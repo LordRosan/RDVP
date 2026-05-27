@@ -27,6 +27,7 @@ RDVP/
 | [docs/02-architecture.md](docs/02-architecture.md) | 系统架构、工程边界、分层设计、核心业务流向和安全边界 |
 | [docs/03-api-design.md](docs/03-api-design.md) | API 设计、通用响应、错误码、接口分组和核心业务接口 |
 | [docs/04-database-design.md](docs/04-database-design.md) | 数据库设计、核心实体、字段、约束、索引和数据一致性规则 |
+| [docs/05-security-design.md](docs/05-security-design.md) | 安全设计、认证授权、二维码防伪、附件安全、离线数据和审计要求 |
 | [docs/06-development-rules.md](docs/06-development-rules.md) | 开发规范、命名规则、Git 规则和安全约束 |
 | [CHANGELOG.md](CHANGELOG.md) | 项目变更记录 |
 
