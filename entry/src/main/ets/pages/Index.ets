@@ -90,6 +90,11 @@ struct Index {
           width: 1,
           color: '#E5E7EB'
         })
+        .onClick(() => {
+          if (!SessionStore.isAuthenticated()) {
+            this.openLoginPage();
+          }
+        })
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
@@ -221,5 +226,13 @@ struct Index {
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
+  }
+
+  openLoginPage(): void {
+    try {
+      this.getUIContext().getRouter().pushUrl({ url: 'pages/Login' });
+    } catch (err) {
+      this.activeActionTitle = '登录页不可用';
+    }
   }
 }
