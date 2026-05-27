@@ -169,8 +169,7 @@ struct Index {
               active: this.activeActionId === item.id
             })
               .onClick(() => {
-                this.activeActionId = item.id;
-                this.activeActionTitle = item.title;
+                this.openAction(item);
               })
           }
         }, (item: WorkbenchAction) => item.id)
@@ -233,6 +232,19 @@ struct Index {
       this.getUIContext().getRouter().pushUrl({ url: 'pages/Login' });
     } catch (err) {
       this.activeActionTitle = '登录页不可用';
+    }
+  }
+
+  openAction(action: WorkbenchAction): void {
+    this.activeActionId = action.id;
+    this.activeActionTitle = action.title;
+
+    if (action.id === WorkbenchActionId.DeviceCodeSearch) {
+      try {
+        this.getUIContext().getRouter().pushUrl({ url: 'pages/DeviceSearch' });
+      } catch (err) {
+        this.activeActionTitle = '设备查询不可用';
+      }
     }
   }
 }

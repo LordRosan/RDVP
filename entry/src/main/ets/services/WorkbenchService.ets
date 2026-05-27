@@ -12,7 +12,7 @@ export class WorkbenchService {
       },
       {
         id: 'pendingFaults',
-        label: '待接单故障',
+        label: '待接取故障',
         value: '0',
         status: '维修响应',
         tone: '#D9480F'
@@ -118,4 +118,3 @@ export class WorkbenchService {
     ];
   }
 }
-

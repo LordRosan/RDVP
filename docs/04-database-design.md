@@ -408,9 +408,9 @@ INDEX(reported_longitude, reported_latitude)
 | `fault_report_id` | id | 是 | FK fault_reports.id, INDEX | 故障报告 ID |
 | `maintainer_id` | id | 是 | FK users.id, INDEX | 维修人员 |
 | `status` | string(32) | 是 | INDEX | 维修任务状态 |
-| `accepted_longitude` | decimal(10,7) | 否 |  | 接单经度 |
-| `accepted_latitude` | decimal(10,7) | 否 |  | 接单纬度 |
-| `accepted_at` | datetime | 是 | INDEX | 接单时间 |
+| `accepted_longitude` | decimal(10,7) | 否 |  | 接取经度 |
+| `accepted_latitude` | decimal(10,7) | 否 |  | 接取纬度 |
+| `accepted_at` | datetime | 是 | INDEX | 接取时间 |
 | `started_at` | datetime | 否 |  | 开始维修时间 |
 | `completed_at` | datetime | 否 | INDEX | 完成时间 |
 | `cancelled_at` | datetime | 否 |  | 取消时间 |
@@ -426,7 +426,7 @@ INDEX(fault_report_id, status)
 INDEX(maintainer_id, status)
 ```
 
-同一故障在同一时间只能存在一个有效维修任务。具体数据库实现应通过唯一约束、部分唯一索引或事务锁保证并发接单一致性。
+同一故障在同一时间只能存在一个有效维修任务。具体数据库实现应通过唯一约束、部分唯一索引或事务锁保证并发接取一致性。
 
 ### 10.3 repair_reports
 
@@ -673,9 +673,9 @@ ATTACHMENT_TYPE_REJECTED
 
 设备信息变更先写入 `device_change_requests`。审核通过后再更新 `devices`，并写入 `operation_logs`。
 
-### 16.4 故障接单并发控制
+### 16.4 故障接取并发控制
 
-同一故障在同一时间只能存在一个有效维修任务。后端实现接单时必须在数据库事务中完成故障状态检查、维修任务创建和故障状态更新。
+同一故障在同一时间只能存在一个有效维修任务。后端实现接取时必须在数据库事务中完成故障状态检查、维修任务创建和故障状态更新。
 
 ### 16.5 重大故障复检
 
@@ -702,4 +702,3 @@ ATTACHMENT_TYPE_REJECTED
 - 附件文件校验算法。
 - 审计日志保留周期。
 - 是否需要多组织或多租户字段。
-
