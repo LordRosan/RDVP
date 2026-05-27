@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "RDVP main module"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "RDVP application entry"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "RDVP"
+    }
+  ]
+}
