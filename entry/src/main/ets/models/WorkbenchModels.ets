@@ -1,6 +1,5 @@
 export enum WorkbenchActionId {
-  DeviceCodeSearch = 'DEVICE_CODE_SEARCH',
-  QrScan = 'QR_SCAN',
+  DeviceQuery = 'DEVICE_QUERY',
   DeviceVerification = 'DEVICE_VERIFICATION',
   FaultReport = 'FAULT_REPORT',
   AvailableRepairTask = 'AVAILABLE_REPAIR_TASK',
@@ -31,4 +30,3 @@ export interface WorkbenchStatusItem {
   value: string;
   tone: string;
 }
-

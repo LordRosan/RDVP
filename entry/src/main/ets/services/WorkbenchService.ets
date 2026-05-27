@@ -12,7 +12,7 @@ export class WorkbenchService {
       },
       {
         id: 'pendingFaults',
-        label: '待接单故障',
+        label: '待接取故障',
         value: '0',
         status: '维修响应',
         tone: '#D9480F'
@@ -37,18 +37,11 @@ export class WorkbenchService {
   static getActions(): WorkbenchAction[] {
     return [
       {
-        id: WorkbenchActionId.DeviceCodeSearch,
-        title: '设备编号查询',
-        summary: '按编号定位设备档案',
+        id: WorkbenchActionId.DeviceQuery,
+        title: '设备查询',
+        summary: '按编号或二维码定位设备',
         mark: '查',
         tone: '#2F6FED'
-      },
-      {
-        id: WorkbenchActionId.QrScan,
-        title: '二维码核验',
-        summary: '扫码并校验设备身份',
-        mark: '码',
-        tone: '#087F5B'
       },
       {
         id: WorkbenchActionId.DeviceVerification,
@@ -118,4 +111,3 @@ export class WorkbenchService {
     ];
   }
 }
-

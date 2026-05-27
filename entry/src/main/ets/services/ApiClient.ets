@@ -16,7 +16,7 @@ export class ApiClient {
       success: false,
       error: {
         code: ApiErrorCode.ServiceUnavailable,
-        message: 'Service unavailable.'
+        message: '后端服务未配置，暂不能访问'
       }
     };
   }
@@ -30,4 +30,3 @@ export class ApiClient {
     };
   }
 }
-

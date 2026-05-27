@@ -3,7 +3,7 @@ import { WorkbenchAction, WorkbenchActionId } from '../models/WorkbenchModels';
 @Component
 export struct ActionTile {
   action: WorkbenchAction = {
-    id: WorkbenchActionId.DeviceCodeSearch,
+    id: WorkbenchActionId.DeviceQuery,
     title: '',
     summary: '',
     mark: '',

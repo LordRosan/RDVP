@@ -13,8 +13,8 @@ struct Index {
   private actions: WorkbenchAction[] = WorkbenchService.getActions();
   private statusItems: WorkbenchStatusItem[] = WorkbenchService.getStatusItems();
   private currentUser: CurrentUserSnapshot = SessionStore.getCurrentUser();
-  @State activeActionId: WorkbenchActionId = WorkbenchActionId.DeviceCodeSearch;
-  @State activeActionTitle: string = '设备编号查询';
+  @State activeActionId: WorkbenchActionId = WorkbenchActionId.DeviceQuery;
+  @State actionMessage: string = '';
 
   build() {
     Scroll() {
@@ -98,33 +98,6 @@ struct Index {
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
-
-      Row() {
-        Text('当前入口')
-          .fontSize(13)
-          .fontColor('#6B7280')
-
-        Text(this.activeActionTitle)
-          .fontSize(14)
-          .fontColor('#111827')
-          .fontWeight(FontWeight.Medium)
-          .margin({ left: 8 })
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      }
-      .padding({
-        left: 14,
-        right: 14,
-        top: 11,
-        bottom: 11
-      })
-      .width('100%')
-      .backgroundColor('#FFFFFF')
-      .borderRadius(8)
-      .border({
-        width: 1,
-        color: '#E5E7EB'
-      })
     }
     .width('100%')
   }
@@ -169,8 +142,7 @@ struct Index {
               active: this.activeActionId === item.id
             })
               .onClick(() => {
-                this.activeActionId = item.id;
-                this.activeActionTitle = item.title;
+                this.openAction(item);
               })
           }
         }, (item: WorkbenchAction) => item.id)
@@ -178,6 +150,15 @@ struct Index {
       .columnsTemplate('1fr')
       .rowsGap(10)
       .width('100%')
+
+      if (this.actionMessage.length > 0) {
+        Text(this.actionMessage)
+          .fontSize(13)
+          .fontColor('#D9480F')
+          .maxLines(2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
+      }
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
@@ -232,7 +213,32 @@ struct Index {
     try {
       this.getUIContext().getRouter().pushUrl({ url: 'pages/Login' });
     } catch (err) {
-      this.activeActionTitle = '登录页不可用';
+      this.actionMessage = '登录页不可用';
     }
+  }
+
+  openAction(action: WorkbenchAction): void {
+    this.activeActionId = action.id;
+    this.actionMessage = '';
+
+    if (action.id === WorkbenchActionId.DeviceQuery) {
+      try {
+        this.getUIContext().getRouter().pushUrl({ url: 'pages/DeviceQuery' });
+      } catch (err) {
+        this.actionMessage = '设备查询不可用';
+      }
+      return;
+    }
+
+    if (action.id === WorkbenchActionId.DeviceVerification) {
+      try {
+        this.getUIContext().getRouter().pushUrl({ url: 'pages/DeviceVerification' });
+      } catch (err) {
+        this.actionMessage = '状态核验不可用';
+      }
+      return;
+    }
+
+    this.actionMessage = `${action.title}模块建设中`;
   }
 }
