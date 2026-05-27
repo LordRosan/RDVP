@@ -24,6 +24,8 @@ RDVP/
 | 文档 | 说明 |
 | --- | --- |
 | [docs/01-requirements.md](docs/01-requirements.md) | 需求说明、业务流程、角色权限、状态设计和安全要求 |
+| [docs/02-architecture.md](docs/02-architecture.md) | 系统架构、工程边界、分层设计、核心业务流向和安全边界 |
+| [docs/03-api-design.md](docs/03-api-design.md) | API 设计、通用响应、错误码、接口分组和核心业务接口 |
 | [docs/06-development-rules.md](docs/06-development-rules.md) | 开发规范、命名规则、Git 规则和安全约束 |
 | [CHANGELOG.md](CHANGELOG.md) | 项目变更记录 |
 
@@ -58,4 +60,3 @@ RDVP/
 - 不提交真实密钥、证书、Token、生产数据库地址、真实设备编号样本和内部账号。
 - 文档、接口、数据库和代码变更必须同步维护。
 - 重要业务功能必须经过构建、运行或测试验证后再提交。
-
