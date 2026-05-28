@@ -4,6 +4,7 @@
     "pages/Login",
     "pages/DeviceQuery",
     "pages/DeviceVerification",
-    "pages/FaultReport"
+    "pages/FaultReport",
+    "pages/AvailableRepairTask"
   ]
 }

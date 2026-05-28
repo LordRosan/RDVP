@@ -2,9 +2,11 @@ import { describe, it, expect } from '@ohos/hypium';
 import { AuthService } from '../main/ets/services/AuthService';
 import { DeviceService } from '../main/ets/services/DeviceService';
 import { FaultSeverity, FaultType } from '../main/ets/models/FaultModels';
+import { RepairerAvailability } from '../main/ets/models/RepairTaskModels';
 import { VerificationResult } from '../main/ets/models/VerificationModels';
 import { FaultReportService } from '../main/ets/services/FaultReportService';
 import { DeviceVerificationService } from '../main/ets/services/DeviceVerificationService';
+import { RepairTaskService } from '../main/ets/services/RepairTaskService';
 import { WorkbenchActionId } from '../main/ets/models/WorkbenchModels';
 import { WorkbenchService } from '../main/ets/services/WorkbenchService';
 
@@ -179,6 +181,49 @@ export default function localUnitTest() {
       });
 
       expect(result.valid).assertEqual(true);
+    });
+  });
+
+  describe('repairTaskConfiguration', () => {
+    it('usesTenKilometersAsDefaultRadius', 0, () => {
+      expect(RepairTaskService.getDefaultRadiusKm()).assertEqual(10);
+    });
+
+    it('rejectsInvalidRepairTaskRadius', 0, () => {
+      const result = RepairTaskService.validateAvailableRepairTaskQuery({
+        radiusKm: 0,
+        availability: RepairerAvailability.Idle
+      });
+
+      expect(result.valid).assertEqual(false);
+      expect(result.message).assertEqual('查询范围必须在1到100公里之间');
+    });
+
+    it('rejectsBusyRepairerWhenRefreshingNearbyFaults', 0, () => {
+      const result = RepairTaskService.validateAvailableRepairTaskQuery({
+        radiusKm: 10,
+        availability: RepairerAvailability.Busy
+      });
+
+      expect(result.valid).assertEqual(false);
+      expect(result.message).assertEqual('仅空闲状态可刷新附近故障');
+    });
+
+    it('acceptsIdleRepairTaskQuery', 0, () => {
+      const result = RepairTaskService.validateAvailableRepairTaskQuery({
+        radiusKm: 10,
+        availability: RepairerAvailability.Idle
+      });
+
+      expect(result.valid).assertEqual(true);
+      expect(result.normalizedRadiusKm).assertEqual(10);
+    });
+
+    it('rejectsEmptyRepairTaskAcceptId', 0, () => {
+      const result = RepairTaskService.validateRepairTaskId('');
+
+      expect(result.valid).assertEqual(false);
+      expect(result.message).assertEqual('请选择需要接取的维修任务');
     });
   });
 }

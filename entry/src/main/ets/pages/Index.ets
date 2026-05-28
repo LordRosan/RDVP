@@ -248,6 +248,15 @@ struct Index {
       return;
     }
 
+    if (action.id === WorkbenchActionId.AvailableRepairTask) {
+      try {
+        this.getUIContext().getRouter().pushUrl({ url: 'pages/AvailableRepairTask' });
+      } catch (err) {
+        this.actionMessage = '附近故障不可用';
+      }
+      return;
+    }
+
     this.actionMessage = `${action.title}模块建设中`;
   }
 }

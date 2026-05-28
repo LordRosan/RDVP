@@ -2,9 +2,11 @@ import { describe, it, expect } from '@ohos/hypium';
 import { AuthService } from '../../../main/ets/services/AuthService';
 import { DeviceService } from '../../../main/ets/services/DeviceService';
 import { FaultSeverity, FaultType } from '../../../main/ets/models/FaultModels';
+import { RepairerAvailability } from '../../../main/ets/models/RepairTaskModels';
 import { VerificationResult } from '../../../main/ets/models/VerificationModels';
 import { FaultReportService } from '../../../main/ets/services/FaultReportService';
 import { DeviceVerificationService } from '../../../main/ets/services/DeviceVerificationService';
+import { RepairTaskService } from '../../../main/ets/services/RepairTaskService';
 import { WorkbenchService } from '../../../main/ets/services/WorkbenchService';
 
 export default function abilityTest() {
@@ -59,6 +61,15 @@ export default function abilityTest() {
         occurredAt: '2026-05-28 16:30',
         description: '设备运行异常，需维修人员进一步检查。',
         sceneCondition: ''
+      });
+
+      expect(result.valid).assertEqual(true);
+    });
+
+    it('validatesAvailableRepairTaskQuery', 0, () => {
+      const result = RepairTaskService.validateAvailableRepairTaskQuery({
+        radiusKm: 10,
+        availability: RepairerAvailability.Idle
       });
 
       expect(result.valid).assertEqual(true);
