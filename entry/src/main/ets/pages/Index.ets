@@ -239,6 +239,15 @@ struct Index {
       return;
     }
 
+    if (action.id === WorkbenchActionId.FaultReport) {
+      try {
+        this.getUIContext().getRouter().pushUrl({ url: 'pages/FaultReport' });
+      } catch (err) {
+        this.actionMessage = '故障报告不可用';
+      }
+      return;
+    }
+
     this.actionMessage = `${action.title}模块建设中`;
   }
 }

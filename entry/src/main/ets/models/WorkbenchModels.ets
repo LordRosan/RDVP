@@ -12,7 +12,6 @@ export interface WorkbenchAction {
   id: WorkbenchActionId;
   title: string;
   summary: string;
-  mark: string;
   tone: string;
 }
 

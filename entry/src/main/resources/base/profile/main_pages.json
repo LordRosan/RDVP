@@ -3,6 +3,7 @@
     "pages/Index",
     "pages/Login",
     "pages/DeviceQuery",
-    "pages/DeviceVerification"
+    "pages/DeviceVerification",
+    "pages/FaultReport"
   ]
 }

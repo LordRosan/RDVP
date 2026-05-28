@@ -6,22 +6,19 @@ export struct ActionTile {
     id: WorkbenchActionId.DeviceQuery,
     title: '',
     summary: '',
-    mark: '',
     tone: '#2F6FED'
   };
   active: boolean = false;
 
   build() {
     Row({ space: 12 }) {
-      Text(this.action.mark)
-        .fontSize(16)
-        .fontWeight(FontWeight.Bold)
-        .fontColor('#FFFFFF')
-        .textAlign(TextAlign.Center)
-        .width(42)
-        .height(42)
-        .borderRadius(21)
-        .backgroundColor(this.action.tone)
+      Stack() {
+        this.ActionIcon()
+      }
+      .width(42)
+      .height(42)
+      .borderRadius(21)
+      .backgroundColor(this.action.tone)
 
       Column({ space: 5 }) {
         Text(this.action.title)
@@ -50,5 +47,38 @@ export struct ActionTile {
       width: 1,
       color: this.active ? '#2F6FED' : '#E5E7EB'
     })
+  }
+
+  @Builder
+  ActionIcon() {
+    if (this.action.id === WorkbenchActionId.DeviceQuery) {
+      SymbolGlyph($r('sys.symbol.magnifyingglass'))
+        .fontSize(22)
+        .fontColor(['#FFFFFF'])
+    } else if (this.action.id === WorkbenchActionId.DeviceVerification) {
+      SymbolGlyph($r('sys.symbol.checkmark_shield'))
+        .fontSize(23)
+        .fontColor(['#FFFFFF'])
+    } else if (this.action.id === WorkbenchActionId.FaultReport) {
+      SymbolGlyph($r('sys.symbol.exclamationmark_message'))
+        .fontSize(23)
+        .fontColor(['#FFFFFF'])
+    } else if (this.action.id === WorkbenchActionId.AvailableRepairTask) {
+      SymbolGlyph($r('sys.symbol.location_up'))
+        .fontSize(23)
+        .fontColor(['#FFFFFF'])
+    } else if (this.action.id === WorkbenchActionId.MyRepairTask) {
+      SymbolGlyph($r('sys.symbol.wrench_and_screwdriver'))
+        .fontSize(23)
+        .fontColor(['#FFFFFF'])
+    } else if (this.action.id === WorkbenchActionId.ReinspectionTask) {
+      SymbolGlyph($r('sys.symbol.doc_text_badge_checkmark'))
+        .fontSize(23)
+        .fontColor(['#FFFFFF'])
+    } else {
+      SymbolGlyph($r('sys.symbol.text_clipboard'))
+        .fontSize(23)
+        .fontColor(['#FFFFFF'])
+    }
   }
 }

@@ -40,49 +40,42 @@ export class WorkbenchService {
         id: WorkbenchActionId.DeviceQuery,
         title: '设备查询',
         summary: '按编号或二维码定位设备',
-        mark: '查',
         tone: '#2F6FED'
       },
       {
         id: WorkbenchActionId.DeviceVerification,
         title: '状态核验',
         summary: '提交现场核验记录',
-        mark: '核',
         tone: '#0B7285'
       },
       {
         id: WorkbenchActionId.FaultReport,
         title: '故障报告',
         summary: '登记设备故障信息',
-        mark: '报',
         tone: '#D9480F'
       },
       {
         id: WorkbenchActionId.AvailableRepairTask,
         title: '附近故障',
         summary: '查看可接取任务',
-        mark: '接',
         tone: '#5C7CFA'
       },
       {
         id: WorkbenchActionId.MyRepairTask,
         title: '我的维修',
         summary: '处理已接取任务',
-        mark: '修',
         tone: '#E67700'
       },
       {
         id: WorkbenchActionId.ReinspectionTask,
         title: '复检任务',
         summary: '确认重大故障结果',
-        mark: '复',
         tone: '#845EF7'
       },
       {
         id: WorkbenchActionId.OperationRecord,
         title: '操作记录',
         summary: '查看业务流转记录',
-        mark: '记',
         tone: '#495057'
       }
     ];
