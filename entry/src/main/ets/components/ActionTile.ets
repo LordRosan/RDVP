@@ -8,7 +8,6 @@ export struct ActionTile {
     summary: '',
     tone: '#2F6FED'
   };
-  active: boolean = false;
 
   build() {
     Row({ space: 12 }) {
@@ -41,11 +40,11 @@ export struct ActionTile {
     .padding(14)
     .height(82)
     .width('100%')
-    .backgroundColor(this.active ? '#EEF4FF' : '#FFFFFF')
+    .backgroundColor('#FFFFFF')
     .borderRadius(8)
     .border({
       width: 1,
-      color: this.active ? '#2F6FED' : '#E5E7EB'
+      color: '#E5E7EB'
     })
   }
 

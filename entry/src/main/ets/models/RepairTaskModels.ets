@@ -13,6 +13,12 @@ export enum RepairTaskStatus {
   ReportSubmitted = 'REPORT_SUBMITTED'
 }
 
+export enum RepairReportResult {
+  Repaired = 'REPAIRED',
+  TemporaryRestored = 'TEMPORARY_RESTORED',
+  Unresolved = 'UNRESOLVED'
+}
+
 export interface AvailableRepairTaskQuery {
   radiusKm: number;
   availability: RepairerAvailability;
@@ -43,8 +49,41 @@ export interface AvailableRepairTaskListResult {
   total: number;
 }
 
+export interface MyRepairTaskSummary {
+  id: string;
+  taskNo: string;
+  faultNo: string;
+  deviceCode: string;
+  deviceName: string;
+  faultType: FaultType;
+  severity: FaultSeverity;
+  acceptedAt: string;
+  status: RepairTaskStatus;
+}
+
+export interface MyRepairTaskListResult {
+  items: MyRepairTaskSummary[];
+  total: number;
+}
+
 export interface RepairTaskAcceptResult {
   taskId: string;
   status: RepairTaskStatus;
   acceptedAt: string;
+}
+
+export interface RepairReportForm {
+  taskId: string;
+  result: RepairReportResult;
+  repairedAt: string;
+  processDescription: string;
+  partsUsed: string;
+}
+
+export interface RepairReportRecord {
+  id: string;
+  reportNo: string;
+  taskId: string;
+  result: RepairReportResult;
+  submittedAt: string;
 }

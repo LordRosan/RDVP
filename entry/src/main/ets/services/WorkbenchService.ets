@@ -21,7 +21,7 @@ export class WorkbenchService {
         id: 'pendingReinspections',
         label: '待复检',
         value: '0',
-        status: '重大故障',
+        status: '高等级故障',
         tone: '#845EF7'
       },
       {
@@ -69,7 +69,7 @@ export class WorkbenchService {
       {
         id: WorkbenchActionId.ReinspectionTask,
         title: '复检任务',
-        summary: '确认重大故障结果',
+        summary: '确认高等级故障结果',
         tone: '#845EF7'
       },
       {

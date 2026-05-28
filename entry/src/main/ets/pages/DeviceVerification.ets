@@ -1,6 +1,36 @@
+import { InfoDialog, InfoDialogSection } from '../components/InfoDialog';
 import { VerificationResult } from '../models/VerificationModels';
 import { DeviceService } from '../services/DeviceService';
 import { DeviceVerificationService } from '../services/DeviceVerificationService';
+
+const VERIFICATION_INFO_SECTIONS: InfoDialogSection[] = [
+  {
+    title: '状态核验',
+    items: [
+      {
+        label: '用途',
+        description: '记录设备现场检查结论和依据'
+      }
+    ]
+  },
+  {
+    title: '核验结果',
+    items: [
+      {
+        label: '正常',
+        description: '设备关键状态符合预期，可继续使用'
+      },
+      {
+        label: '异常',
+        description: '设备存在异常现象，需要后续处理或生成故障报告'
+      },
+      {
+        label: '不可用',
+        description: '设备无法完成基本功能，需停止使用并安排维修'
+      }
+    ]
+  }
+];
 
 @Entry
 @Component
@@ -11,6 +41,14 @@ struct DeviceVerification {
   @State remark: string = '';
   @State message: string = '';
   @State normalizedDeviceCode: string = '-';
+  private verificationInfoDialogController: CustomDialogController = new CustomDialogController({
+    builder: InfoDialog({
+      title: '状态核验说明',
+      sections: VERIFICATION_INFO_SECTIONS
+    }),
+    autoCancel: true,
+    alignment: DialogAlignment.Center
+  });
 
   build() {
     Scroll() {
@@ -65,13 +103,6 @@ struct DeviceVerification {
       .onClick(() => {
         this.backToWorkbench();
       })
-
-      Text('状态核验')
-        .fontSize(24)
-        .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .width('100%')
     .height(60)
@@ -103,7 +134,7 @@ struct DeviceVerification {
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
 
-      Stack() {
+      Button({ type: ButtonType.Circle, stateEffect: true }) {
         SymbolGlyph($r('sys.symbol.checkmark_shield'))
           .fontSize(32)
           .fontColor(['#111827'])
@@ -111,10 +142,12 @@ struct DeviceVerification {
       .width(58)
       .height(58)
       .backgroundColor('#FFFFFF')
-      .borderRadius(29)
       .border({
         width: 1,
         color: '#E5E7EB'
+      })
+      .onClick(() => {
+        this.showVerificationInfoDialog();
       })
     }
     .width('100%')
@@ -442,6 +475,10 @@ struct DeviceVerification {
       default:
         return '#374151';
     }
+  }
+
+  showVerificationInfoDialog(): void {
+    this.verificationInfoDialogController.open();
   }
 
   backToWorkbench(): void {

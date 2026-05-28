@@ -2,7 +2,7 @@ import { describe, it, expect } from '@ohos/hypium';
 import { AuthService } from '../main/ets/services/AuthService';
 import { DeviceService } from '../main/ets/services/DeviceService';
 import { FaultSeverity, FaultType } from '../main/ets/models/FaultModels';
-import { RepairerAvailability } from '../main/ets/models/RepairTaskModels';
+import { RepairerAvailability, RepairReportResult } from '../main/ets/models/RepairTaskModels';
 import { VerificationResult } from '../main/ets/models/VerificationModels';
 import { FaultReportService } from '../main/ets/services/FaultReportService';
 import { DeviceVerificationService } from '../main/ets/services/DeviceVerificationService';
@@ -145,8 +145,8 @@ export default function localUnitTest() {
     it('rejectsEmptyFaultOccurredAt', 0, () => {
       const result = FaultReportService.validateFaultReportForm({
         deviceCode: 'RDVP-DEVICE-0001',
-        faultType: FaultType.OperationAbnormal,
-        severity: FaultSeverity.General,
+        faultType: FaultType.CommunicationFault,
+        severity: FaultSeverity.Severe,
         occurredAt: '',
         description: '设备运行异常。',
         sceneCondition: ''
@@ -159,7 +159,7 @@ export default function localUnitTest() {
     it('rejectsEmptyFaultDescription', 0, () => {
       const result = FaultReportService.validateFaultReportForm({
         deviceCode: 'RDVP-DEVICE-0001',
-        faultType: FaultType.OperationAbnormal,
+        faultType: FaultType.LogicFault,
         severity: FaultSeverity.General,
         occurredAt: '2026-05-28 16:30',
         description: '',
@@ -173,14 +173,23 @@ export default function localUnitTest() {
     it('acceptsCompleteFaultReportForm', 0, () => {
       const result = FaultReportService.validateFaultReportForm({
         deviceCode: 'RDVP-DEVICE-0001',
-        faultType: FaultType.OperationAbnormal,
-        severity: FaultSeverity.General,
+        faultType: FaultType.ExternalFactor,
+        severity: FaultSeverity.Minor,
         occurredAt: '2026-05-28 16:30',
         description: '设备运行异常，需维修人员进一步检查。',
         sceneCondition: '现场已停止继续使用。'
       });
 
       expect(result.valid).assertEqual(true);
+    });
+
+    it('formatsUpdatedFaultCategories', 0, () => {
+      expect(FaultReportService.formatFaultType(FaultType.CommunicationFault)).assertEqual('通信故障');
+      expect(FaultReportService.formatFaultType(FaultType.EnergyFault)).assertEqual('能源故障');
+      expect(FaultReportService.formatFaultTypeDescription(FaultType.LogicFault)).assertEqual('控制逻辑、业务规则、程序状态或配置逻辑异常');
+      expect(FaultReportService.formatSeverity(FaultSeverity.Emergency)).assertEqual('紧急');
+      expect(FaultReportService.formatSeverity(FaultSeverity.Minor)).assertEqual('轻微');
+      expect(FaultReportService.formatSeverityDescription(FaultSeverity.Minor)).assertEqual('不影响业务，可正常运行，但存在隐患或小缺陷');
     });
   });
 
@@ -224,6 +233,45 @@ export default function localUnitTest() {
 
       expect(result.valid).assertEqual(false);
       expect(result.message).assertEqual('请选择需要接取的维修任务');
+    });
+
+    it('rejectsEmptyRepairReportTaskId', 0, () => {
+      const result = RepairTaskService.validateRepairReportForm({
+        taskId: '',
+        result: RepairReportResult.Repaired,
+        repairedAt: '2026-05-28 18:30',
+        processDescription: '已完成维修并复测。',
+        partsUsed: ''
+      });
+
+      expect(result.valid).assertEqual(false);
+      expect(result.message).assertEqual('请输入维修任务编号');
+    });
+
+    it('rejectsEmptyRepairReportProcess', 0, () => {
+      const result = RepairTaskService.validateRepairReportForm({
+        taskId: 'RDVP-REPAIR-0001',
+        result: RepairReportResult.Repaired,
+        repairedAt: '2026-05-28 18:30',
+        processDescription: '',
+        partsUsed: ''
+      });
+
+      expect(result.valid).assertEqual(false);
+      expect(result.message).assertEqual('请输入维修过程');
+    });
+
+    it('acceptsCompleteRepairReport', 0, () => {
+      const result = RepairTaskService.validateRepairReportForm({
+        taskId: 'RDVP-REPAIR-0001',
+        result: RepairReportResult.TemporaryRestored,
+        repairedAt: '2026-05-28 18:30',
+        processDescription: '完成临时恢复，设备可限载运行，需后续更换部件。',
+        partsUsed: '临时接线端子 1 个'
+      });
+
+      expect(result.valid).assertEqual(true);
+      expect(RepairTaskService.formatRepairReportResult(RepairReportResult.TemporaryRestored)).assertEqual('临时恢复');
     });
   });
 }

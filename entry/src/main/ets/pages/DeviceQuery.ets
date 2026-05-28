@@ -65,13 +65,6 @@ struct DeviceQuery {
       .onClick(() => {
         this.backToWorkbench();
       })
-
-      Text('设备查询')
-        .fontSize(24)
-        .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .width('100%')
     .height(60)

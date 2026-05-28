@@ -13,7 +13,6 @@ struct Index {
   private actions: WorkbenchAction[] = WorkbenchService.getActions();
   private statusItems: WorkbenchStatusItem[] = WorkbenchService.getStatusItems();
   private currentUser: CurrentUserSnapshot = SessionStore.getCurrentUser();
-  @State activeActionId: WorkbenchActionId = WorkbenchActionId.DeviceQuery;
   @State actionMessage: string = '';
 
   build() {
@@ -138,8 +137,7 @@ struct Index {
         ForEach(this.actions, (item: WorkbenchAction) => {
           GridItem() {
             ActionTile({
-              action: item,
-              active: this.activeActionId === item.id
+              action: item
             })
               .onClick(() => {
                 this.openAction(item);
@@ -218,7 +216,6 @@ struct Index {
   }
 
   openAction(action: WorkbenchAction): void {
-    this.activeActionId = action.id;
     this.actionMessage = '';
 
     if (action.id === WorkbenchActionId.DeviceQuery) {
@@ -253,6 +250,15 @@ struct Index {
         this.getUIContext().getRouter().pushUrl({ url: 'pages/AvailableRepairTask' });
       } catch (err) {
         this.actionMessage = '附近故障不可用';
+      }
+      return;
+    }
+
+    if (action.id === WorkbenchActionId.MyRepairTask) {
+      try {
+        this.getUIContext().getRouter().pushUrl({ url: 'pages/MyRepairTask' });
+      } catch (err) {
+        this.actionMessage = '我的维修不可用';
       }
       return;
     }

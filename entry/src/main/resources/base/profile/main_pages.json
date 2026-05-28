@@ -5,6 +5,7 @@
     "pages/DeviceQuery",
     "pages/DeviceVerification",
     "pages/FaultReport",
-    "pages/AvailableRepairTask"
+    "pages/AvailableRepairTask",
+    "pages/MyRepairTask"
   ]
 }

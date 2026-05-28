@@ -1,15 +1,18 @@
 export enum FaultType {
   OperationAbnormal = 'OPERATION_ABNORMAL',
-  NetworkAbnormal = 'NETWORK_ABNORMAL',
   HardwareDamage = 'HARDWARE_DAMAGE',
-  SafetyRisk = 'SAFETY_RISK',
+  CommunicationFault = 'COMMUNICATION_FAULT',
+  LogicFault = 'LOGIC_FAULT',
+  EnergyFault = 'ENERGY_FAULT',
+  ExternalFactor = 'EXTERNAL_FACTOR',
   Other = 'OTHER'
 }
 
 export enum FaultSeverity {
+  Emergency = 'EMERGENCY',
+  Severe = 'SEVERE',
   General = 'GENERAL',
-  Major = 'MAJOR',
-  Critical = 'CRITICAL'
+  Minor = 'MINOR'
 }
 
 export interface FaultReportForm {

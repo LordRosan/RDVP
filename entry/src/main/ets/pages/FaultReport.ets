@@ -1,6 +1,64 @@
+import { InfoDialog, InfoDialogSection } from '../components/InfoDialog';
 import { FaultSeverity, FaultType } from '../models/FaultModels';
 import { DeviceService } from '../services/DeviceService';
 import { FaultReportService } from '../services/FaultReportService';
+
+const FAULT_REPORT_INFO_SECTIONS: InfoDialogSection[] = [
+  {
+    title: '故障类型',
+    items: [
+      {
+        label: FaultReportService.formatFaultType(FaultType.OperationAbnormal),
+        description: FaultReportService.formatFaultTypeDescription(FaultType.OperationAbnormal)
+      },
+      {
+        label: FaultReportService.formatFaultType(FaultType.HardwareDamage),
+        description: FaultReportService.formatFaultTypeDescription(FaultType.HardwareDamage)
+      },
+      {
+        label: FaultReportService.formatFaultType(FaultType.CommunicationFault),
+        description: FaultReportService.formatFaultTypeDescription(FaultType.CommunicationFault)
+      },
+      {
+        label: FaultReportService.formatFaultType(FaultType.LogicFault),
+        description: FaultReportService.formatFaultTypeDescription(FaultType.LogicFault)
+      },
+      {
+        label: FaultReportService.formatFaultType(FaultType.EnergyFault),
+        description: FaultReportService.formatFaultTypeDescription(FaultType.EnergyFault)
+      },
+      {
+        label: FaultReportService.formatFaultType(FaultType.ExternalFactor),
+        description: FaultReportService.formatFaultTypeDescription(FaultType.ExternalFactor)
+      },
+      {
+        label: FaultReportService.formatFaultType(FaultType.Other),
+        description: FaultReportService.formatFaultTypeDescription(FaultType.Other)
+      }
+    ]
+  },
+  {
+    title: '故障等级',
+    items: [
+      {
+        label: FaultReportService.formatSeverity(FaultSeverity.Emergency),
+        description: FaultReportService.formatSeverityDescription(FaultSeverity.Emergency)
+      },
+      {
+        label: FaultReportService.formatSeverity(FaultSeverity.Severe),
+        description: FaultReportService.formatSeverityDescription(FaultSeverity.Severe)
+      },
+      {
+        label: FaultReportService.formatSeverity(FaultSeverity.General),
+        description: FaultReportService.formatSeverityDescription(FaultSeverity.General)
+      },
+      {
+        label: FaultReportService.formatSeverity(FaultSeverity.Minor),
+        description: FaultReportService.formatSeverityDescription(FaultSeverity.Minor)
+      }
+    ]
+  }
+];
 
 @Entry
 @Component
@@ -13,6 +71,14 @@ struct FaultReport {
   @State sceneCondition: string = '';
   @State message: string = '';
   @State normalizedDeviceCode: string = '-';
+  private faultInfoDialogController: CustomDialogController = new CustomDialogController({
+    builder: InfoDialog({
+      title: '故障分类说明',
+      sections: FAULT_REPORT_INFO_SECTIONS
+    }),
+    autoCancel: true,
+    alignment: DialogAlignment.Center
+  });
 
   build() {
     Scroll() {
@@ -67,13 +133,6 @@ struct FaultReport {
       .onClick(() => {
         this.backToWorkbench();
       })
-
-      Text('故障报告')
-        .fontSize(24)
-        .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .width('100%')
     .height(60)
@@ -105,7 +164,7 @@ struct FaultReport {
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
 
-      Stack() {
+      Button({ type: ButtonType.Circle, stateEffect: true }) {
         SymbolGlyph($r('sys.symbol.exclamationmark_message'))
           .fontSize(32)
           .fontColor(['#111827'])
@@ -113,10 +172,12 @@ struct FaultReport {
       .width(58)
       .height(58)
       .backgroundColor('#FFFFFF')
-      .borderRadius(29)
       .border({
         width: 1,
         color: '#E5E7EB'
+      })
+      .onClick(() => {
+        this.showFaultReportInfoDialog();
       })
     }
     .width('100%')
@@ -192,26 +253,64 @@ struct FaultReport {
     Column({ space: 10 }) {
       this.FieldTitle('故障类型')
 
-      Grid() {
-        GridItem() {
-          this.FaultTypeOption(FaultType.OperationAbnormal, $r('sys.symbol.exclamationmark_message'))
+      Column({ space: 10 }) {
+        Row({ space: 10 }) {
+          Column() {
+            this.FaultTypeOption(FaultType.OperationAbnormal, $r('sys.symbol.exclamationmark_message'))
+          }
+          .layoutWeight(1)
+
+          Column() {
+            this.FaultTypeOption(FaultType.HardwareDamage, $r('sys.symbol.wrench_and_screwdriver'))
+          }
+          .layoutWeight(1)
         }
-        GridItem() {
-          this.FaultTypeOption(FaultType.NetworkAbnormal, $r('sys.symbol.location_up'))
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+
+        Row({ space: 10 }) {
+          Column() {
+            this.FaultTypeOption(FaultType.CommunicationFault, $r('sys.symbol.wifi_badge_exclamationmark'))
+          }
+          .layoutWeight(1)
+
+          Column() {
+            this.FaultTypeOption(FaultType.LogicFault, $r('sys.symbol.gearshape'))
+          }
+          .layoutWeight(1)
         }
-        GridItem() {
-          this.FaultTypeOption(FaultType.HardwareDamage, $r('sys.symbol.wrench_and_screwdriver'))
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+
+        Row({ space: 10 }) {
+          Column() {
+            this.FaultTypeOption(FaultType.EnergyFault, $r('sys.symbol.bolt'))
+          }
+          .layoutWeight(1)
+
+          Column() {
+            this.FaultTypeOption(FaultType.ExternalFactor, $r('sys.symbol.geologic_hazard'))
+          }
+          .layoutWeight(1)
         }
-        GridItem() {
-          this.FaultTypeOption(FaultType.SafetyRisk, $r('sys.symbol.exclamationmark_shield_fill'))
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+
+        Row() {
+          Blank()
+            .layoutWeight(1)
+
+          Column() {
+            this.FaultTypeOption(FaultType.Other, $r('sys.symbol.text_clipboard'))
+          }
+          .width('48%')
+
+          Blank()
+            .layoutWeight(1)
         }
-        GridItem() {
-          this.FaultTypeOption(FaultType.Other, $r('sys.symbol.text_clipboard'))
-        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
       }
-      .columnsTemplate('1fr 1fr')
-      .columnsGap(10)
-      .rowsGap(10)
       .width('100%')
     }
     .width('100%')
@@ -254,26 +353,44 @@ struct FaultReport {
     Column({ space: 10 }) {
       this.FieldTitle('故障等级')
 
-      Row({ space: 10 }) {
-        this.SeverityOption(FaultSeverity.General)
-        this.SeverityOption(FaultSeverity.Major)
-        this.SeverityOption(FaultSeverity.Critical)
+      Column({ space: 10 }) {
+        Row({ space: 10 }) {
+          this.SeverityOption(FaultSeverity.Emergency, $r('sys.symbol.exclamationmark_triangle_fill'))
+          this.SeverityOption(FaultSeverity.Severe, $r('sys.symbol.exclamationmark_circle'))
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+
+        Row({ space: 10 }) {
+          this.SeverityOption(FaultSeverity.General, $r('sys.symbol.exclamationmark_message'))
+          this.SeverityOption(FaultSeverity.Minor, $r('sys.symbol.checkmark_circle'))
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
       }
       .width('100%')
-      .alignItems(VerticalAlign.Center)
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
-  SeverityOption(severity: FaultSeverity) {
+  SeverityOption(severity: FaultSeverity, icon: Resource) {
     Button({ type: ButtonType.Capsule, stateEffect: true }) {
-      Text(FaultReportService.formatSeverity(severity))
-        .fontSize(14)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(this.severity === severity ? '#FFFFFF' : '#111827')
-        .maxLines(1)
+      Row({ space: 6 }) {
+        SymbolGlyph(icon)
+          .fontSize(17)
+          .fontColor([this.severity === severity ? '#FFFFFF' : '#111827'])
+
+        Text(FaultReportService.formatSeverity(severity))
+          .fontSize(14)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.severity === severity ? '#FFFFFF' : '#111827')
+          .maxLines(1)
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
     }
     .height(42)
     .layoutWeight(1)
@@ -293,12 +410,24 @@ struct FaultReport {
     Column({ space: 10 }) {
       this.FieldTitle('发生时间')
 
-      TextInput({
-        placeholder: '例如 2026-05-28 16:30',
-        text: this.occurredAt
-      })
+      Row({ space: 10 }) {
+        SymbolGlyph($r('sys.symbol.calendar'))
+          .fontSize(20)
+          .fontColor(['#111827'])
+
+        Text(this.occurredAt.length > 0 ? this.occurredAt : '选择发生时间')
+          .fontSize(16)
+          .fontColor(this.occurredAt.length > 0 ? '#111827' : '#9CA3AF')
+          .layoutWeight(1)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+        SymbolGlyph($r('sys.symbol.chevron_forward'))
+          .fontSize(18)
+          .fontColor(['#6B7280'])
+      }
         .height(56)
-        .fontSize(16)
+        .width('100%')
         .backgroundColor('#F7F9FC')
         .borderRadius(18)
         .padding({
@@ -309,8 +438,8 @@ struct FaultReport {
           width: 1,
           color: '#D6DAE1'
         })
-        .onChange((value: string) => {
-          this.occurredAt = value;
+        .onClick(() => {
+          this.showOccurredAtPicker();
           this.message = '';
         })
     }
@@ -523,15 +652,72 @@ struct FaultReport {
 
   getSeverityTone(severity: FaultSeverity): string {
     switch (severity) {
+      case FaultSeverity.Emergency:
+        return '#D9480F';
+      case FaultSeverity.Severe:
+        return '#E67700';
       case FaultSeverity.General:
         return '#2F6FED';
-      case FaultSeverity.Major:
-        return '#E67700';
-      case FaultSeverity.Critical:
-        return '#D9480F';
+      case FaultSeverity.Minor:
+        return '#087F5B';
       default:
         return '#374151';
     }
+  }
+
+  showFaultReportInfoDialog(): void {
+    this.faultInfoDialogController.open();
+  }
+
+  showOccurredAtPicker(): void {
+    this.getUIContext().showDatePickerDialog({
+      start: new Date(2000, 0, 1, 0, 0),
+      end: new Date(2100, 11, 31, 23, 59),
+      selected: this.resolveSelectedDate(this.occurredAt),
+      showTime: true,
+      useMilitaryTime: true,
+      onDateAccept: (value: Date) => {
+        this.occurredAt = this.formatDateTime(value);
+        this.message = '';
+      }
+    });
+  }
+
+  resolveSelectedDate(value: string): Date {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      return new Date();
+    }
+
+    const segments = trimmed.split(' ');
+    if (segments.length !== 2) {
+      return new Date();
+    }
+
+    const dateSegments = segments[0].split('-');
+    const timeSegments = segments[1].split(':');
+    if (dateSegments.length !== 3 || timeSegments.length < 2) {
+      return new Date();
+    }
+
+    const year = Number(dateSegments[0]);
+    const month = Number(dateSegments[1]);
+    const day = Number(dateSegments[2]);
+    const hour = Number(timeSegments[0]);
+    const minute = Number(timeSegments[1]);
+    if (year !== year || month !== month || day !== day || hour !== hour || minute !== minute) {
+      return new Date();
+    }
+
+    return new Date(year, month - 1, day, hour, minute);
+  }
+
+  formatDateTime(value: Date): string {
+    return `${value.getFullYear()}-${this.pad2(value.getMonth() + 1)}-${this.pad2(value.getDate())} ${this.pad2(value.getHours())}:${this.pad2(value.getMinutes())}`;
+  }
+
+  pad2(value: number): string {
+    return value < 10 ? `0${value}` : `${value}`;
   }
 
   backToWorkbench(): void {

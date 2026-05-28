@@ -2,7 +2,7 @@ import { describe, it, expect } from '@ohos/hypium';
 import { AuthService } from '../../../main/ets/services/AuthService';
 import { DeviceService } from '../../../main/ets/services/DeviceService';
 import { FaultSeverity, FaultType } from '../../../main/ets/models/FaultModels';
-import { RepairerAvailability } from '../../../main/ets/models/RepairTaskModels';
+import { RepairerAvailability, RepairReportResult } from '../../../main/ets/models/RepairTaskModels';
 import { VerificationResult } from '../../../main/ets/models/VerificationModels';
 import { FaultReportService } from '../../../main/ets/services/FaultReportService';
 import { DeviceVerificationService } from '../../../main/ets/services/DeviceVerificationService';
@@ -56,8 +56,8 @@ export default function abilityTest() {
     it('validatesFaultReportForm', 0, () => {
       const result = FaultReportService.validateFaultReportForm({
         deviceCode: 'RDVP-DEVICE-0001',
-        faultType: FaultType.OperationAbnormal,
-        severity: FaultSeverity.General,
+        faultType: FaultType.CommunicationFault,
+        severity: FaultSeverity.Severe,
         occurredAt: '2026-05-28 16:30',
         description: '设备运行异常，需维修人员进一步检查。',
         sceneCondition: ''
@@ -70,6 +70,18 @@ export default function abilityTest() {
       const result = RepairTaskService.validateAvailableRepairTaskQuery({
         radiusKm: 10,
         availability: RepairerAvailability.Idle
+      });
+
+      expect(result.valid).assertEqual(true);
+    });
+
+    it('validatesRepairReportForm', 0, () => {
+      const result = RepairTaskService.validateRepairReportForm({
+        taskId: 'RDVP-REPAIR-0001',
+        result: RepairReportResult.Repaired,
+        repairedAt: '2026-05-28 18:30',
+        processDescription: '已完成维修并复测。',
+        partsUsed: ''
       });
 
       expect(result.valid).assertEqual(true);

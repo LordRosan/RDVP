@@ -1,7 +1,28 @@
+import { InfoDialog, InfoDialogSection } from '../components/InfoDialog';
 import { FaultSeverity } from '../models/FaultModels';
 import { AvailableRepairTaskSummary, RepairerAvailability } from '../models/RepairTaskModels';
 import { FaultReportService } from '../services/FaultReportService';
 import { RepairTaskService } from '../services/RepairTaskService';
+
+const AVAILABLE_TASK_INFO_SECTIONS: InfoDialogSection[] = [
+  {
+    title: '附近故障',
+    items: [
+      {
+        label: '筛选',
+        description: '根据服务半径和维修人员状态筛选可接取维修任务'
+      },
+      {
+        label: '接取',
+        description: '接取成功后，任务进入我的维修页面继续处理'
+      },
+      {
+        label: '状态',
+        description: '仅空闲状态可刷新附近故障，避免任务响应与人员状态不一致'
+      }
+    ]
+  }
+];
 
 @Entry
 @Component
@@ -11,6 +32,14 @@ struct AvailableRepairTask {
   @State message: string = '';
   @State refreshStatus: string = '未刷新';
   @State taskItems: AvailableRepairTaskSummary[] = [];
+  private availableTaskInfoDialogController: CustomDialogController = new CustomDialogController({
+    builder: InfoDialog({
+      title: '附近故障说明',
+      sections: AVAILABLE_TASK_INFO_SECTIONS
+    }),
+    autoCancel: true,
+    alignment: DialogAlignment.Center
+  });
 
   build() {
     Scroll() {
@@ -66,13 +95,6 @@ struct AvailableRepairTask {
       .onClick(() => {
         this.backToWorkbench();
       })
-
-      Text('附近故障')
-        .fontSize(24)
-        .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .width('100%')
     .height(60)
@@ -104,7 +126,7 @@ struct AvailableRepairTask {
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
 
-      Stack() {
+      Button({ type: ButtonType.Circle, stateEffect: true }) {
         SymbolGlyph($r('sys.symbol.location_up'))
           .fontSize(32)
           .fontColor(['#111827'])
@@ -112,10 +134,12 @@ struct AvailableRepairTask {
       .width(58)
       .height(58)
       .backgroundColor('#FFFFFF')
-      .borderRadius(29)
       .border({
         width: 1,
         color: '#E5E7EB'
+      })
+      .onClick(() => {
+        this.showAvailableTaskInfoDialog();
       })
     }
     .width('100%')
@@ -523,12 +547,14 @@ struct AvailableRepairTask {
 
   getSeverityTone(severity: FaultSeverity): string {
     switch (severity) {
+      case FaultSeverity.Emergency:
+        return '#D9480F';
+      case FaultSeverity.Severe:
+        return '#E67700';
       case FaultSeverity.General:
         return '#2F6FED';
-      case FaultSeverity.Major:
-        return '#E67700';
-      case FaultSeverity.Critical:
-        return '#D9480F';
+      case FaultSeverity.Minor:
+        return '#087F5B';
       default:
         return '#374151';
     }
@@ -544,6 +570,10 @@ struct AvailableRepairTask {
     }
 
     return '#495057';
+  }
+
+  showAvailableTaskInfoDialog(): void {
+    this.availableTaskInfoDialogController.open();
   }
 
   backToWorkbench(): void {

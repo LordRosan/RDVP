@@ -2,7 +2,11 @@ import { ApiResponse } from '../models/ApiModels';
 import {
   AvailableRepairTaskListResult,
   AvailableRepairTaskQuery,
+  MyRepairTaskListResult,
   RepairerAvailability,
+  RepairReportForm,
+  RepairReportRecord,
+  RepairReportResult,
   RepairTaskAcceptResult,
   RepairTaskStatus,
   RepairTaskValidationResult
@@ -12,6 +16,8 @@ import { ApiClient } from './ApiClient';
 const DEFAULT_RADIUS_KM = 10;
 const MIN_RADIUS_KM = 1;
 const MAX_RADIUS_KM = 100;
+const MAX_REPAIR_PROCESS_LENGTH = 1000;
+const MAX_PARTS_USED_LENGTH = 500;
 
 export class RepairTaskService {
   static getDefaultRadiusKm(): number {
@@ -90,6 +96,99 @@ export class RepairTaskService {
     return ApiClient.createServiceUnavailableResponse<RepairTaskAcceptResult>();
   }
 
+  static queryMyRepairTasks(): ApiResponse<MyRepairTaskListResult> {
+    if (!ApiClient.isConfigured()) {
+      return ApiClient.createServiceUnavailableResponse<MyRepairTaskListResult>();
+    }
+
+    return ApiClient.createServiceUnavailableResponse<MyRepairTaskListResult>();
+  }
+
+  static validateRepairReportForm(form: RepairReportForm): RepairTaskValidationResult {
+    const taskId = form.taskId.trim();
+    if (taskId.length === 0) {
+      return {
+        valid: false,
+        message: '请输入维修任务编号'
+      };
+    }
+
+    if (taskId.length > 64) {
+      return {
+        valid: false,
+        message: '维修任务编号不能超过64字'
+      };
+    }
+
+    if (!RepairTaskService.isKnownRepairReportResult(form.result)) {
+      return {
+        valid: false,
+        message: '请选择维修结果'
+      };
+    }
+
+    const repairedAt = form.repairedAt.trim();
+    if (repairedAt.length === 0) {
+      return {
+        valid: false,
+        message: '请输入维修完成时间'
+      };
+    }
+
+    if (repairedAt.length > 64) {
+      return {
+        valid: false,
+        message: '维修完成时间不能超过64字'
+      };
+    }
+
+    const processDescription = form.processDescription.trim();
+    if (processDescription.length === 0) {
+      return {
+        valid: false,
+        message: '请输入维修过程'
+      };
+    }
+
+    if (processDescription.length > MAX_REPAIR_PROCESS_LENGTH) {
+      return {
+        valid: false,
+        message: '维修过程不能超过1000字'
+      };
+    }
+
+    if (form.partsUsed.trim().length > MAX_PARTS_USED_LENGTH) {
+      return {
+        valid: false,
+        message: '更换部件不能超过500字'
+      };
+    }
+
+    return {
+      valid: true,
+      message: ''
+    };
+  }
+
+  static submitRepairReport(form: RepairReportForm): ApiResponse<RepairReportRecord> {
+    const validation = RepairTaskService.validateRepairReportForm(form);
+    if (!validation.valid) {
+      return {
+        success: false,
+        error: {
+          code: 'REPAIR_REPORT_INVALID',
+          message: validation.message
+        }
+      };
+    }
+
+    if (!ApiClient.isConfigured()) {
+      return ApiClient.createServiceUnavailableResponse<RepairReportRecord>();
+    }
+
+    return ApiClient.createServiceUnavailableResponse<RepairReportRecord>();
+  }
+
   static validateRepairTaskId(taskId: string): RepairTaskValidationResult {
     if (taskId.trim().length === 0) {
       return {
@@ -139,9 +238,28 @@ export class RepairTaskService {
     }
   }
 
+  static formatRepairReportResult(result: RepairReportResult): string {
+    switch (result) {
+      case RepairReportResult.Repaired:
+        return '已修复';
+      case RepairReportResult.TemporaryRestored:
+        return '临时恢复';
+      case RepairReportResult.Unresolved:
+        return '未修复';
+      default:
+        return '-';
+    }
+  }
+
   private static isKnownAvailability(availability: RepairerAvailability): boolean {
     return availability === RepairerAvailability.Idle ||
       availability === RepairerAvailability.Busy ||
       availability === RepairerAvailability.Offline;
+  }
+
+  private static isKnownRepairReportResult(result: RepairReportResult): boolean {
+    return result === RepairReportResult.Repaired ||
+      result === RepairReportResult.TemporaryRestored ||
+      result === RepairReportResult.Unresolved;
   }
 }

@@ -116,12 +116,16 @@ export class FaultReportService {
     switch (type) {
       case FaultType.OperationAbnormal:
         return '运行异常';
-      case FaultType.NetworkAbnormal:
-        return '通信异常';
       case FaultType.HardwareDamage:
         return '部件损坏';
-      case FaultType.SafetyRisk:
-        return '安全风险';
+      case FaultType.CommunicationFault:
+        return '通信故障';
+      case FaultType.LogicFault:
+        return '逻辑故障';
+      case FaultType.EnergyFault:
+        return '能源故障';
+      case FaultType.ExternalFactor:
+        return '外部因素';
       case FaultType.Other:
         return '其他';
       default:
@@ -131,12 +135,50 @@ export class FaultReportService {
 
   static formatSeverity(severity: FaultSeverity): string {
     switch (severity) {
+      case FaultSeverity.Emergency:
+        return '紧急';
+      case FaultSeverity.Severe:
+        return '严重';
       case FaultSeverity.General:
         return '一般';
-      case FaultSeverity.Major:
-        return '重大';
-      case FaultSeverity.Critical:
-        return '紧急';
+      case FaultSeverity.Minor:
+        return '轻微';
+      default:
+        return '-';
+    }
+  }
+
+  static formatSeverityDescription(severity: FaultSeverity): string {
+    switch (severity) {
+      case FaultSeverity.Emergency:
+        return '核心功能完全不可用，影响所有用户，造成重大损失；设备完全停机，可能引发安全事故或严重生产中断';
+      case FaultSeverity.Severe:
+        return '核心功能受损，大部分用户受影响，但非全部；设备运行效率极低，很大可能停机，严重影响产量或质量';
+      case FaultSeverity.General:
+        return '非核心功能异常，部分用户受影响，有临时方案；设备降效运行，但未停机，明显影响产量或质量';
+      case FaultSeverity.Minor:
+        return '不影响业务，可正常运行，但存在隐患或小缺陷';
+      default:
+        return '-';
+    }
+  }
+
+  static formatFaultTypeDescription(type: FaultType): string {
+    switch (type) {
+      case FaultType.OperationAbnormal:
+        return '设备运行状态、性能输出或工作流程出现异常';
+      case FaultType.HardwareDamage:
+        return '硬件、结构件或关键部件损坏、失效或磨损超限';
+      case FaultType.CommunicationFault:
+        return '网络链路、协议交互、数据传输或远程连接异常';
+      case FaultType.LogicFault:
+        return '控制逻辑、业务规则、程序状态或配置逻辑异常';
+      case FaultType.EnergyFault:
+        return '供电、储能、电源链路、能耗或能源供应异常';
+      case FaultType.ExternalFactor:
+        return '环境、人为、施工、灾害等外部条件导致异常';
+      case FaultType.Other:
+        return '无法归入以上类别的故障';
       default:
         return '-';
     }
@@ -144,15 +186,18 @@ export class FaultReportService {
 
   private static isKnownFaultType(type: FaultType): boolean {
     return type === FaultType.OperationAbnormal ||
-      type === FaultType.NetworkAbnormal ||
       type === FaultType.HardwareDamage ||
-      type === FaultType.SafetyRisk ||
+      type === FaultType.CommunicationFault ||
+      type === FaultType.LogicFault ||
+      type === FaultType.EnergyFault ||
+      type === FaultType.ExternalFactor ||
       type === FaultType.Other;
   }
 
   private static isKnownSeverity(severity: FaultSeverity): boolean {
-    return severity === FaultSeverity.General ||
-      severity === FaultSeverity.Major ||
-      severity === FaultSeverity.Critical;
+    return severity === FaultSeverity.Emergency ||
+      severity === FaultSeverity.Severe ||
+      severity === FaultSeverity.General ||
+      severity === FaultSeverity.Minor;
   }
 }
