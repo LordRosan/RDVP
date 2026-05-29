@@ -1,6 +1,8 @@
 import { describe, it, expect } from '@ohos/hypium';
 import { AuthService } from '../main/ets/services/AuthService';
+import { DeviceArchiveChangeService } from '../main/ets/services/DeviceArchiveChangeService';
 import { DeviceService } from '../main/ets/services/DeviceService';
+import { DeviceStatus } from '../main/ets/models/DeviceModels';
 import { FaultSeverity, FaultType } from '../main/ets/models/FaultModels';
 import { RepairerAvailability, RepairReportResult } from '../main/ets/models/RepairTaskModels';
 import { VerificationResult } from '../main/ets/models/VerificationModels';
@@ -17,7 +19,7 @@ export default function localUnitTest() {
 
       expect(actions.length).assertEqual(7);
       expect(actions[0].id).assertEqual(WorkbenchActionId.DeviceQuery);
-      expect(actions[0].title).assertEqual('设备查询');
+      expect(actions[0].title).assertEqual('设备档案查询');
     });
 
     it('providesOperationalMetrics', 0, () => {
@@ -87,6 +89,124 @@ export default function localUnitTest() {
       });
 
       expect(result.valid).assertEqual(true);
+    });
+  });
+
+  describe('deviceChangeConfiguration', () => {
+    it('rejectsEmptyChangeDeviceCode', 0, () => {
+      const result = DeviceArchiveChangeService.validateChangeRequestForm({
+        deviceCode: '',
+        deviceName: '新设备名称',
+        model: '',
+        manufacturer: '',
+        locationAddress: '',
+        reason: '修正现场铭牌信息。'
+      });
+
+      expect(result.valid).assertEqual(false);
+      expect(result.message).assertEqual('请输入设备编号');
+    });
+
+    it('rejectsEmptyChangedFields', 0, () => {
+      const result = DeviceArchiveChangeService.validateChangeRequestForm({
+        deviceCode: 'RDVP-DEVICE-0001',
+        deviceName: '',
+        model: '',
+        manufacturer: '',
+        locationAddress: '',
+        reason: '修正现场铭牌信息。'
+      });
+
+      expect(result.valid).assertEqual(false);
+      expect(result.message).assertEqual('请至少填写一项需要变更的信息');
+    });
+
+    it('rejectsEmptyChangeReason', 0, () => {
+      const result = DeviceArchiveChangeService.validateChangeRequestForm({
+        deviceCode: 'RDVP-DEVICE-0001',
+        deviceName: '冷却泵A-01',
+        model: '',
+        manufacturer: '',
+        locationAddress: '',
+        reason: ''
+      });
+
+      expect(result.valid).assertEqual(false);
+      expect(result.message).assertEqual('请输入变更原因');
+    });
+
+    it('acceptsCompleteChangeRequest', 0, () => {
+      const result = DeviceArchiveChangeService.validateChangeRequestForm({
+        deviceCode: ' rdvp-device-0001 ',
+        deviceName: '冷却泵A-01',
+        model: 'CP-2000',
+        manufacturer: '',
+        locationAddress: '',
+        reason: '现场铭牌与系统档案不一致，需修正。'
+      });
+
+      expect(result.valid).assertEqual(true);
+      expect(result.normalizedDeviceCode).assertEqual('RDVP-DEVICE-0001');
+      expect(result.changeCount).assertEqual(2);
+    });
+
+    it('comparesChangeRequestWithBaseline', 0, () => {
+      const result = DeviceArchiveChangeService.validateChangeRequestForm({
+        deviceCode: 'RDVP-DEVICE-0001',
+        deviceName: '冷却泵A-02',
+        model: 'CP-1000',
+        manufacturer: '北方设备',
+        locationAddress: '一号厂房',
+        reason: '现场铭牌名称已更新。',
+        baseline: {
+          deviceName: '冷却泵A-01',
+          model: 'CP-1000',
+          manufacturer: '北方设备',
+          locationAddress: '一号厂房'
+        }
+      });
+
+      expect(result.valid).assertEqual(true);
+      expect(result.changeCount).assertEqual(1);
+    });
+
+    it('rejectsUnchangedPrefilledArchive', 0, () => {
+      const result = DeviceArchiveChangeService.validateChangeRequestForm({
+        deviceCode: 'RDVP-DEVICE-0001',
+        deviceName: '冷却泵A-01',
+        model: 'CP-1000',
+        manufacturer: '北方设备',
+        locationAddress: '一号厂房',
+        reason: '现场信息确认无误。',
+        baseline: {
+          deviceName: '冷却泵A-01',
+          model: 'CP-1000',
+          manufacturer: '北方设备',
+          locationAddress: '一号厂房'
+        }
+      });
+
+      expect(result.valid).assertEqual(false);
+      expect(result.message).assertEqual('请至少填写一项需要变更的信息');
+    });
+
+    it('formatsArchiveStatusAndChangeLock', 0, () => {
+      expect(DeviceService.formatDeviceStatus(DeviceStatus.ChangePendingReview)).assertEqual('变更待审核');
+      expect(DeviceService.isArchiveChangeLocked({
+        id: 'device-1',
+        deviceCode: 'RDVP-DEVICE-0001',
+        name: '冷却泵A-01',
+        model: 'CP-1000',
+        manufacturer: '北方设备',
+        location: {
+          address: '一号厂房'
+        },
+        status: DeviceStatus.ChangePendingReview,
+        changeState: {
+          locked: true,
+          pendingRequestId: 'RDVP-CHANGE-0001'
+        }
+      })).assertEqual(true);
     });
   });
 

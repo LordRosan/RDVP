@@ -38,8 +38,8 @@ export class WorkbenchService {
     return [
       {
         id: WorkbenchActionId.DeviceQuery,
-        title: '设备查询',
-        summary: '按编号或二维码定位设备',
+        title: '设备档案查询',
+        summary: '按编号或二维码定位档案',
         tone: '#2F6FED'
       },
       {

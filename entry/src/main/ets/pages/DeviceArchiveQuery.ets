@@ -1,16 +1,47 @@
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { detectBarcode, scanBarcode, scanCore } from '@kit.ScanKit';
-import { DeviceQueryMode } from '../models/DeviceModels';
+import { InfoDialog, InfoDialogSection } from '../components/InfoDialog';
+import { DeviceQueryMode, DeviceSummary } from '../models/DeviceModels';
 import { DeviceService } from '../services/DeviceService';
+import { DeviceArchiveFlowStore } from '../stores/DeviceArchiveFlowStore';
+
+const DEVICE_ARCHIVE_QUERY_INFO_SECTIONS: InfoDialogSection[] = [
+  {
+    title: '设备档案查询',
+    items: [
+      {
+        label: '设备编号',
+        description: '使用系统内唯一编号查询设备档案，适合已知编号或现场记录明确的场景'
+      },
+      {
+        label: '二维码',
+        description: '通过扫描或上传二维码解析设备标识和防伪信息，用于快速定位设备档案'
+      },
+      {
+        label: '档案详情',
+        description: '查询成功后进入设备档案详情，再根据档案状态决定是否发起变更申请'
+      }
+    ]
+  }
+];
 
 @Entry
 @Component
-struct DeviceQuery {
+struct DeviceArchiveQuery {
   @State queryMode: DeviceQueryMode = DeviceQueryMode.Code;
   @State deviceCode: string = '';
   @State qrContent: string = '';
   @State message: string = '';
   @State normalizedDeviceCode: string = '-';
+  private queryInfoDialogController: CustomDialogController = new CustomDialogController({
+    builder: InfoDialog({
+      title: '设备档案查询说明',
+      sections: DEVICE_ARCHIVE_QUERY_INFO_SECTIONS
+    }),
+    autoCancel: true,
+    alignment: DialogAlignment.Center,
+    customStyle: true
+  });
 
   build() {
     Scroll() {
@@ -80,12 +111,19 @@ struct DeviceQuery {
   ModeHeader() {
     Row({ space: 16 }) {
       Column({ space: 6 }) {
-        Text(this.getModeTitle())
-          .fontSize(34)
-          .fontWeight(FontWeight.Bold)
-          .fontColor('#111827')
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Row({ space: 6 }) {
+          Text('设备档案查询')
+            .fontSize(34)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#111827')
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+          this.InfoButton(() => {
+            this.showQueryInfoDialog();
+          })
+        }
+        .alignItems(VerticalAlign.Center)
 
         Text(this.getModeSubtitle())
           .fontSize(15)
@@ -143,7 +181,7 @@ struct DeviceQuery {
   @Builder
   DeviceCodePanel() {
     Column({ space: 14 }) {
-      Text('设备编号')
+      Text('设备编号查询')
         .fontSize(17)
         .fontWeight(FontWeight.Bold)
         .fontColor('#111827')
@@ -194,6 +232,12 @@ struct DeviceQuery {
   @Builder
   QrQueryPanel() {
     Column({ space: 14 }) {
+      Text('二维码查询')
+        .fontSize(17)
+        .fontWeight(FontWeight.Bold)
+        .fontColor('#111827')
+        .maxLines(1)
+
       Stack() {
         if (this.qrContent.length > 0) {
           Text(this.qrContent)
@@ -307,6 +351,21 @@ struct DeviceQuery {
   }
 
   @Builder
+  InfoButton(action: () => void) {
+    Button({ type: ButtonType.Circle, stateEffect: true }) {
+      SymbolGlyph($r('sys.symbol.info_circle'))
+        .fontSize(18)
+        .fontColor(['#111827'])
+    }
+    .width(28)
+    .height(28)
+    .backgroundColor('#00000000')
+    .onClick(() => {
+      action();
+    })
+  }
+
+  @Builder
   ResultPanel() {
     Column({ space: 10 }) {
       Text('查询状态')
@@ -376,7 +435,7 @@ struct DeviceQuery {
   }
 
   getModeTitle(): string {
-    return this.queryMode === DeviceQueryMode.Code ? '设备编号查询' : '二维码查询';
+    return '设备档案查询';
   }
 
   getModeSubtitle(): string {
@@ -399,7 +458,12 @@ struct DeviceQuery {
 
     if (!response.success) {
       const error = response.error;
-      this.message = error ? error.message : '设备查询失败';
+      this.message = error ? error.message : '设备档案查询失败';
+      return;
+    }
+
+    if (response.data !== undefined) {
+      this.openDeviceArchiveDetail(response.data);
     }
   }
 
@@ -463,6 +527,11 @@ struct DeviceQuery {
     if (!response.success) {
       const error = response.error;
       this.message = error ? error.message : '二维码查询失败';
+      return;
+    }
+
+    if (response.data !== undefined) {
+      this.openDeviceArchiveDetail(response.data);
     }
   }
 
@@ -489,8 +558,23 @@ struct DeviceQuery {
     return this.qrContent;
   }
 
+  showQueryInfoDialog(): void {
+    this.queryInfoDialogController.open();
+  }
+
+  openDeviceArchiveDetail(device: DeviceSummary): void {
+    DeviceArchiveFlowStore.startFlow(device);
+
+    try {
+      this.getUIContext().getRouter().pushUrl({ url: 'pages/DeviceArchiveDetail' });
+    } catch (err) {
+      this.message = '设备档案详情不可用';
+    }
+  }
+
   backToWorkbench(): void {
     try {
+      DeviceArchiveFlowStore.clearFlow();
       const router = this.getUIContext().getRouter();
       if (router.getState().index > 1) {
         router.back();

@@ -3,6 +3,7 @@ import { ApiResponse } from '../models/ApiModels';
 import {
   DeviceCodeQueryForm,
   DeviceCodeValidationResult,
+  DeviceStatus,
   DeviceQrQueryForm,
   DeviceQrValidationResult,
   DeviceSummary
@@ -109,5 +110,87 @@ export class DeviceService {
     }
 
     return ApiClient.createServiceUnavailableResponse<DeviceSummary>();
+  }
+
+  static formatDeviceStatus(status: DeviceStatus): string {
+    switch (status) {
+      case DeviceStatus.Normal:
+        return '正常';
+      case DeviceStatus.PendingVerification:
+        return '待核验';
+      case DeviceStatus.ChangePendingReview:
+        return '变更待审核';
+      case DeviceStatus.Faulted:
+        return '故障中';
+      case DeviceStatus.UnderRepair:
+        return '维修中';
+      case DeviceStatus.PendingReinspection:
+        return '待复检';
+      case DeviceStatus.Disabled:
+        return '停用';
+      case DeviceStatus.Retired:
+        return '已退役';
+      default:
+        return '-';
+    }
+  }
+
+  static getDeviceStatusTone(status: DeviceStatus): string {
+    switch (status) {
+      case DeviceStatus.Normal:
+        return '#087F5B';
+      case DeviceStatus.PendingVerification:
+      case DeviceStatus.ChangePendingReview:
+      case DeviceStatus.PendingReinspection:
+        return '#E67700';
+      case DeviceStatus.Faulted:
+      case DeviceStatus.Disabled:
+        return '#D9480F';
+      case DeviceStatus.UnderRepair:
+        return '#2F6FED';
+      case DeviceStatus.Retired:
+        return '#6B7280';
+      default:
+        return '#374151';
+    }
+  }
+
+  static isArchiveChangeLocked(device: DeviceSummary): boolean {
+    const changeState = device.changeState;
+    if (changeState === undefined) {
+      return false;
+    }
+
+    if (changeState.locked) {
+      return true;
+    }
+
+    if (changeState.freezeUntil === undefined || changeState.freezeUntil.length === 0) {
+      return false;
+    }
+
+    const freezeUntil = new Date(changeState.freezeUntil);
+    if (freezeUntil.getTime() !== freezeUntil.getTime()) {
+      return false;
+    }
+
+    return freezeUntil.getTime() > Date.now();
+  }
+
+  static formatArchiveChangeLockReason(device: DeviceSummary): string {
+    const changeState = device.changeState;
+    if (changeState === undefined) {
+      return '可申请变更';
+    }
+
+    if (changeState.locked) {
+      return '存在待审核变更，暂不可再次修改';
+    }
+
+    if (DeviceService.isArchiveChangeLocked(device) && changeState.freezeUntil !== undefined) {
+      return `变更冻结中，${changeState.freezeUntil} 后可再次修改`;
+    }
+
+    return '可申请变更';
   }
 }

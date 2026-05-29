@@ -220,9 +220,9 @@ struct Index {
 
     if (action.id === WorkbenchActionId.DeviceQuery) {
       try {
-        this.getUIContext().getRouter().pushUrl({ url: 'pages/DeviceQuery' });
+        this.getUIContext().getRouter().pushUrl({ url: 'pages/DeviceArchiveQuery' });
       } catch (err) {
-        this.actionMessage = '设备查询不可用';
+        this.actionMessage = '设备档案查询不可用';
       }
       return;
     }

@@ -128,8 +128,8 @@ struct MyRepairTask {
 
   @Builder
   ModeHeader() {
-    Row({ space: 16 }) {
-      Column({ space: 6 }) {
+    Column({ space: 6 }) {
+      Row({ space: 6 }) {
         Text('我的维修')
           .fontSize(34)
           .fontWeight(FontWeight.Bold)
@@ -137,33 +137,20 @@ struct MyRepairTask {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-        Text('处理已接取任务')
-          .fontSize(15)
-          .fontColor('#6B7280')
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        this.InfoButton(() => {
+          this.showMyRepairTaskInfoDialog();
+        })
       }
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start)
+      .alignItems(VerticalAlign.Center)
 
-      Button({ type: ButtonType.Circle, stateEffect: true }) {
-        SymbolGlyph($r('sys.symbol.wrench_and_screwdriver'))
-          .fontSize(32)
-          .fontColor(['#111827'])
-      }
-      .width(58)
-      .height(58)
-      .backgroundColor('#FFFFFF')
-      .border({
-        width: 1,
-        color: '#E5E7EB'
-      })
-      .onClick(() => {
-        this.showMyRepairTaskInfoDialog();
-      })
+      Text('处理已接取任务')
+        .fontSize(15)
+        .fontColor('#6B7280')
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .width('100%')
-    .alignItems(VerticalAlign.Center)
+    .alignItems(HorizontalAlign.Start)
     .padding({
       top: 0,
       bottom: 2
@@ -631,6 +618,21 @@ struct MyRepairTask {
     .height(54)
     .width('100%')
     .backgroundColor('#2F6FED')
+    .onClick(() => {
+      action();
+    })
+  }
+
+  @Builder
+  InfoButton(action: () => void) {
+    Button({ type: ButtonType.Circle, stateEffect: true }) {
+      SymbolGlyph($r('sys.symbol.info_circle'))
+        .fontSize(18)
+        .fontColor(['#111827'])
+    }
+    .width(28)
+    .height(28)
+    .backgroundColor('#00000000')
     .onClick(() => {
       action();
     })

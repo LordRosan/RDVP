@@ -147,8 +147,8 @@ struct FaultReport {
 
   @Builder
   ModeHeader() {
-    Row({ space: 16 }) {
-      Column({ space: 6 }) {
+    Column({ space: 6 }) {
+      Row({ space: 6 }) {
         Text('故障报告')
           .fontSize(34)
           .fontWeight(FontWeight.Bold)
@@ -156,33 +156,20 @@ struct FaultReport {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-        Text('登记设备故障信息')
-          .fontSize(15)
-          .fontColor('#6B7280')
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        this.InfoButton(() => {
+          this.showFaultReportInfoDialog();
+        })
       }
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start)
+      .alignItems(VerticalAlign.Center)
 
-      Button({ type: ButtonType.Circle, stateEffect: true }) {
-        SymbolGlyph($r('sys.symbol.exclamationmark_message'))
-          .fontSize(32)
-          .fontColor(['#111827'])
-      }
-      .width(58)
-      .height(58)
-      .backgroundColor('#FFFFFF')
-      .border({
-        width: 1,
-        color: '#E5E7EB'
-      })
-      .onClick(() => {
-        this.showFaultReportInfoDialog();
-      })
+      Text('登记设备故障信息')
+        .fontSize(15)
+        .fontColor('#6B7280')
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .width('100%')
-    .alignItems(VerticalAlign.Center)
+    .alignItems(HorizontalAlign.Start)
     .padding({
       top: 0,
       bottom: 2
@@ -560,6 +547,21 @@ struct FaultReport {
     .height(54)
     .width('100%')
     .backgroundColor('#2F6FED')
+    .onClick(() => {
+      action();
+    })
+  }
+
+  @Builder
+  InfoButton(action: () => void) {
+    Button({ type: ButtonType.Circle, stateEffect: true }) {
+      SymbolGlyph($r('sys.symbol.info_circle'))
+        .fontSize(18)
+        .fontColor(['#111827'])
+    }
+    .width(28)
+    .height(28)
+    .backgroundColor('#00000000')
     .onClick(() => {
       action();
     })

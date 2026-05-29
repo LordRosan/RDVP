@@ -2,7 +2,9 @@
   "src": [
     "pages/Index",
     "pages/Login",
-    "pages/DeviceQuery",
+    "pages/DeviceArchiveQuery",
+    "pages/DeviceArchiveDetail",
+    "pages/DeviceArchiveChange",
     "pages/DeviceVerification",
     "pages/FaultReport",
     "pages/AvailableRepairTask",

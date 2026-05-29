@@ -20,6 +20,12 @@ export interface DeviceLocation {
   latitude?: number;
 }
 
+export interface DeviceArchiveChangeState {
+  locked: boolean;
+  pendingRequestId?: string;
+  freezeUntil?: string;
+}
+
 export interface DeviceSummary {
   id: string;
   deviceCode: string;
@@ -29,6 +35,7 @@ export interface DeviceSummary {
   location: DeviceLocation;
   status: DeviceStatus;
   lastVerificationTime?: string;
+  changeState?: DeviceArchiveChangeState;
 }
 
 export interface DeviceCodeQueryForm {
