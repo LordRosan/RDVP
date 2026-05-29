@@ -2,7 +2,7 @@
 
 RDVP 是一个基于 HarmonyOS 的远程设备核验与运维报告系统。项目面向分布式设备管理场景，提供设备编号查询、二维码防伪查询、设备状态核验、设备信息变更审核、故障报告、维修接取、维修报告、重大故障复检、离线草稿和操作审计等能力。
 
-本仓库当前包含 HarmonyOS 移动端工程和项目设计文档。移动端已具备工作台、登录、设备档案查询、二维码查询、状态核验、档案变更申请、故障报告、维修接取、维修报告、复检任务和操作记录等基础页面与本地运行闭环；后端服务、数据库脚本和部署说明后续按文档边界补充。
+本仓库当前包含 HarmonyOS 移动端工程、后端服务和项目设计文档。移动端已具备工作台、登录、设备档案查询、二维码查询、状态核验、档案变更申请、故障报告、维修接取、维修报告、复检任务和操作记录等基础页面与本地运行闭环；后端服务已提供认证、设备查询、二维码防伪校验、设备档案变更审核、故障接取、维修报告、复检和审计日志的首批 API 工作流。
 
 ## 项目组成
 
@@ -10,11 +10,14 @@ RDVP 是一个基于 HarmonyOS 的远程设备核验与运维报告系统。项�
 RDVP/
   AppScope/                  HarmonyOS 应用级配置
   entry/                     HarmonyOS 主模块
+  backend-service/           后端服务
   docs/                      项目文档
   hvigor/                    Hvigor 构建配置
   build-profile.json5        工程构建配置
   code-linter.json5          代码检查配置
   hvigorfile.ts              根构建脚本
+  package.json               npm workspace 配置
+  package-lock.json          npm 依赖锁定文件
   oh-package.json5           OpenHarmony 包配置
   oh-package-lock.json5      依赖锁定文件
 ```
@@ -55,6 +58,8 @@ RDVP/
 - ArkTS
 - Stage 模型
 - Phone 设备类型
+- Node.js 22+
+- TypeScript
 
 ## 仓库要求
 

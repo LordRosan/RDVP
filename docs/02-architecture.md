@@ -157,6 +157,8 @@ backend-service/
     audit/       操作日志和审计事件
 ```
 
+当前 `backend-service` 的第一阶段实现使用内存型基础设施适配器，用于验证 API 边界、领域状态流转和本地开发流程。后续接入数据库时应保持 `application` 与 `domain` 层规则稳定，将持久化实现替换到 `infrastructure` 层。
+
 分层规则：
 
 - `api` 层只负责协议适配、参数接收和响应输出。

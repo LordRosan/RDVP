@@ -1,0 +1,14 @@
+{
+  "name": "rdvp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "RDVP workspace",
+  "workspaces": [
+    "backend-service"
+  ],
+  "scripts": {
+    "backend:build": "npm --workspace @rdvp/backend-service run build",
+    "backend:test": "npm --workspace @rdvp/backend-service test",
+    "backend:start": "npm --workspace @rdvp/backend-service start"
+  }
+}

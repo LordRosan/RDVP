@@ -1,5 +1,7 @@
 /node_modules
+/backend-service/node_modules
 /oh_modules
+/backend-service/dist
 /local.properties
 /.idea
 **/build

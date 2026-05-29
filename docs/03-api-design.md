@@ -901,7 +901,7 @@ SUCCESS
 FAILED
 ```
 
-### 18.7 离线记录类型
+### 18.10 离线记录类型
 
 ```text
 VERIFICATION_RECORD
@@ -920,6 +920,8 @@ REINSPECTION_RECORD
 | `QR_CODE_INVALID` | 二维码内容无效 |
 | `QR_CODE_EXPIRED` | 二维码已过期 |
 | `QR_CODE_SIGNATURE_INVALID` | 二维码签名校验失败 |
+| `DEVICE_CHANGE_LOCKED` | 设备存在待审核变更申请 |
+| `DEVICE_CHANGE_FROZEN` | 设备处于变更冻结期 |
 | `CHANGE_REQUEST_NOT_FOUND` | 设备信息变更申请不存在 |
 | `CHANGE_REQUEST_ALREADY_REVIEWED` | 设备信息变更申请已审核 |
 | `FAULT_REPORT_NOT_FOUND` | 故障报告不存在 |

@@ -325,11 +325,13 @@ INDEX(verifier_id, verified_at)
 | `device_id` | id | 是 | FK devices.id, INDEX | 设备 ID |
 | `applicant_id` | id | 是 | FK users.id, INDEX | 申请人 |
 | `status` | string(32) | 是 | INDEX | 申请状态 |
+| `previous_device_status` | string(32) | 是 |  | 申请创建前设备状态 |
 | `reason` | text | 是 |  | 申请原因 |
 | `changes` | json | 是 |  | 字段变更内容 |
 | `reviewer_id` | id | 否 | FK users.id, INDEX | 审核人 |
 | `review_comment` | text | 否 |  | 审核意见 |
 | `reviewed_at` | datetime | 否 | INDEX | 审核时间 |
+| `freeze_until` | datetime | 否 | INDEX | 审核通过后的变更冻结截止时间 |
 | `created_at` | datetime | 是 |  | 创建时间 |
 | `created_by` | id | 是 | FK users.id | 创建人 |
 | `updated_at` | datetime | 是 |  | 更新时间 |
@@ -373,7 +375,7 @@ INDEX(reviewer_id, reviewed_at)
 | `device_id` | id | 是 | FK devices.id, INDEX | 设备 ID |
 | `reporter_id` | id | 是 | FK users.id, INDEX | 报告人 |
 | `fault_type` | string(64) | 是 | INDEX | 故障类型 |
-| `fault_level` | string(32) | 是 | INDEX | 故障等级 |
+| `severity` | string(32) | 是 | INDEX | 故障等级 |
 | `description` | text | 是 |  | 故障描述 |
 | `status` | string(32) | 是 | INDEX | 故障状态 |
 | `occurred_at` | datetime | 是 | INDEX | 发生时间 |
@@ -394,7 +396,7 @@ INDEX(reviewer_id, reviewed_at)
 UNIQUE(fault_report_no)
 INDEX(device_id, status)
 INDEX(reporter_id, created_at)
-INDEX(fault_level, status)
+INDEX(severity, status)
 INDEX(reported_longitude, reported_latitude)
 ```
 
@@ -450,8 +452,8 @@ INDEX(maintainer_id, status)
 
 ```text
 REPAIRED
-NOT_REPAIRED
-PARTIALLY_REPAIRED
+TEMPORARY_RESTORED
+UNRESOLVED
 ```
 
 ## 11. 复检
