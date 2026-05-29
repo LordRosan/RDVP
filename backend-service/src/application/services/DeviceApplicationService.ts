@@ -1,8 +1,8 @@
 import { timingSafeEqual } from 'node:crypto';
 import { AuditLogService } from '../../audit/AuditLogService.js';
 import { badRequest, notFound } from '../../domain/errors.js';
-import { Device, GeoPoint, UserAccount } from '../../domain/models/entities.js';
-import { OperationRecordStatus } from '../../domain/models/enums.js';
+import { Device, DeviceVerificationRecord, GeoPoint, UserAccount } from '../../domain/models/entities.js';
+import { OperationRecordStatus, VerificationResult } from '../../domain/models/enums.js';
 import { InMemoryDatabase } from '../../infrastructure/InMemoryDatabase.js';
 
 export class DeviceApplicationService {
@@ -90,6 +90,72 @@ export class DeviceApplicationService {
       valid: true,
       device: this.cloneDevice(device)
     };
+  }
+
+  submitVerificationRecord(input: {
+    deviceId: string;
+    result: VerificationResult;
+    description: string;
+    remark?: string;
+    verifiedAt?: string;
+    location?: GeoPoint;
+    actor: UserAccount;
+    requestId?: string;
+  }): DeviceVerificationRecord {
+    const device = this.database.devices.find((item) => item.id === input.deviceId);
+    if (device === undefined) {
+      throw notFound('DEVICE_NOT_FOUND', 'Device not found.');
+    }
+
+    if (!Object.values(VerificationResult).includes(input.result)) {
+      throw badRequest('VERIFICATION_RESULT_INVALID', 'Verification result is invalid.');
+    }
+
+    const description = input.description.trim();
+    if (description.length === 0) {
+      throw badRequest('VALIDATION_FAILED', 'Verification description is required.');
+    }
+
+    const now = this.database.now();
+    const verifiedAt = input.verifiedAt?.trim() || now;
+    const record: DeviceVerificationRecord = {
+      id: this.database.nextId('verification'),
+      deviceId: device.id,
+      verifierId: input.actor.id,
+      result: input.result,
+      description,
+      remark: input.remark?.trim(),
+      location: input.location,
+      verifiedAt,
+      createdAt: now
+    };
+
+    this.database.deviceVerificationRecords.unshift(record);
+    device.lastVerificationTime = verifiedAt;
+    device.updatedAt = now;
+
+    this.auditLogService.record({
+      action: 'DEVICE_VERIFICATION',
+      targetType: 'DEVICE',
+      targetId: device.id,
+      targetNo: device.deviceCode,
+      actor: input.actor,
+      description: 'Submitted device verification record.',
+      requestId: input.requestId
+    });
+
+    return { ...record };
+  }
+
+  listVerificationRecords(deviceId: string): DeviceVerificationRecord[] {
+    const device = this.database.devices.find((item) => item.id === deviceId);
+    if (device === undefined) {
+      throw notFound('DEVICE_NOT_FOUND', 'Device not found.');
+    }
+
+    return this.database.deviceVerificationRecords
+      .filter((record) => record.deviceId === deviceId)
+      .map((record) => ({ ...record }));
   }
 
   normalizeDeviceCode(deviceCode: string): string {

@@ -326,12 +326,12 @@ POST /api/v1/devices/{deviceId}/verification-records
 {
   "result": "NORMAL",
   "description": "Device is operating normally.",
+  "remark": "No abnormal noise.",
   "verifiedAt": "2026-05-27T07:30:00Z",
   "location": {
     "longitude": 114.1694,
     "latitude": 22.3193
-  },
-  "attachmentIds": ["attachment-id"]
+  }
 }
 ```
 
@@ -342,6 +342,8 @@ POST /api/v1/devices/{deviceId}/verification-records
   "id": "verification-record-id",
   "deviceId": "device-id",
   "result": "NORMAL",
+  "description": "Device is operating normally.",
+  "verifiedAt": "2026-05-27T07:30:00Z",
   "createdAt": "2026-05-27T07:30:00Z"
 }
 ```

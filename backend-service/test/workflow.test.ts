@@ -44,6 +44,34 @@ test('verifies signed QR content and rejects tampered signatures', async () => {
   });
 });
 
+test('submits device verification record and updates last verification time', async () => {
+  await withClient(async (client) => {
+    const verifierToken = await client.login('verifier');
+    const device = await client.request('GET', '/api/v1/devices/by-code/RDVP-DEVICE-0001', undefined, verifierToken);
+    assert.equal(device.status, 200);
+
+    const verifiedAt = '2026-05-29T09:30:00.000Z';
+    const created = await client.request('POST', `/api/v1/devices/${device.body.data.id}/verification-records`, {
+      result: 'NORMAL',
+      description: 'Device is operating normally during site verification.',
+      remark: 'No abnormal noise.',
+      verifiedAt
+    }, verifierToken);
+
+    assert.equal(created.status, 201);
+    assert.equal(created.body.data.deviceId, device.body.data.id);
+    assert.equal(created.body.data.result, 'NORMAL');
+    assert.equal(created.body.data.verifiedAt, verifiedAt);
+
+    const records = await client.request('GET', `/api/v1/devices/${device.body.data.id}/verification-records`, undefined, verifierToken);
+    assert.equal(records.status, 200);
+    assert.equal(records.body.data.total, 1);
+
+    const updatedDevice = await client.request('GET', '/api/v1/devices/by-code/RDVP-DEVICE-0001', undefined, verifierToken);
+    assert.equal(updatedDevice.body.data.lastVerificationTime, verifiedAt);
+  });
+});
+
 test('locks device archive changes until review and enforces freeze after approval', async () => {
   await withClient(async (client) => {
     const reporterToken = await client.login('reporter');

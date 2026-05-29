@@ -13,6 +13,15 @@ import { LocalOperationRecordRepository } from './LocalOperationRecordRepository
 const MAX_DESCRIPTION_LENGTH = 500;
 const MAX_REMARK_LENGTH = 300;
 
+interface DeviceVerificationApiResult {
+  id: string;
+  result: string;
+  description: string;
+  remark?: string;
+  verifiedAt: string;
+  createdAt: string;
+}
+
 export class DeviceVerificationService {
   static normalizeText(value: string): string {
     return value.trim();
@@ -83,6 +92,82 @@ export class DeviceVerificationService {
     }
 
     return ApiClient.createServiceUnavailableResponse<DeviceVerificationRecord>();
+  }
+
+  static async submitVerificationRemoteFirst(form: DeviceVerificationForm): Promise<ApiResponse<DeviceVerificationRecord>> {
+    const validation = DeviceVerificationService.validateVerificationForm(form);
+    if (!validation.valid) {
+      return {
+        success: false,
+        error: {
+          code: 'DEVICE_VERIFICATION_INVALID',
+          message: validation.message
+        }
+      };
+    }
+
+    if (!ApiClient.isConfigured()) {
+      return DeviceVerificationService.createLocalVerificationResponse(form);
+    }
+
+    const deviceResponse = await DeviceService.queryByCodeRemoteFirst({
+      deviceCode: form.deviceCode
+    });
+    if (!deviceResponse.success || deviceResponse.data === undefined) {
+      return {
+        success: false,
+        error: deviceResponse.error,
+        requestId: deviceResponse.requestId,
+        timestamp: deviceResponse.timestamp
+      };
+    }
+
+    const response = await ApiClient.request<DeviceVerificationApiResult>(
+      `/api/v1/devices/${encodeURIComponent(deviceResponse.data.id)}/verification-records`,
+      'POST',
+      true,
+      JSON.stringify({
+        result: form.result,
+        description: DeviceVerificationService.normalizeText(form.description),
+        remark: DeviceVerificationService.normalizeText(form.remark),
+        verifiedAt: new Date().toISOString()
+      })
+    );
+
+    if (!response.success) {
+      return {
+        success: false,
+        error: response.error,
+        requestId: response.requestId,
+        timestamp: response.timestamp
+      };
+    }
+
+    if (response.data === undefined) {
+      return {
+        success: false,
+        error: {
+          code: 'DEVICE_VERIFICATION_RESPONSE_INVALID',
+          message: '核验记录响应无效'
+        },
+        requestId: response.requestId,
+        timestamp: response.timestamp
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        id: response.data.id,
+        deviceCode: DeviceService.normalizeDeviceCode(form.deviceCode),
+        result: response.data.result as VerificationResult,
+        description: response.data.description,
+        remark: response.data.remark,
+        submittedAt: response.data.createdAt
+      },
+      requestId: response.requestId,
+      timestamp: response.timestamp
+    };
   }
 
   static formatVerificationResult(result: VerificationResult): string {

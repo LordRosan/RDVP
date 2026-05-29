@@ -44,6 +44,7 @@ struct DeviceVerification {
   @State message: string = '';
   @State messageTone: string = '#D9480F';
   @State normalizedDeviceCode: string = '-';
+  @State submitting: boolean = false;
   private verificationInfoDialogController: CustomDialogController = new CustomDialogController({
     builder: InfoDialog({
       title: '状态核验说明',
@@ -161,7 +162,7 @@ struct DeviceVerification {
       this.DescriptionField()
       this.RemarkField()
       this.MessageText()
-      this.ActionButton('提交核验', $r('sys.symbol.checkmark_circle'), () => {
+      this.ActionButton(this.submitting ? '提交中' : '提交核验', $r('sys.symbol.checkmark_circle'), !this.submitting, () => {
         this.submitVerification();
       })
     }
@@ -355,7 +356,7 @@ struct DeviceVerification {
   }
 
   @Builder
-  ActionButton(label: string, icon: Resource, action: () => void) {
+  ActionButton(label: string, icon: Resource, enabled: boolean, action: () => void) {
     Button({ type: ButtonType.Capsule, stateEffect: true }) {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
@@ -375,6 +376,7 @@ struct DeviceVerification {
     .height(54)
     .width('100%')
     .backgroundColor('#2F6FED')
+    .enabled(enabled)
     .onClick(() => {
       action();
     })
@@ -459,13 +461,19 @@ struct DeviceVerification {
     .width('100%')
   }
 
-  submitVerification(): void {
-    const response = DeviceVerificationService.submitVerification({
+  async submitVerification(): Promise<void> {
+    if (this.submitting) {
+      return;
+    }
+
+    this.submitting = true;
+    const response = await DeviceVerificationService.submitVerificationRemoteFirst({
       deviceCode: this.deviceCode,
       result: this.verificationResult,
       description: this.description,
       remark: this.remark
     });
+    this.submitting = false;
 
     this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(this.deviceCode);
     if (this.normalizedDeviceCode.length === 0) {

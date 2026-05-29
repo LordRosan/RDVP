@@ -24,6 +24,7 @@ npm run backend:start
 | 用户名 | 角色 |
 | --- | --- |
 | `admin` | `SYSTEM_ADMIN` |
+| `verifier` | `VERIFIER` |
 | `reporter` | `FAULT_REPORTER` |
 | `maintainer` | `MAINTAINER` |
 | `reinspector` | `REINSPECTOR` |

@@ -20,6 +20,12 @@ export enum DeviceStatus {
   Retired = 'RETIRED'
 }
 
+export enum VerificationResult {
+  Normal = 'NORMAL',
+  Abnormal = 'ABNORMAL',
+  Unavailable = 'UNAVAILABLE'
+}
+
 export enum ChangeRequestStatus {
   PendingReview = 'PENDING_REVIEW',
   Approved = 'APPROVED',

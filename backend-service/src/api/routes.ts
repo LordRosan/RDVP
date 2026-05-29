@@ -8,7 +8,8 @@ import {
   FaultType,
   ReinspectionResult,
   RepairReportResult,
-  RepairTaskStatus
+  RepairTaskStatus,
+  VerificationResult
 } from '../domain/models/enums.js';
 import { createRequestContext, readJsonBody, sendError, sendSuccess } from './http.js';
 
@@ -30,6 +31,17 @@ interface DeviceChangeRequestBody {
   deviceId?: string;
   reason?: string;
   changes?: Record<string, DeviceChangeValue>;
+}
+
+interface DeviceVerificationBody {
+  result?: string;
+  description?: string;
+  remark?: string;
+  verifiedAt?: string;
+  location?: {
+    longitude: number;
+    latitude: number;
+  };
 }
 
 interface DeviceChangeReviewBody {
@@ -130,6 +142,42 @@ export async function handleApiRequest(
         requestId: requestContext.requestId
       });
       sendSuccess(response, 200, result, requestContext.requestId);
+      return;
+    }
+
+    if (
+      method === 'POST' &&
+      segments[2] === 'devices' &&
+      segments[4] === 'verification-records' &&
+      segments.length === 5
+    ) {
+      appContext.authService.requirePermission(actor, 'DEVICE_VERIFY');
+      const body = await readJsonBody<DeviceVerificationBody>(request);
+      const result = appContext.deviceApplicationService.submitVerificationRecord({
+        deviceId: requiredPathSegment(segments[3], 'deviceId'),
+        result: requiredString(body.result, 'result') as VerificationResult,
+        description: requiredString(body.description, 'description'),
+        remark: body.remark,
+        verifiedAt: body.verifiedAt,
+        location: body.location,
+        actor,
+        requestId: requestContext.requestId
+      });
+      sendSuccess(response, 201, result, requestContext.requestId);
+      return;
+    }
+
+    if (
+      method === 'GET' &&
+      segments[2] === 'devices' &&
+      segments[4] === 'verification-records' &&
+      segments.length === 5
+    ) {
+      appContext.authService.requirePermission(actor, 'DEVICE_READ');
+      const result = appContext.deviceApplicationService.listVerificationRecords(
+        requiredPathSegment(segments[3], 'deviceId')
+      );
+      sendSuccess(response, 200, { items: result, total: result.length }, requestContext.requestId);
       return;
     }
 

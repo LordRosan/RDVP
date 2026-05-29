@@ -8,7 +8,8 @@ import {
   ReinspectionResult,
   RepairReportResult,
   RepairTaskStatus,
-  RoleCode
+  RoleCode,
+  VerificationResult
 } from './enums.js';
 
 export interface GeoPoint {
@@ -49,6 +50,18 @@ export interface DeviceQrCode {
   status: 'ACTIVE' | 'EXPIRED' | 'REVOKED';
   issuedAt: string;
   expiresAt?: string;
+}
+
+export interface DeviceVerificationRecord {
+  id: string;
+  deviceId: string;
+  verifierId: string;
+  result: VerificationResult;
+  description: string;
+  remark?: string;
+  location?: GeoPoint;
+  verifiedAt: string;
+  createdAt: string;
 }
 
 export interface UserAccount {

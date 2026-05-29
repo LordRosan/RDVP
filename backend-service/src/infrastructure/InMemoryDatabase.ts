@@ -5,6 +5,7 @@ import {
   Device,
   DeviceChangeRequest,
   DeviceQrCode,
+  DeviceVerificationRecord,
   FaultReport,
   RepairReport,
   RepairTask,
@@ -27,6 +28,7 @@ export class InMemoryDatabase {
   readonly devices: Device[] = [];
   readonly deviceChangeRequests: DeviceChangeRequest[] = [];
   readonly deviceQrCodes: DeviceQrCode[] = [];
+  readonly deviceVerificationRecords: DeviceVerificationRecord[] = [];
   readonly faultReports: FaultReport[] = [];
   readonly repairTasks: RepairTask[] = [];
   readonly repairReports: RepairReport[] = [];
@@ -95,6 +97,15 @@ export class InMemoryDatabase {
         displayName: 'System Admin',
         roles: [RoleCode.SystemAdmin],
         permissions: ['*'],
+        status: 'ACTIVE'
+      },
+      {
+        id: 'user-verifier',
+        username: 'verifier',
+        passwordHash,
+        displayName: 'Verifier',
+        roles: [RoleCode.Verifier],
+        permissions: ['DEVICE_READ', 'DEVICE_VERIFY'],
         status: 'ACTIVE'
       },
       {

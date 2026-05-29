@@ -167,6 +167,8 @@ export class OperationRecordService {
         return '提交设备档案变更申请';
       case 'DEVICE_CHANGE_REVIEW':
         return '完成设备档案变更审核';
+      case 'DEVICE_VERIFICATION':
+        return '提交设备状态核验记录';
       case 'FAULT_REPORT':
         return '提交故障报告';
       case 'REPAIR_TASK_ACCEPT':
