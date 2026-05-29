@@ -5,6 +5,7 @@ import {
   DeviceArchiveChangeRequestForm,
   DeviceArchiveChangeRequestStatus
 } from '../models/DeviceArchiveChangeModels';
+import { ApiClient } from '../services/ApiClient';
 import { DeviceArchiveChangeService } from '../services/DeviceArchiveChangeService';
 import { DeviceService } from '../services/DeviceService';
 import { DeviceArchiveFlowStore } from '../stores/DeviceArchiveFlowStore';
@@ -380,7 +381,7 @@ struct DeviceArchiveChange {
         this.StatusRow('申请状态', DeviceArchiveChangeService.formatRequestStatus(this.requestStatus),
           this.getStatusTone(this.requestStatus))
         this.CardDivider()
-        this.StatusRow('服务状态', '未连接', '#D9480F')
+        this.StatusRow('服务状态', ApiClient.getRuntimeStatusLabel(), ApiClient.getRuntimeStatusTone())
       }
       .width('100%')
       .backgroundColor('#FFFFFF')

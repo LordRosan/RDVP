@@ -1,5 +1,6 @@
 import { InfoDialog, InfoDialogSection } from '../components/InfoDialog';
 import { VerificationResult } from '../models/VerificationModels';
+import { ApiClient } from '../services/ApiClient';
 import { DeviceService } from '../services/DeviceService';
 import { DeviceVerificationService } from '../services/DeviceVerificationService';
 
@@ -399,7 +400,7 @@ struct DeviceVerification {
         this.StatusRow('核验结果', DeviceVerificationService.formatVerificationResult(this.verificationResult),
           this.getResultTone(this.verificationResult))
         this.CardDivider()
-        this.StatusRow('服务状态', '未连接', '#D9480F')
+        this.StatusRow('服务状态', ApiClient.getRuntimeStatusLabel(), ApiClient.getRuntimeStatusTone())
       }
       .width('100%')
       .backgroundColor('#FFFFFF')

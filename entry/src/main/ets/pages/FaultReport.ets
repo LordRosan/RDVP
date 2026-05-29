@@ -1,5 +1,6 @@
 import { InfoDialog, InfoDialogSection } from '../components/InfoDialog';
 import { FaultSeverity, FaultType } from '../models/FaultModels';
+import { ApiClient } from '../services/ApiClient';
 import { DeviceService } from '../services/DeviceService';
 import { FaultReportService } from '../services/FaultReportService';
 
@@ -70,6 +71,7 @@ struct FaultReport {
   @State description: string = '';
   @State sceneCondition: string = '';
   @State message: string = '';
+  @State messageTone: string = '#D9480F';
   @State normalizedDeviceCode: string = '-';
   private faultInfoDialogController: CustomDialogController = new CustomDialogController({
     builder: InfoDialog({
@@ -226,6 +228,7 @@ struct FaultReport {
         .onChange((value: string) => {
           this.deviceCode = value;
           this.message = '';
+          this.messageTone = '#D9480F';
           this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(value);
           if (this.normalizedDeviceCode.length === 0) {
             this.normalizedDeviceCode = '-';
@@ -333,6 +336,7 @@ struct FaultReport {
     .onClick(() => {
       this.faultType = type;
       this.message = '';
+      this.messageTone = '#D9480F';
     })
   }
 
@@ -390,6 +394,7 @@ struct FaultReport {
     .onClick(() => {
       this.severity = severity;
       this.message = '';
+      this.messageTone = '#D9480F';
     })
   }
 
@@ -429,6 +434,7 @@ struct FaultReport {
         .onClick(() => {
           this.showOccurredAtPicker();
           this.message = '';
+          this.messageTone = '#D9480F';
         })
     }
     .width('100%')
@@ -464,6 +470,7 @@ struct FaultReport {
         .onChange((value: string) => {
           this.description = value;
           this.message = '';
+          this.messageTone = '#D9480F';
         })
     }
     .width('100%')
@@ -499,6 +506,7 @@ struct FaultReport {
         .onChange((value: string) => {
           this.sceneCondition = value;
           this.message = '';
+          this.messageTone = '#D9480F';
         })
     }
     .width('100%')
@@ -519,7 +527,7 @@ struct FaultReport {
     if (this.message.length > 0) {
       Text(this.message)
         .fontSize(13)
-        .fontColor('#D9480F')
+        .fontColor(this.messageTone)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
@@ -583,7 +591,7 @@ struct FaultReport {
         this.CardDivider()
         this.StatusRow('故障等级', FaultReportService.formatSeverity(this.severity), this.getSeverityTone(this.severity))
         this.CardDivider()
-        this.StatusRow('服务状态', '未连接', '#D9480F')
+        this.StatusRow('服务状态', ApiClient.getRuntimeStatusLabel(), ApiClient.getRuntimeStatusTone())
       }
       .width('100%')
       .backgroundColor('#FFFFFF')
@@ -650,7 +658,13 @@ struct FaultReport {
     if (!response.success) {
       const error = response.error;
       this.message = error ? error.message : '故障报告提交失败';
+      this.messageTone = '#D9480F';
+      return;
     }
+
+    const reportNo = response.data ? response.data.reportNo : '';
+    this.message = reportNo.length > 0 ? `故障报告已提交：${reportNo}` : '故障报告已提交';
+    this.messageTone = '#087F5B';
   }
 
   getSeverityTone(severity: FaultSeverity): string {
@@ -682,6 +696,7 @@ struct FaultReport {
       onDateAccept: (value: Date) => {
         this.occurredAt = this.formatDateTime(value);
         this.message = '';
+        this.messageTone = '#D9480F';
       }
     });
   }

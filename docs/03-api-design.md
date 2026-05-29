@@ -218,7 +218,12 @@ GET /api/v1/devices/by-code/{deviceCode}
     "latitude": 22.3193
   },
   "status": "NORMAL",
-  "lastVerificationTime": "2026-05-27T07:30:00Z"
+  "lastVerificationTime": "2026-05-27T07:30:00Z",
+  "changeState": {
+    "locked": false,
+    "pendingRequestId": null,
+    "freezeUntil": null
+  }
 }
 ```
 
@@ -244,6 +249,11 @@ GET /api/v1/devices/{deviceId}
   },
   "status": "NORMAL",
   "lastVerificationTime": "2026-05-27T07:30:00Z",
+  "changeState": {
+    "locked": false,
+    "pendingRequestId": null,
+    "freezeUntil": null
+  },
   "recentFaultReports": [],
   "recentRepairReports": [],
   "recentVerificationRecords": []
@@ -372,6 +382,12 @@ POST /api/v1/device-change-requests
 }
 ```
 
+后端创建申请前必须校验：
+
+- 设备不存在待审核变更申请。
+- 设备不处于变更冻结期。
+- 提交的新值与当前设备档案存在有效差异。
+
 响应数据：
 
 ```json
@@ -392,7 +408,7 @@ GET /api/v1/device-change-requests
 
 | 参数 | 说明 |
 | --- | --- |
-| `deviceId` | 设备 ID |
+| `deviceCode` | 设备编号 |
 | `status` | 申请状态 |
 | `applicantId` | 申请人 ID |
 | `page` | 页码 |
@@ -419,7 +435,8 @@ POST /api/v1/device-change-requests/{requestId}/review
 {
   "id": "change-request-id",
   "status": "APPROVED",
-  "reviewedAt": "2026-05-27T07:30:00Z"
+  "reviewedAt": "2026-05-27T07:30:00Z",
+  "freezeUntil": "2026-05-27T19:30:00Z"
 }
 ```
 
@@ -435,11 +452,12 @@ POST /api/v1/fault-reports
 
 ```json
 {
-  "deviceId": "device-id",
-  "faultType": "POWER_FAILURE",
-  "faultLevel": "MAJOR",
-  "description": "Device cannot be powered on.",
+  "deviceCode": "RDVP-DEVICE-0001",
+  "faultType": "ENERGY_FAULT",
+  "severity": "SEVERE",
   "occurredAt": "2026-05-27T07:30:00Z",
+  "description": "Device power supply is unstable.",
+  "sceneCondition": "The site has reduced the operating load.",
   "location": {
     "longitude": 114.1694,
     "latitude": 22.3193
@@ -469,9 +487,10 @@ GET /api/v1/fault-reports
 
 | 参数 | 说明 |
 | --- | --- |
-| `deviceId` | 设备 ID |
+| `deviceCode` | 设备编号 |
 | `status` | 故障状态 |
-| `faultLevel` | 故障等级 |
+| `faultType` | 故障类型 |
+| `severity` | 故障等级 |
 | `nearLongitude` | 附近查询经度 |
 | `nearLatitude` | 附近查询纬度 |
 | `radiusKm` | 附近查询半径，单位 km |
@@ -513,7 +532,7 @@ GET /api/v1/repair-tasks/available
 | `longitude` | 当前经度 |
 | `latitude` | 当前纬度 |
 | `radiusKm` | 查询半径，默认 10 |
-| `faultLevel` | 故障等级 |
+| `severity` | 故障等级 |
 | `page` | 页码 |
 | `pageSize` | 每页数量 |
 
@@ -540,7 +559,7 @@ POST /api/v1/fault-reports/{faultReportId}/accept
 {
   "repairTaskId": "repair-task-id",
   "faultReportId": "fault-report-id",
-  "status": "IN_PROGRESS",
+  "status": "ACCEPTED",
   "acceptedAt": "2026-05-27T07:30:00Z"
 }
 ```
@@ -573,10 +592,10 @@ POST /api/v1/repair-tasks/{repairTaskId}/repair-reports
 
 ```json
 {
-  "repairDescription": "Replaced the power module.",
-  "repairResult": "REPAIRED",
-  "replacedParts": ["Power module"],
+  "result": "REPAIRED",
   "repairedAt": "2026-05-27T07:30:00Z",
+  "processDescription": "Replaced the power module and completed verification.",
+  "partsUsed": "Power module x1",
   "attachmentIds": ["attachment-id"]
 }
 ```
@@ -586,8 +605,10 @@ POST /api/v1/repair-tasks/{repairTaskId}/repair-reports
 ```json
 {
   "id": "repair-report-id",
+  "repairReportNo": "RR-20260527-0001",
   "repairTaskId": "repair-task-id",
   "faultReportId": "fault-report-id",
+  "result": "REPAIRED",
   "nextStatus": "PENDING_REINSPECTION",
   "requiresReinspection": true,
   "createdAt": "2026-05-27T07:30:00Z"
@@ -804,25 +825,45 @@ CLOSED
 REJECTED
 ```
 
-### 18.4 故障等级
+### 18.4 故障类型
 
 ```text
+OPERATION_ABNORMAL
+HARDWARE_DAMAGE
+COMMUNICATION_FAULT
+LOGIC_FAULT
+ENERGY_FAULT
+EXTERNAL_FACTOR
+OTHER
+```
+
+### 18.5 故障等级
+
+```text
+EMERGENCY
+SEVERE
+GENERAL
 MINOR
-MAJOR
-CRITICAL
 ```
 
-### 18.5 维修任务状态
+### 18.6 维修任务状态
 
 ```text
-PENDING
-IN_PROGRESS
+AVAILABLE
+ACCEPTED
+PROCESSING
 REPORT_SUBMITTED
-COMPLETED
-CANCELLED
 ```
 
-### 18.6 复检结果
+### 18.7 维修报告结果
+
+```text
+REPAIRED
+TEMPORARY_RESTORED
+UNRESOLVED
+```
+
+### 18.8 复检结果
 
 ```text
 PASSED
@@ -868,4 +909,3 @@ REINSPECTION_RECORD
 - 离线批量同步是否需要全局幂等键。
 - 维修人员位置来源和更新频率。
 - 是否为 Web 管理后台复用同一套 API。
-

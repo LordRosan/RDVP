@@ -1,4 +1,6 @@
 import { WorkbenchAction, WorkbenchActionId, WorkbenchMetric, WorkbenchStatusItem } from '../models/WorkbenchModels';
+import { ApiClient } from './ApiClient';
+import { LocalRepairTaskRepository } from './LocalRepairTaskRepository';
 
 export class WorkbenchService {
   static getMetrics(): WorkbenchMetric[] {
@@ -13,7 +15,7 @@ export class WorkbenchService {
       {
         id: 'pendingFaults',
         label: '待接取故障',
-        value: '0',
+        value: ApiClient.isConfigured() ? '0' : `${LocalRepairTaskRepository.getPendingAvailableTaskCount()}`,
         status: '维修响应',
         tone: '#D9480F'
       },
@@ -86,8 +88,8 @@ export class WorkbenchService {
       {
         id: 'network',
         name: '网络状态',
-        value: '待检测',
-        tone: '#495057'
+        value: ApiClient.getRuntimeStatusLabel(),
+        tone: ApiClient.getRuntimeStatusTone()
       },
       {
         id: 'auth',

@@ -1,5 +1,5 @@
 import { ApiClient } from './ApiClient';
-import { ApiResponse } from '../models/ApiModels';
+import { ApiErrorCode, ApiResponse } from '../models/ApiModels';
 import {
   DeviceCodeQueryForm,
   DeviceCodeValidationResult,
@@ -8,6 +8,7 @@ import {
   DeviceQrValidationResult,
   DeviceSummary
 } from '../models/DeviceModels';
+import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
 
 export class DeviceService {
   static normalizeDeviceCode(deviceCode: string): string {
@@ -86,7 +87,7 @@ export class DeviceService {
     }
 
     if (!ApiClient.isConfigured()) {
-      return ApiClient.createServiceUnavailableResponse<DeviceSummary>();
+      return DeviceService.queryLocalArchiveByCode(form.deviceCode);
     }
 
     return ApiClient.createServiceUnavailableResponse<DeviceSummary>();
@@ -106,7 +107,7 @@ export class DeviceService {
     }
 
     if (!ApiClient.isConfigured()) {
-      return ApiClient.createServiceUnavailableResponse<DeviceSummary>();
+      return DeviceService.queryLocalArchiveByQrContent(form.qrContent);
     }
 
     return ApiClient.createServiceUnavailableResponse<DeviceSummary>();
@@ -192,5 +193,44 @@ export class DeviceService {
     }
 
     return '可申请变更';
+  }
+
+  private static queryLocalArchiveByCode(deviceCode: string): ApiResponse<DeviceSummary> {
+    const device = LocalDeviceArchiveRepository.findByCode(deviceCode);
+    if (device === undefined) {
+      return {
+        success: false,
+        error: {
+          code: ApiErrorCode.NotFound,
+          message: '未找到设备档案'
+        }
+      };
+    }
+
+    return DeviceService.createLocalArchiveResponse(device);
+  }
+
+  private static queryLocalArchiveByQrContent(qrContent: string): ApiResponse<DeviceSummary> {
+    const device = LocalDeviceArchiveRepository.findByQrContent(qrContent);
+    if (device === undefined) {
+      return {
+        success: false,
+        error: {
+          code: 'QR_DEVICE_NOT_FOUND',
+          message: '二维码未关联设备档案'
+        }
+      };
+    }
+
+    return DeviceService.createLocalArchiveResponse(device);
+  }
+
+  private static createLocalArchiveResponse(device: DeviceSummary): ApiResponse<DeviceSummary> {
+    return {
+      success: true,
+      data: device,
+      requestId: 'local-device-archive',
+      timestamp: new Date().toISOString()
+    };
   }
 }

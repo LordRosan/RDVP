@@ -153,7 +153,8 @@ export class DeviceArchiveChangeService {
     }
 
     if (!ApiClient.isConfigured()) {
-      return ApiClient.createServiceUnavailableResponse<DeviceArchiveChangeRequestRecord>();
+      return DeviceArchiveChangeService.createLocalChangeRequestResponse(form, validation.normalizedDeviceCode ?
+        validation.normalizedDeviceCode : DeviceService.normalizeDeviceCode(form.deviceCode));
     }
 
     return ApiClient.createServiceUnavailableResponse<DeviceArchiveChangeRequestRecord>();
@@ -227,6 +228,27 @@ export class DeviceArchiveChangeService {
     }
 
     return DeviceArchiveChangeService.hasFieldChanged(baseline, field, value);
+  }
+
+  private static createLocalChangeRequestResponse(form: DeviceArchiveChangeRequestForm,
+    normalizedDeviceCode: string): ApiResponse<DeviceArchiveChangeRequestRecord> {
+    const submittedAt = new Date().toISOString();
+    return {
+      success: true,
+      data: {
+        id: `DCR-LOCAL-${submittedAt.replace(/[-:.TZ]/g, '').substring(0, 14)}`,
+        deviceCode: normalizedDeviceCode,
+        deviceName: form.deviceName.trim(),
+        model: form.model.trim(),
+        manufacturer: form.manufacturer.trim(),
+        locationAddress: form.locationAddress.trim(),
+        reason: form.reason.trim(),
+        status: DeviceArchiveChangeRequestStatus.PendingReview,
+        submittedAt
+      },
+      requestId: 'local-device-change-request',
+      timestamp: submittedAt
+    };
   }
 
   private static normalizeText(value: string): string {

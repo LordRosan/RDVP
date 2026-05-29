@@ -11,6 +11,14 @@ export class ApiClient {
     return DEFAULT_API_BASE_URL.length > 0;
   }
 
+  static getRuntimeStatusLabel(): string {
+    return ApiClient.isConfigured() ? '已配置' : '本地模式';
+  }
+
+  static getRuntimeStatusTone(): string {
+    return ApiClient.isConfigured() ? '#087F5B' : '#2F6FED';
+  }
+
   static createServiceUnavailableResponse<T>(): ApiResponse<T> {
     return {
       success: false,

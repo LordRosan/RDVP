@@ -1,6 +1,7 @@
 import { InfoDialog, InfoDialogSection } from '../components/InfoDialog';
 import { FaultSeverity } from '../models/FaultModels';
 import { AvailableRepairTaskSummary, RepairerAvailability } from '../models/RepairTaskModels';
+import { ApiClient } from '../services/ApiClient';
 import { FaultReportService } from '../services/FaultReportService';
 import { RepairTaskService } from '../services/RepairTaskService';
 
@@ -30,6 +31,7 @@ struct AvailableRepairTask {
   @State radiusKm: number = RepairTaskService.getDefaultRadiusKm();
   @State availability: RepairerAvailability = RepairerAvailability.Idle;
   @State message: string = '';
+  @State messageTone: string = '#D9480F';
   @State refreshStatus: string = '未刷新';
   @State taskItems: AvailableRepairTaskSummary[] = [];
   private availableTaskInfoDialogController: CustomDialogController = new CustomDialogController({
@@ -194,6 +196,7 @@ struct AvailableRepairTask {
     .onClick(() => {
       this.radiusKm = radiusKm;
       this.message = '';
+      this.messageTone = '#D9480F';
     })
   }
 
@@ -225,6 +228,7 @@ struct AvailableRepairTask {
     .onClick(() => {
       this.availability = availability;
       this.message = '';
+      this.messageTone = '#D9480F';
     })
   }
 
@@ -379,7 +383,7 @@ struct AvailableRepairTask {
         this.CardDivider()
         this.RefreshStatusRow()
         this.CardDivider()
-        this.StatusRow('服务状态', '未连接', '#D9480F')
+        this.StatusRow('服务状态', ApiClient.getRuntimeStatusLabel(), ApiClient.getRuntimeStatusTone())
       }
       .width('100%')
       .backgroundColor('#FFFFFF')
@@ -403,7 +407,7 @@ struct AvailableRepairTask {
     if (this.message.length > 0) {
       Text(this.message)
         .fontSize(13)
-        .fontColor('#D9480F')
+        .fontColor(this.messageTone)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
@@ -501,7 +505,7 @@ struct AvailableRepairTask {
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      Text(this.message.length > 0 ? '刷新失败' : this.refreshStatus)
+      Text(this.isFailureMessageVisible() ? '刷新失败' : this.refreshStatus)
         .fontSize(15)
         .fontColor(this.getRefreshStatusTone())
         .fontWeight(FontWeight.Medium)
@@ -527,6 +531,7 @@ struct AvailableRepairTask {
     if (!response.success) {
       const error = response.error;
       this.message = error ? error.message : '附近故障刷新失败';
+      this.messageTone = '#D9480F';
       this.refreshStatus = '刷新失败';
       return;
     }
@@ -535,6 +540,7 @@ struct AvailableRepairTask {
     this.taskItems = data ? data.items : [];
     this.refreshStatus = '已刷新';
     this.message = '';
+    this.messageTone = '#D9480F';
   }
 
   acceptTask(taskId: string): void {
@@ -542,10 +548,16 @@ struct AvailableRepairTask {
     if (!response.success) {
       const error = response.error;
       this.message = error ? error.message : '维修任务接取失败';
+      this.messageTone = '#D9480F';
       return;
     }
 
-    this.message = '';
+    this.taskItems = this.taskItems.filter((item: AvailableRepairTaskSummary) => {
+      return item.id !== taskId;
+    });
+    this.refreshStatus = '已接取';
+    this.message = '维修任务已接取，可在我的维修中处理';
+    this.messageTone = '#087F5B';
   }
 
   getSeverityTone(severity: FaultSeverity): string {
@@ -564,15 +576,19 @@ struct AvailableRepairTask {
   }
 
   getRefreshStatusTone(): string {
-    if (this.message.length > 0) {
+    if (this.isFailureMessageVisible()) {
       return '#D9480F';
     }
 
-    if (this.refreshStatus === '已刷新') {
+    if (this.refreshStatus === '已刷新' || this.refreshStatus === '已接取') {
       return '#087F5B';
     }
 
     return '#495057';
+  }
+
+  isFailureMessageVisible(): boolean {
+    return this.message.length > 0 && this.messageTone === '#D9480F';
   }
 
   showAvailableTaskInfoDialog(): void {

@@ -90,6 +90,40 @@ export default function localUnitTest() {
 
       expect(result.valid).assertEqual(true);
     });
+
+    it('returnsLocalDeviceArchiveByCodeWhenBackendUnconfigured', 0, () => {
+      const response = DeviceService.queryByCode({
+        deviceCode: 'RDVP-DEVICE-0001'
+      });
+
+      expect(response.success).assertEqual(true);
+      expect(response.data?.deviceCode).assertEqual('RDVP-DEVICE-0001');
+      expect(response.data?.status).assertEqual(DeviceStatus.Normal);
+    });
+
+    it('returnsLocalDeviceArchiveByQrWhenBackendUnconfigured', 0, () => {
+      const response = DeviceService.queryByQrContent({
+        qrContent: 'RDVP:1:RDVP-DEVICE-0002:nonce:signature'
+      });
+
+      expect(response.success).assertEqual(true);
+      expect(response.data?.deviceCode).assertEqual('RDVP-DEVICE-0002');
+      const device = response.data;
+      if (device !== undefined) {
+        expect(DeviceService.isArchiveChangeLocked(device)).assertEqual(true);
+      } else {
+        expect(true).assertEqual(false);
+      }
+    });
+
+    it('rejectsUnknownLocalDeviceArchive', 0, () => {
+      const response = DeviceService.queryByCode({
+        deviceCode: 'RDVP-DEVICE-9999'
+      });
+
+      expect(response.success).assertEqual(false);
+      expect(response.error?.message).assertEqual('未找到设备档案');
+    });
   });
 
   describe('deviceChangeConfiguration', () => {
@@ -208,6 +242,27 @@ export default function localUnitTest() {
         }
       })).assertEqual(true);
     });
+
+    it('submitsLocalChangeRequestWhenBackendUnconfigured', 0, () => {
+      const response = DeviceArchiveChangeService.submitChangeRequest({
+        deviceCode: 'RDVP-DEVICE-0001',
+        deviceName: '冷却泵A-02',
+        model: 'CP-1000',
+        manufacturer: '北方设备',
+        locationAddress: '一号厂房',
+        reason: '现场铭牌名称已更新。',
+        baseline: {
+          deviceName: '冷却泵A-01',
+          model: 'CP-1000',
+          manufacturer: '北方设备',
+          locationAddress: '一号厂房'
+        }
+      });
+
+      expect(response.success).assertEqual(true);
+      expect(response.data?.status).assertEqual('PENDING_REVIEW');
+      expect(response.data?.deviceCode).assertEqual('RDVP-DEVICE-0001');
+    });
   });
 
   describe('deviceVerificationConfiguration', () => {
@@ -303,6 +358,21 @@ export default function localUnitTest() {
       expect(result.valid).assertEqual(true);
     });
 
+    it('submitsLocalFaultReportWhenBackendUnconfigured', 0, () => {
+      const response = FaultReportService.submitFaultReport({
+        deviceCode: 'RDVP-DEVICE-0001',
+        faultType: FaultType.OperationAbnormal,
+        severity: FaultSeverity.General,
+        occurredAt: '2026-05-29 11:30',
+        description: '设备运行振动异常，需维修人员检查。',
+        sceneCondition: '现场已降低运行负载。'
+      });
+
+      expect(response.success).assertEqual(true);
+      expect(response.data?.deviceCode).assertEqual('RDVP-DEVICE-0001');
+      expect(response.data?.status).assertEqual('PENDING_ACCEPTANCE');
+    });
+
     it('formatsUpdatedFaultCategories', 0, () => {
       expect(FaultReportService.formatFaultType(FaultType.CommunicationFault)).assertEqual('通信故障');
       expect(FaultReportService.formatFaultType(FaultType.EnergyFault)).assertEqual('能源故障');
@@ -346,6 +416,54 @@ export default function localUnitTest() {
 
       expect(result.valid).assertEqual(true);
       expect(result.normalizedRadiusKm).assertEqual(10);
+    });
+
+    it('returnsLocalAvailableRepairTasksWhenBackendUnconfigured', 0, () => {
+      const response = RepairTaskService.queryAvailableRepairTasks({
+        radiusKm: 10,
+        availability: RepairerAvailability.Idle
+      });
+
+      expect(response.success).assertEqual(true);
+      const data = response.data;
+      if (data !== undefined) {
+        expect(data.total > 0).assertEqual(true);
+      } else {
+        expect(true).assertEqual(false);
+      }
+    });
+
+    it('acceptsAndReportsLocalRepairTaskWhenBackendUnconfigured', 0, () => {
+      const listResponse = RepairTaskService.queryAvailableRepairTasks({
+        radiusKm: 10,
+        availability: RepairerAvailability.Idle
+      });
+      const taskId = listResponse.data?.items[0].id;
+      if (taskId === undefined) {
+        expect(true).assertEqual(false);
+        return;
+      }
+
+      const acceptResponse = RepairTaskService.acceptRepairTask(taskId);
+      expect(acceptResponse.success).assertEqual(true);
+      const acceptedTaskId = acceptResponse.data?.taskId;
+      if (acceptedTaskId === undefined) {
+        expect(true).assertEqual(false);
+        return;
+      }
+
+      const myTaskResponse = RepairTaskService.queryMyRepairTasks();
+      expect(myTaskResponse.success).assertEqual(true);
+      const reportResponse = RepairTaskService.submitRepairReport({
+        taskId: acceptedTaskId,
+        result: RepairReportResult.Repaired,
+        repairedAt: '2026-05-29 12:10',
+        processDescription: '已完成故障定位、部件复位和运行验证。',
+        partsUsed: ''
+      });
+
+      expect(reportResponse.success).assertEqual(true);
+      expect(reportResponse.data?.taskId).assertEqual(acceptedTaskId);
     });
 
     it('rejectsEmptyRepairTaskAcceptId', 0, () => {

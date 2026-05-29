@@ -12,6 +12,7 @@ import {
   RepairTaskValidationResult
 } from '../models/RepairTaskModels';
 import { ApiClient } from './ApiClient';
+import { LocalRepairTaskRepository } from './LocalRepairTaskRepository';
 
 const DEFAULT_RADIUS_KM = 10;
 const MIN_RADIUS_KM = 1;
@@ -71,7 +72,8 @@ export class RepairTaskService {
     }
 
     if (!ApiClient.isConfigured()) {
-      return ApiClient.createServiceUnavailableResponse<AvailableRepairTaskListResult>();
+      return RepairTaskService.createLocalAvailableTasksResponse(validation.normalizedRadiusKm ?
+        validation.normalizedRadiusKm : RepairTaskService.normalizeRadiusKm(query.radiusKm));
     }
 
     return ApiClient.createServiceUnavailableResponse<AvailableRepairTaskListResult>();
@@ -90,7 +92,7 @@ export class RepairTaskService {
     }
 
     if (!ApiClient.isConfigured()) {
-      return ApiClient.createServiceUnavailableResponse<RepairTaskAcceptResult>();
+      return RepairTaskService.createLocalAcceptTaskResponse(taskId);
     }
 
     return ApiClient.createServiceUnavailableResponse<RepairTaskAcceptResult>();
@@ -98,7 +100,7 @@ export class RepairTaskService {
 
   static queryMyRepairTasks(): ApiResponse<MyRepairTaskListResult> {
     if (!ApiClient.isConfigured()) {
-      return ApiClient.createServiceUnavailableResponse<MyRepairTaskListResult>();
+      return RepairTaskService.createLocalMyTasksResponse();
     }
 
     return ApiClient.createServiceUnavailableResponse<MyRepairTaskListResult>();
@@ -183,7 +185,7 @@ export class RepairTaskService {
     }
 
     if (!ApiClient.isConfigured()) {
-      return ApiClient.createServiceUnavailableResponse<RepairReportRecord>();
+      return RepairTaskService.createLocalRepairReportResponse(form);
     }
 
     return ApiClient.createServiceUnavailableResponse<RepairReportRecord>();
@@ -261,5 +263,63 @@ export class RepairTaskService {
     return result === RepairReportResult.Repaired ||
       result === RepairReportResult.TemporaryRestored ||
       result === RepairReportResult.Unresolved;
+  }
+
+  private static createLocalAvailableTasksResponse(radiusKm: number): ApiResponse<AvailableRepairTaskListResult> {
+    return {
+      success: true,
+      data: LocalRepairTaskRepository.queryAvailableTasks(radiusKm),
+      requestId: 'local-available-repair-tasks',
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  private static createLocalAcceptTaskResponse(taskId: string): ApiResponse<RepairTaskAcceptResult> {
+    const result = LocalRepairTaskRepository.acceptTask(taskId);
+    if (result === undefined) {
+      return {
+        success: false,
+        error: {
+          code: 'REPAIR_TASK_NOT_FOUND',
+          message: '维修任务不存在或已被接取'
+        }
+      };
+    }
+
+    return {
+      success: true,
+      data: result,
+      requestId: 'local-repair-task-accept',
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  private static createLocalMyTasksResponse(): ApiResponse<MyRepairTaskListResult> {
+    return {
+      success: true,
+      data: LocalRepairTaskRepository.queryMyTasks(),
+      requestId: 'local-my-repair-tasks',
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  private static createLocalRepairReportResponse(form: RepairReportForm): ApiResponse<RepairReportRecord> {
+    const record = LocalRepairTaskRepository.submitRepairReport(form);
+    if (record === undefined) {
+      return {
+        success: false,
+        error: {
+          code: 'REPAIR_TASK_NOT_FOUND',
+          message: '维修任务不存在或已完成'
+        }
+      };
+    }
+
+    return {
+      success: true,
+      data: record,
+      requestId: 'local-repair-report',
+      timestamp: new Date().toISOString()
+    };
   }
 }

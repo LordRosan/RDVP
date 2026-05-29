@@ -2,6 +2,7 @@ import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { detectBarcode, scanBarcode, scanCore } from '@kit.ScanKit';
 import { InfoDialog, InfoDialogSection } from '../components/InfoDialog';
 import { DeviceQueryMode, DeviceSummary } from '../models/DeviceModels';
+import { ApiClient } from '../services/ApiClient';
 import { DeviceService } from '../services/DeviceService';
 import { DeviceArchiveFlowStore } from '../stores/DeviceArchiveFlowStore';
 
@@ -380,7 +381,7 @@ struct DeviceArchiveQuery {
         this.StatusRow(this.queryMode === DeviceQueryMode.Code ? '标准编号' : '二维码内容',
           this.queryMode === DeviceQueryMode.Code ? this.normalizedDeviceCode : this.getQrPreview(), '#374151')
         this.CardDivider()
-        this.StatusRow('服务状态', '未连接', '#D9480F')
+        this.StatusRow('服务状态', ApiClient.getRuntimeStatusLabel(), ApiClient.getRuntimeStatusTone())
       }
       .width('100%')
       .backgroundColor('#FFFFFF')

@@ -1,6 +1,7 @@
 import { InfoDialog, InfoDialogSection } from '../components/InfoDialog';
 import { FaultSeverity } from '../models/FaultModels';
 import { MyRepairTaskSummary, RepairReportResult } from '../models/RepairTaskModels';
+import { ApiClient } from '../services/ApiClient';
 import { DeviceService } from '../services/DeviceService';
 import { FaultReportService } from '../services/FaultReportService';
 import { RepairTaskService } from '../services/RepairTaskService';
@@ -49,6 +50,7 @@ struct MyRepairTask {
   @State partsUsed: string = '';
   @State taskMessage: string = '';
   @State reportMessage: string = '';
+  @State reportMessageTone: string = '#D9480F';
   @State refreshStatus: string = '未刷新';
   @State normalizedTaskId: string = '-';
   private myRepairTaskInfoDialogController: CustomDialogController = new CustomDialogController({
@@ -309,6 +311,7 @@ struct MyRepairTask {
         this.taskId = item.taskNo;
         this.normalizedTaskId = item.taskNo;
         this.reportMessage = '';
+        this.reportMessageTone = '#D9480F';
       })
     }
     .padding(16)
@@ -371,6 +374,7 @@ struct MyRepairTask {
             this.normalizedTaskId = '-';
           }
           this.reportMessage = '';
+          this.reportMessageTone = '#D9480F';
         })
     }
     .width('100%')
@@ -422,6 +426,7 @@ struct MyRepairTask {
     .onClick(() => {
       this.reportResult = result;
       this.reportMessage = '';
+      this.reportMessageTone = '#D9480F';
     })
   }
 
@@ -461,6 +466,7 @@ struct MyRepairTask {
         .onClick(() => {
           this.showRepairedAtPicker();
           this.reportMessage = '';
+          this.reportMessageTone = '#D9480F';
         })
     }
     .width('100%')
@@ -496,6 +502,7 @@ struct MyRepairTask {
         .onChange((value: string) => {
           this.processDescription = value;
           this.reportMessage = '';
+          this.reportMessageTone = '#D9480F';
         })
     }
     .width('100%')
@@ -531,6 +538,7 @@ struct MyRepairTask {
         .onChange((value: string) => {
           this.partsUsed = value;
           this.reportMessage = '';
+          this.reportMessageTone = '#D9480F';
         })
     }
     .width('100%')
@@ -554,7 +562,7 @@ struct MyRepairTask {
         this.StatusRow('刷新状态', this.taskMessage.length > 0 ? '刷新失败' : this.refreshStatus,
           this.taskMessage.length > 0 ? '#D9480F' : '#495057')
         this.CardDivider()
-        this.StatusRow('服务状态', '未连接', '#D9480F')
+        this.StatusRow('服务状态', ApiClient.getRuntimeStatusLabel(), ApiClient.getRuntimeStatusTone())
       }
       .width('100%')
       .backgroundColor('#FFFFFF')
@@ -590,7 +598,7 @@ struct MyRepairTask {
     if (this.reportMessage.length > 0) {
       Text(this.reportMessage)
         .fontSize(13)
-        .fontColor('#D9480F')
+        .fontColor(this.reportMessageTone)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
@@ -709,7 +717,17 @@ struct MyRepairTask {
     if (!response.success) {
       const error = response.error;
       this.reportMessage = error ? error.message : '维修报告提交失败';
+      this.reportMessageTone = '#D9480F';
+      return;
     }
+
+    const reportNo = response.data ? response.data.reportNo : '';
+    this.reportMessage = reportNo.length > 0 ? `维修报告已提交：${reportNo}` : '维修报告已提交';
+    this.reportMessageTone = '#087F5B';
+    this.taskItems = this.taskItems.filter((item: MyRepairTaskSummary) => {
+      return item.taskNo !== this.normalizedTaskId && item.id !== this.normalizedTaskId;
+    });
+    this.refreshStatus = '已更新';
   }
 
   getSeverityTone(severity: FaultSeverity): string {
@@ -741,6 +759,7 @@ struct MyRepairTask {
       onDateAccept: (value: Date) => {
         this.repairedAt = this.formatDateTime(value);
         this.reportMessage = '';
+        this.reportMessageTone = '#D9480F';
       }
     });
   }
@@ -793,6 +812,7 @@ struct MyRepairTask {
       router.replaceUrl({ url: 'pages/Index' });
     } catch (err) {
       this.reportMessage = '页面跳转失败';
+      this.reportMessageTone = '#D9480F';
     }
   }
 }

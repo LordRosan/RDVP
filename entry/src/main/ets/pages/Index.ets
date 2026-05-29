@@ -9,11 +9,17 @@ import { formatConnectionStatus } from '../utils/SessionFormat';
 @Entry
 @Component
 struct Index {
-  private metrics: WorkbenchMetric[] = WorkbenchService.getMetrics();
+  @State metrics: WorkbenchMetric[] = WorkbenchService.getMetrics();
   private actions: WorkbenchAction[] = WorkbenchService.getActions();
-  private statusItems: WorkbenchStatusItem[] = WorkbenchService.getStatusItems();
-  private currentUser: CurrentUserSnapshot = SessionStore.getCurrentUser();
+  @State statusItems: WorkbenchStatusItem[] = WorkbenchService.getStatusItems();
+  @State currentUser: CurrentUserSnapshot = SessionStore.getCurrentUser();
   @State actionMessage: string = '';
+
+  aboutToAppear(): void {
+    this.metrics = WorkbenchService.getMetrics();
+    this.statusItems = WorkbenchService.getStatusItems();
+    this.currentUser = SessionStore.getCurrentUser();
+  }
 
   build() {
     Scroll() {

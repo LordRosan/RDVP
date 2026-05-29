@@ -1,4 +1,4 @@
-import { ApiErrorCode, ApiResponse } from '../models/ApiModels';
+import { ApiResponse } from '../models/ApiModels';
 import {
   FaultReportForm,
   FaultReportRecord,
@@ -8,6 +8,7 @@ import {
 } from '../models/FaultModels';
 import { ApiClient } from './ApiClient';
 import { DeviceService } from './DeviceService';
+import { LocalRepairTaskRepository } from './LocalRepairTaskRepository';
 
 const MAX_DESCRIPTION_LENGTH = 800;
 const MAX_SCENE_CONDITION_LENGTH = 500;
@@ -100,13 +101,7 @@ export class FaultReportService {
     }
 
     if (!ApiClient.isConfigured()) {
-      return {
-        success: false,
-        error: {
-          code: ApiErrorCode.ServiceUnavailable,
-          message: '后端服务未配置，暂不能提交'
-        }
-      };
+      return FaultReportService.createLocalFaultReportResponse(form);
     }
 
     return ApiClient.createServiceUnavailableResponse<FaultReportRecord>();
@@ -199,5 +194,15 @@ export class FaultReportService {
       severity === FaultSeverity.Severe ||
       severity === FaultSeverity.General ||
       severity === FaultSeverity.Minor;
+  }
+
+  private static createLocalFaultReportResponse(form: FaultReportForm): ApiResponse<FaultReportRecord> {
+    const record = LocalRepairTaskRepository.createFaultReport(form);
+    return {
+      success: true,
+      data: record,
+      requestId: 'local-fault-report',
+      timestamp: new Date().toISOString()
+    };
   }
 }
