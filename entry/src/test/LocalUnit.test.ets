@@ -246,7 +246,7 @@ export default function localUnitTest() {
     });
 
     it('formatsArchiveStatusAndChangeLock', 0, () => {
-      expect(DeviceService.formatDeviceStatus(DeviceStatus.ChangePendingReview)).assertEqual('变更待审核');
+      expect(DeviceService.formatDeviceStatus(DeviceStatus.ChangePendingReview)).assertEqual('正常');
       expect(DeviceService.isArchiveChangeLocked({
         id: 'device-1',
         deviceCode: 'RDVP-DEVICE-0001',

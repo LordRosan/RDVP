@@ -54,7 +54,6 @@ export class DeviceChangeService {
     };
 
     this.database.deviceChangeRequests.unshift(changeRequest);
-    device.status = DeviceStatus.ChangePendingReview;
     device.changeState = {
       locked: true,
       pendingRequestId: changeRequest.id

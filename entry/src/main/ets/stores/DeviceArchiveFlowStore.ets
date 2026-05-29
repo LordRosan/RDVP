@@ -1,5 +1,5 @@
 import { DeviceArchiveChangeDraft } from '../models/DeviceArchiveChangeModels';
-import { DeviceStatus, DeviceSummary } from '../models/DeviceModels';
+import { DeviceSummary } from '../models/DeviceModels';
 
 export class DeviceArchiveFlowStore {
   private static currentDevice?: DeviceSummary = undefined;
@@ -45,7 +45,7 @@ export class DeviceArchiveFlowStore {
       model: device.model,
       manufacturer: device.manufacturer,
       location: device.location,
-      status: DeviceStatus.ChangePendingReview,
+      status: device.status,
       lastVerificationTime: device.lastVerificationTime,
       changeState: {
         locked: true,

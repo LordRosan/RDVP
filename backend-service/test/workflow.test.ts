@@ -94,7 +94,7 @@ test('locks device archive changes until review and enforces freeze after approv
     assert.equal(changeRequest.body.data.status, 'PENDING_REVIEW');
 
     const lockedDevice = await client.request('GET', '/api/v1/devices/by-code/RDVP-DEVICE-0001', undefined, reporterToken);
-    assert.equal(lockedDevice.body.data.status, 'CHANGE_PENDING_REVIEW');
+    assert.equal(lockedDevice.body.data.status, device.body.data.status);
     assert.equal(lockedDevice.body.data.changeState.locked, true);
 
     const duplicate = await client.request('POST', '/api/v1/device-change-requests', {

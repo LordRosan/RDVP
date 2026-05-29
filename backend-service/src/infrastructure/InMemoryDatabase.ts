@@ -171,7 +171,7 @@ export class InMemoryDatabase {
           longitude: 114.1721,
           latitude: 22.3188
         },
-        status: DeviceStatus.ChangePendingReview,
+        status: DeviceStatus.Normal,
         lastVerificationTime: '2026-05-27T15:20:00.000Z',
         changeState: {
           locked: true,

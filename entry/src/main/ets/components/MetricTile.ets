@@ -2,7 +2,7 @@ import { WorkbenchMetric } from '../models/WorkbenchModels';
 
 @Component
 export struct MetricTile {
-  metric: WorkbenchMetric = {
+  @Prop metric: WorkbenchMetric = {
     id: '',
     label: '',
     value: '',
@@ -44,4 +44,3 @@ export struct MetricTile {
     })
   }
 }
-

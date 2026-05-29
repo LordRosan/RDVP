@@ -184,18 +184,10 @@ struct DeviceArchiveChange {
   ChangeForm() {
     Column({ space: 16 }) {
       this.DeviceCodeField()
-      this.ChangeInputField('设备名称', '填写新的设备名称', this.deviceName, (value: string) => {
-        this.deviceName = value;
-      })
-      this.ChangeInputField('设备型号', '填写新的设备型号', this.model, (value: string) => {
-        this.model = value;
-      })
-      this.ChangeInputField('生产厂商', '填写新的生产厂商', this.manufacturer, (value: string) => {
-        this.manufacturer = value;
-      })
-      this.ChangeInputField('设备位置', '填写新的设备位置', this.locationAddress, (value: string) => {
-        this.locationAddress = value;
-      })
+      this.DeviceNameField()
+      this.DeviceModelField()
+      this.ManufacturerField()
+      this.LocationAddressField()
       this.ReasonField()
       this.MessageText()
       this.ActionButton(this.getSubmitButtonLabel(), $r('sys.symbol.checkmark_circle'),
@@ -244,33 +236,152 @@ struct DeviceArchiveChange {
   }
 
   @Builder
-  ChangeInputField(title: string, placeholder: string, textValue: string, inputAction: (value: string) => void) {
+  DeviceNameField() {
     Column({ space: 10 }) {
-      this.FieldTitle(title)
+      this.FieldTitle('设备名称')
 
-      TextInput({
-        placeholder,
-        text: textValue
-      })
-        .height(56)
-        .fontSize(16)
-        .backgroundColor('#F7F9FC')
-        .borderRadius(18)
-        .padding({
-          left: 16,
-          right: 16
+      if (this.isChangeSubmitted()) {
+        Text(this.deviceName)
+          .height(56)
+          .width('100%')
+          .fontSize(16)
+          .fontColor('#6B7280')
+          .backgroundColor('#F7F9FC')
+          .borderRadius(18)
+          .padding({ left: 16, right: 16 })
+          .border({ width: 1, color: '#D6DAE1' })
+      } else {
+        TextInput({
+          placeholder: '填写新的设备名称',
+          text: this.deviceName
         })
-        .border({
-          width: 1,
-          color: '#D6DAE1'
+          .height(56)
+          .fontSize(16)
+          .backgroundColor('#F7F9FC')
+          .borderRadius(18)
+          .padding({ left: 16, right: 16 })
+          .border({ width: 1, color: '#D6DAE1' })
+          .onChange((value: string) => {
+            this.deviceName = value;
+            this.message = '';
+            this.updateChangeCount();
+            this.saveDraft();
+          })
+      }
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  DeviceModelField() {
+    Column({ space: 10 }) {
+      this.FieldTitle('设备型号')
+
+      if (this.isChangeSubmitted()) {
+        Text(this.model)
+          .height(56)
+          .width('100%')
+          .fontSize(16)
+          .fontColor('#6B7280')
+          .backgroundColor('#F7F9FC')
+          .borderRadius(18)
+          .padding({ left: 16, right: 16 })
+          .border({ width: 1, color: '#D6DAE1' })
+      } else {
+        TextInput({
+          placeholder: '填写新的设备型号',
+          text: this.model
         })
-        .enabled(!this.isChangeSubmitted())
-        .onChange((value: string) => {
-          inputAction(value);
-          this.message = '';
-          this.updateChangeCount();
-          this.saveDraft();
+          .height(56)
+          .fontSize(16)
+          .backgroundColor('#F7F9FC')
+          .borderRadius(18)
+          .padding({ left: 16, right: 16 })
+          .border({ width: 1, color: '#D6DAE1' })
+          .onChange((value: string) => {
+            this.model = value;
+            this.message = '';
+            this.updateChangeCount();
+            this.saveDraft();
+          })
+      }
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  ManufacturerField() {
+    Column({ space: 10 }) {
+      this.FieldTitle('生产厂商')
+
+      if (this.isChangeSubmitted()) {
+        Text(this.manufacturer)
+          .height(56)
+          .width('100%')
+          .fontSize(16)
+          .fontColor('#6B7280')
+          .backgroundColor('#F7F9FC')
+          .borderRadius(18)
+          .padding({ left: 16, right: 16 })
+          .border({ width: 1, color: '#D6DAE1' })
+      } else {
+        TextInput({
+          placeholder: '填写新的生产厂商',
+          text: this.manufacturer
         })
+          .height(56)
+          .fontSize(16)
+          .backgroundColor('#F7F9FC')
+          .borderRadius(18)
+          .padding({ left: 16, right: 16 })
+          .border({ width: 1, color: '#D6DAE1' })
+          .onChange((value: string) => {
+            this.manufacturer = value;
+            this.message = '';
+            this.updateChangeCount();
+            this.saveDraft();
+          })
+      }
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  LocationAddressField() {
+    Column({ space: 10 }) {
+      this.FieldTitle('设备位置')
+
+      if (this.isChangeSubmitted()) {
+        Text(this.locationAddress)
+          .height(56)
+          .width('100%')
+          .fontSize(16)
+          .fontColor('#6B7280')
+          .backgroundColor('#F7F9FC')
+          .borderRadius(18)
+          .padding({ left: 16, right: 16 })
+          .border({ width: 1, color: '#D6DAE1' })
+      } else {
+        TextInput({
+          placeholder: '填写新的设备位置',
+          text: this.locationAddress
+        })
+          .height(56)
+          .fontSize(16)
+          .backgroundColor('#F7F9FC')
+          .borderRadius(18)
+          .padding({ left: 16, right: 16 })
+          .border({ width: 1, color: '#D6DAE1' })
+          .onChange((value: string) => {
+            this.locationAddress = value;
+            this.message = '';
+            this.updateChangeCount();
+            this.saveDraft();
+          })
+      }
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)

@@ -31,7 +31,6 @@ export class LocalDeviceArchiveRepository {
 
     for (let i = 0; i < devices.length; i += 1) {
       if (devices[i].deviceCode === normalizedDeviceCode) {
-        devices[i].status = DeviceStatus.ChangePendingReview;
         devices[i].changeState = {
           locked: true,
           pendingRequestId: requestId
@@ -98,7 +97,7 @@ export class LocalDeviceArchiveRepository {
             longitude: 114.1721,
             latitude: 22.3188
           },
-          status: DeviceStatus.ChangePendingReview,
+          status: DeviceStatus.Normal,
           lastVerificationTime: '2026-05-27T15:20:00Z',
           changeState: {
             locked: true,

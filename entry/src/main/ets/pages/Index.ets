@@ -20,6 +20,16 @@ struct Index {
       return;
     }
 
+    this.refreshWorkbenchState();
+  }
+
+  onPageShow(): void {
+    if (SessionStore.isAuthenticated()) {
+      this.refreshWorkbenchState();
+    }
+  }
+
+  refreshWorkbenchState(): void {
     this.metrics = WorkbenchService.getMetrics();
     this.statusItems = WorkbenchService.getStatusItems();
     this.currentUser = SessionStore.getCurrentUser();

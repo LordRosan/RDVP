@@ -198,7 +198,7 @@ export class DeviceService {
       case DeviceStatus.PendingVerification:
         return '待核验';
       case DeviceStatus.ChangePendingReview:
-        return '变更待审核';
+        return '正常';
       case DeviceStatus.Faulted:
         return '故障中';
       case DeviceStatus.UnderRepair:
@@ -217,9 +217,9 @@ export class DeviceService {
   static getDeviceStatusTone(status: DeviceStatus): string {
     switch (status) {
       case DeviceStatus.Normal:
+      case DeviceStatus.ChangePendingReview:
         return '#087F5B';
       case DeviceStatus.PendingVerification:
-      case DeviceStatus.ChangePendingReview:
       case DeviceStatus.PendingReinspection:
         return '#E67700';
       case DeviceStatus.Faulted:
