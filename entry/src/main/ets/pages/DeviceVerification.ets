@@ -8,8 +8,8 @@ const VERIFICATION_INFO_SECTIONS: InfoDialogSection[] = [
     title: '状态核验',
     items: [
       {
-        label: '用途',
-        description: '记录设备现场检查结论和依据'
+        label: '现场记录',
+        description: '记录设备当前运行、环境、外观和核验依据，形成可追溯的现场状态记录'
       }
     ]
   },
@@ -18,15 +18,15 @@ const VERIFICATION_INFO_SECTIONS: InfoDialogSection[] = [
     items: [
       {
         label: '正常',
-        description: '设备关键状态符合预期，可继续使用'
+        description: '关键功能、状态指标和现场环境未见异常，设备可按原业务流程继续运行'
       },
       {
         label: '异常',
-        description: '设备存在异常现象，需要后续处理或生成故障报告'
+        description: '发现偏离预期的状态、现象或风险信号，应补充说明并视情况提交故障报告'
       },
       {
         label: '不可用',
-        description: '设备无法完成基本功能，需停止使用并安排维修'
+        description: '设备无法完成基本业务能力或存在明显安全风险，应停止使用并进入维修流程'
       }
     ]
   }
@@ -47,7 +47,8 @@ struct DeviceVerification {
       sections: VERIFICATION_INFO_SECTIONS
     }),
     autoCancel: true,
-    alignment: DialogAlignment.Center
+    alignment: DialogAlignment.Center,
+    customStyle: true
   });
 
   build() {

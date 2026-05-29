@@ -186,10 +186,10 @@ export default function localUnitTest() {
     it('formatsUpdatedFaultCategories', 0, () => {
       expect(FaultReportService.formatFaultType(FaultType.CommunicationFault)).assertEqual('通信故障');
       expect(FaultReportService.formatFaultType(FaultType.EnergyFault)).assertEqual('能源故障');
-      expect(FaultReportService.formatFaultTypeDescription(FaultType.LogicFault)).assertEqual('控制逻辑、业务规则、程序状态或配置逻辑异常');
+      expect(FaultReportService.formatFaultTypeDescription(FaultType.LogicFault)).assertEqual('控制策略、业务规则、程序状态或参数配置异常，导致设备行为不符合预期');
       expect(FaultReportService.formatSeverity(FaultSeverity.Emergency)).assertEqual('紧急');
       expect(FaultReportService.formatSeverity(FaultSeverity.Minor)).assertEqual('轻微');
-      expect(FaultReportService.formatSeverityDescription(FaultSeverity.Minor)).assertEqual('不影响业务，可正常运行，但存在隐患或小缺陷');
+      expect(FaultReportService.formatSeverityDescription(FaultSeverity.Minor)).assertEqual('暂不影响正常使用，但存在缺陷、隐患或趋势性异常，应记录并跟踪处理');
     });
   });
 

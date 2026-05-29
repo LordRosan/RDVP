@@ -9,16 +9,16 @@ const AVAILABLE_TASK_INFO_SECTIONS: InfoDialogSection[] = [
     title: '附近故障',
     items: [
       {
-        label: '筛选',
-        description: '根据服务半径和维修人员状态筛选可接取维修任务'
+        label: '服务范围',
+        description: '按当前位置、服务半径和任务状态筛选可接取任务，减少无效响应和跨区处理'
       },
       {
         label: '接取',
-        description: '接取成功后，任务进入我的维修页面继续处理'
+        description: '维修人员主动接取后承担处理责任，任务进入我的维修页面继续跟进'
       },
       {
-        label: '状态',
-        description: '仅空闲状态可刷新附近故障，避免任务响应与人员状态不一致'
+        label: '空闲状态',
+        description: '仅空闲人员可刷新任务列表，避免忙碌状态下误接任务影响故障响应效率'
       }
     ]
   }
@@ -38,7 +38,8 @@ struct AvailableRepairTask {
       sections: AVAILABLE_TASK_INFO_SECTIONS
     }),
     autoCancel: true,
-    alignment: DialogAlignment.Center
+    alignment: DialogAlignment.Center,
+    customStyle: true
   });
 
   build() {

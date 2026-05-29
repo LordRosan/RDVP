@@ -233,12 +233,25 @@ struct DeviceQuery {
       })
 
       this.MessageText()
-      this.ActionButton('扫描', $r('sys.symbol.circle_viewfinder'), () => {
-        this.scanQrCode();
-      })
-      this.ActionButton('本地上传', $r('sys.symbol.picture'), () => {
-        this.uploadQrImage();
-      })
+
+      Row({ space: 10 }) {
+        Column() {
+          this.ActionButton('扫描', $r('sys.symbol.circle_viewfinder'), () => {
+            this.scanQrCode();
+          })
+        }
+        .layoutWeight(1)
+
+        Column() {
+          this.ActionButton('上传', $r('sys.symbol.picture'), () => {
+            this.uploadQrImage();
+          })
+        }
+        .layoutWeight(1)
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+
       this.ActionButton('查询', $r('sys.symbol.magnifyingglass'), () => {
         this.submitQrQuery();
       })

@@ -11,11 +11,11 @@ const MY_REPAIR_TASK_INFO_SECTIONS: InfoDialogSection[] = [
     items: [
       {
         label: '任务',
-        description: '跟进当前已接取的维修任务'
+        description: '集中查看已接取且需要继续处理的维修任务，保持责任人与任务进度一致'
       },
       {
         label: '报告',
-        description: '维修完成或阶段处理后填写维修报告'
+        description: '在维修完成、临时恢复或无法解决时填写处理记录，支撑复检、归档和审计'
       }
     ]
   },
@@ -24,15 +24,15 @@ const MY_REPAIR_TASK_INFO_SECTIONS: InfoDialogSection[] = [
     items: [
       {
         label: RepairTaskService.formatRepairReportResult(RepairReportResult.Repaired),
-        description: '故障已处理完成，设备可恢复正常流程'
+        description: '故障已消除并完成必要验证，设备可进入正常运行或后续复检流程'
       },
       {
         label: RepairTaskService.formatRepairReportResult(RepairReportResult.TemporaryRestored),
-        description: '已采取临时措施，设备可短期运行但仍需后续处理'
+        description: '通过临时措施恢复有限运行能力，仍需标记遗留风险并安排后续处理'
       },
       {
         label: RepairTaskService.formatRepairReportResult(RepairReportResult.Unresolved),
-        description: '故障未消除，需要继续维修、升级处理或补充资源'
+        description: '当前处理未能消除故障，应说明阻塞原因，并升级、转派或补充资源'
       }
     ]
   }
@@ -57,7 +57,8 @@ struct MyRepairTask {
       sections: MY_REPAIR_TASK_INFO_SECTIONS
     }),
     autoCancel: true,
-    alignment: DialogAlignment.Center
+    alignment: DialogAlignment.Center,
+    customStyle: true
   });
 
   build() {

@@ -77,7 +77,8 @@ struct FaultReport {
       sections: FAULT_REPORT_INFO_SECTIONS
     }),
     autoCancel: true,
-    alignment: DialogAlignment.Center
+    alignment: DialogAlignment.Center,
+    customStyle: true
   });
 
   build() {

@@ -151,13 +151,13 @@ export class FaultReportService {
   static formatSeverityDescription(severity: FaultSeverity): string {
     switch (severity) {
       case FaultSeverity.Emergency:
-        return '核心功能完全不可用，影响所有用户，造成重大损失；设备完全停机，可能引发安全事故或严重生产中断';
+        return '关键能力已中断或设备停机，可能造成安全事故、重大损失或大范围业务中断，应立即处置';
       case FaultSeverity.Severe:
-        return '核心功能受损，大部分用户受影响，但非全部；设备运行效率极低，很大可能停机，严重影响产量或质量';
+        return '核心能力明显受损，运行效率或质量显著下降，存在停机风险，需要优先安排维修';
       case FaultSeverity.General:
-        return '非核心功能异常，部分用户受影响，有临时方案；设备降效运行，但未停机，明显影响产量或质量';
+        return '局部功能或指标异常，设备仍可受控运行，但已影响效率、质量或现场操作体验';
       case FaultSeverity.Minor:
-        return '不影响业务，可正常运行，但存在隐患或小缺陷';
+        return '暂不影响正常使用，但存在缺陷、隐患或趋势性异常，应记录并跟踪处理';
       default:
         return '-';
     }
@@ -166,19 +166,19 @@ export class FaultReportService {
   static formatFaultTypeDescription(type: FaultType): string {
     switch (type) {
       case FaultType.OperationAbnormal:
-        return '设备运行状态、性能输出或工作流程出现异常';
+        return '运行状态、性能表现或作业流程偏离预期，可能影响稳定性或产出一致性';
       case FaultType.HardwareDamage:
-        return '硬件、结构件或关键部件损坏、失效或磨损超限';
+        return '机械结构、电气部件或关键零部件出现损坏、失效、松动或磨损超限';
       case FaultType.CommunicationFault:
-        return '网络链路、协议交互、数据传输或远程连接异常';
+        return '网络链路、协议交互、远程连接或数据传输异常，导致状态同步或控制受阻';
       case FaultType.LogicFault:
-        return '控制逻辑、业务规则、程序状态或配置逻辑异常';
+        return '控制策略、业务规则、程序状态或参数配置异常，导致设备行为不符合预期';
       case FaultType.EnergyFault:
-        return '供电、储能、电源链路、能耗或能源供应异常';
+        return '供电、储能、电源链路或能耗表现异常，可能影响连续运行或安全边界';
       case FaultType.ExternalFactor:
-        return '环境、人为、施工、灾害等外部条件导致异常';
+        return '环境、人为操作、施工干扰、自然灾害等外部条件引发或放大设备异常';
       case FaultType.Other:
-        return '无法归入以上类别的故障';
+        return '现象明确但暂无法归入既有类别，提交时应补充充分现场描述和证据';
       default:
         return '-';
     }

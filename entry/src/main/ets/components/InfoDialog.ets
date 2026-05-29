@@ -62,6 +62,7 @@ export struct InfoDialog {
       }
       .width('100%')
       .constraintSize({ maxHeight: 520 })
+      .scrollBar(BarState.Off)
     }
     .width('88%')
     .padding({
@@ -72,6 +73,7 @@ export struct InfoDialog {
     })
     .backgroundColor('#FFFFFF')
     .borderRadius(28)
+    .clip(true)
   }
 
   @Builder
