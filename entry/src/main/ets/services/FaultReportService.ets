@@ -15,6 +15,13 @@ import { LocalOperationRecordRepository } from './LocalOperationRecordRepository
 const MAX_DESCRIPTION_LENGTH = 800;
 const MAX_SCENE_CONDITION_LENGTH = 500;
 
+interface FaultReportApiResult {
+  id: string;
+  faultReportNo: string;
+  status: string;
+  createdAt: string;
+}
+
 export class FaultReportService {
   static normalizeText(value: string): string {
     return value.trim();
@@ -107,6 +114,61 @@ export class FaultReportService {
     }
 
     return ApiClient.createServiceUnavailableResponse<FaultReportRecord>();
+  }
+
+  static async submitFaultReportRemoteFirst(form: FaultReportForm): Promise<ApiResponse<FaultReportRecord>> {
+    const validation = FaultReportService.validateFaultReportForm(form);
+    if (!validation.valid) {
+      return {
+        success: false,
+        error: {
+          code: 'FAULT_REPORT_INVALID',
+          message: validation.message
+        }
+      };
+    }
+
+    if (!ApiClient.isConfigured()) {
+      return FaultReportService.createLocalFaultReportResponse(form);
+    }
+
+    const response = await ApiClient.request<FaultReportApiResult>('/api/v1/fault-reports', 'POST', true,
+      JSON.stringify({
+        deviceCode: DeviceService.normalizeDeviceCode(form.deviceCode),
+        faultType: form.faultType,
+        severity: form.severity,
+        occurredAt: FaultReportService.normalizeText(form.occurredAt),
+        description: FaultReportService.normalizeText(form.description),
+        sceneCondition: FaultReportService.normalizeText(form.sceneCondition)
+      }));
+
+    if (!response.success) {
+      return {
+        success: false,
+        error: response.error,
+        requestId: response.requestId,
+        timestamp: response.timestamp
+      };
+    }
+
+    if (response.data === undefined) {
+      return {
+        success: false,
+        error: {
+          code: 'FAULT_REPORT_RESPONSE_INVALID',
+          message: '故障报告响应无效'
+        },
+        requestId: response.requestId,
+        timestamp: response.timestamp
+      };
+    }
+
+    return {
+      success: true,
+      data: FaultReportService.createRecordFromApiResult(form, response.data),
+      requestId: response.requestId,
+      timestamp: response.timestamp
+    };
   }
 
   static formatFaultType(type: FaultType): string {
@@ -207,6 +269,18 @@ export class FaultReportService {
       data: record,
       requestId: 'local-fault-report',
       timestamp: new Date().toISOString()
+    };
+  }
+
+  private static createRecordFromApiResult(form: FaultReportForm, result: FaultReportApiResult): FaultReportRecord {
+    return {
+      id: result.id,
+      reportNo: result.faultReportNo,
+      deviceCode: DeviceService.normalizeDeviceCode(form.deviceCode),
+      faultType: form.faultType,
+      severity: form.severity,
+      status: result.status,
+      submittedAt: result.createdAt
     };
   }
 }

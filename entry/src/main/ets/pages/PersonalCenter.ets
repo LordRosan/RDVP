@@ -1,4 +1,5 @@
 import { CurrentUserSnapshot } from '../models/SessionModels';
+import { ApiClient } from '../services/ApiClient';
 import { SessionStore } from '../stores/SessionStore';
 import { formatConnectionStatus } from '../utils/SessionFormat';
 
@@ -6,7 +7,9 @@ import { formatConnectionStatus } from '../utils/SessionFormat';
 @Component
 struct PersonalCenter {
   @State currentUser: CurrentUserSnapshot = SessionStore.getCurrentUser();
+  @State apiBaseUrl: string = ApiClient.getBaseUrl();
   @State message: string = '';
+  @State messageTone: string = '#D9480F';
 
   aboutToAppear(): void {
     if (!SessionStore.isAuthenticated()) {
@@ -15,6 +18,7 @@ struct PersonalCenter {
     }
 
     this.currentUser = SessionStore.getCurrentUser();
+    this.apiBaseUrl = ApiClient.getBaseUrl();
   }
 
   build() {
@@ -26,6 +30,7 @@ struct PersonalCenter {
           this.ModeHeader()
           this.ProfilePanel()
           this.SessionPanel()
+          this.ServicePanel()
           this.ActionPanel()
         }
         .alignItems(HorizontalAlign.Start)
@@ -191,11 +196,78 @@ struct PersonalCenter {
       if (this.message.length > 0) {
         Text(this.message)
           .fontSize(13)
-          .fontColor('#D9480F')
+          .fontColor(this.messageTone)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .width('100%')
       }
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  ServicePanel() {
+    Column({ space: 10 }) {
+      Text('服务')
+        .fontSize(22)
+        .fontWeight(FontWeight.Bold)
+        .fontColor('#111827')
+        .maxLines(1)
+
+      Column({ space: 12 }) {
+        this.InfoRow('服务状态', ApiClient.getRuntimeStatusLabel(), ApiClient.getRuntimeStatusTone())
+        this.CardDivider()
+
+        TextInput({
+          placeholder: '输入后端服务地址',
+          text: this.apiBaseUrl
+        })
+          .height(52)
+          .fontSize(15)
+          .backgroundColor('#F7F9FC')
+          .borderRadius(18)
+          .padding({
+            left: 14,
+            right: 14
+          })
+          .border({
+            width: 1,
+            color: '#D6DAE1'
+          })
+          .onChange((value: string) => {
+            this.apiBaseUrl = value;
+            this.message = '';
+            this.messageTone = '#D9480F';
+          })
+
+        Row({ space: 10 }) {
+          Column() {
+            this.ServiceButton('保存地址', $r('sys.symbol.checkmark_circle'), '#2F6FED', '#FFFFFF', () => {
+              this.saveApiBaseUrl();
+            })
+          }
+          .layoutWeight(1)
+
+          Column() {
+            this.ServiceButton('本地模式', $r('sys.symbol.xmark_circle'), '#FFFFFF', '#111827', () => {
+              this.clearApiBaseUrl();
+            })
+          }
+          .layoutWeight(1)
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+      }
+      .padding({
+        left: 18,
+        right: 18,
+        top: 12,
+        bottom: 18
+      })
+      .width('100%')
+      .backgroundColor('#FFFFFF')
+      .borderRadius(24)
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -290,6 +362,57 @@ struct PersonalCenter {
     .onClick(() => {
       action();
     })
+  }
+
+  @Builder
+  ServiceButton(label: string, icon: Resource, backgroundColor: string, textColor: string, action: () => void) {
+    Button({ type: ButtonType.Capsule, stateEffect: true }) {
+      Row({ space: 6 }) {
+        SymbolGlyph(icon)
+          .fontSize(18)
+          .fontColor([textColor])
+
+        Text(label)
+          .fontSize(15)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(textColor)
+          .maxLines(1)
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+    }
+    .height(46)
+    .width('100%')
+    .backgroundColor(backgroundColor)
+    .border({
+      width: 1,
+      color: backgroundColor === '#FFFFFF' ? '#D6DAE1' : backgroundColor
+    })
+    .onClick(() => {
+      action();
+    })
+  }
+
+  saveApiBaseUrl(): void {
+    const value = this.apiBaseUrl.trim();
+    if (value.length > 0 && !value.startsWith('http://') && !value.startsWith('https://')) {
+      this.message = '后端服务地址必须以 http:// 或 https:// 开头';
+      this.messageTone = '#D9480F';
+      return;
+    }
+
+    ApiClient.setBaseUrl(value);
+    this.apiBaseUrl = ApiClient.getBaseUrl();
+    this.message = ApiClient.isConfigured() ? '服务地址已保存，建议重新登录后使用后端会话' : '已切换为本地模式';
+    this.messageTone = ApiClient.isConfigured() ? '#087F5B' : '#2F6FED';
+  }
+
+  clearApiBaseUrl(): void {
+    ApiClient.setBaseUrl('');
+    this.apiBaseUrl = '';
+    this.message = '已切换为本地模式';
+    this.messageTone = '#2F6FED';
   }
 
   formatSessionExpiresAt(): string {

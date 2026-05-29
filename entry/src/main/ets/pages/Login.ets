@@ -200,13 +200,13 @@ struct Login {
     })
   }
 
-  submitLogin(): void {
+  async submitLogin(): Promise<void> {
     if (this.submitting) {
       return;
     }
 
     this.submitting = true;
-    const response = AuthService.login({
+    const response = await AuthService.loginRemoteFirst({
       username: this.username,
       password: this.password
     });

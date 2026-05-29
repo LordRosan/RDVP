@@ -5,7 +5,7 @@ import { AuthSession, UserAccount } from '../domain/models/entities.js';
 import { OperationRecordStatus } from '../domain/models/enums.js';
 import { InMemoryDatabase } from '../infrastructure/InMemoryDatabase.js';
 
-const SESSION_TTL_SECONDS = 7200;
+const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 export class AuthService {
   constructor(

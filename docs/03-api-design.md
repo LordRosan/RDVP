@@ -152,7 +152,7 @@ POST /api/v1/auth/login
 ```json
 {
   "accessToken": "token",
-  "expiresIn": 7200,
+  "expiresIn": 604800,
   "user": {
     "id": "user-id",
     "username": "user001",

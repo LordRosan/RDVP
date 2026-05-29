@@ -74,6 +74,7 @@ struct FaultReport {
   @State message: string = '';
   @State messageTone: string = '#D9480F';
   @State normalizedDeviceCode: string = '-';
+  @State submitting: boolean = false;
   private faultInfoDialogController: CustomDialogController = new CustomDialogController({
     builder: InfoDialog({
       title: '故障分类说明',
@@ -193,9 +194,9 @@ struct FaultReport {
       this.DescriptionField()
       this.SceneConditionField()
       this.MessageText()
-      this.ActionButton('提交报告', $r('sys.symbol.exclamationmark_message'), () => {
+      this.ActionButton(this.submitting ? '提交中' : '提交报告', $r('sys.symbol.exclamationmark_message'), () => {
         this.submitFaultReport();
-      })
+      }, !this.submitting)
     }
     .padding({
       left: 18,
@@ -540,7 +541,7 @@ struct FaultReport {
   }
 
   @Builder
-  ActionButton(label: string, icon: Resource, action: () => void) {
+  ActionButton(label: string, icon: Resource, action: () => void, enabled: boolean) {
     Button({ type: ButtonType.Capsule, stateEffect: true }) {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
@@ -560,6 +561,7 @@ struct FaultReport {
     .height(54)
     .width('100%')
     .backgroundColor('#2F6FED')
+    .enabled(enabled)
     .onClick(() => {
       action();
     })
@@ -645,8 +647,18 @@ struct FaultReport {
     .width('100%')
   }
 
-  submitFaultReport(): void {
-    const response = FaultReportService.submitFaultReport({
+  async submitFaultReport(): Promise<void> {
+    if (this.submitting) {
+      return;
+    }
+
+    this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(this.deviceCode);
+    if (this.normalizedDeviceCode.length === 0) {
+      this.normalizedDeviceCode = '-';
+    }
+
+    this.submitting = true;
+    const response = await FaultReportService.submitFaultReportRemoteFirst({
       deviceCode: this.deviceCode,
       faultType: this.faultType,
       severity: this.severity,
@@ -654,11 +666,7 @@ struct FaultReport {
       description: this.description,
       sceneCondition: this.sceneCondition
     });
-
-    this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(this.deviceCode);
-    if (this.normalizedDeviceCode.length === 0) {
-      this.normalizedDeviceCode = '-';
-    }
+    this.submitting = false;
 
     if (!response.success) {
       const error = response.error;

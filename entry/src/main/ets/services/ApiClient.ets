@@ -1,14 +1,30 @@
+import { http } from '@kit.NetworkKit';
 import { ApiErrorCode, ApiRequestOptions, ApiResponse } from '../models/ApiModels';
+import { SessionStore } from '../stores/SessionStore';
 
 const DEFAULT_API_BASE_URL = '';
+const API_BASE_URL_STORAGE_KEY = 'rdvp_api_base_url';
+const CLIENT_VERSION = 'rdvp-harmony-0.1.0';
+const REQUEST_TIMEOUT_MS = 15000;
+
+interface ApiHttpHeaders {
+  'Content-Type': string;
+  'Accept': string;
+  'X-Client-Version': string;
+  'Authorization'?: string;
+}
 
 export class ApiClient {
+  private static baseUrl: string = DEFAULT_API_BASE_URL;
+  private static initialized: boolean = false;
+
   static getBaseUrl(): string {
-    return DEFAULT_API_BASE_URL;
+    ApiClient.ensureInitialized();
+    return ApiClient.baseUrl;
   }
 
   static isConfigured(): boolean {
-    return DEFAULT_API_BASE_URL.length > 0;
+    return ApiClient.getBaseUrl().length > 0;
   }
 
   static getRuntimeStatusLabel(): string {
@@ -36,5 +52,188 @@ export class ApiClient {
       requiresAuth,
       body
     };
+  }
+
+  static async request<T>(path: string, method: string, requiresAuth: boolean, body?: string): Promise<ApiResponse<T>> {
+    if (!ApiClient.isConfigured()) {
+      return ApiClient.createServiceUnavailableResponse<T>();
+    }
+
+    const request = http.createHttp();
+    try {
+      const response = await request.request(ApiClient.createUrl(path), {
+        method: ApiClient.toRequestMethod(method),
+        header: ApiClient.createHeaders(requiresAuth),
+        extraData: body,
+        expectDataType: http.HttpDataType.STRING,
+        readTimeout: REQUEST_TIMEOUT_MS,
+        connectTimeout: REQUEST_TIMEOUT_MS
+      });
+
+      if (response.responseCode === 401) {
+        SessionStore.clearSession();
+      }
+
+      return ApiClient.parseResponse<T>(response.responseCode, `${response.result}`);
+    } catch (err) {
+      return {
+        success: false,
+        error: {
+          code: ApiErrorCode.ServiceUnavailable,
+          message: '后端服务暂不可用，请检查网络或服务地址'
+        },
+        timestamp: new Date().toISOString()
+      };
+    } finally {
+      request.destroy();
+    }
+  }
+
+  static setBaseUrl(baseUrl: string): void {
+    ApiClient.ensureInitialized();
+    ApiClient.baseUrl = ApiClient.normalizeBaseUrl(baseUrl);
+    ApiClient.persistBaseUrl(ApiClient.baseUrl);
+  }
+
+  private static ensureInitialized(): void {
+    if (ApiClient.initialized) {
+      return;
+    }
+
+    ApiClient.initialized = true;
+    try {
+      PersistentStorage.persistProp<string>(API_BASE_URL_STORAGE_KEY, DEFAULT_API_BASE_URL);
+      const storedBaseUrl = AppStorage.get<string>(API_BASE_URL_STORAGE_KEY);
+      ApiClient.baseUrl = ApiClient.normalizeBaseUrl(storedBaseUrl === undefined ? DEFAULT_API_BASE_URL : storedBaseUrl);
+    } catch (err) {
+      ApiClient.baseUrl = ApiClient.normalizeBaseUrl(DEFAULT_API_BASE_URL);
+    }
+  }
+
+  private static persistBaseUrl(baseUrl: string): void {
+    try {
+      AppStorage.setOrCreate<string>(API_BASE_URL_STORAGE_KEY, baseUrl);
+    } catch (err) {
+    }
+  }
+
+  private static normalizeBaseUrl(baseUrl: string): string {
+    let normalized = baseUrl.trim();
+    while (normalized.endsWith('/')) {
+      normalized = normalized.substring(0, normalized.length - 1);
+    }
+
+    return normalized;
+  }
+
+  private static createUrl(path: string): string {
+    if (path.startsWith('/')) {
+      return `${ApiClient.getBaseUrl()}${path}`;
+    }
+
+    return `${ApiClient.getBaseUrl()}/${path}`;
+  }
+
+  private static createHeaders(requiresAuth: boolean): ApiHttpHeaders {
+    const session = SessionStore.getSessionState().session;
+    if (requiresAuth && session !== undefined && session.accessToken.length > 0) {
+      return {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Client-Version': CLIENT_VERSION,
+        'Authorization': `Bearer ${session.accessToken}`
+      };
+    }
+
+    return {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'X-Client-Version': CLIENT_VERSION
+    };
+  }
+
+  private static toRequestMethod(method: string): http.RequestMethod {
+    switch (method.toUpperCase()) {
+      case 'POST':
+        return http.RequestMethod.POST;
+      case 'PUT':
+        return http.RequestMethod.PUT;
+      case 'DELETE':
+        return http.RequestMethod.DELETE;
+      case 'GET':
+      default:
+        return http.RequestMethod.GET;
+    }
+  }
+
+  private static parseResponse<T>(responseCode: number, responseText: string): ApiResponse<T> {
+    if (responseText.trim().length > 0) {
+      try {
+        return JSON.parse(responseText) as ApiResponse<T>;
+      } catch (err) {
+        return {
+          success: false,
+          error: {
+            code: ApiErrorCode.InternalError,
+            message: '后端响应解析失败'
+          },
+          timestamp: new Date().toISOString()
+        };
+      }
+    }
+
+    if (responseCode >= 200 && responseCode < 300) {
+      return {
+        success: true,
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    return {
+      success: false,
+      error: {
+        code: ApiClient.mapStatusToErrorCode(responseCode),
+        message: ApiClient.mapStatusToMessage(responseCode)
+      },
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  private static mapStatusToErrorCode(responseCode: number): ApiErrorCode {
+    switch (responseCode) {
+      case 400:
+        return ApiErrorCode.BadRequest;
+      case 401:
+        return ApiErrorCode.Unauthorized;
+      case 403:
+        return ApiErrorCode.Forbidden;
+      case 404:
+        return ApiErrorCode.NotFound;
+      case 409:
+        return ApiErrorCode.Conflict;
+      case 429:
+        return ApiErrorCode.RateLimited;
+      default:
+        return ApiErrorCode.InternalError;
+    }
+  }
+
+  private static mapStatusToMessage(responseCode: number): string {
+    switch (responseCode) {
+      case 400:
+        return '请求参数无效';
+      case 401:
+        return '登录状态已失效，请重新登录';
+      case 403:
+        return '当前账号无权执行该操作';
+      case 404:
+        return '未找到请求资源';
+      case 409:
+        return '当前状态不允许执行该操作';
+      case 429:
+        return '请求过于频繁，请稍后再试';
+      default:
+        return '后端服务处理失败';
+    }
   }
 }

@@ -10,6 +10,11 @@ import {
 } from '../models/DeviceModels';
 import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
 
+interface QrVerifyApiResult {
+  valid: boolean;
+  device: DeviceSummary;
+}
+
 export class DeviceService {
   static normalizeDeviceCode(deviceCode: string): string {
     return deviceCode.trim().toUpperCase();
@@ -93,6 +98,27 @@ export class DeviceService {
     return ApiClient.createServiceUnavailableResponse<DeviceSummary>();
   }
 
+  static async queryByCodeRemoteFirst(form: DeviceCodeQueryForm): Promise<ApiResponse<DeviceSummary>> {
+    const validation = DeviceService.validateDeviceCodeQuery(form);
+
+    if (!validation.valid) {
+      return {
+        success: false,
+        error: {
+          code: 'DEVICE_CODE_INVALID',
+          message: validation.message
+        }
+      };
+    }
+
+    if (!ApiClient.isConfigured()) {
+      return DeviceService.queryLocalArchiveByCode(form.deviceCode);
+    }
+
+    const deviceCode = encodeURIComponent(DeviceService.normalizeDeviceCode(form.deviceCode));
+    return ApiClient.request<DeviceSummary>(`/api/v1/devices/by-code/${deviceCode}`, 'GET', true);
+  }
+
   static queryByQrContent(form: DeviceQrQueryForm): ApiResponse<DeviceSummary> {
     const validation = DeviceService.validateQrQuery(form);
 
@@ -111,6 +137,58 @@ export class DeviceService {
     }
 
     return ApiClient.createServiceUnavailableResponse<DeviceSummary>();
+  }
+
+  static async queryByQrContentRemoteFirst(form: DeviceQrQueryForm): Promise<ApiResponse<DeviceSummary>> {
+    const validation = DeviceService.validateQrQuery(form);
+
+    if (!validation.valid) {
+      return {
+        success: false,
+        error: {
+          code: 'QR_CODE_INVALID',
+          message: validation.message
+        }
+      };
+    }
+
+    if (!ApiClient.isConfigured()) {
+      return DeviceService.queryLocalArchiveByQrContent(form.qrContent);
+    }
+
+    const response = await ApiClient.request<QrVerifyApiResult>('/api/v1/device-qrcodes/verify', 'POST', true,
+      JSON.stringify({
+        qrContent: DeviceService.normalizeQrContent(form.qrContent),
+        scannedAt: new Date().toISOString()
+      }));
+
+    if (!response.success) {
+      return {
+        success: false,
+        error: response.error,
+        requestId: response.requestId,
+        timestamp: response.timestamp
+      };
+    }
+
+    if (response.data === undefined || !response.data.valid) {
+      return {
+        success: false,
+        error: {
+          code: 'QR_CODE_INVALID',
+          message: '二维码校验未通过'
+        },
+        requestId: response.requestId,
+        timestamp: response.timestamp
+      };
+    }
+
+    return {
+      success: true,
+      data: response.data.device,
+      requestId: response.requestId,
+      timestamp: response.timestamp
+    };
   }
 
   static formatDeviceStatus(status: DeviceStatus): string {

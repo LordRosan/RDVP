@@ -1,8 +1,14 @@
 import { ApiClient } from './ApiClient';
 import { ApiResponse } from '../models/ApiModels';
-import { AuthSession, LoginForm, LoginValidationResult, RoleCode } from '../models/AuthModels';
+import { AuthenticatedUser, AuthSession, LoginForm, LoginValidationResult, RoleCode } from '../models/AuthModels';
 import { OperationRecordType } from '../models/OperationRecordModels';
 import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
+
+interface LoginApiResult {
+  accessToken: string;
+  expiresIn: number;
+  user: AuthenticatedUser;
+}
 
 export class AuthService {
   static validateLoginForm(form: LoginForm): LoginValidationResult {
@@ -48,6 +54,57 @@ export class AuthService {
     return ApiClient.createServiceUnavailableResponse<AuthSession>();
   }
 
+  static async loginRemoteFirst(form: LoginForm): Promise<ApiResponse<AuthSession>> {
+    const validation = AuthService.validateLoginForm(form);
+
+    if (!validation.valid) {
+      return {
+        success: false,
+        error: {
+          code: 'LOGIN_FORM_INVALID',
+          message: validation.message
+        }
+      };
+    }
+
+    if (!ApiClient.isConfigured()) {
+      return AuthService.createLocalSession(form);
+    }
+
+    const response = await ApiClient.request<LoginApiResult>('/api/v1/auth/login', 'POST', false, JSON.stringify({
+      username: form.username.trim(),
+      password: form.password
+    }));
+
+    if (!response.success) {
+      return {
+        success: false,
+        error: response.error,
+        requestId: response.requestId,
+        timestamp: response.timestamp
+      };
+    }
+
+    if (response.data === undefined) {
+      return {
+        success: false,
+        error: {
+          code: 'LOGIN_RESPONSE_INVALID',
+          message: '登录响应无效'
+        },
+        requestId: response.requestId,
+        timestamp: response.timestamp
+      };
+    }
+
+    return {
+      success: true,
+      data: AuthService.createSessionFromApiResult(response.data),
+      requestId: response.requestId,
+      timestamp: response.timestamp
+    };
+  }
+
   private static createLocalSession(form: LoginForm): ApiResponse<AuthSession> {
     const username = form.username.trim();
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -83,6 +140,15 @@ export class AuthService {
       data: session,
       requestId: 'local-auth-session',
       timestamp: new Date().toISOString()
+    };
+  }
+
+  private static createSessionFromApiResult(result: LoginApiResult): AuthSession {
+    const expiresIn = result.expiresIn > 0 ? result.expiresIn : 0;
+    return {
+      accessToken: result.accessToken,
+      expiresAt: new Date(Date.now() + expiresIn * 1000).toISOString(),
+      user: result.user
     };
   }
 }

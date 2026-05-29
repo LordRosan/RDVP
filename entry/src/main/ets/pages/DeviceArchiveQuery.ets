@@ -36,6 +36,7 @@ struct DeviceArchiveQuery {
   @State qrContent: string = '';
   @State message: string = '';
   @State normalizedDeviceCode: string = '-';
+  @State querying: boolean = false;
   private queryInfoDialogController: CustomDialogController = new CustomDialogController({
     builder: InfoDialog({
       title: '设备档案查询说明',
@@ -220,9 +221,9 @@ struct DeviceArchiveQuery {
         })
 
       this.MessageText()
-      this.ActionButton('查询', $r('sys.symbol.magnifyingglass'), () => {
+      this.ActionButton(this.querying ? '查询中' : '查询', $r('sys.symbol.magnifyingglass'), () => {
         this.submitDeviceCodeQuery();
-      })
+      }, !this.querying)
     }
     .padding({
       left: 18,
@@ -289,23 +290,23 @@ struct DeviceArchiveQuery {
         Column() {
           this.ActionButton('扫描', $r('sys.symbol.circle_viewfinder'), () => {
             this.scanQrCode();
-          })
+          }, !this.querying)
         }
         .layoutWeight(1)
 
         Column() {
           this.ActionButton('上传', $r('sys.symbol.picture'), () => {
             this.uploadQrImage();
-          })
+          }, !this.querying)
         }
         .layoutWeight(1)
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
 
-      this.ActionButton('查询', $r('sys.symbol.magnifyingglass'), () => {
+      this.ActionButton(this.querying ? '查询中' : '查询', $r('sys.symbol.magnifyingglass'), () => {
         this.submitQrQuery();
-      })
+      }, !this.querying)
     }
     .padding({
       left: 18,
@@ -332,7 +333,7 @@ struct DeviceArchiveQuery {
   }
 
   @Builder
-  ActionButton(label: string, icon: Resource, action: () => void) {
+  ActionButton(label: string, icon: Resource, action: () => void, enabled: boolean) {
     Button({ type: ButtonType.Capsule, stateEffect: true }) {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
@@ -352,6 +353,7 @@ struct DeviceArchiveQuery {
     .height(54)
     .width('100%')
     .backgroundColor('#2F6FED')
+    .enabled(enabled)
     .onClick(() => {
       action();
     })
@@ -453,15 +455,21 @@ struct DeviceArchiveQuery {
     return this.queryMode === DeviceQueryMode.Code ? '设备编号' : '二维码';
   }
 
-  submitDeviceCodeQuery(): void {
-    const response = DeviceService.queryByCode({
-      deviceCode: this.deviceCode
-    });
+  async submitDeviceCodeQuery(): Promise<void> {
+    if (this.querying) {
+      return;
+    }
 
     this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(this.deviceCode);
     if (this.normalizedDeviceCode.length === 0) {
       this.normalizedDeviceCode = '-';
     }
+
+    this.querying = true;
+    const response = await DeviceService.queryByCodeRemoteFirst({
+      deviceCode: this.deviceCode
+    });
+    this.querying = false;
 
     if (!response.success) {
       const error = response.error;
@@ -550,11 +558,17 @@ struct DeviceArchiveQuery {
     }
   }
 
-  submitQrQuery(): void {
+  async submitQrQuery(): Promise<void> {
+    if (this.querying) {
+      return;
+    }
+
     this.qrContent = DeviceService.normalizeQrContent(this.qrContent);
-    const response = DeviceService.queryByQrContent({
+    this.querying = true;
+    const response = await DeviceService.queryByQrContentRemoteFirst({
       qrContent: this.qrContent
     });
+    this.querying = false;
 
     if (!response.success) {
       const error = response.error;
