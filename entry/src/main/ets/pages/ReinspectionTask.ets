@@ -1,4 +1,5 @@
 import { InfoDialog, InfoDialogSection } from '../components/InfoDialog';
+import { StatusInfoRow } from '../components/StatusInfoRow';
 import {
   ReinspectionResult,
   ReinspectionTaskSummary
@@ -506,14 +507,25 @@ struct ReinspectionTask {
         .maxLines(1)
 
       Column() {
-        this.StatusRow('标准任务号', this.normalizedTaskId, '#374151')
+        StatusInfoRow({ label: '标准任务号', value: this.normalizedTaskId, tone: '#374151' })
         this.CardDivider()
-        this.StatusRow('复检结论', ReinspectionService.formatResult(this.result), ReinspectionService.getResultTone(this.result))
+        StatusInfoRow({
+          label: '复检结论',
+          value: ReinspectionService.formatResult(this.result),
+          tone: ReinspectionService.getResultTone(this.result)
+        })
         this.CardDivider()
-        this.StatusRow('刷新状态', this.taskMessage.length > 0 ? '刷新失败' : this.refreshStatus,
-          this.taskMessage.length > 0 ? '#D9480F' : '#495057')
+        StatusInfoRow({
+          label: '刷新状态',
+          value: this.taskMessage.length > 0 ? '刷新失败' : this.refreshStatus,
+          tone: this.taskMessage.length > 0 ? '#D9480F' : '#495057'
+        })
         this.CardDivider()
-        this.StatusRow('服务状态', ApiClient.getRuntimeStatusLabel(), ApiClient.getRuntimeStatusTone())
+        StatusInfoRow({
+          label: '服务状态',
+          value: ApiClient.getRuntimeStatusLabel(),
+          tone: ApiClient.getRuntimeStatusTone()
+        })
       }
       .width('100%')
       .backgroundColor('#FFFFFF')
@@ -607,34 +619,6 @@ struct ReinspectionTask {
         left: 18,
         right: 18
       })
-  }
-
-  @Builder
-  StatusRow(label: string, value: string, tone: string) {
-    Row() {
-      Text(label)
-        .fontSize(15)
-        .fontColor('#111827')
-        .fontWeight(FontWeight.Medium)
-        .layoutWeight(1)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-      Text(value)
-        .fontSize(15)
-        .fontColor(tone)
-        .fontWeight(FontWeight.Medium)
-        .textAlign(TextAlign.End)
-        .width('58%')
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
-    .height(54)
-    .padding({
-      left: 18,
-      right: 18
-    })
-    .width('100%')
   }
 
   async refreshTasks(): Promise<void> {

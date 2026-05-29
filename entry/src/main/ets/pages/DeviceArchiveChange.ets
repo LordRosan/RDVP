@@ -6,6 +6,7 @@ import {
   DeviceArchiveChangeRequestStatus
 } from '../models/DeviceArchiveChangeModels';
 import { ApiClient } from '../services/ApiClient';
+import { StatusInfoRow } from '../components/StatusInfoRow';
 import { DeviceArchiveChangeService } from '../services/DeviceArchiveChangeService';
 import { DeviceService } from '../services/DeviceService';
 import { DeviceArchiveFlowStore } from '../stores/DeviceArchiveFlowStore';
@@ -197,10 +198,10 @@ struct DeviceArchiveChange {
       })
       this.ReasonField()
       this.MessageText()
-      this.ActionButton(this.submitting ? '提交中' : '提交申请', $r('sys.symbol.checkmark_circle'),
-        this.hasDevice && !this.submitting, () => {
-        this.submitChangeRequest();
-      })
+      this.ActionButton(this.getSubmitButtonLabel(), $r('sys.symbol.checkmark_circle'),
+        this.hasDevice && !this.submitting && !this.isChangeSubmitted(), () => {
+          this.submitChangeRequest();
+        })
     }
     .padding({
       left: 18,
@@ -263,6 +264,7 @@ struct DeviceArchiveChange {
           width: 1,
           color: '#D6DAE1'
         })
+        .enabled(!this.isChangeSubmitted())
         .onChange((value: string) => {
           inputAction(value);
           this.message = '';
@@ -300,6 +302,7 @@ struct DeviceArchiveChange {
           width: 1,
           color: '#D6DAE1'
         })
+        .enabled(!this.isChangeSubmitted())
         .onChange((value: string) => {
           this.reason = value;
           this.message = '';
@@ -383,14 +386,21 @@ struct DeviceArchiveChange {
         .maxLines(1)
 
       Column() {
-        this.StatusRow('标准编号', this.normalizedDeviceCode, '#374151')
+        StatusInfoRow({ label: '标准编号', value: this.normalizedDeviceCode, tone: '#374151' })
         this.CardDivider()
-        this.StatusRow('变更字段', `${this.changeCount}项`, '#374151')
+        StatusInfoRow({ label: '变更字段', value: `${this.changeCount}项`, tone: '#374151' })
         this.CardDivider()
-        this.StatusRow('申请状态', DeviceArchiveChangeService.formatRequestStatus(this.requestStatus),
-          this.getStatusTone(this.requestStatus))
+        StatusInfoRow({
+          label: '申请状态',
+          value: DeviceArchiveChangeService.formatRequestStatus(this.requestStatus),
+          tone: this.getStatusTone(this.requestStatus)
+        })
         this.CardDivider()
-        this.StatusRow('服务状态', ApiClient.getRuntimeStatusLabel(), ApiClient.getRuntimeStatusTone())
+        StatusInfoRow({
+          label: '服务状态',
+          value: ApiClient.getRuntimeStatusLabel(),
+          tone: ApiClient.getRuntimeStatusTone()
+        })
       }
       .width('100%')
       .backgroundColor('#FFFFFF')
@@ -408,35 +418,7 @@ struct DeviceArchiveChange {
       .margin({
         left: 18,
         right: 18
-      })
-  }
-
-  @Builder
-  StatusRow(label: string, value: string, tone: string) {
-    Row() {
-      Text(label)
-        .fontSize(15)
-        .fontColor('#111827')
-        .fontWeight(FontWeight.Medium)
-        .layoutWeight(1)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-      Text(value)
-        .fontSize(15)
-        .fontColor(tone)
-        .fontWeight(FontWeight.Medium)
-        .textAlign(TextAlign.End)
-        .width('58%')
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
-    .height(54)
-    .padding({
-      left: 18,
-      right: 18
     })
-    .width('100%')
   }
 
   async submitChangeRequest(): Promise<void> {
@@ -507,6 +489,22 @@ struct DeviceArchiveChange {
       default:
         return '#374151';
     }
+  }
+
+  isChangeSubmitted(): boolean {
+    return this.requestStatus === DeviceArchiveChangeRequestStatus.PendingReview;
+  }
+
+  getSubmitButtonLabel(): string {
+    if (this.submitting) {
+      return '提交中';
+    }
+
+    if (this.isChangeSubmitted()) {
+      return '已提交';
+    }
+
+    return '提交申请';
   }
 
   showChangeInfoDialog(): void {

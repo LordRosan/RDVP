@@ -9,6 +9,7 @@ import {
 import { OperationRecordType } from '../models/OperationRecordModels';
 import { ApiClient } from './ApiClient';
 import { DeviceService } from './DeviceService';
+import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
 import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
 
 interface DeviceArchiveChangeApiResult {
@@ -305,6 +306,7 @@ export class DeviceArchiveChangeService {
     normalizedDeviceCode: string): ApiResponse<DeviceArchiveChangeRequestRecord> {
     const submittedAt = new Date().toISOString();
     const requestId = `DCR-LOCAL-${submittedAt.replace(/[-:.TZ]/g, '').substring(0, 14)}`;
+    LocalDeviceArchiveRepository.markChangePending(normalizedDeviceCode, requestId);
     LocalOperationRecordRepository.append(OperationRecordType.DeviceChangeRequest, '提交档案变更', normalizedDeviceCode,
       '设备档案变更进入待审核状态');
     return {

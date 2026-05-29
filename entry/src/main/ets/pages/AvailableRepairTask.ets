@@ -1,4 +1,5 @@
 import { InfoDialog, InfoDialogSection } from '../components/InfoDialog';
+import { StatusInfoRow } from '../components/StatusInfoRow';
 import { FaultSeverity } from '../models/FaultModels';
 import { AvailableRepairTaskSummary, RepairerAvailability } from '../models/RepairTaskModels';
 import { ApiClient } from '../services/ApiClient';
@@ -382,16 +383,27 @@ struct AvailableRepairTask {
         .maxLines(1)
 
       Column() {
-        this.StatusRow('推荐范围', `${RepairTaskService.getDefaultRadiusKm()} km`, '#374151')
+        StatusInfoRow({
+          label: '推荐范围',
+          value: `${RepairTaskService.getDefaultRadiusKm()} km`,
+          tone: '#374151'
+        })
         this.CardDivider()
-        this.StatusRow('当前范围', `${this.radiusKm} km`, '#2F6FED')
+        StatusInfoRow({ label: '当前范围', value: `${this.radiusKm} km`, tone: '#2F6FED' })
         this.CardDivider()
-        this.StatusRow('维修状态', RepairTaskService.formatAvailability(this.availability),
-          this.availability === RepairerAvailability.Idle ? '#087F5B' : '#D9480F')
+        StatusInfoRow({
+          label: '维修状态',
+          value: RepairTaskService.formatAvailability(this.availability),
+          tone: this.availability === RepairerAvailability.Idle ? '#087F5B' : '#D9480F'
+        })
         this.CardDivider()
         this.RefreshStatusRow()
         this.CardDivider()
-        this.StatusRow('服务状态', ApiClient.getRuntimeStatusLabel(), ApiClient.getRuntimeStatusTone())
+        StatusInfoRow({
+          label: '服务状态',
+          value: ApiClient.getRuntimeStatusLabel(),
+          tone: ApiClient.getRuntimeStatusTone()
+        })
       }
       .width('100%')
       .backgroundColor('#FFFFFF')
@@ -473,34 +485,6 @@ struct AvailableRepairTask {
         left: 18,
         right: 18
       })
-  }
-
-  @Builder
-  StatusRow(label: string, value: string, tone: string) {
-    Row() {
-      Text(label)
-        .fontSize(15)
-        .fontColor('#111827')
-        .fontWeight(FontWeight.Medium)
-        .layoutWeight(1)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-      Text(value)
-        .fontSize(15)
-        .fontColor(tone)
-        .fontWeight(FontWeight.Medium)
-        .textAlign(TextAlign.End)
-        .width('58%')
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
-    .height(54)
-    .padding({
-      left: 18,
-      right: 18
-    })
-    .width('100%')
   }
 
   @Builder

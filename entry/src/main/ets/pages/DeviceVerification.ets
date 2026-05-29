@@ -1,4 +1,5 @@
 import { InfoDialog, InfoDialogSection } from '../components/InfoDialog';
+import { StatusInfoRow } from '../components/StatusInfoRow';
 import { VerificationResult } from '../models/VerificationModels';
 import { ApiClient } from '../services/ApiClient';
 import { DeviceService } from '../services/DeviceService';
@@ -407,12 +408,19 @@ struct DeviceVerification {
         .maxLines(1)
 
       Column() {
-        this.StatusRow('标准编号', this.normalizedDeviceCode, '#374151')
+        StatusInfoRow({ label: '标准编号', value: this.normalizedDeviceCode, tone: '#374151' })
         this.CardDivider()
-        this.StatusRow('核验结果', DeviceVerificationService.formatVerificationResult(this.verificationResult),
-          this.getResultTone(this.verificationResult))
+        StatusInfoRow({
+          label: '核验结果',
+          value: DeviceVerificationService.formatVerificationResult(this.verificationResult),
+          tone: this.getResultTone(this.verificationResult)
+        })
         this.CardDivider()
-        this.StatusRow('服务状态', ApiClient.getRuntimeStatusLabel(), ApiClient.getRuntimeStatusTone())
+        StatusInfoRow({
+          label: '服务状态',
+          value: ApiClient.getRuntimeStatusLabel(),
+          tone: ApiClient.getRuntimeStatusTone()
+        })
       }
       .width('100%')
       .backgroundColor('#FFFFFF')
@@ -431,34 +439,6 @@ struct DeviceVerification {
         left: 18,
         right: 18
       })
-  }
-
-  @Builder
-  StatusRow(label: string, value: string, tone: string) {
-    Row() {
-      Text(label)
-        .fontSize(15)
-        .fontColor('#111827')
-        .fontWeight(FontWeight.Medium)
-        .layoutWeight(1)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-      Text(value)
-        .fontSize(15)
-        .fontColor(tone)
-        .fontWeight(FontWeight.Medium)
-        .textAlign(TextAlign.End)
-        .width('58%')
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
-    .height(54)
-    .padding({
-      left: 18,
-      right: 18
-    })
-    .width('100%')
   }
 
   async submitVerification(): Promise<void> {

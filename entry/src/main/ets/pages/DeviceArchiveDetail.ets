@@ -1,4 +1,5 @@
 import { InfoDialog, InfoDialogSection } from '../components/InfoDialog';
+import { StatusInfoRow } from '../components/StatusInfoRow';
 import { DeviceStatus, DeviceSummary } from '../models/DeviceModels';
 import { DeviceService } from '../services/DeviceService';
 import { DeviceArchiveFlowStore } from '../stores/DeviceArchiveFlowStore';
@@ -177,17 +178,53 @@ struct DeviceArchiveDetail {
         .maxLines(1)
 
       Column() {
-        this.StatusRow('设备编号', this.device.deviceCode, '#374151')
+        StatusInfoRow({
+          label: '设备编号',
+          value: this.device.deviceCode,
+          tone: '#374151',
+          valueMaxLines: 2,
+          verticalPadding: 12
+        })
         this.CardDivider()
-        this.StatusRow('设备名称', this.device.name, '#374151')
+        StatusInfoRow({
+          label: '设备名称',
+          value: this.device.name,
+          tone: '#374151',
+          valueMaxLines: 2,
+          verticalPadding: 12
+        })
         this.CardDivider()
-        this.StatusRow('设备型号', this.device.model, '#374151')
+        StatusInfoRow({
+          label: '设备型号',
+          value: this.device.model,
+          tone: '#374151',
+          valueMaxLines: 2,
+          verticalPadding: 12
+        })
         this.CardDivider()
-        this.StatusRow('生产厂商', this.device.manufacturer, '#374151')
+        StatusInfoRow({
+          label: '生产厂商',
+          value: this.device.manufacturer,
+          tone: '#374151',
+          valueMaxLines: 2,
+          verticalPadding: 12
+        })
         this.CardDivider()
-        this.StatusRow('设备位置', this.device.location.address, '#374151')
+        StatusInfoRow({
+          label: '设备位置',
+          value: this.device.location.address,
+          tone: '#374151',
+          valueMaxLines: 2,
+          verticalPadding: 12
+        })
         this.CardDivider()
-        this.StatusRow('最近核验', this.device.lastVerificationTime ? this.device.lastVerificationTime : '-', '#374151')
+        StatusInfoRow({
+          label: '最近核验',
+          value: this.device.lastVerificationTime ? this.device.lastVerificationTime : '-',
+          tone: '#374151',
+          valueMaxLines: 2,
+          verticalPadding: 12
+        })
       }
       .width('100%')
       .backgroundColor('#FFFFFF')
@@ -207,11 +244,21 @@ struct DeviceArchiveDetail {
         .maxLines(1)
 
       Column() {
-        this.StatusRow('设备状态', DeviceService.formatDeviceStatus(this.device.status),
-          DeviceService.getDeviceStatusTone(this.device.status))
+        StatusInfoRow({
+          label: '设备状态',
+          value: DeviceService.formatDeviceStatus(this.device.status),
+          tone: DeviceService.getDeviceStatusTone(this.device.status),
+          valueMaxLines: 2,
+          verticalPadding: 12
+        })
         this.CardDivider()
-        this.StatusRow('变更状态', DeviceService.formatArchiveChangeLockReason(this.device),
-          DeviceService.isArchiveChangeLocked(this.device) ? '#D9480F' : '#087F5B')
+        StatusInfoRow({
+          label: '变更状态',
+          value: DeviceService.formatArchiveChangeLockReason(this.device),
+          tone: DeviceService.isArchiveChangeLocked(this.device) ? '#D9480F' : '#087F5B',
+          valueMaxLines: 2,
+          verticalPadding: 12
+        })
       }
       .width('100%')
       .backgroundColor('#FFFFFF')
@@ -327,36 +374,6 @@ struct DeviceArchiveDetail {
         left: 18,
         right: 18
       })
-  }
-
-  @Builder
-  StatusRow(label: string, value: string, tone: string) {
-    Row() {
-      Text(label)
-        .fontSize(15)
-        .fontColor('#111827')
-        .fontWeight(FontWeight.Medium)
-        .layoutWeight(1)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-      Text(value)
-        .fontSize(15)
-        .fontColor(tone)
-        .fontWeight(FontWeight.Medium)
-        .textAlign(TextAlign.End)
-        .width('58%')
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
-    .constraintSize({ minHeight: 54 })
-    .padding({
-      left: 18,
-      right: 18,
-      top: 12,
-      bottom: 12
-    })
-    .width('100%')
   }
 
   showDetailInfoDialog(): void {

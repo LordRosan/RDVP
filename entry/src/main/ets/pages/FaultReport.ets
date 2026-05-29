@@ -1,4 +1,5 @@
 import { InfoDialog, InfoDialogSection } from '../components/InfoDialog';
+import { StatusInfoRow } from '../components/StatusInfoRow';
 import { FaultSeverity, FaultType } from '../models/FaultModels';
 import { ApiClient } from '../services/ApiClient';
 import { DeviceService } from '../services/DeviceService';
@@ -592,13 +593,25 @@ struct FaultReport {
         .maxLines(1)
 
       Column() {
-        this.StatusRow('标准编号', this.normalizedDeviceCode, '#374151')
+        StatusInfoRow({ label: '标准编号', value: this.normalizedDeviceCode, tone: '#374151' })
         this.CardDivider()
-        this.StatusRow('故障类型', FaultReportService.formatFaultType(this.faultType), '#374151')
+        StatusInfoRow({
+          label: '故障类型',
+          value: FaultReportService.formatFaultType(this.faultType),
+          tone: '#374151'
+        })
         this.CardDivider()
-        this.StatusRow('故障等级', FaultReportService.formatSeverity(this.severity), this.getSeverityTone(this.severity))
+        StatusInfoRow({
+          label: '故障等级',
+          value: FaultReportService.formatSeverity(this.severity),
+          tone: this.getSeverityTone(this.severity)
+        })
         this.CardDivider()
-        this.StatusRow('服务状态', ApiClient.getRuntimeStatusLabel(), ApiClient.getRuntimeStatusTone())
+        StatusInfoRow({
+          label: '服务状态',
+          value: ApiClient.getRuntimeStatusLabel(),
+          tone: ApiClient.getRuntimeStatusTone()
+        })
       }
       .width('100%')
       .backgroundColor('#FFFFFF')
@@ -617,34 +630,6 @@ struct FaultReport {
         left: 18,
         right: 18
       })
-  }
-
-  @Builder
-  StatusRow(label: string, value: string, tone: string) {
-    Row() {
-      Text(label)
-        .fontSize(15)
-        .fontColor('#111827')
-        .fontWeight(FontWeight.Medium)
-        .layoutWeight(1)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-      Text(value)
-        .fontSize(15)
-        .fontColor(tone)
-        .fontWeight(FontWeight.Medium)
-        .textAlign(TextAlign.End)
-        .width('58%')
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
-    .height(54)
-    .padding({
-      left: 18,
-      right: 18
-    })
-    .width('100%')
   }
 
   async submitFaultReport(): Promise<void> {

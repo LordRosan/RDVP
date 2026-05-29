@@ -2,6 +2,7 @@ import { abilityAccessCtrl } from '@kit.AbilityKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { detectBarcode, scanBarcode, scanCore } from '@kit.ScanKit';
 import { InfoDialog, InfoDialogSection } from '../components/InfoDialog';
+import { StatusInfoRow } from '../components/StatusInfoRow';
 import { DeviceQueryMode, DeviceSummary } from '../models/DeviceModels';
 import { ApiClient } from '../services/ApiClient';
 import { DeviceService } from '../services/DeviceService';
@@ -384,12 +385,15 @@ struct DeviceArchiveQuery {
         .maxLines(1)
 
       Column() {
-        this.StatusRow('查询方式', this.getQueryMethodText(), '#374151')
+        this.QueryMethodStatusRow()
         this.CardDivider()
-        this.StatusRow(this.queryMode === DeviceQueryMode.Code ? '标准编号' : '二维码内容',
-          this.queryMode === DeviceQueryMode.Code ? this.normalizedDeviceCode : this.getQrPreview(), '#374151')
+        this.QueryValueStatusRow()
         this.CardDivider()
-        this.StatusRow('服务状态', ApiClient.getRuntimeStatusLabel(), ApiClient.getRuntimeStatusTone())
+        StatusInfoRow({
+          label: '服务状态',
+          value: ApiClient.getRuntimeStatusLabel(),
+          tone: ApiClient.getRuntimeStatusTone()
+        })
       }
       .width('100%')
       .backgroundColor('#FFFFFF')
@@ -400,20 +404,9 @@ struct DeviceArchiveQuery {
   }
 
   @Builder
-  CardDivider() {
-    Divider()
-      .height(1)
-      .backgroundColor('#E5E7EB')
-      .margin({
-        left: 18,
-        right: 18
-      })
-  }
-
-  @Builder
-  StatusRow(label: string, value: string, tone: string) {
+  QueryMethodStatusRow() {
     Row() {
-      Text(label)
+      Text('查询方式')
         .fontSize(15)
         .fontColor('#111827')
         .fontWeight(FontWeight.Medium)
@@ -421,9 +414,9 @@ struct DeviceArchiveQuery {
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      Text(value)
+      Text(this.queryMode === DeviceQueryMode.Code ? '设备编号' : '二维码')
         .fontSize(15)
-        .fontColor(tone)
+        .fontColor('#374151')
         .fontWeight(FontWeight.Medium)
         .textAlign(TextAlign.End)
         .width('58%')
@@ -438,6 +431,45 @@ struct DeviceArchiveQuery {
     .width('100%')
   }
 
+  @Builder
+  QueryValueStatusRow() {
+    Row() {
+      Text(this.queryMode === DeviceQueryMode.Code ? '标准编号' : '二维码内容')
+        .fontSize(15)
+        .fontColor('#111827')
+        .fontWeight(FontWeight.Medium)
+        .layoutWeight(1)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+      Text(this.queryMode === DeviceQueryMode.Code ? this.normalizedDeviceCode : this.getQrPreview())
+        .fontSize(15)
+        .fontColor('#374151')
+        .fontWeight(FontWeight.Medium)
+        .textAlign(TextAlign.End)
+        .width('58%')
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .height(54)
+    .padding({
+      left: 18,
+      right: 18
+    })
+    .width('100%')
+  }
+
+  @Builder
+  CardDivider() {
+    Divider()
+      .height(1)
+      .backgroundColor('#E5E7EB')
+      .margin({
+        left: 18,
+        right: 18
+      })
+  }
+
   switchQueryMode(): void {
     this.message = '';
     this.queryMode = this.queryMode === DeviceQueryMode.Code ? DeviceQueryMode.Qr : DeviceQueryMode.Code;
@@ -449,10 +481,6 @@ struct DeviceArchiveQuery {
 
   getModeSubtitle(): string {
     return this.queryMode === DeviceQueryMode.Code ? '输入设备编号定位设备档案' : '扫描或上传二维码定位设备档案';
-  }
-
-  getQueryMethodText(): string {
-    return this.queryMode === DeviceQueryMode.Code ? '设备编号' : '二维码';
   }
 
   async submitDeviceCodeQuery(): Promise<void> {
