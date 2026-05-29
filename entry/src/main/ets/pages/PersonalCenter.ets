@@ -99,20 +99,6 @@ struct PersonalCenter {
       }
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
-
-      Stack() {
-        SymbolGlyph($r('sys.symbol.person_crop_circle_fill'))
-          .fontSize(38)
-          .fontColor(['#111827'])
-      }
-      .width(58)
-      .height(58)
-      .borderRadius(29)
-      .backgroundColor('#FFFFFF')
-      .border({
-        width: 1,
-        color: '#E5E7EB'
-      })
     }
     .width('100%')
     .alignItems(VerticalAlign.Center)
