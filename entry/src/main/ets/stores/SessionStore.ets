@@ -1,16 +1,26 @@
 import { AuthSession, RoleCode } from '../models/AuthModels';
 import { CurrentUserSnapshot, SessionState } from '../models/SessionModels';
 
+const SESSION_STORAGE_KEY = 'rdvp_auth_session';
+
 export class SessionStore {
   private static sessionState: SessionState = {
     authenticated: false
   };
+  private static initialized: boolean = false;
 
   static getSessionState(): SessionState {
+    SessionStore.ensureInitialized();
     return SessionStore.sessionState;
   }
 
   static isAuthenticated(): boolean {
+    SessionStore.ensureInitialized();
+    if (SessionStore.sessionState.authenticated && SessionStore.isSessionExpired(SessionStore.sessionState.session)) {
+      SessionStore.clearSession();
+      return false;
+    }
+
     return SessionStore.sessionState.authenticated;
   }
 
@@ -19,21 +29,26 @@ export class SessionStore {
       authenticated: true,
       session
     };
+    SessionStore.persistSession(session);
   }
 
   static clearSession(): void {
     SessionStore.sessionState = {
       authenticated: false
     };
+    SessionStore.persistSession(undefined);
   }
 
   static getCurrentUser(): CurrentUserSnapshot {
+    SessionStore.ensureInitialized();
     const session = SessionStore.sessionState.session;
 
-    if (SessionStore.sessionState.authenticated && session?.user) {
+    if (SessionStore.isAuthenticated() && session?.user) {
       return {
         displayName: session.user.displayName,
         roleName: SessionStore.formatRoleNames(session.user.roles),
+        username: session.user.username,
+        expiresAt: session.expiresAt,
         online: true
       };
     }
@@ -76,5 +91,64 @@ export class SessionStore {
       default:
         return '-';
     }
+  }
+
+  private static ensureInitialized(): void {
+    if (SessionStore.initialized) {
+      return;
+    }
+
+    SessionStore.initialized = true;
+
+    try {
+      PersistentStorage.persistProp<string>(SESSION_STORAGE_KEY, '');
+      const sessionText = AppStorage.get<string>(SESSION_STORAGE_KEY);
+      const session = SessionStore.parseSession(sessionText);
+      if (session !== undefined && !SessionStore.isSessionExpired(session)) {
+        SessionStore.sessionState = {
+          authenticated: true,
+          session
+        };
+        return;
+      }
+
+      SessionStore.persistSession(undefined);
+    } catch (err) {
+      SessionStore.sessionState = {
+        authenticated: false
+      };
+    }
+  }
+
+  private static persistSession(session: AuthSession | undefined): void {
+    try {
+      AppStorage.setOrCreate<string>(SESSION_STORAGE_KEY, session === undefined ? '' : JSON.stringify(session));
+    } catch (err) {
+    }
+  }
+
+  private static parseSession(sessionText: string | undefined): AuthSession | undefined {
+    if (sessionText === undefined || sessionText.length === 0) {
+      return undefined;
+    }
+
+    try {
+      const session = JSON.parse(sessionText) as AuthSession;
+      if (session.accessToken.length === 0 || session.expiresAt.length === 0) {
+        return undefined;
+      }
+
+      return session;
+    } catch (err) {
+      return undefined;
+    }
+  }
+
+  private static isSessionExpired(session: AuthSession | undefined): boolean {
+    if (session === undefined) {
+      return true;
+    }
+
+    return Date.parse(session.expiresAt) <= Date.now();
   }
 }

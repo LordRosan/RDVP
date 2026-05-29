@@ -5,6 +5,7 @@ import { ApiClient } from '../services/ApiClient';
 import { DeviceService } from '../services/DeviceService';
 import { FaultReportService } from '../services/FaultReportService';
 import { RepairTaskService } from '../services/RepairTaskService';
+import { AuthGuard } from '../utils/AuthGuard';
 
 const MY_REPAIR_TASK_INFO_SECTIONS: InfoDialogSection[] = [
   {
@@ -62,6 +63,10 @@ struct MyRepairTask {
     alignment: DialogAlignment.Center,
     customStyle: true
   });
+
+  aboutToAppear(): void {
+    AuthGuard.requireAuthenticated(this.getUIContext());
+  }
 
   build() {
     Scroll() {

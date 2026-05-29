@@ -3,6 +3,7 @@ import { FaultSeverity, FaultType } from '../models/FaultModels';
 import { ApiClient } from '../services/ApiClient';
 import { DeviceService } from '../services/DeviceService';
 import { FaultReportService } from '../services/FaultReportService';
+import { AuthGuard } from '../utils/AuthGuard';
 
 const FAULT_REPORT_INFO_SECTIONS: InfoDialogSection[] = [
   {
@@ -82,6 +83,10 @@ struct FaultReport {
     alignment: DialogAlignment.Center,
     customStyle: true
   });
+
+  aboutToAppear(): void {
+    AuthGuard.requireAuthenticated(this.getUIContext());
+  }
 
   build() {
     Scroll() {

@@ -2,6 +2,7 @@ import { InfoDialog, InfoDialogSection } from '../components/InfoDialog';
 import { DeviceStatus, DeviceSummary } from '../models/DeviceModels';
 import { DeviceService } from '../services/DeviceService';
 import { DeviceArchiveFlowStore } from '../stores/DeviceArchiveFlowStore';
+import { AuthGuard } from '../utils/AuthGuard';
 
 const DEVICE_ARCHIVE_DETAIL_INFO_SECTIONS: InfoDialogSection[] = [
   {
@@ -50,6 +51,10 @@ struct DeviceArchiveDetail {
   });
 
   aboutToAppear(): void {
+    if (!AuthGuard.requireAuthenticated(this.getUIContext())) {
+      return;
+    }
+
     const device = DeviceArchiveFlowStore.getCurrentDevice();
     if (device === undefined) {
       this.hasDevice = false;

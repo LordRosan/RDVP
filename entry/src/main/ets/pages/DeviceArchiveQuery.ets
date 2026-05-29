@@ -6,6 +6,7 @@ import { DeviceQueryMode, DeviceSummary } from '../models/DeviceModels';
 import { ApiClient } from '../services/ApiClient';
 import { DeviceService } from '../services/DeviceService';
 import { DeviceArchiveFlowStore } from '../stores/DeviceArchiveFlowStore';
+import { AuthGuard } from '../utils/AuthGuard';
 
 const DEVICE_ARCHIVE_QUERY_INFO_SECTIONS: InfoDialogSection[] = [
   {
@@ -44,6 +45,10 @@ struct DeviceArchiveQuery {
     alignment: DialogAlignment.Center,
     customStyle: true
   });
+
+  aboutToAppear(): void {
+    AuthGuard.requireAuthenticated(this.getUIContext());
+  }
 
   build() {
     Scroll() {
@@ -154,7 +159,7 @@ struct DeviceArchiveQuery {
           .fontSize(31)
           .fontColor(['#111827'])
       } else {
-        SymbolGlyph($r('sys.symbol.character_textbox'))
+        SymbolGlyph($r('sys.symbol.rename'))
           .fontSize(31)
           .fontColor(['#111827'])
       }

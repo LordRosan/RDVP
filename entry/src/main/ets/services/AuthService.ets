@@ -50,7 +50,7 @@ export class AuthService {
 
   private static createLocalSession(form: LoginForm): ApiResponse<AuthSession> {
     const username = form.username.trim();
-    const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
     const session: AuthSession = {
       accessToken: `local-session-${Date.now()}`,
       expiresAt,

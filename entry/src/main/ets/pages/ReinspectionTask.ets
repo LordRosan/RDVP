@@ -5,6 +5,7 @@ import {
 } from '../models/ReinspectionModels';
 import { ApiClient } from '../services/ApiClient';
 import { ReinspectionService } from '../services/ReinspectionService';
+import { AuthGuard } from '../utils/AuthGuard';
 
 const REINSPECTION_INFO_SECTIONS: InfoDialogSection[] = [
   {
@@ -46,6 +47,10 @@ struct ReinspectionTask {
   });
 
   aboutToAppear(): void {
+    if (!AuthGuard.requireAuthenticated(this.getUIContext())) {
+      return;
+    }
+
     this.refreshTasks();
   }
 

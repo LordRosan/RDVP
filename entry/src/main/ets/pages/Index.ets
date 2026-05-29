@@ -4,7 +4,6 @@ import { WorkbenchAction, WorkbenchActionId, WorkbenchMetric, WorkbenchStatusIte
 import { CurrentUserSnapshot } from '../models/SessionModels';
 import { WorkbenchService } from '../services/WorkbenchService';
 import { SessionStore } from '../stores/SessionStore';
-import { formatConnectionStatus } from '../utils/SessionFormat';
 
 @Entry
 @Component
@@ -16,6 +15,11 @@ struct Index {
   @State actionMessage: string = '';
 
   aboutToAppear(): void {
+    if (!SessionStore.isAuthenticated()) {
+      this.openLoginPage();
+      return;
+    }
+
     this.metrics = WorkbenchService.getMetrics();
     this.statusItems = WorkbenchService.getStatusItems();
     this.currentUser = SessionStore.getCurrentUser();
@@ -63,43 +67,7 @@ struct Index {
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
 
-        Column({ space: 2 }) {
-          Text(this.currentUser.displayName)
-            .fontSize(13)
-            .fontColor('#111827')
-            .fontWeight(FontWeight.Medium)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-          Text(this.currentUser.roleName)
-            .fontSize(11)
-            .fontColor('#6B7280')
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-          Text(formatConnectionStatus(this.currentUser.online))
-            .fontSize(11)
-            .fontColor(this.currentUser.online ? '#087F5B' : '#D9480F')
-            .maxLines(1)
-        }
-        .alignItems(HorizontalAlign.End)
-        .padding({
-          left: 12,
-          right: 12,
-          top: 8,
-          bottom: 8
-        })
-        .borderRadius(8)
-        .backgroundColor('#FFFFFF')
-        .border({
-          width: 1,
-          color: '#E5E7EB'
-        })
-        .onClick(() => {
-          if (!SessionStore.isAuthenticated()) {
-            this.openLoginPage();
-          }
-        })
+        this.PersonalCenterButton()
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
@@ -215,14 +183,46 @@ struct Index {
 
   openLoginPage(): void {
     try {
-      this.getUIContext().getRouter().pushUrl({ url: 'pages/Login' });
+      this.getUIContext().getRouter().replaceUrl({ url: 'pages/Login' });
     } catch (err) {
       this.actionMessage = '登录页不可用';
     }
   }
 
+  @Builder
+  PersonalCenterButton() {
+    Button({ type: ButtonType.Circle, stateEffect: true }) {
+      SymbolGlyph($r('sys.symbol.person_crop_circle_fill'))
+        .fontSize(31)
+        .fontColor(['#111827'])
+    }
+    .width(58)
+    .height(58)
+    .backgroundColor('#FFFFFF')
+    .border({
+      width: 1,
+      color: '#E5E7EB'
+    })
+    .onClick(() => {
+      this.openPersonalCenter();
+    })
+  }
+
+  openPersonalCenter(): void {
+    try {
+      this.getUIContext().getRouter().pushUrl({ url: 'pages/PersonalCenter' });
+    } catch (err) {
+      this.actionMessage = '个人中心不可用';
+    }
+  }
+
   openAction(action: WorkbenchAction): void {
     this.actionMessage = '';
+
+    if (!SessionStore.isAuthenticated()) {
+      this.openLoginPage();
+      return;
+    }
 
     if (action.id === WorkbenchActionId.DeviceQuery) {
       try {

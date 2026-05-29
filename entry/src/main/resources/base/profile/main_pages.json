@@ -1,7 +1,8 @@
 {
   "src": [
-    "pages/Index",
     "pages/Login",
+    "pages/Index",
+    "pages/PersonalCenter",
     "pages/DeviceArchiveQuery",
     "pages/DeviceArchiveDetail",
     "pages/DeviceArchiveChange",

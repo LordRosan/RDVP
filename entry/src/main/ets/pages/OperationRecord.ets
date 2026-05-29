@@ -2,6 +2,7 @@ import { InfoDialog, InfoDialogSection } from '../components/InfoDialog';
 import { OperationRecordSummary } from '../models/OperationRecordModels';
 import { ApiClient } from '../services/ApiClient';
 import { OperationRecordService } from '../services/OperationRecordService';
+import { AuthGuard } from '../utils/AuthGuard';
 
 const OPERATION_RECORD_INFO_SECTIONS: InfoDialogSection[] = [
   {
@@ -36,6 +37,10 @@ struct OperationRecord {
   });
 
   aboutToAppear(): void {
+    if (!AuthGuard.requireAuthenticated(this.getUIContext())) {
+      return;
+    }
+
     this.refreshRecords();
   }
 

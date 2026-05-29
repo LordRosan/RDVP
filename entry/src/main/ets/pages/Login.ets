@@ -7,132 +7,210 @@ struct Login {
   @State username: string = '';
   @State password: string = '';
   @State message: string = '';
+  @State submitting: boolean = false;
+
+  aboutToAppear(): void {
+    if (SessionStore.isAuthenticated()) {
+      this.openWorkbench();
+    }
+  }
 
   build() {
-    Scroll() {
-      Column({ space: 24 }) {
-        this.Header()
-        this.LoginForm()
+    Stack() {
+      Column({ space: 0 }) {
+        Blank()
+          .height(26)
+
+        Column({ space: 28 }) {
+          this.BrandHeader()
+          this.LoginPanel()
+        }
+        .width('100%')
+        .padding({
+          left: 24,
+          right: 24
+        })
+
+        Blank()
       }
-      .alignItems(HorizontalAlign.Start)
-      .padding({
-        left: 22,
-        right: 22,
-        top: 34,
-        bottom: 34
-      })
       .width('100%')
+      .height('100%')
+      .justifyContent(FlexAlign.Center)
     }
     .height('100%')
     .width('100%')
-    .backgroundColor('#F6F8FB')
+    .backgroundColor('#F2F5F7')
+  }
+
+  onBackPress(): boolean {
+    return true;
   }
 
   @Builder
-  Header() {
+  BrandHeader() {
+    Column({ space: 12 }) {
+      Row({ space: 12 }) {
+        Stack() {
+          Text('RD')
+            .fontSize(18)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#FFFFFF')
+            .maxLines(1)
+        }
+        .width(52)
+        .height(52)
+        .borderRadius(16)
+        .backgroundColor('#2F6FED')
+
+        Column({ space: 4 }) {
+          Text('RDVP')
+            .fontSize(34)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#111827')
+            .maxLines(1)
+
+          Text('远程设备核验与运维报告系统')
+            .fontSize(14)
+            .fontColor('#5B6472')
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  LoginPanel() {
+    Column({ space: 18 }) {
+      Column({ space: 6 }) {
+        Text('登录')
+          .fontSize(28)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#111827')
+          .maxLines(1)
+
+        Text('验证身份后进入业务工作台')
+          .fontSize(14)
+          .fontColor('#6B7280')
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .alignItems(HorizontalAlign.Start)
+      .width('100%')
+
+      this.InputField('账号', '输入账号', false)
+      this.InputField('密码', '输入密码', true)
+      this.MessageText()
+      this.LoginButton()
+    }
+    .padding({
+      left: 20,
+      right: 20,
+      top: 22,
+      bottom: 22
+    })
+    .width('100%')
+    .backgroundColor('#FFFFFF')
+    .borderRadius(24)
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  InputField(label: string, placeholder: string, secure: boolean) {
     Column({ space: 8 }) {
-      Text('RDVP')
-        .fontSize(32)
-        .fontWeight(FontWeight.Bold)
+      Text(label)
+        .fontSize(14)
+        .fontWeight(FontWeight.Medium)
         .fontColor('#111827')
         .maxLines(1)
 
-      Text('账号登录')
-        .fontSize(18)
-        .fontWeight(FontWeight.Medium)
-        .fontColor('#374151')
-        .maxLines(1)
+      TextInput({
+        placeholder,
+        text: secure ? this.password : this.username
+      })
+        .type(secure ? InputType.Password : InputType.Normal)
+        .height(54)
+        .fontSize(16)
+        .backgroundColor('#F7F9FC')
+        .borderRadius(18)
+        .padding({
+          left: 16,
+          right: 16
+        })
+        .border({
+          width: 1,
+          color: '#D6DAE1'
+        })
+        .onChange((value: string) => {
+          if (secure) {
+            this.password = value;
+          } else {
+            this.username = value;
+          }
+          this.message = '';
+        })
     }
-    .alignItems(HorizontalAlign.Start)
     .width('100%')
+    .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
-  LoginForm() {
-    Column({ space: 16 }) {
-      TextInput({
-        placeholder: '账号',
-        text: this.username
-      })
-        .height(48)
-        .fontSize(15)
-        .backgroundColor('#FFFFFF')
-        .borderRadius(8)
-        .border({
-          width: 1,
-          color: '#D1D5DB'
-        })
-        .onChange((value: string) => {
-          this.username = value;
-          this.message = '';
-        })
-
-      TextInput({
-        placeholder: '密码',
-        text: this.password
-      })
-        .type(InputType.Password)
-        .height(48)
-        .fontSize(15)
-        .backgroundColor('#FFFFFF')
-        .borderRadius(8)
-        .border({
-          width: 1,
-          color: '#D1D5DB'
-        })
-        .onChange((value: string) => {
-          this.password = value;
-          this.message = '';
-        })
-
-      if (this.message.length > 0) {
-        Text(this.message)
-          .fontSize(13)
-          .fontColor('#D9480F')
-          .maxLines(2)
-      }
-
-      Button('登录')
-        .height(48)
+  MessageText() {
+    if (this.message.length > 0) {
+      Text(this.message)
+        .fontSize(13)
+        .fontColor('#D9480F')
+        .lineHeight(18)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
-        .fontSize(16)
-        .fontWeight(FontWeight.Medium)
-        .backgroundColor('#2F6FED')
-        .borderRadius(8)
-        .onClick(() => {
-          this.submitLogin();
-        })
-
-      Button('返回工作台')
-        .height(44)
-        .width('100%')
-        .fontSize(15)
-        .fontColor('#374151')
-        .backgroundColor('#FFFFFF')
-        .borderRadius(8)
-        .border({
-          width: 1,
-          color: '#D1D5DB'
-        })
-        .onClick(() => {
-          this.backToWorkbench();
-        })
     }
-    .padding(18)
+  }
+
+  @Builder
+  LoginButton() {
+    Button({ type: ButtonType.Capsule, stateEffect: true }) {
+      Row({ space: 8 }) {
+        SymbolGlyph($r('sys.symbol.person_badge_checkmark'))
+          .fontSize(20)
+          .fontColor(['#FFFFFF'])
+
+        Text(this.submitting ? '登录中' : '登录')
+          .fontSize(17)
+          .fontWeight(FontWeight.Medium)
+          .fontColor('#FFFFFF')
+          .maxLines(1)
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+    }
+    .height(54)
     .width('100%')
-    .backgroundColor('#FFFFFF')
-    .borderRadius(8)
-    .border({
-      width: 1,
-      color: '#E5E7EB'
+    .backgroundColor('#2F6FED')
+    .enabled(!this.submitting)
+    .onClick(() => {
+      this.submitLogin();
     })
   }
 
   submitLogin(): void {
+    if (this.submitting) {
+      return;
+    }
+
+    this.submitting = true;
     const response = AuthService.login({
       username: this.username,
       password: this.password
     });
+    this.submitting = false;
 
     if (!response.success) {
       const error = response.error;
@@ -144,22 +222,14 @@ struct Login {
       SessionStore.setSession(response.data);
     }
 
+    this.openWorkbench();
+  }
+
+  openWorkbench(): void {
     try {
       this.getUIContext().getRouter().replaceUrl({ url: 'pages/Index' });
     } catch (err) {
       this.message = '页面跳转失败';
-    }
-  }
-
-  backToWorkbench(): void {
-    try {
-      this.getUIContext().getRouter().back();
-    } catch (err) {
-      try {
-        this.getUIContext().getRouter().replaceUrl({ url: 'pages/Index' });
-      } catch (innerErr) {
-        this.message = '页面跳转失败';
-      }
     }
   }
 }

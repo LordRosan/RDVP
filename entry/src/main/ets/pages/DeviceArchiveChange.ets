@@ -9,6 +9,7 @@ import { ApiClient } from '../services/ApiClient';
 import { DeviceArchiveChangeService } from '../services/DeviceArchiveChangeService';
 import { DeviceService } from '../services/DeviceService';
 import { DeviceArchiveFlowStore } from '../stores/DeviceArchiveFlowStore';
+import { AuthGuard } from '../utils/AuthGuard';
 
 const DEVICE_CHANGE_INFO_SECTIONS: InfoDialogSection[] = [
   {
@@ -73,6 +74,10 @@ struct DeviceArchiveChange {
   });
 
   aboutToAppear(): void {
+    if (!AuthGuard.requireAuthenticated(this.getUIContext())) {
+      return;
+    }
+
     this.loadArchiveContext();
   }
 

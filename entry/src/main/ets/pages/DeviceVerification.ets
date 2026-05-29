@@ -3,6 +3,7 @@ import { VerificationResult } from '../models/VerificationModels';
 import { ApiClient } from '../services/ApiClient';
 import { DeviceService } from '../services/DeviceService';
 import { DeviceVerificationService } from '../services/DeviceVerificationService';
+import { AuthGuard } from '../utils/AuthGuard';
 
 const VERIFICATION_INFO_SECTIONS: InfoDialogSection[] = [
   {
@@ -52,6 +53,10 @@ struct DeviceVerification {
     alignment: DialogAlignment.Center,
     customStyle: true
   });
+
+  aboutToAppear(): void {
+    AuthGuard.requireAuthenticated(this.getUIContext());
+  }
 
   build() {
     Scroll() {

@@ -4,6 +4,7 @@ import { AvailableRepairTaskSummary, RepairerAvailability } from '../models/Repa
 import { ApiClient } from '../services/ApiClient';
 import { FaultReportService } from '../services/FaultReportService';
 import { RepairTaskService } from '../services/RepairTaskService';
+import { AuthGuard } from '../utils/AuthGuard';
 
 const AVAILABLE_TASK_INFO_SECTIONS: InfoDialogSection[] = [
   {
@@ -43,6 +44,10 @@ struct AvailableRepairTask {
     alignment: DialogAlignment.Center,
     customStyle: true
   });
+
+  aboutToAppear(): void {
+    AuthGuard.requireAuthenticated(this.getUIContext());
+  }
 
   build() {
     Scroll() {
