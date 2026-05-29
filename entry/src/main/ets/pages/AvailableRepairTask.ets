@@ -35,6 +35,8 @@ struct AvailableRepairTask {
   @State messageTone: string = '#D9480F';
   @State refreshStatus: string = '未刷新';
   @State taskItems: AvailableRepairTaskSummary[] = [];
+  @State refreshing: boolean = false;
+  @State acceptingTaskId: string = '';
   private availableTaskInfoDialogController: CustomDialogController = new CustomDialogController({
     builder: InfoDialog({
       title: '附近故障说明',
@@ -166,7 +168,7 @@ struct AvailableRepairTask {
       .alignItems(VerticalAlign.Center)
 
       this.MessageText()
-      this.ActionButton('刷新任务', $r('sys.symbol.arrow_clockwise'), () => {
+      this.ActionButton(this.refreshing ? '刷新中' : '刷新任务', $r('sys.symbol.arrow_clockwise'), !this.refreshing, () => {
         this.refreshTasks();
       })
     }
@@ -359,7 +361,8 @@ struct AvailableRepairTask {
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      this.ActionButton('接取任务', $r('sys.symbol.checkmark_circle'), () => {
+      this.ActionButton(this.acceptingTaskId === item.id ? '接取中' : '接取任务', $r('sys.symbol.checkmark_circle'),
+        this.acceptingTaskId.length === 0 && !this.refreshing, () => {
         this.acceptTask(item.id);
       })
     }
@@ -420,7 +423,7 @@ struct AvailableRepairTask {
   }
 
   @Builder
-  ActionButton(label: string, icon: Resource, action: () => void) {
+  ActionButton(label: string, icon: Resource, enabled: boolean, action: () => void) {
     Button({ type: ButtonType.Capsule, stateEffect: true }) {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
@@ -440,6 +443,7 @@ struct AvailableRepairTask {
     .height(54)
     .width('100%')
     .backgroundColor('#2F6FED')
+    .enabled(enabled)
     .onClick(() => {
       action();
     })
@@ -527,11 +531,17 @@ struct AvailableRepairTask {
     .width('100%')
   }
 
-  refreshTasks(): void {
-    const response = RepairTaskService.queryAvailableRepairTasks({
+  async refreshTasks(): Promise<void> {
+    if (this.refreshing || this.acceptingTaskId.length > 0) {
+      return;
+    }
+
+    this.refreshing = true;
+    const response = await RepairTaskService.queryAvailableRepairTasksRemoteFirst({
       radiusKm: this.radiusKm,
       availability: this.availability
     });
+    this.refreshing = false;
 
     if (!response.success) {
       const error = response.error;
@@ -548,8 +558,15 @@ struct AvailableRepairTask {
     this.messageTone = '#D9480F';
   }
 
-  acceptTask(taskId: string): void {
-    const response = RepairTaskService.acceptRepairTask(taskId);
+  async acceptTask(taskId: string): Promise<void> {
+    if (this.acceptingTaskId.length > 0 || this.refreshing) {
+      return;
+    }
+
+    this.acceptingTaskId = taskId;
+    const response = await RepairTaskService.acceptRepairTaskRemoteFirst(taskId);
+    this.acceptingTaskId = '';
+
     if (!response.success) {
       const error = response.error;
       this.message = error ? error.message : '维修任务接取失败';

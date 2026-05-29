@@ -54,6 +54,8 @@ struct MyRepairTask {
   @State reportMessageTone: string = '#D9480F';
   @State refreshStatus: string = '未刷新';
   @State normalizedTaskId: string = '-';
+  @State refreshing: boolean = false;
+  @State submitting: boolean = false;
   private myRepairTaskInfoDialogController: CustomDialogController = new CustomDialogController({
     builder: InfoDialog({
       title: '维修任务说明',
@@ -183,6 +185,7 @@ struct MyRepairTask {
         .width(44)
         .height(44)
         .backgroundColor('#2F6FED')
+        .enabled(!this.refreshing && !this.submitting)
         .onClick(() => {
           this.refreshTasks();
         })
@@ -335,7 +338,7 @@ struct MyRepairTask {
       this.ProcessDescriptionField()
       this.PartsUsedField()
       this.ReportMessageText()
-      this.ActionButton('提交报告', $r('sys.symbol.text_clipboard'), () => {
+      this.ActionButton(this.submitting ? '提交中' : '提交报告', $r('sys.symbol.text_clipboard'), !this.submitting, () => {
         this.submitRepairReport();
       })
     }
@@ -611,7 +614,7 @@ struct MyRepairTask {
   }
 
   @Builder
-  ActionButton(label: string, icon: Resource, action: () => void) {
+  ActionButton(label: string, icon: Resource, enabled: boolean, action: () => void) {
     Button({ type: ButtonType.Capsule, stateEffect: true }) {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
@@ -631,6 +634,7 @@ struct MyRepairTask {
     .height(54)
     .width('100%')
     .backgroundColor('#2F6FED')
+    .enabled(enabled)
     .onClick(() => {
       action();
     })
@@ -690,8 +694,15 @@ struct MyRepairTask {
     .width('100%')
   }
 
-  refreshTasks(): void {
-    const response = RepairTaskService.queryMyRepairTasks();
+  async refreshTasks(): Promise<void> {
+    if (this.refreshing || this.submitting) {
+      return;
+    }
+
+    this.refreshing = true;
+    const response = await RepairTaskService.queryMyRepairTasksRemoteFirst();
+    this.refreshing = false;
+
     if (!response.success) {
       const error = response.error;
       this.taskMessage = error ? error.message : '维修任务刷新失败';
@@ -705,14 +716,20 @@ struct MyRepairTask {
     this.taskMessage = '';
   }
 
-  submitRepairReport(): void {
-    const response = RepairTaskService.submitRepairReport({
+  async submitRepairReport(): Promise<void> {
+    if (this.submitting) {
+      return;
+    }
+
+    this.submitting = true;
+    const response = await RepairTaskService.submitRepairReportRemoteFirst({
       taskId: this.taskId,
       result: this.reportResult,
       repairedAt: this.repairedAt,
       processDescription: this.processDescription,
       partsUsed: this.partsUsed
     });
+    this.submitting = false;
 
     this.normalizedTaskId = DeviceService.normalizeDeviceCode(this.taskId);
     if (this.normalizedTaskId.length === 0) {

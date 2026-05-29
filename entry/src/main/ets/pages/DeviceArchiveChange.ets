@@ -58,10 +58,13 @@ struct DeviceArchiveChange {
   @State locationAddress: string = '';
   @State reason: string = '';
   @State message: string = '';
+  @State messageTone: string = '#D9480F';
   @State normalizedDeviceCode: string = '-';
   @State changeCount: number = 0;
   @State requestStatus: DeviceArchiveChangeRequestStatus = DeviceArchiveChangeRequestStatus.Draft;
   @State hasDevice: boolean = false;
+  @State submitting: boolean = false;
+  private currentDeviceId: string = '';
   private baseline?: DeviceArchiveChangeBaseline = undefined;
   private changeInfoDialogController: CustomDialogController = new CustomDialogController({
     builder: InfoDialog({
@@ -194,7 +197,8 @@ struct DeviceArchiveChange {
       })
       this.ReasonField()
       this.MessageText()
-      this.ActionButton('提交申请', $r('sys.symbol.checkmark_circle'), this.hasDevice, () => {
+      this.ActionButton(this.submitting ? '提交中' : '提交申请', $r('sys.symbol.checkmark_circle'),
+        this.hasDevice && !this.submitting, () => {
         this.submitChangeRequest();
       })
     }
@@ -320,7 +324,7 @@ struct DeviceArchiveChange {
     if (this.message.length > 0) {
       Text(this.message)
         .fontSize(13)
-        .fontColor('#D9480F')
+        .fontColor(this.messageTone)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
@@ -435,7 +439,11 @@ struct DeviceArchiveChange {
     .width('100%')
   }
 
-  submitChangeRequest(): void {
+  async submitChangeRequest(): Promise<void> {
+    if (this.submitting) {
+      return;
+    }
+
     const form = this.buildForm();
     const validation = DeviceArchiveChangeService.validateChangeRequestForm(form);
     this.normalizedDeviceCode = validation.normalizedDeviceCode ?
@@ -448,23 +456,30 @@ struct DeviceArchiveChange {
 
     if (!validation.valid) {
       this.message = validation.message;
+      this.messageTone = '#D9480F';
       return;
     }
 
-    const response = DeviceArchiveChangeService.submitChangeRequest(form);
+    this.submitting = true;
+    const response = await DeviceArchiveChangeService.submitChangeRequestRemoteFirst(form);
+    this.submitting = false;
+
     if (!response.success) {
       const error = response.error;
       this.message = error ? error.message : '变更申请提交失败';
+      this.messageTone = '#D9480F';
       return;
     }
 
     this.requestStatus = DeviceArchiveChangeRequestStatus.PendingReview;
     DeviceArchiveFlowStore.markChangePending(response.data ? response.data.id : '');
     this.message = '变更申请已提交，等待管理员审核';
+    this.messageTone = '#087F5B';
   }
 
   buildForm(): DeviceArchiveChangeRequestForm {
     return {
+      deviceId: this.currentDeviceId,
       deviceCode: this.deviceCode,
       deviceName: this.deviceName,
       model: this.model,
@@ -503,10 +518,12 @@ struct DeviceArchiveChange {
     if (device === undefined) {
       this.hasDevice = false;
       this.message = '未获取设备档案，请返回后重新查询';
+      this.messageTone = '#D9480F';
       return;
     }
 
     this.hasDevice = true;
+    this.currentDeviceId = device.id;
     this.baseline = {
       deviceName: device.name,
       model: device.model,

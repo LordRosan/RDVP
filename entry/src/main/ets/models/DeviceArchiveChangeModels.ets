@@ -13,6 +13,7 @@ export interface DeviceArchiveChangeBaseline {
 }
 
 export interface DeviceArchiveChangeRequestForm {
+  deviceId?: string;
   deviceCode: string;
   deviceName: string;
   model: string;

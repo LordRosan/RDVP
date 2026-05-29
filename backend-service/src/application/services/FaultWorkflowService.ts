@@ -346,6 +346,7 @@ export class FaultWorkflowService {
 
     return {
       id: record.id,
+      reinspectionRecordNo: record.reinspectionRecordNo,
       faultReportId: fault.id,
       result: record.result,
       nextFaultStatus: fault.status,

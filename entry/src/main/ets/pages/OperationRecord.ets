@@ -26,6 +26,7 @@ struct OperationRecord {
   @State records: OperationRecordSummary[] = [];
   @State message: string = '';
   @State refreshStatus: string = '未刷新';
+  @State refreshing: boolean = false;
   private operationRecordInfoDialogController: CustomDialogController = new CustomDialogController({
     builder: InfoDialog({
       title: '操作记录说明',
@@ -158,6 +159,7 @@ struct OperationRecord {
         .width(44)
         .height(44)
         .backgroundColor('#2F6FED')
+        .enabled(!this.refreshing)
         .onClick(() => {
           this.refreshRecords();
         })
@@ -371,8 +373,15 @@ struct OperationRecord {
     .width('100%')
   }
 
-  refreshRecords(): void {
-    const response = OperationRecordService.queryRecentRecords();
+  async refreshRecords(): Promise<void> {
+    if (this.refreshing) {
+      return;
+    }
+
+    this.refreshing = true;
+    const response = await OperationRecordService.queryRecentRecordsRemoteFirst();
+    this.refreshing = false;
+
     if (!response.success) {
       const error = response.error;
       this.message = error ? error.message : '操作记录刷新失败';

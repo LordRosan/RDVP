@@ -1,8 +1,11 @@
 import { ApiResponse } from '../models/ApiModels';
+import { FaultSeverity, FaultType } from '../models/FaultModels';
 import {
   AvailableRepairTaskListResult,
   AvailableRepairTaskQuery,
+  AvailableRepairTaskSummary,
   MyRepairTaskListResult,
+  MyRepairTaskSummary,
   RepairerAvailability,
   RepairReportForm,
   RepairReportRecord,
@@ -21,6 +24,57 @@ const MIN_RADIUS_KM = 1;
 const MAX_RADIUS_KM = 100;
 const MAX_REPAIR_PROCESS_LENGTH = 1000;
 const MAX_PARTS_USED_LENGTH = 500;
+
+interface DeviceLocationApiResult {
+  address: string;
+  longitude?: number;
+  latitude?: number;
+}
+
+interface AvailableRepairTaskApiSummary {
+  id: string;
+  faultReportId: string;
+  faultReportNo: string;
+  deviceCode: string;
+  deviceName: string;
+  faultType: string;
+  severity: string;
+  distanceKm: number;
+  location: DeviceLocationApiResult;
+  submittedAt: string;
+  status: string;
+}
+
+interface MyRepairTaskApiSummary {
+  id: string;
+  repairTaskNo: string;
+  faultReportNo: string;
+  deviceCode: string;
+  deviceName: string;
+  faultType: string;
+  severity: string;
+  acceptedAt: string;
+  status: string;
+}
+
+interface RepairTaskAcceptApiResult {
+  repairTaskId: string;
+  status: string;
+  acceptedAt: string;
+}
+
+interface RepairReportApiResult {
+  id: string;
+  repairReportNo: string;
+  repairTaskId: string;
+  result: string;
+  createdAt: string;
+}
+
+interface ApiListResult<T> {
+  items: T[];
+  total: number;
+}
 
 export class RepairTaskService {
   static getDefaultRadiusKm(): number {
@@ -81,6 +135,55 @@ export class RepairTaskService {
     return ApiClient.createServiceUnavailableResponse<AvailableRepairTaskListResult>();
   }
 
+  static async queryAvailableRepairTasksRemoteFirst(
+    query: AvailableRepairTaskQuery
+  ): Promise<ApiResponse<AvailableRepairTaskListResult>> {
+    const validation = RepairTaskService.validateAvailableRepairTaskQuery(query);
+    if (!validation.valid) {
+      return {
+        success: false,
+        error: {
+          code: 'AVAILABLE_REPAIR_TASK_QUERY_INVALID',
+          message: validation.message
+        }
+      };
+    }
+
+    const radiusKm = validation.normalizedRadiusKm ?
+      validation.normalizedRadiusKm : RepairTaskService.normalizeRadiusKm(query.radiusKm);
+    if (!ApiClient.isConfigured()) {
+      return RepairTaskService.createLocalAvailableTasksResponse(radiusKm);
+    }
+
+    const response = await ApiClient.request<ApiListResult<AvailableRepairTaskApiSummary>>(
+      `/api/v1/repair-tasks/available?radiusKm=${radiusKm}`,
+      'GET',
+      true
+    );
+
+    if (!response.success) {
+      return {
+        success: false,
+        error: response.error,
+        requestId: response.requestId,
+        timestamp: response.timestamp
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        radiusKm,
+        items: response.data === undefined ? [] : response.data.items.map((item: AvailableRepairTaskApiSummary): AvailableRepairTaskSummary => {
+          return RepairTaskService.mapAvailableTask(item);
+        }),
+        total: response.data === undefined ? 0 : response.data.total
+      },
+      requestId: response.requestId,
+      timestamp: response.timestamp
+    };
+  }
+
   static acceptRepairTask(taskId: string): ApiResponse<RepairTaskAcceptResult> {
     const validation = RepairTaskService.validateRepairTaskId(taskId);
     if (!validation.valid) {
@@ -100,12 +203,98 @@ export class RepairTaskService {
     return ApiClient.createServiceUnavailableResponse<RepairTaskAcceptResult>();
   }
 
+  static async acceptRepairTaskRemoteFirst(taskId: string): Promise<ApiResponse<RepairTaskAcceptResult>> {
+    const validation = RepairTaskService.validateRepairTaskId(taskId);
+    if (!validation.valid) {
+      return {
+        success: false,
+        error: {
+          code: 'REPAIR_TASK_ACCEPT_INVALID',
+          message: validation.message
+        }
+      };
+    }
+
+    if (!ApiClient.isConfigured()) {
+      return RepairTaskService.createLocalAcceptTaskResponse(taskId);
+    }
+
+    const faultReportId = encodeURIComponent(taskId.trim());
+    const response = await ApiClient.request<RepairTaskAcceptApiResult>(
+      `/api/v1/fault-reports/${faultReportId}/accept`,
+      'POST',
+      true,
+      JSON.stringify({})
+    );
+
+    if (!response.success) {
+      return {
+        success: false,
+        error: response.error,
+        requestId: response.requestId,
+        timestamp: response.timestamp
+      };
+    }
+
+    if (response.data === undefined) {
+      return {
+        success: false,
+        error: {
+          code: 'REPAIR_TASK_ACCEPT_RESPONSE_INVALID',
+          message: '维修任务接取响应无效'
+        },
+        requestId: response.requestId,
+        timestamp: response.timestamp
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        taskId: response.data.repairTaskId,
+        status: response.data.status as RepairTaskStatus,
+        acceptedAt: response.data.acceptedAt
+      },
+      requestId: response.requestId,
+      timestamp: response.timestamp
+    };
+  }
+
   static queryMyRepairTasks(): ApiResponse<MyRepairTaskListResult> {
     if (!ApiClient.isConfigured()) {
       return RepairTaskService.createLocalMyTasksResponse();
     }
 
     return ApiClient.createServiceUnavailableResponse<MyRepairTaskListResult>();
+  }
+
+  static async queryMyRepairTasksRemoteFirst(): Promise<ApiResponse<MyRepairTaskListResult>> {
+    if (!ApiClient.isConfigured()) {
+      return RepairTaskService.createLocalMyTasksResponse();
+    }
+
+    const response = await ApiClient.request<ApiListResult<MyRepairTaskApiSummary>>('/api/v1/repair-tasks/my', 'GET', true);
+
+    if (!response.success) {
+      return {
+        success: false,
+        error: response.error,
+        requestId: response.requestId,
+        timestamp: response.timestamp
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        items: response.data === undefined ? [] : response.data.items.map((item: MyRepairTaskApiSummary): MyRepairTaskSummary => {
+          return RepairTaskService.mapMyTask(item);
+        }),
+        total: response.data === undefined ? 0 : response.data.total
+      },
+      requestId: response.requestId,
+      timestamp: response.timestamp
+    };
   }
 
   static validateRepairReportForm(form: RepairReportForm): RepairTaskValidationResult {
@@ -191,6 +380,70 @@ export class RepairTaskService {
     }
 
     return ApiClient.createServiceUnavailableResponse<RepairReportRecord>();
+  }
+
+  static async submitRepairReportRemoteFirst(form: RepairReportForm): Promise<ApiResponse<RepairReportRecord>> {
+    const validation = RepairTaskService.validateRepairReportForm(form);
+    if (!validation.valid) {
+      return {
+        success: false,
+        error: {
+          code: 'REPAIR_REPORT_INVALID',
+          message: validation.message
+        }
+      };
+    }
+
+    if (!ApiClient.isConfigured()) {
+      return RepairTaskService.createLocalRepairReportResponse(form);
+    }
+
+    const taskId = encodeURIComponent(form.taskId.trim());
+    const response = await ApiClient.request<RepairReportApiResult>(
+      `/api/v1/repair-tasks/${taskId}/repair-reports`,
+      'POST',
+      true,
+      JSON.stringify({
+        result: form.result,
+        repairedAt: form.repairedAt.trim(),
+        processDescription: form.processDescription.trim(),
+        partsUsed: form.partsUsed.trim()
+      })
+    );
+
+    if (!response.success) {
+      return {
+        success: false,
+        error: response.error,
+        requestId: response.requestId,
+        timestamp: response.timestamp
+      };
+    }
+
+    if (response.data === undefined) {
+      return {
+        success: false,
+        error: {
+          code: 'REPAIR_REPORT_RESPONSE_INVALID',
+          message: '维修报告响应无效'
+        },
+        requestId: response.requestId,
+        timestamp: response.timestamp
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        id: response.data.id,
+        reportNo: response.data.repairReportNo,
+        taskId: response.data.repairTaskId,
+        result: response.data.result as RepairReportResult,
+        submittedAt: response.data.createdAt
+      },
+      requestId: response.requestId,
+      timestamp: response.timestamp
+    };
   }
 
   static validateRepairTaskId(taskId: string): RepairTaskValidationResult {
@@ -326,6 +579,35 @@ export class RepairTaskService {
       data: record,
       requestId: 'local-repair-report',
       timestamp: new Date().toISOString()
+    };
+  }
+
+  private static mapAvailableTask(item: AvailableRepairTaskApiSummary): AvailableRepairTaskSummary {
+    return {
+      id: item.faultReportId,
+      faultNo: item.faultReportNo,
+      deviceCode: item.deviceCode,
+      deviceName: item.deviceName,
+      faultType: item.faultType as FaultType,
+      severity: item.severity as FaultSeverity,
+      distanceKm: item.distanceKm,
+      location: item.location.address,
+      submittedAt: item.submittedAt,
+      status: item.status as RepairTaskStatus
+    };
+  }
+
+  private static mapMyTask(item: MyRepairTaskApiSummary): MyRepairTaskSummary {
+    return {
+      id: item.id,
+      taskNo: item.repairTaskNo,
+      faultNo: item.faultReportNo,
+      deviceCode: item.deviceCode,
+      deviceName: item.deviceName,
+      faultType: item.faultType as FaultType,
+      severity: item.severity as FaultSeverity,
+      acceptedAt: item.acceptedAt,
+      status: item.status as RepairTaskStatus
     };
   }
 }

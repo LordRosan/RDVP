@@ -36,6 +36,8 @@ struct ReinspectionTask {
   @State recordMessageTone: string = '#D9480F';
   @State refreshStatus: string = '未刷新';
   @State normalizedTaskId: string = '-';
+  @State refreshing: boolean = false;
+  @State submitting: boolean = false;
   private reinspectionInfoDialogController: CustomDialogController = new CustomDialogController({
     builder: InfoDialog({
       title: '复检任务说明',
@@ -169,6 +171,7 @@ struct ReinspectionTask {
         .width(44)
         .height(44)
         .backgroundColor('#2F6FED')
+        .enabled(!this.refreshing && !this.submitting)
         .onClick(() => {
           this.refreshTasks();
         })
@@ -315,7 +318,7 @@ struct ReinspectionTask {
       this.ReinspectedAtField()
       this.DescriptionField()
       this.RecordMessageText()
-      this.ActionButton('提交复检', $r('sys.symbol.checkmark_circle'), () => {
+      this.ActionButton(this.submitting ? '提交中' : '提交复检', $r('sys.symbol.checkmark_circle'), !this.submitting, () => {
         this.submitRecord();
       })
     }
@@ -554,7 +557,7 @@ struct ReinspectionTask {
   }
 
   @Builder
-  ActionButton(label: string, icon: Resource, action: () => void) {
+  ActionButton(label: string, icon: Resource, enabled: boolean, action: () => void) {
     Button({ type: ButtonType.Capsule, stateEffect: true }) {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
@@ -574,6 +577,7 @@ struct ReinspectionTask {
     .height(54)
     .width('100%')
     .backgroundColor('#2F6FED')
+    .enabled(enabled)
     .onClick(() => {
       action();
     })
@@ -633,8 +637,15 @@ struct ReinspectionTask {
     .width('100%')
   }
 
-  refreshTasks(): void {
-    const response = ReinspectionService.queryPendingTasks();
+  async refreshTasks(): Promise<void> {
+    if (this.refreshing || this.submitting) {
+      return;
+    }
+
+    this.refreshing = true;
+    const response = await ReinspectionService.queryPendingTasksRemoteFirst();
+    this.refreshing = false;
+
     if (!response.success) {
       const error = response.error;
       this.taskMessage = error ? error.message : '复检任务刷新失败';
@@ -648,13 +659,19 @@ struct ReinspectionTask {
     this.taskMessage = '';
   }
 
-  submitRecord(): void {
-    const response = ReinspectionService.submitRecord({
+  async submitRecord(): Promise<void> {
+    if (this.submitting) {
+      return;
+    }
+
+    this.submitting = true;
+    const response = await ReinspectionService.submitRecordRemoteFirst({
       taskId: this.taskId,
       result: this.result,
       reinspectedAt: this.reinspectedAt,
       description: this.description
     });
+    this.submitting = false;
 
     this.normalizedTaskId = this.taskId.trim().toUpperCase();
     if (this.normalizedTaskId.length === 0) {

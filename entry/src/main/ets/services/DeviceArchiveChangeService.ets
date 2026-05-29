@@ -11,6 +11,12 @@ import { ApiClient } from './ApiClient';
 import { DeviceService } from './DeviceService';
 import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
 
+interface DeviceArchiveChangeApiResult {
+  id: string;
+  status: DeviceArchiveChangeRequestStatus;
+  createdAt: string;
+}
+
 export class DeviceArchiveChangeService {
   static validateChangeRequestForm(form: DeviceArchiveChangeRequestForm): DeviceArchiveChangeRequestValidationResult {
     const deviceCodeValidation = DeviceService.validateDeviceCodeQuery({
@@ -162,6 +168,69 @@ export class DeviceArchiveChangeService {
     return ApiClient.createServiceUnavailableResponse<DeviceArchiveChangeRequestRecord>();
   }
 
+  static async submitChangeRequestRemoteFirst(
+    form: DeviceArchiveChangeRequestForm
+  ): Promise<ApiResponse<DeviceArchiveChangeRequestRecord>> {
+    const validation = DeviceArchiveChangeService.validateChangeRequestForm(form);
+
+    if (!validation.valid) {
+      return {
+        success: false,
+        error: {
+          code: 'DEVICE_CHANGE_REQUEST_INVALID',
+          message: validation.message
+        }
+      };
+    }
+
+    if (!ApiClient.isConfigured()) {
+      return DeviceArchiveChangeService.createLocalChangeRequestResponse(form, validation.normalizedDeviceCode ?
+        validation.normalizedDeviceCode : DeviceService.normalizeDeviceCode(form.deviceCode));
+    }
+
+    if (form.deviceId === undefined || form.deviceId.trim().length === 0 || form.baseline === undefined) {
+      return {
+        success: false,
+        error: {
+          code: 'DEVICE_CHANGE_BASELINE_MISSING',
+          message: '缺少设备档案基准信息，请重新查询后提交'
+        }
+      };
+    }
+
+    const response = await ApiClient.request<DeviceArchiveChangeApiResult>('/api/v1/device-change-requests', 'POST', true,
+      DeviceArchiveChangeService.buildCreateRequestBody(form));
+
+    if (!response.success) {
+      return {
+        success: false,
+        error: response.error,
+        requestId: response.requestId,
+        timestamp: response.timestamp
+      };
+    }
+
+    if (response.data === undefined) {
+      return {
+        success: false,
+        error: {
+          code: 'DEVICE_CHANGE_RESPONSE_INVALID',
+          message: '变更申请响应无效'
+        },
+        requestId: response.requestId,
+        timestamp: response.timestamp
+      };
+    }
+
+    return {
+      success: true,
+      data: DeviceArchiveChangeService.createRecordFromApiResult(form, response.data, validation.normalizedDeviceCode ?
+        validation.normalizedDeviceCode : DeviceService.normalizeDeviceCode(form.deviceCode)),
+      requestId: response.requestId,
+      timestamp: response.timestamp
+    };
+  }
+
   static countChangedFields(form: DeviceArchiveChangeRequestForm): number {
     let count = 0;
 
@@ -253,6 +322,62 @@ export class DeviceArchiveChangeService {
       },
       requestId: 'local-device-change-request',
       timestamp: submittedAt
+    };
+  }
+
+  private static buildApiChangesPayload(form: DeviceArchiveChangeRequestForm): string {
+    const baseline = form.baseline;
+    if (baseline === undefined) {
+      return '{}';
+    }
+
+    const changeItems: string[] = [];
+    const deviceName = DeviceArchiveChangeService.normalizeText(form.deviceName);
+    if (DeviceArchiveChangeService.hasFieldChanged(baseline, 'deviceName', deviceName)) {
+      changeItems.push(DeviceArchiveChangeService.formatApiChangeItem('name', baseline.deviceName, deviceName));
+    }
+
+    const model = DeviceArchiveChangeService.normalizeText(form.model);
+    if (DeviceArchiveChangeService.hasFieldChanged(baseline, 'model', model)) {
+      changeItems.push(DeviceArchiveChangeService.formatApiChangeItem('model', baseline.model, model));
+    }
+
+    const manufacturer = DeviceArchiveChangeService.normalizeText(form.manufacturer);
+    if (DeviceArchiveChangeService.hasFieldChanged(baseline, 'manufacturer', manufacturer)) {
+      changeItems.push(DeviceArchiveChangeService.formatApiChangeItem('manufacturer', baseline.manufacturer, manufacturer));
+    }
+
+    const locationAddress = DeviceArchiveChangeService.normalizeText(form.locationAddress);
+    if (DeviceArchiveChangeService.hasFieldChanged(baseline, 'locationAddress', locationAddress)) {
+      changeItems.push(DeviceArchiveChangeService.formatApiChangeItem('location.address', baseline.locationAddress, locationAddress));
+    }
+
+    return `{${changeItems.join(',')}}`;
+  }
+
+  private static buildCreateRequestBody(form: DeviceArchiveChangeRequestForm): string {
+    return `{"deviceId":${JSON.stringify(form.deviceId)},"reason":${JSON.stringify(DeviceArchiveChangeService.normalizeText(form.reason))},"changes":${DeviceArchiveChangeService.buildApiChangesPayload(form)}}`;
+  }
+
+  private static formatApiChangeItem(field: string, oldValue: string, newValue: string): string {
+    return `${JSON.stringify(field)}:{"oldValue":${JSON.stringify(oldValue)},"newValue":${JSON.stringify(newValue)}}`;
+  }
+
+  private static createRecordFromApiResult(
+    form: DeviceArchiveChangeRequestForm,
+    result: DeviceArchiveChangeApiResult,
+    normalizedDeviceCode: string
+  ): DeviceArchiveChangeRequestRecord {
+    return {
+      id: result.id,
+      deviceCode: normalizedDeviceCode,
+      deviceName: form.deviceName.trim(),
+      model: form.model.trim(),
+      manufacturer: form.manufacturer.trim(),
+      locationAddress: form.locationAddress.trim(),
+      reason: form.reason.trim(),
+      status: result.status,
+      submittedAt: result.createdAt
     };
   }
 
