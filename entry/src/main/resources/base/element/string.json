@@ -11,6 +11,14 @@
     {
       "name": "EntryAbility_label",
       "value": "RDVP"
+    },
+    {
+      "name": "camera_permission_reason",
+      "value": "用于扫描设备二维码"
+    },
+    {
+      "name": "internet_permission_reason",
+      "value": "用于访问后端服务"
     }
   ]
 }

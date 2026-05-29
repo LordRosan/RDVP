@@ -5,12 +5,16 @@ import { DeviceService } from '../main/ets/services/DeviceService';
 import { DeviceStatus } from '../main/ets/models/DeviceModels';
 import { FaultSeverity, FaultType } from '../main/ets/models/FaultModels';
 import { RepairerAvailability, RepairReportResult } from '../main/ets/models/RepairTaskModels';
+import { ReinspectionResult } from '../main/ets/models/ReinspectionModels';
 import { VerificationResult } from '../main/ets/models/VerificationModels';
 import { FaultReportService } from '../main/ets/services/FaultReportService';
 import { DeviceVerificationService } from '../main/ets/services/DeviceVerificationService';
+import { OperationRecordService } from '../main/ets/services/OperationRecordService';
 import { RepairTaskService } from '../main/ets/services/RepairTaskService';
+import { ReinspectionService } from '../main/ets/services/ReinspectionService';
 import { WorkbenchActionId } from '../main/ets/models/WorkbenchModels';
 import { WorkbenchService } from '../main/ets/services/WorkbenchService';
+import { SessionStore } from '../main/ets/stores/SessionStore';
 
 export default function localUnitTest() {
   describe('workbenchConfiguration', () => {
@@ -47,6 +51,23 @@ export default function localUnitTest() {
       });
 
       expect(result.valid).assertEqual(true);
+    });
+
+    it('returnsLocalSessionWhenBackendUnconfigured', 0, () => {
+      const response = AuthService.login({
+        username: 'user001',
+        password: 'password'
+      });
+
+      expect(response.success).assertEqual(true);
+      expect(response.data?.user?.username).assertEqual('user001');
+      if (response.data !== undefined) {
+        SessionStore.setSession(response.data);
+        expect(SessionStore.isAuthenticated()).assertEqual(true);
+        expect(SessionStore.getCurrentUser().displayName).assertEqual('user001');
+      } else {
+        expect(true).assertEqual(false);
+      }
     });
   });
 
@@ -300,6 +321,19 @@ export default function localUnitTest() {
 
       expect(result.valid).assertEqual(true);
     });
+
+    it('submitsLocalVerificationWhenBackendUnconfigured', 0, () => {
+      const response = DeviceVerificationService.submitVerification({
+        deviceCode: 'RDVP-DEVICE-0001',
+        result: VerificationResult.Normal,
+        description: '设备外观完整，运行状态正常。',
+        remark: ''
+      });
+
+      expect(response.success).assertEqual(true);
+      expect(response.data?.deviceCode).assertEqual('RDVP-DEVICE-0001');
+      expect(response.data?.result).assertEqual(VerificationResult.Normal);
+    });
   });
 
   describe('faultReportConfiguration', () => {
@@ -510,6 +544,65 @@ export default function localUnitTest() {
 
       expect(result.valid).assertEqual(true);
       expect(RepairTaskService.formatRepairReportResult(RepairReportResult.TemporaryRestored)).assertEqual('临时恢复');
+    });
+  });
+
+  describe('reinspectionConfiguration', () => {
+    it('returnsLocalPendingReinspectionTasksWhenBackendUnconfigured', 0, () => {
+      const response = ReinspectionService.queryPendingTasks();
+
+      expect(response.success).assertEqual(true);
+      const data = response.data;
+      if (data !== undefined) {
+        expect(data.total > 0).assertEqual(true);
+      } else {
+        expect(true).assertEqual(false);
+      }
+    });
+
+    it('rejectsEmptyReinspectionTaskId', 0, () => {
+      const result = ReinspectionService.validateRecordForm({
+        taskId: '',
+        result: ReinspectionResult.Passed,
+        reinspectedAt: '2026-05-29 14:30',
+        description: '复检通过。'
+      });
+
+      expect(result.valid).assertEqual(false);
+      expect(result.message).assertEqual('请选择复检任务');
+    });
+
+    it('submitsLocalReinspectionRecordWhenBackendUnconfigured', 0, () => {
+      const listResponse = ReinspectionService.queryPendingTasks();
+      const taskId = listResponse.data?.items[0].taskNo;
+      if (taskId === undefined) {
+        expect(true).assertEqual(false);
+        return;
+      }
+
+      const response = ReinspectionService.submitRecord({
+        taskId,
+        result: ReinspectionResult.Passed,
+        reinspectedAt: '2026-05-29 14:30',
+        description: '设备恢复状态与维修报告一致，现场复检通过。'
+      });
+
+      expect(response.success).assertEqual(true);
+      expect(response.data?.taskId).assertEqual(taskId);
+    });
+  });
+
+  describe('operationRecordConfiguration', () => {
+    it('returnsLocalOperationRecordsWhenBackendUnconfigured', 0, () => {
+      const response = OperationRecordService.queryRecentRecords();
+
+      expect(response.success).assertEqual(true);
+      const data = response.data;
+      if (data !== undefined) {
+        expect(data.total > 0).assertEqual(true);
+      } else {
+        expect(true).assertEqual(false);
+      }
     });
   });
 }

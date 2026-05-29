@@ -1,4 +1,5 @@
-import { ApiErrorCode, ApiResponse } from '../models/ApiModels';
+import { ApiResponse } from '../models/ApiModels';
+import { OperationRecordType } from '../models/OperationRecordModels';
 import {
   DeviceVerificationForm,
   DeviceVerificationRecord,
@@ -7,6 +8,7 @@ import {
 } from '../models/VerificationModels';
 import { ApiClient } from './ApiClient';
 import { DeviceService } from './DeviceService';
+import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
 
 const MAX_DESCRIPTION_LENGTH = 500;
 const MAX_REMARK_LENGTH = 300;
@@ -77,13 +79,7 @@ export class DeviceVerificationService {
     }
 
     if (!ApiClient.isConfigured()) {
-      return {
-        success: false,
-        error: {
-          code: ApiErrorCode.ServiceUnavailable,
-          message: '后端服务未配置，暂不能提交'
-        }
-      };
+      return DeviceVerificationService.createLocalVerificationResponse(form);
     }
 
     return ApiClient.createServiceUnavailableResponse<DeviceVerificationRecord>();
@@ -106,5 +102,27 @@ export class DeviceVerificationService {
     return result === VerificationResult.Normal ||
       result === VerificationResult.Abnormal ||
       result === VerificationResult.Unavailable;
+  }
+
+  private static createLocalVerificationResponse(form: DeviceVerificationForm): ApiResponse<DeviceVerificationRecord> {
+    const submittedAt = new Date().toISOString();
+    const deviceCode = DeviceService.normalizeDeviceCode(form.deviceCode);
+    const record: DeviceVerificationRecord = {
+      id: `DVR-LOCAL-${submittedAt.replace(/[-:.TZ]/g, '').substring(0, 14)}`,
+      deviceCode,
+      result: form.result,
+      description: form.description.trim(),
+      remark: form.remark.trim(),
+      submittedAt
+    };
+
+    LocalOperationRecordRepository.append(OperationRecordType.DeviceVerification, '提交状态核验', deviceCode,
+      `核验结果：${DeviceVerificationService.formatVerificationResult(form.result)}`);
+    return {
+      success: true,
+      data: record,
+      requestId: 'local-device-verification',
+      timestamp: submittedAt
+    };
   }
 }

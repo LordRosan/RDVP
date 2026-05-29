@@ -1,3 +1,4 @@
+import { abilityAccessCtrl } from '@kit.AbilityKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { detectBarcode, scanBarcode, scanCore } from '@kit.ScanKit';
 import { InfoDialog, InfoDialogSection } from '../components/InfoDialog';
@@ -477,6 +478,12 @@ struct DeviceArchiveQuery {
     }
 
     try {
+      const cameraGranted = await this.ensureCameraPermission();
+      if (!cameraGranted) {
+        this.message = '请授权相机权限后再扫描二维码';
+        return;
+      }
+
       const result = await scanBarcode.startScanForResult(context, {
         scanTypes: [scanCore.ScanType.QR_CODE],
         enableAlbum: false
@@ -484,6 +491,25 @@ struct DeviceArchiveQuery {
       this.applyQrContent(result.originalValue);
     } catch (err) {
       this.message = '扫码取消或失败';
+    }
+  }
+
+  async ensureCameraPermission(): Promise<boolean> {
+    const context = this.getUIContext().getHostContext();
+    if (context === undefined) {
+      return false;
+    }
+
+    try {
+      const atManager = abilityAccessCtrl.createAtManager();
+      const result = await atManager.requestPermissionsFromUser(context, ['ohos.permission.CAMERA']);
+      if (result.authResults.length === 0) {
+        return false;
+      }
+
+      return result.authResults[0] === 0;
+    } catch (err) {
+      return false;
     }
   }
 

@@ -1,6 +1,7 @@
 import { WorkbenchAction, WorkbenchActionId, WorkbenchMetric, WorkbenchStatusItem } from '../models/WorkbenchModels';
 import { ApiClient } from './ApiClient';
 import { LocalRepairTaskRepository } from './LocalRepairTaskRepository';
+import { LocalReinspectionRepository } from './LocalReinspectionRepository';
 
 export class WorkbenchService {
   static getMetrics(): WorkbenchMetric[] {
@@ -22,7 +23,7 @@ export class WorkbenchService {
       {
         id: 'pendingReinspections',
         label: '待复检',
-        value: '0',
+        value: ApiClient.isConfigured() ? '0' : `${LocalReinspectionRepository.getPendingTaskCount()}`,
         status: '高等级故障',
         tone: '#845EF7'
       },

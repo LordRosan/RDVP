@@ -6,8 +6,10 @@ import {
   DeviceArchiveChangeRequestStatus,
   DeviceArchiveChangeRequestValidationResult
 } from '../models/DeviceArchiveChangeModels';
+import { OperationRecordType } from '../models/OperationRecordModels';
 import { ApiClient } from './ApiClient';
 import { DeviceService } from './DeviceService';
+import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
 
 export class DeviceArchiveChangeService {
   static validateChangeRequestForm(form: DeviceArchiveChangeRequestForm): DeviceArchiveChangeRequestValidationResult {
@@ -233,10 +235,13 @@ export class DeviceArchiveChangeService {
   private static createLocalChangeRequestResponse(form: DeviceArchiveChangeRequestForm,
     normalizedDeviceCode: string): ApiResponse<DeviceArchiveChangeRequestRecord> {
     const submittedAt = new Date().toISOString();
+    const requestId = `DCR-LOCAL-${submittedAt.replace(/[-:.TZ]/g, '').substring(0, 14)}`;
+    LocalOperationRecordRepository.append(OperationRecordType.DeviceChangeRequest, '提交档案变更', normalizedDeviceCode,
+      '设备档案变更进入待审核状态');
     return {
       success: true,
       data: {
-        id: `DCR-LOCAL-${submittedAt.replace(/[-:.TZ]/g, '').substring(0, 14)}`,
+        id: requestId,
         deviceCode: normalizedDeviceCode,
         deviceName: form.deviceName.trim(),
         model: form.model.trim(),

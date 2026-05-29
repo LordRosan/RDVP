@@ -269,6 +269,24 @@ struct Index {
       return;
     }
 
-    this.actionMessage = `${action.title}模块建设中`;
+    if (action.id === WorkbenchActionId.ReinspectionTask) {
+      try {
+        this.getUIContext().getRouter().pushUrl({ url: 'pages/ReinspectionTask' });
+      } catch (err) {
+        this.actionMessage = '复检任务不可用';
+      }
+      return;
+    }
+
+    if (action.id === WorkbenchActionId.OperationRecord) {
+      try {
+        this.getUIContext().getRouter().pushUrl({ url: 'pages/OperationRecord' });
+      } catch (err) {
+        this.actionMessage = '操作记录不可用';
+      }
+      return;
+    }
+
+    this.actionMessage = '功能暂不可用';
   }
 }

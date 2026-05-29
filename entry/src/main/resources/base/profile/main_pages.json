@@ -8,6 +8,8 @@
     "pages/DeviceVerification",
     "pages/FaultReport",
     "pages/AvailableRepairTask",
-    "pages/MyRepairTask"
+    "pages/MyRepairTask",
+    "pages/ReinspectionTask",
+    "pages/OperationRecord"
   ]
 }

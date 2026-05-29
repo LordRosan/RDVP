@@ -1,4 +1,5 @@
 import { AuthService } from '../services/AuthService';
+import { SessionStore } from '../stores/SessionStore';
 
 @Entry
 @Component
@@ -137,6 +138,10 @@ struct Login {
       const error = response.error;
       this.message = error ? error.message : '登录失败';
       return;
+    }
+
+    if (response.data !== undefined) {
+      SessionStore.setSession(response.data);
     }
 
     try {

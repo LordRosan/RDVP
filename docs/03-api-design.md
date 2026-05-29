@@ -788,6 +788,30 @@ GET /api/v1/audit-logs
 | `page` | 页码 |
 | `pageSize` | 每页数量 |
 
+响应数据：
+
+```json
+{
+  "items": [
+    {
+      "id": "audit-log-id",
+      "action": "FAULT_REPORT",
+      "targetType": "FAULT_REPORT",
+      "targetId": "fault-report-id",
+      "targetNo": "FR-20260527-0001",
+      "actorId": "user-id",
+      "actorName": "User Name",
+      "status": "SUCCESS",
+      "description": "Created fault report.",
+      "occurredAt": "2026-05-27T07:30:00Z"
+    }
+  ],
+  "page": 1,
+  "pageSize": 20,
+  "total": 1
+}
+```
+
 ## 18. 枚举定义
 
 ### 18.1 设备状态
@@ -867,6 +891,13 @@ UNRESOLVED
 
 ```text
 PASSED
+FAILED
+```
+
+### 18.9 操作记录状态
+
+```text
+SUCCESS
 FAILED
 ```
 
