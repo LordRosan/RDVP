@@ -4,10 +4,12 @@ import { DeviceStatus, DeviceSummary } from '../models/DeviceModels';
 export class DeviceArchiveFlowStore {
   private static currentDevice?: DeviceSummary = undefined;
   private static draft?: DeviceArchiveChangeDraft = undefined;
+  private static pendingDraft?: DeviceArchiveChangeDraft = undefined;
 
   static startFlow(device: DeviceSummary): void {
     DeviceArchiveFlowStore.currentDevice = device;
     DeviceArchiveFlowStore.draft = undefined;
+    DeviceArchiveFlowStore.pendingDraft = undefined;
   }
 
   static getCurrentDevice(): DeviceSummary | undefined {
@@ -26,7 +28,11 @@ export class DeviceArchiveFlowStore {
     DeviceArchiveFlowStore.draft = undefined;
   }
 
-  static markChangePending(requestId: string): void {
+  static getPendingDraft(): DeviceArchiveChangeDraft | undefined {
+    return DeviceArchiveFlowStore.pendingDraft;
+  }
+
+  static markChangePending(requestId: string, pendingDraft?: DeviceArchiveChangeDraft): void {
     if (DeviceArchiveFlowStore.currentDevice === undefined) {
       return;
     }
@@ -46,11 +52,13 @@ export class DeviceArchiveFlowStore {
         pendingRequestId: requestId
       }
     };
+    DeviceArchiveFlowStore.pendingDraft = pendingDraft;
     DeviceArchiveFlowStore.clearDraft();
   }
 
   static clearFlow(): void {
     DeviceArchiveFlowStore.currentDevice = undefined;
     DeviceArchiveFlowStore.draft = undefined;
+    DeviceArchiveFlowStore.pendingDraft = undefined;
   }
 }

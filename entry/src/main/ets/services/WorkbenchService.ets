@@ -1,5 +1,6 @@
 import { WorkbenchAction, WorkbenchActionId, WorkbenchMetric, WorkbenchStatusItem } from '../models/WorkbenchModels';
 import { ApiClient } from './ApiClient';
+import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
 import { LocalRepairTaskRepository } from './LocalRepairTaskRepository';
 import { LocalReinspectionRepository } from './LocalReinspectionRepository';
 
@@ -9,7 +10,7 @@ export class WorkbenchService {
       {
         id: 'pendingChangeRequests',
         label: '待审核变更',
-        value: '0',
+        value: ApiClient.isConfigured() ? '0' : `${LocalDeviceArchiveRepository.getPendingChangeCount()}`,
         status: '设备信息',
         tone: '#2F6FED'
       },

@@ -41,6 +41,22 @@ export class LocalDeviceArchiveRepository {
     }
   }
 
+  static getPendingChangeCount(): number {
+    const devices = LocalDeviceArchiveRepository.getDevices();
+    let count = 0;
+
+    for (let i = 0; i < devices.length; i += 1) {
+      const device = devices[i];
+      const changeState = device.changeState;
+      if (device.status === DeviceStatus.ChangePendingReview ||
+        (changeState !== undefined && changeState.locked)) {
+        count += 1;
+      }
+    }
+
+    return count;
+  }
+
   private static parseDeviceCodeFromQrContent(qrContent: string): string {
     const segments = qrContent.trim().split(':');
     if (segments.length < 3 || segments[0] !== 'RDVP') {

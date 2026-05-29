@@ -453,8 +453,11 @@ struct DeviceArchiveChange {
       return;
     }
 
+    const submittedDraft = this.buildDraft();
     this.requestStatus = DeviceArchiveChangeRequestStatus.PendingReview;
-    DeviceArchiveFlowStore.markChangePending(response.data ? response.data.id : '');
+    DeviceArchiveFlowStore.markChangePending(response.data ? response.data.id : '', submittedDraft);
+    this.applyDraft(submittedDraft);
+    this.changeCount = DeviceArchiveChangeService.countChangedFields(this.buildForm());
     this.message = '变更申请已提交，等待管理员审核';
     this.messageTone = '#087F5B';
   }
@@ -474,7 +477,9 @@ struct DeviceArchiveChange {
 
   updateChangeCount(): void {
     this.changeCount = DeviceArchiveChangeService.countChangedFields(this.buildForm());
-    this.requestStatus = DeviceArchiveChangeRequestStatus.Draft;
+    if (!this.isChangeSubmitted()) {
+      this.requestStatus = DeviceArchiveChangeRequestStatus.Draft;
+    }
   }
 
   getStatusTone(status: DeviceArchiveChangeRequestStatus): string {
@@ -529,6 +534,17 @@ struct DeviceArchiveChange {
       locationAddress: device.location.address
     };
 
+    const pendingDraft = DeviceArchiveFlowStore.getPendingDraft();
+    if (pendingDraft !== undefined && pendingDraft.deviceCode === device.deviceCode) {
+      this.applyDraft(pendingDraft);
+      this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(this.deviceCode);
+      this.changeCount = DeviceArchiveChangeService.countChangedFields(this.buildForm());
+      this.requestStatus = DeviceArchiveChangeRequestStatus.PendingReview;
+      this.message = '变更申请已提交，等待管理员审核';
+      this.messageTone = '#087F5B';
+      return;
+    }
+
     const draft = DeviceArchiveFlowStore.getDraft();
     if (draft !== undefined && draft.deviceCode === device.deviceCode) {
       this.applyDraft(draft);
@@ -559,14 +575,18 @@ struct DeviceArchiveChange {
       return;
     }
 
-    DeviceArchiveFlowStore.saveDraft({
+    DeviceArchiveFlowStore.saveDraft(this.buildDraft());
+  }
+
+  buildDraft(): DeviceArchiveChangeDraft {
+    return {
       deviceCode: this.deviceCode,
       deviceName: this.deviceName,
       model: this.model,
       manufacturer: this.manufacturer,
       locationAddress: this.locationAddress,
       reason: this.reason
-    });
+    };
   }
 
   backToDetail(): void {
