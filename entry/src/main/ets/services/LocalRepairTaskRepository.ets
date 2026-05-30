@@ -175,7 +175,7 @@ export class LocalRepairTaskRepository {
       return item.id === normalizedTaskId || item.taskNo === normalizedTaskId;
     });
 
-    if (task === undefined) {
+    if (task === undefined || task.status === RepairTaskStatus.ReportSubmitted) {
       return undefined;
     }
 

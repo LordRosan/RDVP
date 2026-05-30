@@ -55,6 +55,7 @@ struct MyRepairTask {
   @State reportMessageTone: string = '#D9480F';
   @State refreshStatus: string = '未刷新';
   @State normalizedTaskId: string = '-';
+  @State submittedRepairTaskId: string = '';
   @State refreshing: boolean = false;
   @State submitting: boolean = false;
   private myRepairTaskInfoDialogController: CustomDialogController = new CustomDialogController({
@@ -319,6 +320,9 @@ struct MyRepairTask {
       .onClick(() => {
         this.taskId = item.taskNo;
         this.normalizedTaskId = item.taskNo;
+        if (this.normalizedTaskId !== this.submittedRepairTaskId) {
+          this.submittedRepairTaskId = '';
+        }
         this.reportMessage = '';
         this.reportMessageTone = '#D9480F';
       })
@@ -339,7 +343,7 @@ struct MyRepairTask {
       this.ProcessDescriptionField()
       this.PartsUsedField()
       this.ReportMessageText()
-      this.ActionButton(this.submitting ? '提交中' : '提交报告', $r('sys.symbol.text_clipboard'), !this.submitting,
+      this.ActionButton(this.getSubmitButtonLabel(), $r('sys.symbol.text_clipboard'), this.canSubmitRepairReport(),
         () => {
           this.submitRepairReport();
         })
@@ -382,6 +386,9 @@ struct MyRepairTask {
           this.normalizedTaskId = DeviceService.normalizeDeviceCode(value);
           if (this.normalizedTaskId.length === 0) {
             this.normalizedTaskId = '-';
+          }
+          if (this.normalizedTaskId !== this.submittedRepairTaskId) {
+            this.submittedRepairTaskId = '';
           }
           this.reportMessage = '';
           this.reportMessageTone = '#D9480F';
@@ -628,7 +635,7 @@ struct MyRepairTask {
 
   @Builder
   ActionButton(label: string, icon: Resource, enabled: boolean, action: () => void) {
-    Button({ type: ButtonType.Capsule, stateEffect: true }) {
+    Button({ type: ButtonType.Capsule, stateEffect: enabled }) {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
           .fontSize(20)
@@ -646,7 +653,7 @@ struct MyRepairTask {
     }
     .height(54)
     .width('100%')
-    .backgroundColor('#2F6FED')
+    .backgroundColor(enabled ? '#2F6FED' : '#AEB6C2')
     .enabled(enabled)
     .onClick(() => {
       action();
@@ -702,7 +709,7 @@ struct MyRepairTask {
   }
 
   async submitRepairReport(): Promise<void> {
-    if (this.submitting) {
+    if (this.submitting || this.isSelectedRepairTaskSubmitted()) {
       return;
     }
 
@@ -731,10 +738,31 @@ struct MyRepairTask {
     const reportNo = response.data ? response.data.reportNo : '';
     this.reportMessage = reportNo.length > 0 ? `维修报告已提交：${reportNo}` : '维修报告已提交';
     this.reportMessageTone = '#087F5B';
+    this.submittedRepairTaskId = this.normalizedTaskId;
     this.taskItems = this.taskItems.filter((item: MyRepairTaskSummary) => {
       return item.taskNo !== this.normalizedTaskId && item.id !== this.normalizedTaskId;
     });
     this.refreshStatus = '已更新';
+  }
+
+  getSubmitButtonLabel(): string {
+    if (this.submitting) {
+      return '提交中';
+    }
+
+    if (this.isSelectedRepairTaskSubmitted()) {
+      return '已提交';
+    }
+
+    return '提交报告';
+  }
+
+  canSubmitRepairReport(): boolean {
+    return !this.submitting && !this.isSelectedRepairTaskSubmitted();
+  }
+
+  isSelectedRepairTaskSubmitted(): boolean {
+    return this.submittedRepairTaskId.length > 0 && this.normalizedTaskId === this.submittedRepairTaskId;
   }
 
   getSeverityTone(severity: FaultSeverity): string {

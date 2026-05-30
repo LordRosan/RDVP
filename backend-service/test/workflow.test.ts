@@ -224,6 +224,16 @@ test('routes severe repair through reinspection before restoring device status',
     assert.equal(repairReport.body.data.requiresReinspection, true);
     assert.equal(repairReport.body.data.nextStatus, 'PENDING_REINSPECTION');
 
+    const repeatedRepairReport = await client.request('POST',
+      `/api/v1/repair-tasks/${accepted.body.data.repairTaskId}/repair-reports`, {
+        result: 'REPAIRED',
+        repairedAt: '2026-05-29T06:10:00.000Z',
+        processDescription: 'Repeated report submission should be rejected.',
+        partsUsed: ''
+      }, maintainerToken);
+    assert.equal(repeatedRepairReport.status, 422);
+    assert.equal(repeatedRepairReport.body.error.code, 'REPAIR_TASK_STATUS_INVALID');
+
     const pending = await client.request('GET', '/api/v1/reinspections/pending', undefined, reinspectorToken);
     assert.equal(pending.status, 200);
     assert.ok(pending.body.data.items.some((item: any) => item.faultReportId === created.body.data.id));

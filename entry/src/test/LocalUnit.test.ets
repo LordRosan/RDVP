@@ -561,6 +561,17 @@ export default function localUnitTest() {
 
       expect(reportResponse.success).assertEqual(true);
       expect(reportResponse.data?.taskId).assertEqual(acceptedTaskId);
+
+      const repeatedReportResponse = RepairTaskService.submitRepairReport({
+        taskId: acceptedTaskId,
+        result: RepairReportResult.Repaired,
+        repairedAt: '2026-05-29 12:15',
+        processDescription: '重复提交同一维修任务报告。',
+        partsUsed: ''
+      });
+
+      expect(repeatedReportResponse.success).assertEqual(false);
+      expect(repeatedReportResponse.error?.message).assertEqual('维修任务不存在或已完成');
     });
 
     it('rejectsEmptyRepairTaskAcceptId', 0, () => {
