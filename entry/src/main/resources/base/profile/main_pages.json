@@ -11,6 +11,7 @@
     "pages/AvailableRepairTask",
     "pages/MyRepairTask",
     "pages/ReinspectionTask",
+    "pages/DeviceArchiveReview",
     "pages/OperationRecord"
   ]
 }

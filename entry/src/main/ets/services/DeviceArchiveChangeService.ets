@@ -9,6 +9,7 @@ import {
 import { OperationRecordType } from '../models/OperationRecordModels';
 import { ApiClient } from './ApiClient';
 import { DeviceService } from './DeviceService';
+import { LocalDeviceChangeRequestRepository } from './LocalDeviceChangeRequestRepository';
 import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
 import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
 
@@ -307,21 +308,23 @@ export class DeviceArchiveChangeService {
     const submittedAt = new Date().toISOString();
     const requestId = `DCR-LOCAL-${submittedAt.replace(/[-:.TZ]/g, '').substring(0, 14)}`;
     LocalDeviceArchiveRepository.markChangePending(normalizedDeviceCode, requestId);
+    const record: DeviceArchiveChangeRequestRecord = {
+      id: requestId,
+      deviceCode: normalizedDeviceCode,
+      deviceName: form.deviceName.trim(),
+      model: form.model.trim(),
+      manufacturer: form.manufacturer.trim(),
+      locationAddress: form.locationAddress.trim(),
+      reason: form.reason.trim(),
+      status: DeviceArchiveChangeRequestStatus.PendingReview,
+      submittedAt
+    };
+    LocalDeviceChangeRequestRepository.appendFromSubmission(form, record);
     LocalOperationRecordRepository.append(OperationRecordType.DeviceChangeRequest, '提交档案变更', normalizedDeviceCode,
       '设备档案变更进入待审核状态');
     return {
       success: true,
-      data: {
-        id: requestId,
-        deviceCode: normalizedDeviceCode,
-        deviceName: form.deviceName.trim(),
-        model: form.model.trim(),
-        manufacturer: form.manufacturer.trim(),
-        locationAddress: form.locationAddress.trim(),
-        reason: form.reason.trim(),
-        status: DeviceArchiveChangeRequestStatus.PendingReview,
-        submittedAt
-      },
+      data: record,
       requestId: 'local-device-change-request',
       timestamp: submittedAt
     };

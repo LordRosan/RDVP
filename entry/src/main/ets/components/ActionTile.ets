@@ -74,6 +74,10 @@ export struct ActionTile {
       SymbolGlyph($r('sys.symbol.doc_text_badge_checkmark'))
         .fontSize(23)
         .fontColor(['#FFFFFF'])
+    } else if (this.action.id === WorkbenchActionId.DeviceChangeReview) {
+      SymbolGlyph($r('sys.symbol.checkmark_shield'))
+        .fontSize(23)
+        .fontColor(['#FFFFFF'])
     } else {
       SymbolGlyph($r('sys.symbol.text_clipboard'))
         .fontSize(23)

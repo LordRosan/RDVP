@@ -5,6 +5,7 @@ export enum WorkbenchActionId {
   AvailableRepairTask = 'AVAILABLE_REPAIR_TASK',
   MyRepairTask = 'MY_REPAIR_TASK',
   ReinspectionTask = 'REINSPECTION_TASK',
+  DeviceChangeReview = 'DEVICE_CHANGE_REVIEW',
   OperationRecord = 'OPERATION_RECORD'
 }
 

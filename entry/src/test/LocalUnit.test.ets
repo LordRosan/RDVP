@@ -1,6 +1,9 @@
 import { describe, it, expect } from '@ohos/hypium';
 import { AuthService } from '../main/ets/services/AuthService';
 import { DeviceArchiveChangeService } from '../main/ets/services/DeviceArchiveChangeService';
+import { DeviceArchiveReviewService } from '../main/ets/services/DeviceArchiveReviewService';
+import { DeviceArchiveReviewDecision } from '../main/ets/models/DeviceArchiveReviewModels';
+import { DeviceArchiveChangeRequestStatus } from '../main/ets/models/DeviceArchiveChangeModels';
 import { DeviceService } from '../main/ets/services/DeviceService';
 import { DeviceStatus } from '../main/ets/models/DeviceModels';
 import { FaultSeverity, FaultType } from '../main/ets/models/FaultModels';
@@ -65,6 +68,24 @@ export default function localUnitTest() {
         SessionStore.setSession(response.data);
         expect(SessionStore.isAuthenticated()).assertEqual(true);
         expect(SessionStore.getCurrentUser().displayName).assertEqual('user001');
+      } else {
+        expect(true).assertEqual(false);
+      }
+    });
+
+    it('grantsLocalAdminReviewPermission', 0, () => {
+      const response = AuthService.login({
+        username: 'admin',
+        password: 'password'
+      });
+
+      expect(response.success).assertEqual(true);
+      if (response.data !== undefined) {
+        SessionStore.setSession(response.data);
+        expect(SessionStore.hasPermission('DEVICE_CHANGE_REVIEW')).assertEqual(true);
+        expect(WorkbenchService.getActions().some((item) => {
+          return item.id === WorkbenchActionId.DeviceChangeReview;
+        })).assertEqual(true);
       } else {
         expect(true).assertEqual(false);
       }
@@ -283,6 +304,12 @@ export default function localUnitTest() {
       expect(response.success).assertEqual(true);
       expect(response.data?.status).assertEqual('PENDING_REVIEW');
       expect(response.data?.deviceCode).assertEqual('RDVP-DEVICE-0001');
+    });
+
+    it('formatsReviewDecisionAndStatus', 0, () => {
+      expect(DeviceArchiveReviewService.formatDecision(DeviceArchiveReviewDecision.Approved)).assertEqual('审核通过');
+      expect(DeviceArchiveReviewService.formatStatus(DeviceArchiveChangeRequestStatus.PendingReview)).assertEqual('待审核');
+      expect(DeviceArchiveReviewService.getStatusTone(DeviceArchiveChangeRequestStatus.Rejected)).assertEqual('#D9480F');
     });
   });
 

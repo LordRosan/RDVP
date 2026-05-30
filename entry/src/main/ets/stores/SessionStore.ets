@@ -60,6 +60,20 @@ export class SessionStore {
     };
   }
 
+  static hasPermission(permission: string): boolean {
+    SessionStore.ensureInitialized();
+    if (!SessionStore.isAuthenticated()) {
+      return false;
+    }
+
+    const permissions = SessionStore.sessionState.session?.user?.permissions;
+    if (permissions === undefined) {
+      return false;
+    }
+
+    return permissions.includes('*') || permissions.includes(permission);
+  }
+
   private static formatRoleNames(roles: RoleCode[]): string {
     if (roles.length === 0) {
       return '权限未加载';

@@ -9,7 +9,7 @@ import { SessionStore } from '../stores/SessionStore';
 @Component
 struct Index {
   @State metrics: WorkbenchMetric[] = WorkbenchService.getMetrics();
-  private actions: WorkbenchAction[] = WorkbenchService.getActions();
+  @State actions: WorkbenchAction[] = WorkbenchService.getActions();
   @State statusItems: WorkbenchStatusItem[] = WorkbenchService.getStatusItems();
   @State currentUser: CurrentUserSnapshot = SessionStore.getCurrentUser();
   @State actionMessage: string = '';
@@ -31,6 +31,7 @@ struct Index {
 
   refreshWorkbenchState(): void {
     this.metrics = WorkbenchService.getMetrics();
+    this.actions = WorkbenchService.getActions();
     this.statusItems = WorkbenchService.getStatusItems();
     this.currentUser = SessionStore.getCurrentUser();
   }
@@ -284,6 +285,15 @@ struct Index {
         this.getUIContext().getRouter().pushUrl({ url: 'pages/ReinspectionTask' });
       } catch (err) {
         this.actionMessage = '复检任务不可用';
+      }
+      return;
+    }
+
+    if (action.id === WorkbenchActionId.DeviceChangeReview) {
+      try {
+        this.getUIContext().getRouter().pushUrl({ url: 'pages/DeviceArchiveReview' });
+      } catch (err) {
+        this.actionMessage = '变更审核不可用';
       }
       return;
     }

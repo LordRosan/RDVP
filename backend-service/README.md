@@ -25,6 +25,7 @@ npm run backend:start
 | --- | --- |
 | `admin` | `SYSTEM_ADMIN` |
 | `verifier` | `VERIFIER` |
+| `deviceadmin` | `DEVICE_ADMIN` |
 | `reporter` | `FAULT_REPORTER` |
 | `maintainer` | `MAINTAINER` |
 | `reinspector` | `REINSPECTOR` |

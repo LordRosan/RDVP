@@ -13,6 +13,7 @@ import {
   UserAccount
 } from '../domain/models/entities.js';
 import {
+  ChangeRequestStatus,
   DeviceStatus,
   FaultSeverity,
   FaultStatus,
@@ -42,6 +43,7 @@ export class InMemoryDatabase {
     if (seed) {
       this.seedUsers();
       this.seedDevices();
+      this.seedDeviceChangeRequests();
       this.seedDeviceQrCodes();
       this.seedFaultReports();
     }
@@ -109,6 +111,15 @@ export class InMemoryDatabase {
         status: 'ACTIVE'
       },
       {
+        id: 'user-deviceadmin',
+        username: 'deviceadmin',
+        passwordHash,
+        displayName: 'Device Admin',
+        roles: [RoleCode.DeviceAdmin],
+        permissions: ['DEVICE_READ', 'DEVICE_CHANGE_REVIEW'],
+        status: 'ACTIVE'
+      },
+      {
         id: 'user-reporter',
         username: 'reporter',
         passwordHash,
@@ -136,6 +147,26 @@ export class InMemoryDatabase {
         status: 'ACTIVE'
       }
     );
+  }
+
+  private seedDeviceChangeRequests(): void {
+    const createdAt = '2026-05-29T10:10:00.000Z';
+    this.deviceChangeRequests.push({
+      id: 'DCR-LOCAL-0002',
+      deviceId: 'device-local-0002',
+      applicantId: 'user-reporter',
+      status: ChangeRequestStatus.PendingReview,
+      reason: 'Site marker location requires archive correction.',
+      changes: {
+        'location.address': {
+          oldValue: 'Plant 2 Packaging Area',
+          newValue: 'Plant 2 Packaging Area Section A'
+        }
+      },
+      previousDeviceStatus: DeviceStatus.Normal,
+      createdAt,
+      updatedAt: createdAt
+    });
   }
 
   private seedDevices(): void {

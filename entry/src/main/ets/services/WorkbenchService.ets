@@ -3,6 +3,7 @@ import { ApiClient } from './ApiClient';
 import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
 import { LocalRepairTaskRepository } from './LocalRepairTaskRepository';
 import { LocalReinspectionRepository } from './LocalReinspectionRepository';
+import { SessionStore } from '../stores/SessionStore';
 
 export class WorkbenchService {
   static getMetrics(): WorkbenchMetric[] {
@@ -39,7 +40,7 @@ export class WorkbenchService {
   }
 
   static getActions(): WorkbenchAction[] {
-    return [
+    const actions: WorkbenchAction[] = [
       {
         id: WorkbenchActionId.DeviceQuery,
         title: '设备档案查询',
@@ -75,14 +76,28 @@ export class WorkbenchService {
         title: '复检任务',
         summary: '确认高等级故障结果',
         tone: '#845EF7'
-      },
+      }
+    ];
+
+    if (SessionStore.hasPermission('DEVICE_CHANGE_REVIEW')) {
+      actions.push({
+        id: WorkbenchActionId.DeviceChangeReview,
+        title: '变更审核',
+        summary: '审核待处理档案变更',
+        tone: '#2B8A3E'
+      });
+    }
+
+    actions.push(
       {
         id: WorkbenchActionId.OperationRecord,
         title: '操作记录',
         summary: '查看业务流转记录',
         tone: '#495057'
       }
-    ];
+    );
+
+    return actions;
   }
 
   static getStatusItems(): WorkbenchStatusItem[] {

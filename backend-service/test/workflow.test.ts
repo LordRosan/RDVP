@@ -138,6 +138,19 @@ test('locks device archive changes until review and enforces freeze after approv
   });
 });
 
+test('allows device administrators to list seeded pending archive changes', async () => {
+  await withClient(async (client) => {
+    const deviceAdminToken = await client.login('deviceadmin');
+    const response = await client.request('GET', '/api/v1/device-change-requests?status=PENDING_REVIEW', undefined,
+      deviceAdminToken);
+
+    assert.equal(response.status, 200);
+    assert.equal(response.body.data.total, 1);
+    assert.equal(response.body.data.items[0].id, 'DCR-LOCAL-0002');
+    assert.equal(response.body.data.items[0].deviceCode, 'RDVP-DEVICE-0002');
+  });
+});
+
 test('creates a fault report and prevents duplicate task acceptance', async () => {
   await withClient(async (client) => {
     const reporterToken = await client.login('reporter');

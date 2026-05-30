@@ -1,3 +1,4 @@
+import { DeviceArchiveChangeFieldDiff } from '../models/DeviceArchiveReviewModels';
 import { DeviceStatus, DeviceSummary } from '../models/DeviceModels';
 
 export class LocalDeviceArchiveRepository {
@@ -54,6 +55,59 @@ export class LocalDeviceArchiveRepository {
     }
 
     return count;
+  }
+
+  static applyApprovedChange(deviceCode: string, changes: DeviceArchiveChangeFieldDiff[], freezeUntil: string): void {
+    const device = LocalDeviceArchiveRepository.findMutableByCode(deviceCode);
+    if (device === undefined) {
+      return;
+    }
+
+    for (let i = 0; i < changes.length; i += 1) {
+      const change = changes[i];
+      if (change.field === 'name') {
+        device.name = change.newValue;
+      } else if (change.field === 'model') {
+        device.model = change.newValue;
+      } else if (change.field === 'manufacturer') {
+        device.manufacturer = change.newValue;
+      } else if (change.field === 'location.address') {
+        device.location = {
+          address: change.newValue,
+          longitude: device.location.longitude,
+          latitude: device.location.latitude
+        };
+      }
+    }
+
+    device.changeState = {
+      locked: false,
+      freezeUntil
+    };
+  }
+
+  static releaseChangeLock(deviceCode: string): void {
+    const device = LocalDeviceArchiveRepository.findMutableByCode(deviceCode);
+    if (device === undefined) {
+      return;
+    }
+
+    device.changeState = {
+      locked: false
+    };
+  }
+
+  private static findMutableByCode(deviceCode: string): DeviceSummary | undefined {
+    const normalizedDeviceCode = LocalDeviceArchiveRepository.normalizeDeviceCode(deviceCode);
+    const devices = LocalDeviceArchiveRepository.getDevices();
+
+    for (let i = 0; i < devices.length; i += 1) {
+      if (devices[i].deviceCode === normalizedDeviceCode) {
+        return devices[i];
+      }
+    }
+
+    return undefined;
   }
 
   private static parseDeviceCodeFromQrContent(qrContent: string): string {
