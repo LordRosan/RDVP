@@ -13,6 +13,7 @@ struct Index {
   @State statusItems: WorkbenchStatusItem[] = WorkbenchService.getStatusItems();
   @State currentUser: CurrentUserSnapshot = SessionStore.getCurrentUser();
   @State actionMessage: string = '';
+  @StorageLink('rdvp_workbench_refresh_revision') workbenchRefreshRevision: number = 0;
 
   aboutToAppear(): void {
     if (!SessionStore.isAuthenticated()) {
@@ -95,11 +96,16 @@ struct Index {
         .fontColor('#111827')
 
       Grid() {
-        ForEach(this.metrics, (item: WorkbenchMetric) => {
+        ForEach(WorkbenchService.getMetrics(), (item: WorkbenchMetric) => {
           GridItem() {
-            MetricTile({ metric: item })
+            MetricTile({
+              label: item.label,
+              value: item.value,
+              status: item.status,
+              tone: item.tone
+            })
           }
-        }, (item: WorkbenchMetric) => item.id)
+        }, (item: WorkbenchMetric) => `${item.id}-${this.workbenchRefreshRevision}`)
       }
       .columnsTemplate('1fr 1fr')
       .columnsGap(12)
@@ -156,7 +162,7 @@ struct Index {
         .fontColor('#111827')
 
       Column() {
-        ForEach(this.statusItems, (item: WorkbenchStatusItem) => {
+        ForEach(WorkbenchService.getStatusItems(), (item: WorkbenchStatusItem) => {
           Row() {
             Text(item.name)
               .fontSize(14)
@@ -187,6 +193,7 @@ struct Index {
         width: 1,
         color: '#E5E7EB'
       })
+
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')

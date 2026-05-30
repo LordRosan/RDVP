@@ -41,6 +41,7 @@ struct DeviceArchiveDetail {
   };
   @State hasDevice: boolean = false;
   @State message: string = '';
+  @State canChangeArchive: boolean = false;
   private detailInfoDialogController: CustomDialogController = new CustomDialogController({
     builder: InfoDialog({
       title: '设备档案详情说明',
@@ -71,12 +72,14 @@ struct DeviceArchiveDetail {
     const device = DeviceArchiveFlowStore.getCurrentDevice();
     if (device === undefined) {
       this.hasDevice = false;
+      this.canChangeArchive = false;
       this.message = '未获取设备档案，请重新查询';
       return;
     }
 
     this.device = device;
     this.hasDevice = true;
+    this.canChangeArchive = !DeviceService.isArchiveChangeLocked(device);
     this.message = '';
   }
 
@@ -284,9 +287,7 @@ struct DeviceArchiveDetail {
   ActionPanel() {
     Column({ space: 12 }) {
       this.MessageText()
-      this.ActionButton('修改设备档案', $r('sys.symbol.text_clipboard'), !DeviceService.isArchiveChangeLocked(this.device), () => {
-        this.openChangePage();
-      })
+      this.ChangeArchiveButton()
       this.ActionButton('返回设备查询', $r('sys.symbol.magnifyingglass'), true, () => {
         this.returnToQuery();
       })
@@ -348,6 +349,33 @@ struct DeviceArchiveDetail {
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
     }
+  }
+
+  @Builder
+  ChangeArchiveButton() {
+    Button({ type: ButtonType.Capsule, stateEffect: this.canChangeArchive }) {
+      Row({ space: 8 }) {
+        SymbolGlyph($r('sys.symbol.text_clipboard'))
+          .fontSize(20)
+          .fontColor(['#FFFFFF'])
+
+        Text('修改设备档案')
+          .fontSize(17)
+          .fontWeight(FontWeight.Medium)
+          .fontColor('#FFFFFF')
+          .maxLines(1)
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+    }
+    .height(54)
+    .width('100%')
+    .backgroundColor(this.canChangeArchive ? '#2F6FED' : '#AEB6C2')
+    .enabled(this.canChangeArchive)
+    .onClick(() => {
+      this.openChangePage();
+    })
   }
 
   @Builder

@@ -111,8 +111,8 @@ export class WorkbenchService {
       {
         id: 'auth',
         name: '认证状态',
-        value: '未登录',
-        tone: '#D9480F'
+        value: SessionStore.isAuthenticated() ? '已登录' : '未登录',
+        tone: SessionStore.isAuthenticated() ? '#087F5B' : '#D9480F'
       },
       {
         id: 'sync',

@@ -1,5 +1,6 @@
 import { DeviceArchiveChangeFieldDiff } from '../models/DeviceArchiveReviewModels';
 import { DeviceStatus, DeviceSummary } from '../models/DeviceModels';
+import { WorkbenchRefreshStore } from '../stores/WorkbenchRefreshStore';
 
 export class LocalDeviceArchiveRepository {
   private static devices?: DeviceSummary[] = undefined;
@@ -36,6 +37,7 @@ export class LocalDeviceArchiveRepository {
           locked: true,
           pendingRequestId: requestId
         };
+        WorkbenchRefreshStore.notifyChanged();
         return;
       }
     }
@@ -84,6 +86,7 @@ export class LocalDeviceArchiveRepository {
       locked: false,
       freezeUntil
     };
+    WorkbenchRefreshStore.notifyChanged();
   }
 
   static releaseChangeLock(deviceCode: string): void {
@@ -95,6 +98,7 @@ export class LocalDeviceArchiveRepository {
     device.changeState = {
       locked: false
     };
+    WorkbenchRefreshStore.notifyChanged();
   }
 
   private static findMutableByCode(deviceCode: string): DeviceSummary | undefined {

@@ -90,6 +90,25 @@ export default function localUnitTest() {
         expect(true).assertEqual(false);
       }
     });
+
+    it('reportsAuthenticatedWorkbenchStatus', 0, () => {
+      const response = AuthService.login({
+        username: 'admin',
+        password: 'password'
+      });
+
+      expect(response.success).assertEqual(true);
+      if (response.data !== undefined) {
+        SessionStore.setSession(response.data);
+        const authStatus = WorkbenchService.getStatusItems().find((item) => {
+          return item.id === 'auth';
+        });
+        expect(authStatus?.value).assertEqual('已登录');
+        expect(authStatus?.tone).assertEqual('#087F5B');
+      } else {
+        expect(true).assertEqual(false);
+      }
+    });
   });
 
   describe('deviceQueryConfiguration', () => {
@@ -286,6 +305,9 @@ export default function localUnitTest() {
     });
 
     it('submitsLocalChangeRequestWhenBackendUnconfigured', 0, () => {
+      const pendingMetricBefore = WorkbenchService.getMetrics().find((item) => {
+        return item.id === 'pendingChangeRequests';
+      });
       const response = DeviceArchiveChangeService.submitChangeRequest({
         deviceCode: 'RDVP-DEVICE-0001',
         deviceName: '冷却泵A-02',
@@ -304,6 +326,10 @@ export default function localUnitTest() {
       expect(response.success).assertEqual(true);
       expect(response.data?.status).assertEqual('PENDING_REVIEW');
       expect(response.data?.deviceCode).assertEqual('RDVP-DEVICE-0001');
+      const pendingMetricAfter = WorkbenchService.getMetrics().find((item) => {
+        return item.id === 'pendingChangeRequests';
+      });
+      expect(Number(pendingMetricAfter?.value) > Number(pendingMetricBefore?.value)).assertEqual(true);
     });
 
     it('formatsReviewDecisionAndStatus', 0, () => {
