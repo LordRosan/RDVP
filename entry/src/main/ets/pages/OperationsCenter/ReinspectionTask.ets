@@ -1,11 +1,11 @@
-import { InfoDialog, InfoDialogSection } from '../components/InfoDialog';
-import { StatusInfoRow } from '../components/StatusInfoRow';
+import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
+import { StatusInfoRow } from '../../components/StatusInfoRow';
 import {
   ReinspectionResult, ReinspectionTaskSummary
-} from '../models/ReinspectionModels';
-import { ApiClient } from '../services/ApiClient';
-import { ReinspectionService } from '../services/ReinspectionService';
-import { AuthGuard } from '../utils/AuthGuard';
+} from '../../models/ReinspectionModels';
+import { ApiClient } from '../../services/ApiClient';
+import { ReinspectionService } from '../../services/ReinspectionService';
+import { AuthGuard } from '../../utils/AuthGuard';
 
 const REINSPECTION_INFO_SECTIONS: InfoDialogSection[] = [
   {

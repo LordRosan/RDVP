@@ -1,9 +1,9 @@
-import { InfoDialog, InfoDialogSection } from '../components/InfoDialog';
-import { StatusInfoRow } from '../components/StatusInfoRow';
-import { OperationRecordSummary } from '../models/OperationRecordModels';
-import { ApiClient } from '../services/ApiClient';
-import { OperationRecordService } from '../services/OperationRecordService';
-import { AuthGuard } from '../utils/AuthGuard';
+import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
+import { StatusInfoRow } from '../../components/StatusInfoRow';
+import { OperationRecordSummary } from '../../models/OperationRecordModels';
+import { ApiClient } from '../../services/ApiClient';
+import { OperationRecordService } from '../../services/OperationRecordService';
+import { AuthGuard } from '../../utils/AuthGuard';
 
 const OPERATION_RECORD_INFO_SECTIONS: InfoDialogSection[] = [
   {

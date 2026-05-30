@@ -1,10 +1,10 @@
-import { ActionTile } from '../components/ActionTile';
-import { StatusInfoRow } from '../components/StatusInfoRow';
-import { WorkbenchAction, WorkbenchActionId } from '../models/WorkbenchModels';
-import { ApiClient } from '../services/ApiClient';
-import { WorkbenchService } from '../services/WorkbenchService';
-import { SessionStore } from '../stores/SessionStore';
-import { AuthGuard } from '../utils/AuthGuard';
+import { ActionTile } from '../../components/ActionTile';
+import { StatusInfoRow } from '../../components/StatusInfoRow';
+import { WorkbenchAction, WorkbenchActionId } from '../../models/WorkbenchModels';
+import { ApiClient } from '../../services/ApiClient';
+import { WorkbenchService } from '../../services/WorkbenchService';
+import { SessionStore } from '../../stores/SessionStore';
+import { AuthGuard } from '../../utils/AuthGuard';
 
 @Entry
 @Component
@@ -233,12 +233,12 @@ struct ManagementCenter {
   openFeature(action: WorkbenchAction): void {
     this.message = '';
     if (action.id === WorkbenchActionId.DeviceChangeReview) {
-      this.openPage('pages/DeviceArchiveReview', '变更审核不可用');
+      this.openPage('pages/ManagementCenter/DeviceArchiveReview', '变更审核不可用');
       return;
     }
 
     if (action.id === WorkbenchActionId.OperationRecord) {
-      this.openPage('pages/OperationRecord', '操作记录不可用');
+      this.openPage('pages/ManagementCenter/OperationRecord', '操作记录不可用');
       return;
     }
 

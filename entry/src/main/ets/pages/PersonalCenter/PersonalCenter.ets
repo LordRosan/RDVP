@@ -1,7 +1,7 @@
-import { CurrentUserSnapshot } from '../models/SessionModels';
-import { ApiClient } from '../services/ApiClient';
-import { SessionStore } from '../stores/SessionStore';
-import { formatConnectionStatus } from '../utils/SessionFormat';
+import { CurrentUserSnapshot } from '../../models/SessionModels';
+import { ApiClient } from '../../services/ApiClient';
+import { SessionStore } from '../../stores/SessionStore';
+import { formatConnectionStatus } from '../../utils/SessionFormat';
 
 @Entry
 @Component

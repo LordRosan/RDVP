@@ -1,14 +1,14 @@
-import { ActionTile } from '../components/ActionTile';
-import { StatusInfoRow } from '../components/StatusInfoRow';
-import { WorkbenchAction, WorkbenchActionId } from '../models/WorkbenchModels';
-import { ApiClient } from '../services/ApiClient';
-import { WorkbenchService } from '../services/WorkbenchService';
-import { AuthGuard } from '../utils/AuthGuard';
+import { ActionTile } from '../../components/ActionTile';
+import { StatusInfoRow } from '../../components/StatusInfoRow';
+import { WorkbenchAction, WorkbenchActionId } from '../../models/WorkbenchModels';
+import { ApiClient } from '../../services/ApiClient';
+import { WorkbenchService } from '../../services/WorkbenchService';
+import { AuthGuard } from '../../utils/AuthGuard';
 
 @Entry
 @Component
-struct OperationsCenter {
-  @State actions: WorkbenchAction[] = WorkbenchService.getOperationsCenterActions();
+struct ArchiveCenter {
+  @State actions: WorkbenchAction[] = WorkbenchService.getArchiveCenterActions();
   @State message: string = '';
   @StorageLink('rdvp_workbench_refresh_revision') workbenchRefreshRevision: number = 0;
 
@@ -94,14 +94,14 @@ struct OperationsCenter {
   ModeHeader() {
     Row({ space: 16 }) {
       Column({ space: 6 }) {
-        Text('运维中心')
+        Text('档案中心')
           .fontSize(34)
           .fontWeight(FontWeight.Bold)
           .fontColor('#111827')
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-        Text('处理核验、故障、维修和复检任务')
+        Text('查询设备档案并从详情发起变更')
           .fontSize(15)
           .fontColor('#6B7280')
           .maxLines(1)
@@ -111,7 +111,7 @@ struct OperationsCenter {
       .alignItems(HorizontalAlign.Start)
 
       Stack() {
-        SymbolGlyph($r('sys.symbol.wrench_and_screwdriver'))
+        SymbolGlyph($r('sys.symbol.text_clipboard'))
           .fontSize(31)
           .fontColor(['#111827'])
       }
@@ -140,15 +140,9 @@ struct OperationsCenter {
 
       Column() {
         StatusInfoRow({
-          label: '待接取故障',
-          value: `${this.getPendingFaultCount()}项`,
-          tone: '#D9480F'
-        })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '待复检任务',
-          value: `${this.getPendingReinspectionCount()}项`,
-          tone: '#845EF7'
+          label: '待审核变更',
+          value: `${this.getPendingChangeCount()}项`,
+          tone: '#2F6FED'
         })
         this.CardDivider()
         StatusInfoRow({
@@ -214,61 +208,29 @@ struct OperationsCenter {
   }
 
   refreshCenterState(): void {
-    this.actions = WorkbenchService.getOperationsCenterActions();
+    this.actions = WorkbenchService.getArchiveCenterActions();
   }
 
-  getPendingFaultCount(): number {
+  getPendingChangeCount(): number {
     if (this.workbenchRefreshRevision < 0) {
       return 0;
     }
 
-    return WorkbenchService.getPendingFaultCount();
-  }
-
-  getPendingReinspectionCount(): number {
-    if (this.workbenchRefreshRevision < 0) {
-      return 0;
-    }
-
-    return WorkbenchService.getPendingReinspectionCount();
+    return WorkbenchService.getPendingChangeCount();
   }
 
   openFeature(action: WorkbenchAction): void {
     this.message = '';
-    if (action.id === WorkbenchActionId.DeviceVerification) {
-      this.openPage('pages/DeviceVerification', '状态核验不可用');
-      return;
-    }
-
-    if (action.id === WorkbenchActionId.FaultReport) {
-      this.openPage('pages/FaultReport', '故障报告不可用');
-      return;
-    }
-
-    if (action.id === WorkbenchActionId.AvailableRepairTask) {
-      this.openPage('pages/AvailableRepairTask', '附近故障不可用');
-      return;
-    }
-
-    if (action.id === WorkbenchActionId.MyRepairTask) {
-      this.openPage('pages/MyRepairTask', '我的维修不可用');
-      return;
-    }
-
-    if (action.id === WorkbenchActionId.ReinspectionTask) {
-      this.openPage('pages/ReinspectionTask', '复检任务不可用');
+    if (action.id === WorkbenchActionId.DeviceQuery) {
+      try {
+        this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveQuery' });
+      } catch (err) {
+        this.message = '设备档案查询不可用';
+      }
       return;
     }
 
     this.message = '功能暂不可用';
-  }
-
-  openPage(url: string, errorMessage: string): void {
-    try {
-      this.getUIContext().getRouter().pushUrl({ url });
-    } catch (err) {
-      this.message = errorMessage;
-    }
   }
 
   backToWorkbench(): void {

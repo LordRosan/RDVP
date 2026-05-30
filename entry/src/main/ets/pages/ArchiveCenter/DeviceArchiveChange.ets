@@ -1,16 +1,16 @@
-import { InfoDialog, InfoDialogSection } from '../components/InfoDialog';
+import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import {
   DeviceArchiveChangeBaseline,
   DeviceArchiveChangeDraft,
   DeviceArchiveChangeRequestForm,
   DeviceArchiveChangeRequestStatus
-} from '../models/DeviceArchiveChangeModels';
-import { ApiClient } from '../services/ApiClient';
-import { StatusInfoRow } from '../components/StatusInfoRow';
-import { DeviceArchiveChangeService } from '../services/DeviceArchiveChangeService';
-import { DeviceService } from '../services/DeviceService';
-import { DeviceArchiveFlowStore } from '../stores/DeviceArchiveFlowStore';
-import { AuthGuard } from '../utils/AuthGuard';
+} from '../../models/DeviceArchiveChangeModels';
+import { ApiClient } from '../../services/ApiClient';
+import { StatusInfoRow } from '../../components/StatusInfoRow';
+import { DeviceArchiveChangeService } from '../../services/DeviceArchiveChangeService';
+import { DeviceService } from '../../services/DeviceService';
+import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
+import { AuthGuard } from '../../utils/AuthGuard';
 
 const DEVICE_CHANGE_INFO_SECTIONS: InfoDialogSection[] = [
   {
@@ -708,7 +708,7 @@ struct DeviceArchiveChange {
         return;
       }
 
-      router.replaceUrl({ url: 'pages/DeviceArchiveDetail' });
+      router.replaceUrl({ url: 'pages/ArchiveCenter/DeviceArchiveDetail' });
     } catch (err) {
       this.message = '页面跳转失败';
     }

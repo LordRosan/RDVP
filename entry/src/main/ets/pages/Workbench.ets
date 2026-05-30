@@ -228,7 +228,7 @@ struct Workbench {
 
   openPersonalCenter(): void {
     try {
-      this.getUIContext().getRouter().pushUrl({ url: 'pages/PersonalCenter' });
+      this.getUIContext().getRouter().pushUrl({ url: 'pages/PersonalCenter/PersonalCenter' });
     } catch (err) {
       this.actionMessage = '个人中心不可用';
     }
@@ -244,7 +244,7 @@ struct Workbench {
 
     if (action.id === WorkbenchActionId.ArchiveCenter) {
       try {
-        this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter' });
+        this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/ArchiveCenter' });
       } catch (err) {
         this.actionMessage = '档案中心不可用';
       }
@@ -253,7 +253,7 @@ struct Workbench {
 
     if (action.id === WorkbenchActionId.OperationsCenter) {
       try {
-        this.getUIContext().getRouter().pushUrl({ url: 'pages/OperationsCenter' });
+        this.getUIContext().getRouter().pushUrl({ url: 'pages/OperationsCenter/OperationsCenter' });
       } catch (err) {
         this.actionMessage = '运维中心不可用';
       }
@@ -262,7 +262,7 @@ struct Workbench {
 
     if (action.id === WorkbenchActionId.ManagementCenter) {
       try {
-        this.getUIContext().getRouter().pushUrl({ url: 'pages/ManagementCenter' });
+        this.getUIContext().getRouter().pushUrl({ url: 'pages/ManagementCenter/ManagementCenter' });
       } catch (err) {
         this.actionMessage = '管理中心不可用';
       }

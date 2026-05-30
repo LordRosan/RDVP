@@ -1,15 +1,15 @@
-import { InfoDialog, InfoDialogSection } from '../components/InfoDialog';
-import { StatusInfoRow } from '../components/StatusInfoRow';
-import { DeviceArchiveChangeRequestStatus } from '../models/DeviceArchiveChangeModels';
+import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
+import { StatusInfoRow } from '../../components/StatusInfoRow';
+import { DeviceArchiveChangeRequestStatus } from '../../models/DeviceArchiveChangeModels';
 import {
   DeviceArchiveChangeFieldDiff,
   DeviceArchiveReviewDecision,
   DeviceArchiveReviewItem
-} from '../models/DeviceArchiveReviewModels';
-import { ApiClient } from '../services/ApiClient';
-import { DeviceArchiveReviewService } from '../services/DeviceArchiveReviewService';
-import { SessionStore } from '../stores/SessionStore';
-import { AuthGuard } from '../utils/AuthGuard';
+} from '../../models/DeviceArchiveReviewModels';
+import { ApiClient } from '../../services/ApiClient';
+import { DeviceArchiveReviewService } from '../../services/DeviceArchiveReviewService';
+import { SessionStore } from '../../stores/SessionStore';
+import { AuthGuard } from '../../utils/AuthGuard';
 
 const DEVICE_ARCHIVE_REVIEW_INFO_SECTIONS: InfoDialogSection[] = [
   {

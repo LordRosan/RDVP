@@ -1,10 +1,10 @@
-import { InfoDialog, InfoDialogSection } from '../components/InfoDialog';
-import { StatusInfoRow } from '../components/StatusInfoRow';
-import { FaultSeverity, FaultType } from '../models/FaultModels';
-import { ApiClient } from '../services/ApiClient';
-import { DeviceService } from '../services/DeviceService';
-import { FaultReportService } from '../services/FaultReportService';
-import { AuthGuard } from '../utils/AuthGuard';
+import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
+import { StatusInfoRow } from '../../components/StatusInfoRow';
+import { FaultSeverity, FaultType } from '../../models/FaultModels';
+import { ApiClient } from '../../services/ApiClient';
+import { DeviceService } from '../../services/DeviceService';
+import { FaultReportService } from '../../services/FaultReportService';
+import { AuthGuard } from '../../utils/AuthGuard';
 
 const FAULT_REPORT_INFO_SECTIONS: InfoDialogSection[] = [
   {

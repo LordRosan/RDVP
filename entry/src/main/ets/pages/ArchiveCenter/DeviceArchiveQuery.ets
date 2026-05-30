@@ -1,13 +1,13 @@
 import { abilityAccessCtrl } from '@kit.AbilityKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { detectBarcode, scanBarcode, scanCore } from '@kit.ScanKit';
-import { InfoDialog, InfoDialogSection } from '../components/InfoDialog';
-import { StatusInfoRow } from '../components/StatusInfoRow';
-import { DeviceQueryMode, DeviceSummary } from '../models/DeviceModels';
-import { ApiClient } from '../services/ApiClient';
-import { DeviceService } from '../services/DeviceService';
-import { DeviceArchiveFlowStore } from '../stores/DeviceArchiveFlowStore';
-import { AuthGuard } from '../utils/AuthGuard';
+import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
+import { StatusInfoRow } from '../../components/StatusInfoRow';
+import { DeviceQueryMode, DeviceSummary } from '../../models/DeviceModels';
+import { ApiClient } from '../../services/ApiClient';
+import { DeviceService } from '../../services/DeviceService';
+import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
+import { AuthGuard } from '../../utils/AuthGuard';
 
 const DEVICE_ARCHIVE_QUERY_INFO_SECTIONS: InfoDialogSection[] = [
   {
@@ -640,7 +640,7 @@ struct DeviceArchiveQuery {
     DeviceArchiveFlowStore.startFlow(device);
 
     try {
-      this.getUIContext().getRouter().pushUrl({ url: 'pages/DeviceArchiveDetail' });
+      this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveDetail' });
     } catch (err) {
       this.message = '设备档案详情不可用';
     }

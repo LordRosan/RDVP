@@ -1,9 +1,9 @@
-import { InfoDialog, InfoDialogSection } from '../components/InfoDialog';
-import { StatusInfoRow } from '../components/StatusInfoRow';
-import { DeviceStatus, DeviceSummary } from '../models/DeviceModels';
-import { DeviceService } from '../services/DeviceService';
-import { DeviceArchiveFlowStore } from '../stores/DeviceArchiveFlowStore';
-import { AuthGuard } from '../utils/AuthGuard';
+import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
+import { StatusInfoRow } from '../../components/StatusInfoRow';
+import { DeviceStatus, DeviceSummary } from '../../models/DeviceModels';
+import { DeviceService } from '../../services/DeviceService';
+import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
+import { AuthGuard } from '../../utils/AuthGuard';
 
 const DEVICE_ARCHIVE_DETAIL_INFO_SECTIONS: InfoDialogSection[] = [
   {
@@ -427,7 +427,7 @@ struct DeviceArchiveDetail {
     }
 
     try {
-      this.getUIContext().getRouter().pushUrl({ url: 'pages/DeviceArchiveChange' });
+      this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveChange' });
     } catch (err) {
       this.message = '设备档案变更不可用';
     }
@@ -442,7 +442,7 @@ struct DeviceArchiveDetail {
         return;
       }
 
-      router.replaceUrl({ url: 'pages/DeviceArchiveQuery' });
+      router.replaceUrl({ url: 'pages/ArchiveCenter/DeviceArchiveQuery' });
     } catch (err) {
       this.message = '页面跳转失败';
     }

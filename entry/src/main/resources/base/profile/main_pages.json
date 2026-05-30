@@ -2,19 +2,19 @@
   "src": [
     "pages/Login",
     "pages/Workbench",
-    "pages/PersonalCenter",
-    "pages/ArchiveCenter",
-    "pages/OperationsCenter",
-    "pages/ManagementCenter",
-    "pages/DeviceArchiveQuery",
-    "pages/DeviceArchiveDetail",
-    "pages/DeviceArchiveChange",
-    "pages/DeviceVerification",
-    "pages/FaultReport",
-    "pages/AvailableRepairTask",
-    "pages/MyRepairTask",
-    "pages/ReinspectionTask",
-    "pages/DeviceArchiveReview",
-    "pages/OperationRecord"
+    "pages/PersonalCenter/PersonalCenter",
+    "pages/ArchiveCenter/ArchiveCenter",
+    "pages/OperationsCenter/OperationsCenter",
+    "pages/ManagementCenter/ManagementCenter",
+    "pages/ArchiveCenter/DeviceArchiveQuery",
+    "pages/ArchiveCenter/DeviceArchiveDetail",
+    "pages/ArchiveCenter/DeviceArchiveChange",
+    "pages/OperationsCenter/DeviceVerification",
+    "pages/OperationsCenter/FaultReport",
+    "pages/OperationsCenter/AvailableRepairTask",
+    "pages/OperationsCenter/MyRepairTask",
+    "pages/OperationsCenter/ReinspectionTask",
+    "pages/ManagementCenter/DeviceArchiveReview",
+    "pages/ManagementCenter/OperationRecord"
   ]
 }
