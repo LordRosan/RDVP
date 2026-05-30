@@ -172,7 +172,7 @@ struct ArchiveCenter {
         ForEach(this.actions, (item: WorkbenchAction) => {
           ActionTile({ action: item })
             .onClick(() => {
-              this.openAction(item);
+              this.openFeature(item);
             })
         }, (item: WorkbenchAction) => item.id)
       }
@@ -219,7 +219,7 @@ struct ArchiveCenter {
     return WorkbenchService.getPendingChangeCount();
   }
 
-  openAction(action: WorkbenchAction): void {
+  openFeature(action: WorkbenchAction): void {
     this.message = '';
     if (action.id === WorkbenchActionId.DeviceQuery) {
       try {
@@ -241,7 +241,7 @@ struct ArchiveCenter {
         return;
       }
 
-      router.replaceUrl({ url: 'pages/Index' });
+      router.replaceUrl({ url: 'pages/Workbench' });
     } catch (err) {
       this.message = '页面跳转失败';
     }

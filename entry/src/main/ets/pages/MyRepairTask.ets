@@ -817,7 +817,7 @@ struct MyRepairTask {
         return;
       }
 
-      router.replaceUrl({ url: 'pages/Index' });
+      router.replaceUrl({ url: 'pages/Workbench' });
     } catch (err) {
       this.reportMessage = '页面跳转失败';
       this.reportMessageTone = '#D9480F';

@@ -178,7 +178,7 @@ struct OperationsCenter {
         ForEach(this.actions, (item: WorkbenchAction) => {
           ActionTile({ action: item })
             .onClick(() => {
-              this.openAction(item);
+              this.openFeature(item);
             })
         }, (item: WorkbenchAction) => item.id)
       }
@@ -233,7 +233,7 @@ struct OperationsCenter {
     return WorkbenchService.getPendingReinspectionCount();
   }
 
-  openAction(action: WorkbenchAction): void {
+  openFeature(action: WorkbenchAction): void {
     this.message = '';
     if (action.id === WorkbenchActionId.DeviceVerification) {
       this.openPage('pages/DeviceVerification', '状态核验不可用');
@@ -279,7 +279,7 @@ struct OperationsCenter {
         return;
       }
 
-      router.replaceUrl({ url: 'pages/Index' });
+      router.replaceUrl({ url: 'pages/Workbench' });
     } catch (err) {
       this.message = '页面跳转失败';
     }

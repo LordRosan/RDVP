@@ -1,7 +1,7 @@
 {
   "src": [
     "pages/Login",
-    "pages/Index",
+    "pages/Workbench",
     "pages/PersonalCenter",
     "pages/ArchiveCenter",
     "pages/OperationsCenter",

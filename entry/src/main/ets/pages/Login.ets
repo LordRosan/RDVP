@@ -227,7 +227,7 @@ struct Login {
 
   openWorkbench(): void {
     try {
-      this.getUIContext().getRouter().replaceUrl({ url: 'pages/Index' });
+      this.getUIContext().getRouter().replaceUrl({ url: 'pages/Workbench' });
     } catch (err) {
       this.message = '页面跳转失败';
     }

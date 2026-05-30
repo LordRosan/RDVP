@@ -7,7 +7,7 @@ import { SessionStore } from '../stores/SessionStore';
 
 @Entry
 @Component
-struct Index {
+struct Workbench {
   @State metrics: WorkbenchMetric[] = WorkbenchService.getMetrics();
   @State actions: WorkbenchAction[] = WorkbenchService.getActions();
   @State statusItems: WorkbenchStatusItem[] = WorkbenchService.getStatusItems();
@@ -131,7 +131,7 @@ struct Index {
               action: item
             })
               .onClick(() => {
-                this.openAction(item);
+                this.openCenter(item);
               })
           }
         }, (item: WorkbenchAction) => item.id)
@@ -234,7 +234,7 @@ struct Index {
     }
   }
 
-  openAction(action: WorkbenchAction): void {
+  openCenter(action: WorkbenchAction): void {
     this.actionMessage = '';
 
     if (!SessionStore.isAuthenticated()) {
@@ -269,78 +269,6 @@ struct Index {
       return;
     }
 
-    if (action.id === WorkbenchActionId.DeviceQuery) {
-      try {
-        this.getUIContext().getRouter().pushUrl({ url: 'pages/DeviceArchiveQuery' });
-      } catch (err) {
-        this.actionMessage = '设备档案查询不可用';
-      }
-      return;
-    }
-
-    if (action.id === WorkbenchActionId.DeviceVerification) {
-      try {
-        this.getUIContext().getRouter().pushUrl({ url: 'pages/DeviceVerification' });
-      } catch (err) {
-        this.actionMessage = '状态核验不可用';
-      }
-      return;
-    }
-
-    if (action.id === WorkbenchActionId.FaultReport) {
-      try {
-        this.getUIContext().getRouter().pushUrl({ url: 'pages/FaultReport' });
-      } catch (err) {
-        this.actionMessage = '故障报告不可用';
-      }
-      return;
-    }
-
-    if (action.id === WorkbenchActionId.AvailableRepairTask) {
-      try {
-        this.getUIContext().getRouter().pushUrl({ url: 'pages/AvailableRepairTask' });
-      } catch (err) {
-        this.actionMessage = '附近故障不可用';
-      }
-      return;
-    }
-
-    if (action.id === WorkbenchActionId.MyRepairTask) {
-      try {
-        this.getUIContext().getRouter().pushUrl({ url: 'pages/MyRepairTask' });
-      } catch (err) {
-        this.actionMessage = '我的维修不可用';
-      }
-      return;
-    }
-
-    if (action.id === WorkbenchActionId.ReinspectionTask) {
-      try {
-        this.getUIContext().getRouter().pushUrl({ url: 'pages/ReinspectionTask' });
-      } catch (err) {
-        this.actionMessage = '复检任务不可用';
-      }
-      return;
-    }
-
-    if (action.id === WorkbenchActionId.DeviceChangeReview) {
-      try {
-        this.getUIContext().getRouter().pushUrl({ url: 'pages/DeviceArchiveReview' });
-      } catch (err) {
-        this.actionMessage = '变更审核不可用';
-      }
-      return;
-    }
-
-    if (action.id === WorkbenchActionId.OperationRecord) {
-      try {
-        this.getUIContext().getRouter().pushUrl({ url: 'pages/OperationRecord' });
-      } catch (err) {
-        this.actionMessage = '操作记录不可用';
-      }
-      return;
-    }
-
-    this.actionMessage = '功能暂不可用';
+    this.actionMessage = '中心入口暂不可用';
   }
 }

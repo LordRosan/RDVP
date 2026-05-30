@@ -441,7 +441,7 @@ struct PersonalCenter {
       this.getUIContext().getRouter().back();
     } catch (err) {
       try {
-        this.getUIContext().getRouter().replaceUrl({ url: 'pages/Index' });
+        this.getUIContext().getRouter().replaceUrl({ url: 'pages/Workbench' });
       } catch (innerErr) {
         this.message = '页面跳转失败';
       }

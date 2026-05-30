@@ -383,7 +383,7 @@ struct OperationRecord {
         return;
       }
 
-      router.replaceUrl({ url: 'pages/Index' });
+      router.replaceUrl({ url: 'pages/Workbench' });
     } catch (err) {
       this.message = '页面跳转失败';
     }

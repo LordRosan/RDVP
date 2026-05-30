@@ -179,7 +179,7 @@ struct ManagementCenter {
         ForEach(this.actions, (item: WorkbenchAction) => {
           ActionTile({ action: item })
             .onClick(() => {
-              this.openAction(item);
+              this.openFeature(item);
             })
         }, (item: WorkbenchAction) => item.id)
       }
@@ -230,7 +230,7 @@ struct ManagementCenter {
     return `${WorkbenchService.getPendingChangeCount()}项`;
   }
 
-  openAction(action: WorkbenchAction): void {
+  openFeature(action: WorkbenchAction): void {
     this.message = '';
     if (action.id === WorkbenchActionId.DeviceChangeReview) {
       this.openPage('pages/DeviceArchiveReview', '变更审核不可用');
@@ -261,7 +261,7 @@ struct ManagementCenter {
         return;
       }
 
-      router.replaceUrl({ url: 'pages/Index' });
+      router.replaceUrl({ url: 'pages/Workbench' });
     } catch (err) {
       this.message = '页面跳转失败';
     }

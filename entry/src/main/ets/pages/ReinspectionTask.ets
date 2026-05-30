@@ -739,7 +739,7 @@ struct ReinspectionTask {
         return;
       }
 
-      router.replaceUrl({ url: 'pages/Index' });
+      router.replaceUrl({ url: 'pages/Workbench' });
     } catch (err) {
       this.recordMessage = '页面跳转失败';
       this.recordMessageTone = '#D9480F';
