@@ -24,15 +24,25 @@ export default function localUnitTest() {
     it('providesCoreActions', 0, () => {
       const actions = WorkbenchService.getActions();
 
-      expect(actions.length).assertEqual(7);
-      expect(actions[0].id).assertEqual(WorkbenchActionId.DeviceQuery);
-      expect(actions[0].title).assertEqual('设备档案查询');
+      expect(actions.length).assertEqual(3);
+      expect(actions[0].id).assertEqual(WorkbenchActionId.ArchiveCenter);
+      expect(actions[0].title).assertEqual('档案中心');
+      expect(actions[1].id).assertEqual(WorkbenchActionId.OperationsCenter);
+      expect(actions[2].id).assertEqual(WorkbenchActionId.ManagementCenter);
     });
 
     it('providesOperationalMetrics', 0, () => {
       const metrics = WorkbenchService.getMetrics();
 
       expect(metrics.length).assertEqual(4);
+      expect(metrics[0].label).assertEqual('档案中心');
+      expect(metrics[1].label).assertEqual('运维中心');
+    });
+
+    it('groupsBusinessActionsByCenter', 0, () => {
+      expect(WorkbenchService.getArchiveCenterActions()[0].id).assertEqual(WorkbenchActionId.DeviceQuery);
+      expect(WorkbenchService.getOperationsCenterActions().length).assertEqual(5);
+      expect(WorkbenchService.getOperationsCenterActions()[0].id).assertEqual(WorkbenchActionId.DeviceVerification);
     });
   });
 
@@ -83,7 +93,7 @@ export default function localUnitTest() {
       if (response.data !== undefined) {
         SessionStore.setSession(response.data);
         expect(SessionStore.hasPermission('DEVICE_CHANGE_REVIEW')).assertEqual(true);
-        expect(WorkbenchService.getActions().some((item) => {
+        expect(WorkbenchService.getManagementCenterActions().some((item) => {
           return item.id === WorkbenchActionId.DeviceChangeReview;
         })).assertEqual(true);
       } else {
@@ -306,7 +316,7 @@ export default function localUnitTest() {
 
     it('submitsLocalChangeRequestWhenBackendUnconfigured', 0, () => {
       const pendingMetricBefore = WorkbenchService.getMetrics().find((item) => {
-        return item.id === 'pendingChangeRequests';
+        return item.id === 'archiveCenter';
       });
       const response = DeviceArchiveChangeService.submitChangeRequest({
         deviceCode: 'RDVP-DEVICE-0001',
@@ -327,7 +337,7 @@ export default function localUnitTest() {
       expect(response.data?.status).assertEqual('PENDING_REVIEW');
       expect(response.data?.deviceCode).assertEqual('RDVP-DEVICE-0001');
       const pendingMetricAfter = WorkbenchService.getMetrics().find((item) => {
-        return item.id === 'pendingChangeRequests';
+        return item.id === 'archiveCenter';
       });
       expect(Number(pendingMetricAfter?.value) > Number(pendingMetricBefore?.value)).assertEqual(true);
     });

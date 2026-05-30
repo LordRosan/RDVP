@@ -90,7 +90,7 @@ struct Index {
   @Builder
   MetricSection() {
     Column({ space: 12 }) {
-      Text('工作概览')
+      Text('中心概览')
         .fontSize(18)
         .fontWeight(FontWeight.Bold)
         .fontColor('#111827')
@@ -119,7 +119,7 @@ struct Index {
   @Builder
   ActionSection() {
     Column({ space: 12 }) {
-      Text('核心业务')
+      Text('业务中心')
         .fontSize(18)
         .fontWeight(FontWeight.Bold)
         .fontColor('#111827')
@@ -239,6 +239,33 @@ struct Index {
 
     if (!SessionStore.isAuthenticated()) {
       this.openLoginPage();
+      return;
+    }
+
+    if (action.id === WorkbenchActionId.ArchiveCenter) {
+      try {
+        this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter' });
+      } catch (err) {
+        this.actionMessage = '档案中心不可用';
+      }
+      return;
+    }
+
+    if (action.id === WorkbenchActionId.OperationsCenter) {
+      try {
+        this.getUIContext().getRouter().pushUrl({ url: 'pages/OperationsCenter' });
+      } catch (err) {
+        this.actionMessage = '运维中心不可用';
+      }
+      return;
+    }
+
+    if (action.id === WorkbenchActionId.ManagementCenter) {
+      try {
+        this.getUIContext().getRouter().pushUrl({ url: 'pages/ManagementCenter' });
+      } catch (err) {
+        this.actionMessage = '管理中心不可用';
+      }
       return;
     }
 

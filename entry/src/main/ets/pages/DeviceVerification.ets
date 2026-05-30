@@ -163,9 +163,10 @@ struct DeviceVerification {
       this.DescriptionField()
       this.RemarkField()
       this.MessageText()
-      this.ActionButton(this.submitting ? '提交中' : '提交核验', $r('sys.symbol.checkmark_circle'), !this.submitting, () => {
-        this.submitVerification();
-      })
+      this.ActionButton(this.submitting ? '提交中' : '提交核验', $r('sys.symbol.checkmark_circle'), !this.submitting,
+        () => {
+          this.submitVerification();
+        })
     }
     .padding({
       left: 18,

@@ -147,7 +147,8 @@ struct PersonalCenter {
       .alignItems(VerticalAlign.Center)
 
       this.InfoRow('角色权限', this.currentUser.roleName, '#374151')
-      this.InfoRow('连接状态', formatConnectionStatus(this.currentUser.online), this.currentUser.online ? '#087F5B' : '#D9480F')
+      this.InfoRow('连接状态', formatConnectionStatus(this.currentUser.online),
+        this.currentUser.online ? '#087F5B' : '#D9480F')
     }
     .padding(18)
     .width('100%')
@@ -168,7 +169,8 @@ struct PersonalCenter {
       Column() {
         this.InfoRow('有效期至', this.formatSessionExpiresAt(), '#374151')
         this.CardDivider()
-        this.InfoRow('登录状态', SessionStore.isAuthenticated() ? '已登录' : '未登录', SessionStore.isAuthenticated() ? '#087F5B' : '#D9480F')
+        this.InfoRow('登录状态', SessionStore.isAuthenticated() ? '已登录' : '未登录',
+          SessionStore.isAuthenticated() ? '#087F5B' : '#D9480F')
       }
       .width('100%')
       .padding({
@@ -426,7 +428,8 @@ struct PersonalCenter {
       return expiresAt;
     }
 
-    return `${date.getFullYear()}-${this.pad2(date.getMonth() + 1)}-${this.pad2(date.getDate())} ${this.pad2(date.getHours())}:${this.pad2(date.getMinutes())}`;
+    return `${date.getFullYear()}-${this.pad2(date.getMonth() + 1)}-${this.pad2(date.getDate())} ${this.pad2(
+      date.getHours())}:${this.pad2(date.getMinutes())}`;
   }
 
   pad2(value: number): string {

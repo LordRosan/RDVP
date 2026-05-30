@@ -426,23 +426,23 @@ struct FaultReport {
           .fontSize(18)
           .fontColor(['#6B7280'])
       }
-        .height(56)
-        .width('100%')
-        .backgroundColor('#F7F9FC')
-        .borderRadius(18)
-        .padding({
-          left: 16,
-          right: 16
-        })
-        .border({
-          width: 1,
-          color: '#D6DAE1'
-        })
-        .onClick(() => {
-          this.showOccurredAtPicker();
-          this.message = '';
-          this.messageTone = '#D9480F';
-        })
+      .height(56)
+      .width('100%')
+      .backgroundColor('#F7F9FC')
+      .borderRadius(18)
+      .padding({
+        left: 16,
+        right: 16
+      })
+      .border({
+        width: 1,
+        color: '#D6DAE1'
+      })
+      .onClick(() => {
+        this.showOccurredAtPicker();
+        this.message = '';
+        this.messageTone = '#D9480F';
+      })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -729,7 +729,8 @@ struct FaultReport {
   }
 
   formatDateTime(value: Date): string {
-    return `${value.getFullYear()}-${this.pad2(value.getMonth() + 1)}-${this.pad2(value.getDate())} ${this.pad2(value.getHours())}:${this.pad2(value.getMinutes())}`;
+    return `${value.getFullYear()}-${this.pad2(value.getMonth() + 1)}-${this.pad2(value.getDate())} ${this.pad2(
+      value.getHours())}:${this.pad2(value.getMinutes())}`;
   }
 
   pad2(value: number): string {

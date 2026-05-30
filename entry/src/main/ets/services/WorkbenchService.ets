@@ -7,26 +7,30 @@ import { SessionStore } from '../stores/SessionStore';
 
 export class WorkbenchService {
   static getMetrics(): WorkbenchMetric[] {
+    const pendingChangeCount = WorkbenchService.getPendingChangeCount();
+    const pendingFaultCount = WorkbenchService.getPendingFaultCount();
+    const pendingReinspectionCount = WorkbenchService.getPendingReinspectionCount();
+
     return [
       {
-        id: 'pendingChangeRequests',
-        label: '待审核变更',
-        value: ApiClient.isConfigured() ? '0' : `${LocalDeviceArchiveRepository.getPendingChangeCount()}`,
-        status: '设备信息',
+        id: 'archiveCenter',
+        label: '档案中心',
+        value: `${pendingChangeCount}`,
+        status: '待审核变更',
         tone: '#2F6FED'
       },
       {
-        id: 'pendingFaults',
-        label: '待接取故障',
-        value: ApiClient.isConfigured() ? '0' : `${LocalRepairTaskRepository.getPendingAvailableTaskCount()}`,
-        status: '维修响应',
+        id: 'operationsCenter',
+        label: '运维中心',
+        value: `${pendingFaultCount + pendingReinspectionCount}`,
+        status: '待处理任务',
         tone: '#D9480F'
       },
       {
-        id: 'pendingReinspections',
-        label: '待复检',
-        value: ApiClient.isConfigured() ? '0' : `${LocalReinspectionRepository.getPendingTaskCount()}`,
-        status: '高等级故障',
+        id: 'managementCenter',
+        label: '管理中心',
+        value: `${SessionStore.hasPermission('DEVICE_CHANGE_REVIEW') ? pendingChangeCount : 0}`,
+        status: '待审核事项',
         tone: '#845EF7'
       },
       {
@@ -40,45 +44,51 @@ export class WorkbenchService {
   }
 
   static getActions(): WorkbenchAction[] {
-    const actions: WorkbenchAction[] = [
+    return [
+      {
+        id: WorkbenchActionId.ArchiveCenter,
+        title: '档案中心',
+        summary: '查询档案与发起档案变更',
+        tone: '#2F6FED'
+      },
+      {
+        id: WorkbenchActionId.OperationsCenter,
+        title: '运维中心',
+        summary: '核验、报修、维修与复检',
+        tone: '#D9480F'
+      },
+      {
+        id: WorkbenchActionId.ManagementCenter,
+        title: '管理中心',
+        summary: '审核变更与查看操作记录',
+        tone: '#495057'
+      }
+    ];
+  }
+
+  static getArchiveCenterActions(): WorkbenchAction[] {
+    return [
       {
         id: WorkbenchActionId.DeviceQuery,
         title: '设备档案查询',
         summary: '按编号或二维码定位档案',
         tone: '#2F6FED'
-      },
-      {
-        id: WorkbenchActionId.DeviceVerification,
-        title: '状态核验',
-        summary: '提交现场核验记录',
-        tone: '#0B7285'
-      },
-      {
-        id: WorkbenchActionId.FaultReport,
-        title: '故障报告',
-        summary: '登记设备故障信息',
-        tone: '#D9480F'
-      },
-      {
-        id: WorkbenchActionId.AvailableRepairTask,
-        title: '附近故障',
-        summary: '查看可接取任务',
-        tone: '#5C7CFA'
-      },
-      {
-        id: WorkbenchActionId.MyRepairTask,
-        title: '我的维修',
-        summary: '处理已接取任务',
-        tone: '#E67700'
-      },
-      {
-        id: WorkbenchActionId.ReinspectionTask,
-        title: '复检任务',
-        summary: '确认高等级故障结果',
-        tone: '#845EF7'
       }
     ];
+  }
 
+  static getOperationsCenterActions(): WorkbenchAction[] {
+    return [
+      WorkbenchService.createAction(WorkbenchActionId.DeviceVerification, '状态核验', '提交现场核验记录', '#0B7285'),
+      WorkbenchService.createAction(WorkbenchActionId.FaultReport, '故障报告', '登记设备故障信息', '#D9480F'),
+      WorkbenchService.createAction(WorkbenchActionId.AvailableRepairTask, '附近故障', '查看可接取任务', '#5C7CFA'),
+      WorkbenchService.createAction(WorkbenchActionId.MyRepairTask, '我的维修', '处理已接取任务', '#E67700'),
+      WorkbenchService.createAction(WorkbenchActionId.ReinspectionTask, '复检任务', '确认高等级故障结果', '#845EF7')
+    ];
+  }
+
+  static getManagementCenterActions(): WorkbenchAction[] {
+    const actions: WorkbenchAction[] = [];
     if (SessionStore.hasPermission('DEVICE_CHANGE_REVIEW')) {
       actions.push({
         id: WorkbenchActionId.DeviceChangeReview,
@@ -121,5 +131,26 @@ export class WorkbenchService {
         tone: '#087F5B'
       }
     ];
+  }
+
+  static getPendingChangeCount(): number {
+    return ApiClient.isConfigured() ? 0 : LocalDeviceArchiveRepository.getPendingChangeCount();
+  }
+
+  static getPendingFaultCount(): number {
+    return ApiClient.isConfigured() ? 0 : LocalRepairTaskRepository.getPendingAvailableTaskCount();
+  }
+
+  static getPendingReinspectionCount(): number {
+    return ApiClient.isConfigured() ? 0 : LocalReinspectionRepository.getPendingTaskCount();
+  }
+
+  private static createAction(id: WorkbenchActionId, title: string, summary: string, tone: string): WorkbenchAction {
+    return {
+      id,
+      title,
+      summary,
+      tone
+    };
   }
 }

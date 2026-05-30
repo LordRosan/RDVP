@@ -529,7 +529,7 @@ struct DeviceArchiveChange {
       .margin({
         left: 18,
         right: 18
-    })
+      })
   }
 
   async submitChangeRequest(): Promise<void> {

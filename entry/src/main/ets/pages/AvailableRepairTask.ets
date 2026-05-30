@@ -169,9 +169,10 @@ struct AvailableRepairTask {
       .alignItems(VerticalAlign.Center)
 
       this.MessageText()
-      this.ActionButton(this.refreshing ? '刷新中' : '刷新任务', $r('sys.symbol.arrow_clockwise'), !this.refreshing, () => {
-        this.refreshTasks();
-      })
+      this.ActionButton(this.refreshing ? '刷新中' : '刷新任务', $r('sys.symbol.arrow_clockwise'), !this.refreshing,
+        () => {
+          this.refreshTasks();
+        })
     }
     .padding({
       left: 18,
@@ -364,8 +365,8 @@ struct AvailableRepairTask {
 
       this.ActionButton(this.acceptingTaskId === item.id ? '接取中' : '接取任务', $r('sys.symbol.checkmark_circle'),
         this.acceptingTaskId.length === 0 && !this.refreshing, () => {
-        this.acceptTask(item.id);
-      })
+          this.acceptTask(item.id);
+        })
     }
     .padding(16)
     .width('100%')

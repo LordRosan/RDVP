@@ -1,8 +1,7 @@
 import { InfoDialog, InfoDialogSection } from '../components/InfoDialog';
 import { StatusInfoRow } from '../components/StatusInfoRow';
 import {
-  ReinspectionResult,
-  ReinspectionTaskSummary
+  ReinspectionResult, ReinspectionTaskSummary
 } from '../models/ReinspectionModels';
 import { ApiClient } from '../services/ApiClient';
 import { ReinspectionService } from '../services/ReinspectionService';
@@ -319,9 +318,10 @@ struct ReinspectionTask {
       this.ReinspectedAtField()
       this.DescriptionField()
       this.RecordMessageText()
-      this.ActionButton(this.submitting ? '提交中' : '提交复检', $r('sys.symbol.checkmark_circle'), !this.submitting, () => {
-        this.submitRecord();
-      })
+      this.ActionButton(this.submitting ? '提交中' : '提交复检', $r('sys.symbol.checkmark_circle'), !this.submitting,
+        () => {
+          this.submitRecord();
+        })
     }
     .padding({
       left: 18,
@@ -439,23 +439,23 @@ struct ReinspectionTask {
           .fontSize(18)
           .fontColor(['#6B7280'])
       }
-        .height(56)
-        .width('100%')
-        .backgroundColor('#F7F9FC')
-        .borderRadius(18)
-        .padding({
-          left: 16,
-          right: 16
-        })
-        .border({
-          width: 1,
-          color: '#D6DAE1'
-        })
-        .onClick(() => {
-          this.showReinspectedAtPicker();
-          this.recordMessage = '';
-          this.recordMessageTone = '#D9480F';
-        })
+      .height(56)
+      .width('100%')
+      .backgroundColor('#F7F9FC')
+      .borderRadius(18)
+      .padding({
+        left: 16,
+        right: 16
+      })
+      .border({
+        width: 1,
+        color: '#D6DAE1'
+      })
+      .onClick(() => {
+        this.showReinspectedAtPicker();
+        this.recordMessage = '';
+        this.recordMessageTone = '#D9480F';
+      })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -723,7 +723,8 @@ struct ReinspectionTask {
   }
 
   formatDateTime(value: Date): string {
-    return `${value.getFullYear()}-${this.pad2(value.getMonth() + 1)}-${this.pad2(value.getDate())} ${this.pad2(value.getHours())}:${this.pad2(value.getMinutes())}`;
+    return `${value.getFullYear()}-${this.pad2(value.getMonth() + 1)}-${this.pad2(value.getDate())} ${this.pad2(
+      value.getHours())}:${this.pad2(value.getMinutes())}`;
   }
 
   pad2(value: number): string {

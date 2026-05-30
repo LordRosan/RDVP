@@ -3,7 +3,7 @@ import { WorkbenchAction, WorkbenchActionId } from '../models/WorkbenchModels';
 @Component
 export struct ActionTile {
   action: WorkbenchAction = {
-    id: WorkbenchActionId.DeviceQuery,
+    id: WorkbenchActionId.ArchiveCenter,
     title: '',
     summary: '',
     tone: '#2F6FED'
@@ -50,7 +50,19 @@ export struct ActionTile {
 
   @Builder
   ActionIcon() {
-    if (this.action.id === WorkbenchActionId.DeviceQuery) {
+    if (this.action.id === WorkbenchActionId.ArchiveCenter) {
+      SymbolGlyph($r('sys.symbol.text_clipboard'))
+        .fontSize(23)
+        .fontColor(['#FFFFFF'])
+    } else if (this.action.id === WorkbenchActionId.OperationsCenter) {
+      SymbolGlyph($r('sys.symbol.wrench_and_screwdriver'))
+        .fontSize(23)
+        .fontColor(['#FFFFFF'])
+    } else if (this.action.id === WorkbenchActionId.ManagementCenter) {
+      SymbolGlyph($r('sys.symbol.checkmark_shield'))
+        .fontSize(23)
+        .fontColor(['#FFFFFF'])
+    } else if (this.action.id === WorkbenchActionId.DeviceQuery) {
       SymbolGlyph($r('sys.symbol.magnifyingglass'))
         .fontSize(22)
         .fontColor(['#FFFFFF'])
