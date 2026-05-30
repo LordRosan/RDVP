@@ -56,6 +56,18 @@ struct DeviceArchiveDetail {
       return;
     }
 
+    this.loadArchiveContext();
+  }
+
+  onPageShow(): void {
+    if (!AuthGuard.requireAuthenticated(this.getUIContext())) {
+      return;
+    }
+
+    this.loadArchiveContext();
+  }
+
+  loadArchiveContext(): void {
     const device = DeviceArchiveFlowStore.getCurrentDevice();
     if (device === undefined) {
       this.hasDevice = false;
