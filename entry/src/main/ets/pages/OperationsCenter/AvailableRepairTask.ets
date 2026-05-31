@@ -49,7 +49,11 @@ struct AvailableRepairTask {
   });
 
   aboutToAppear(): void {
-    AuthGuard.requireAuthenticated(this.getUIContext());
+    if (!AuthGuard.requireAuthenticated(this.getUIContext())) {
+      return;
+    }
+
+    this.refreshTasks();
   }
 
   build() {
