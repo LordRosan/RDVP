@@ -1,0 +1,23 @@
+name: rdvp-backend
+
+services:
+  postgres:
+    image: ${RDVP_POSTGIS_IMAGE:-postgis/postgis:17-3.5}
+    container_name: rdvp-postgres
+    environment:
+      POSTGRES_DB: rdvp
+      POSTGRES_USER: rdvp
+      POSTGRES_PASSWORD: rdvp_dev_password
+    ports:
+      - "${RDVP_POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - rdvp-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rdvp -d rdvp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  rdvp-postgres-data:

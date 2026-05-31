@@ -4,3 +4,8 @@ spring:
       - org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration
       - org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration
       - org.mybatis.spring.boot.autoconfigure.MybatisAutoConfiguration
+
+rdvp:
+  service:
+    name: rdvp-backend-test
+    version: test
