@@ -39,7 +39,7 @@ const VERIFICATION_INFO_SECTIONS: InfoDialogSection[] = [
 @Component
 struct DeviceVerification {
   @State deviceCode: string = '';
-  @State verificationResult: VerificationResult = VerificationResult.Normal;
+  @State verificationResult: string = '';
   @State description: string = '';
   @State remark: string = '';
   @State message: string = '';
@@ -238,12 +238,12 @@ struct DeviceVerification {
       Row({ space: 5 }) {
         SymbolGlyph(icon)
           .fontSize(17)
-          .fontColor([this.verificationResult === result ? '#FFFFFF' : '#111827'])
+          .fontColor([this.verificationResult === `${result}` ? '#FFFFFF' : '#111827'])
 
         Text(DeviceVerificationService.formatVerificationResult(result))
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
-          .fontColor(this.verificationResult === result ? '#FFFFFF' : '#111827')
+          .fontColor(this.verificationResult === `${result}` ? '#FFFFFF' : '#111827')
           .maxLines(1)
       }
       .width('100%')
@@ -252,13 +252,13 @@ struct DeviceVerification {
     }
     .height(42)
     .layoutWeight(1)
-    .backgroundColor(this.verificationResult === result ? this.getResultTone(result) : '#F7F9FC')
+    .backgroundColor(this.verificationResult === `${result}` ? this.getResultTone(result) : '#F7F9FC')
     .border({
       width: 1,
-      color: this.verificationResult === result ? this.getResultTone(result) : '#D6DAE1'
+      color: this.verificationResult === `${result}` ? this.getResultTone(result) : '#D6DAE1'
     })
     .onClick(() => {
-      this.verificationResult = result;
+      this.verificationResult = `${result}`;
       this.message = '';
       this.messageTone = '#D9480F';
     })
@@ -413,8 +413,8 @@ struct DeviceVerification {
         this.CardDivider()
         StatusInfoRow({
           label: '核验结果',
-          value: DeviceVerificationService.formatVerificationResult(this.verificationResult),
-          tone: this.getResultTone(this.verificationResult)
+          value: this.getVerificationResultStatusText(),
+          tone: this.getSelectedResultTone()
         })
         this.CardDivider()
         StatusInfoRow({
@@ -450,7 +450,7 @@ struct DeviceVerification {
     this.submitting = true;
     const response = await DeviceVerificationService.submitVerificationRemoteFirst({
       deviceCode: this.deviceCode,
-      result: this.verificationResult,
+      result: this.verificationResult as VerificationResult,
       description: this.description,
       remark: this.remark
     });
@@ -471,6 +471,15 @@ struct DeviceVerification {
     const recordId = response.data ? response.data.id : '';
     this.message = recordId.length > 0 ? `核验记录已提交：${recordId}` : '核验记录已提交';
     this.messageTone = '#087F5B';
+  }
+
+  getVerificationResultStatusText(): string {
+    return this.verificationResult.length === 0 ? '-' :
+      DeviceVerificationService.formatVerificationResult(this.verificationResult as VerificationResult);
+  }
+
+  getSelectedResultTone(): string {
+    return this.verificationResult.length === 0 ? '#374151' : this.getResultTone(this.verificationResult as VerificationResult);
   }
 
   getResultTone(result: VerificationResult): string {

@@ -28,7 +28,7 @@ const REINSPECTION_INFO_SECTIONS: InfoDialogSection[] = [
 struct ReinspectionTask {
   @State taskItems: ReinspectionTaskSummary[] = [];
   @State taskId: string = '';
-  @State result: ReinspectionResult = ReinspectionResult.Passed;
+  @State result: string = '';
   @State reinspectedAt: string = '';
   @State description: string = '';
   @State taskMessage: string = '';
@@ -399,12 +399,12 @@ struct ReinspectionTask {
       Row({ space: 6 }) {
         SymbolGlyph(icon)
           .fontSize(17)
-          .fontColor([this.result === result ? '#FFFFFF' : '#111827'])
+          .fontColor([this.result === `${result}` ? '#FFFFFF' : '#111827'])
 
         Text(ReinspectionService.formatResult(result))
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
-          .fontColor(this.result === result ? '#FFFFFF' : '#111827')
+          .fontColor(this.result === `${result}` ? '#FFFFFF' : '#111827')
           .maxLines(1)
       }
       .width('100%')
@@ -413,13 +413,13 @@ struct ReinspectionTask {
     }
     .height(42)
     .layoutWeight(1)
-    .backgroundColor(this.result === result ? ReinspectionService.getResultTone(result) : '#F7F9FC')
+    .backgroundColor(this.result === `${result}` ? ReinspectionService.getResultTone(result) : '#F7F9FC')
     .border({
       width: 1,
-      color: this.result === result ? ReinspectionService.getResultTone(result) : '#D6DAE1'
+      color: this.result === `${result}` ? ReinspectionService.getResultTone(result) : '#D6DAE1'
     })
     .onClick(() => {
-      this.result = result;
+      this.result = `${result}`;
       this.recordMessage = '';
       this.recordMessageTone = '#D9480F';
     })
@@ -518,8 +518,8 @@ struct ReinspectionTask {
         this.CardDivider()
         StatusInfoRow({
           label: '复检结论',
-          value: ReinspectionService.formatResult(this.result),
-          tone: ReinspectionService.getResultTone(this.result)
+          value: this.getResultStatusText(),
+          tone: this.getSelectedResultTone()
         })
         this.CardDivider()
         StatusInfoRow({
@@ -658,7 +658,7 @@ struct ReinspectionTask {
     this.submitting = true;
     const response = await ReinspectionService.submitRecordRemoteFirst({
       taskId: this.taskId,
-      result: this.result,
+      result: this.result as ReinspectionResult,
       reinspectedAt: this.reinspectedAt,
       description: this.description
     });
@@ -704,6 +704,14 @@ struct ReinspectionTask {
 
   isSelectedReinspectionTaskSubmitted(): boolean {
     return this.submittedReinspectionTaskId.length > 0 && this.normalizedTaskId === this.submittedReinspectionTaskId;
+  }
+
+  getResultStatusText(): string {
+    return this.result.length === 0 ? '-' : ReinspectionService.formatResult(this.result as ReinspectionResult);
+  }
+
+  getSelectedResultTone(): string {
+    return this.result.length === 0 ? '#374151' : ReinspectionService.getResultTone(this.result as ReinspectionResult);
   }
 
   showReinspectedAtPicker(): void {

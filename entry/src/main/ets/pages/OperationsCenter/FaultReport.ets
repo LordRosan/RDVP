@@ -67,8 +67,8 @@ const FAULT_REPORT_INFO_SECTIONS: InfoDialogSection[] = [
 @Component
 struct FaultReport {
   @State deviceCode: string = '';
-  @State faultType: FaultType = FaultType.OperationAbnormal;
-  @State severity: FaultSeverity = FaultSeverity.General;
+  @State faultType: string = '';
+  @State severity: string = '';
   @State occurredAt: string = '';
   @State description: string = '';
   @State sceneCondition: string = '';
@@ -321,12 +321,12 @@ struct FaultReport {
       Row({ space: 5 }) {
         SymbolGlyph(icon)
           .fontSize(17)
-          .fontColor([this.faultType === type ? '#FFFFFF' : '#111827'])
+          .fontColor([this.faultType === `${type}` ? '#FFFFFF' : '#111827'])
 
         Text(FaultReportService.formatFaultType(type))
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
-          .fontColor(this.faultType === type ? '#FFFFFF' : '#111827')
+          .fontColor(this.faultType === `${type}` ? '#FFFFFF' : '#111827')
           .maxLines(1)
       }
       .width('100%')
@@ -335,13 +335,13 @@ struct FaultReport {
     }
     .height(42)
     .width('100%')
-    .backgroundColor(this.faultType === type ? '#2F6FED' : '#F7F9FC')
+    .backgroundColor(this.faultType === `${type}` ? '#2F6FED' : '#F7F9FC')
     .border({
       width: 1,
-      color: this.faultType === type ? '#2F6FED' : '#D6DAE1'
+      color: this.faultType === `${type}` ? '#2F6FED' : '#D6DAE1'
     })
     .onClick(() => {
-      this.faultType = type;
+      this.faultType = `${type}`;
       this.message = '';
       this.messageTone = '#D9480F';
     })
@@ -379,12 +379,12 @@ struct FaultReport {
       Row({ space: 6 }) {
         SymbolGlyph(icon)
           .fontSize(17)
-          .fontColor([this.severity === severity ? '#FFFFFF' : '#111827'])
+          .fontColor([this.severity === `${severity}` ? '#FFFFFF' : '#111827'])
 
         Text(FaultReportService.formatSeverity(severity))
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
-          .fontColor(this.severity === severity ? '#FFFFFF' : '#111827')
+          .fontColor(this.severity === `${severity}` ? '#FFFFFF' : '#111827')
           .maxLines(1)
       }
       .width('100%')
@@ -393,13 +393,13 @@ struct FaultReport {
     }
     .height(42)
     .layoutWeight(1)
-    .backgroundColor(this.severity === severity ? this.getSeverityTone(severity) : '#F7F9FC')
+    .backgroundColor(this.severity === `${severity}` ? this.getSeverityTone(severity) : '#F7F9FC')
     .border({
       width: 1,
-      color: this.severity === severity ? this.getSeverityTone(severity) : '#D6DAE1'
+      color: this.severity === `${severity}` ? this.getSeverityTone(severity) : '#D6DAE1'
     })
     .onClick(() => {
-      this.severity = severity;
+      this.severity = `${severity}`;
       this.message = '';
       this.messageTone = '#D9480F';
     })
@@ -597,14 +597,14 @@ struct FaultReport {
         this.CardDivider()
         StatusInfoRow({
           label: '故障类型',
-          value: FaultReportService.formatFaultType(this.faultType),
+          value: this.getFaultTypeStatusText(),
           tone: '#374151'
         })
         this.CardDivider()
         StatusInfoRow({
           label: '故障等级',
-          value: FaultReportService.formatSeverity(this.severity),
-          tone: this.getSeverityTone(this.severity)
+          value: this.getSeverityStatusText(),
+          tone: this.getSelectedSeverityTone()
         })
         this.CardDivider()
         StatusInfoRow({
@@ -645,8 +645,8 @@ struct FaultReport {
     this.submitting = true;
     const response = await FaultReportService.submitFaultReportRemoteFirst({
       deviceCode: this.deviceCode,
-      faultType: this.faultType,
-      severity: this.severity,
+      faultType: this.faultType as FaultType,
+      severity: this.severity as FaultSeverity,
       occurredAt: this.occurredAt,
       description: this.description,
       sceneCondition: this.sceneCondition
@@ -663,6 +663,18 @@ struct FaultReport {
     const reportNo = response.data ? response.data.reportNo : '';
     this.message = reportNo.length > 0 ? `故障报告已提交：${reportNo}` : '故障报告已提交';
     this.messageTone = '#087F5B';
+  }
+
+  getFaultTypeStatusText(): string {
+    return this.faultType.length === 0 ? '-' : FaultReportService.formatFaultType(this.faultType as FaultType);
+  }
+
+  getSeverityStatusText(): string {
+    return this.severity.length === 0 ? '-' : FaultReportService.formatSeverity(this.severity as FaultSeverity);
+  }
+
+  getSelectedSeverityTone(): string {
+    return this.severity.length === 0 ? '#374151' : this.getSeverityTone(this.severity as FaultSeverity);
   }
 
   getSeverityTone(severity: FaultSeverity): string {

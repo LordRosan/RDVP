@@ -46,7 +46,7 @@ const MY_REPAIR_TASK_INFO_SECTIONS: InfoDialogSection[] = [
 struct MyRepairTask {
   @State taskItems: MyRepairTaskSummary[] = [];
   @State taskId: string = '';
-  @State reportResult: RepairReportResult = RepairReportResult.Repaired;
+  @State reportResult: string = '';
   @State repairedAt: string = '';
   @State processDescription: string = '';
   @State partsUsed: string = '';
@@ -421,12 +421,12 @@ struct MyRepairTask {
       Row({ space: 5 }) {
         SymbolGlyph(icon)
           .fontSize(17)
-          .fontColor([this.reportResult === result ? '#FFFFFF' : '#111827'])
+          .fontColor([this.reportResult === `${result}` ? '#FFFFFF' : '#111827'])
 
         Text(RepairTaskService.formatRepairReportResult(result))
           .fontSize(13)
           .fontWeight(FontWeight.Medium)
-          .fontColor(this.reportResult === result ? '#FFFFFF' : '#111827')
+          .fontColor(this.reportResult === `${result}` ? '#FFFFFF' : '#111827')
           .maxLines(1)
       }
       .width('100%')
@@ -435,13 +435,13 @@ struct MyRepairTask {
     }
     .height(42)
     .layoutWeight(1)
-    .backgroundColor(this.reportResult === result ? '#2F6FED' : '#F7F9FC')
+    .backgroundColor(this.reportResult === `${result}` ? this.getRepairResultTone(result) : '#F7F9FC')
     .border({
       width: 1,
-      color: this.reportResult === result ? '#2F6FED' : '#D6DAE1'
+      color: this.reportResult === `${result}` ? this.getRepairResultTone(result) : '#D6DAE1'
     })
     .onClick(() => {
-      this.reportResult = result;
+      this.reportResult = `${result}`;
       this.reportMessage = '';
       this.reportMessageTone = '#D9480F';
     })
@@ -576,8 +576,8 @@ struct MyRepairTask {
         this.CardDivider()
         StatusInfoRow({
           label: '维修结果',
-          value: RepairTaskService.formatRepairReportResult(this.reportResult),
-          tone: '#2F6FED'
+          value: this.getRepairResultStatusText(),
+          tone: this.getSelectedRepairResultTone()
         })
         this.CardDivider()
         StatusInfoRow({
@@ -716,7 +716,7 @@ struct MyRepairTask {
     this.submitting = true;
     const response = await RepairTaskService.submitRepairReportRemoteFirst({
       taskId: this.taskId,
-      result: this.reportResult,
+      result: this.reportResult as RepairReportResult,
       repairedAt: this.repairedAt,
       processDescription: this.processDescription,
       partsUsed: this.partsUsed
@@ -763,6 +763,28 @@ struct MyRepairTask {
 
   isSelectedRepairTaskSubmitted(): boolean {
     return this.submittedRepairTaskId.length > 0 && this.normalizedTaskId === this.submittedRepairTaskId;
+  }
+
+  getRepairResultStatusText(): string {
+    return this.reportResult.length === 0 ? '-' :
+      RepairTaskService.formatRepairReportResult(this.reportResult as RepairReportResult);
+  }
+
+  getSelectedRepairResultTone(): string {
+    return this.reportResult.length === 0 ? '#374151' : this.getRepairResultTone(this.reportResult as RepairReportResult);
+  }
+
+  getRepairResultTone(result: RepairReportResult): string {
+    switch (result) {
+      case RepairReportResult.Repaired:
+        return '#087F5B';
+      case RepairReportResult.TemporaryRestored:
+        return '#E67700';
+      case RepairReportResult.Unresolved:
+        return '#D9480F';
+      default:
+        return '#374151';
+    }
   }
 
   getSeverityTone(severity: FaultSeverity): string {
