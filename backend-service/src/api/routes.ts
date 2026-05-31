@@ -93,6 +93,11 @@ export async function handleApiRequest(
   try {
     const method = request.method ?? 'GET';
     const url = new URL(request.url ?? '/', 'http://localhost');
+    if (method === 'GET' && (url.pathname === '/healthz' || url.pathname === '/readyz')) {
+      sendSuccess(response, 200, createHealthPayload(appContext, url.pathname), requestContext.requestId);
+      return;
+    }
+
     const segments = url.pathname.split('/').filter((segment) => segment.length > 0);
     if (segments[0] !== 'api' || segments[1] !== 'v1') {
       throw notFound('NOT_FOUND', 'Route not found.');
@@ -383,6 +388,17 @@ function optionalEnum<T extends string>(value: string | null): T | undefined {
   }
 
   return value as T;
+}
+
+function createHealthPayload(appContext: AppContext, pathname: string): Record<string, unknown> {
+  return {
+    status: pathname === '/readyz' ? 'ready' : 'ok',
+    service: appContext.runtimeConfig.serviceName,
+    version: appContext.runtimeConfig.serviceVersion,
+    environment: appContext.runtimeConfig.environment,
+    storageDriver: appContext.runtimeConfig.storageDriver,
+    startedAt: appContext.startedAt
+  };
 }
 
 function requiredChanges(value: Record<string, DeviceChangeValue> | undefined): Record<string, DeviceChangeValue> {

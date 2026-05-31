@@ -11,6 +11,21 @@ interface TestClient {
   login: (username: string) => Promise<string>;
 }
 
+test('exposes unauthenticated health and readiness probes', async () => {
+  await withClient(async (client) => {
+    const health = await client.request('GET', '/healthz');
+    assert.equal(health.status, 200);
+    assert.equal(health.body.success, true);
+    assert.equal(health.body.data.status, 'ok');
+    assert.equal(health.body.data.service, 'rdvp-backend-service');
+    assert.equal(health.body.data.storageDriver, 'memory');
+
+    const readiness = await client.request('GET', '/readyz');
+    assert.equal(readiness.status, 200);
+    assert.equal(readiness.body.data.status, 'ready');
+  });
+});
+
 test('authenticates and queries device archive by code', async () => {
   await withClient(async (client) => {
     const token = await client.login('fieldoperator');

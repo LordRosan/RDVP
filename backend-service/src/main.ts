@@ -1,8 +1,10 @@
 import { createHttpServer } from './api/server.js';
+import { createDefaultAppContext } from './application/AppContext.js';
+import { loadRuntimeConfig } from './config/RuntimeConfig.js';
 
-const port = Number(process.env.PORT ?? 3000);
-const server = createHttpServer();
+const runtimeConfig = loadRuntimeConfig();
+const server = createHttpServer(createDefaultAppContext(runtimeConfig));
 
-server.listen(port, () => {
-  console.log(`RDVP backend service listening on port ${port}`);
+server.listen(runtimeConfig.port, () => {
+  console.log(`RDVP backend service listening on port ${runtimeConfig.port}`);
 });

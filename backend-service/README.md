@@ -17,6 +17,22 @@ npm run backend:start
 
 服务默认监听 `3000` 端口，可通过 `PORT` 环境变量调整。
 
+运行配置：
+
+| 环境变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `PORT` | `3000` | HTTP 服务监听端口 |
+| `NODE_ENV` | `development` | 运行环境标识 |
+| `RDVP_SERVICE_NAME` | `rdvp-backend-service` | 服务名称 |
+| `RDVP_SERVICE_VERSION` | `0.1.0` | 服务版本 |
+
+健康检查：
+
+| 路径 | 说明 |
+| --- | --- |
+| `GET /healthz` | 存活检查，不需要认证 |
+| `GET /readyz` | 就绪检查，不需要认证 |
+
 ## 本地账号
 
 内置本地账号用于开发验证，密码均为 `password`。
