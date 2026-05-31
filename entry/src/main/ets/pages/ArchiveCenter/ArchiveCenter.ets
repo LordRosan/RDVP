@@ -1,8 +1,10 @@
 import { ActionTile } from '../../components/ActionTile';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
+import { PermissionCode } from '../../models/PermissionModels';
 import { WorkbenchAction, WorkbenchActionId } from '../../models/WorkbenchModels';
 import { ApiClient } from '../../services/ApiClient';
 import { WorkbenchService } from '../../services/WorkbenchService';
+import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 
 @Entry
@@ -13,7 +15,7 @@ struct ArchiveCenter {
   @StorageLink('rdvp_workbench_refresh_revision') workbenchRefreshRevision: number = 0;
 
   aboutToAppear(): void {
-    if (!AuthGuard.requireAuthenticated(this.getUIContext())) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.DeviceRead)) {
       return;
     }
 
@@ -21,7 +23,7 @@ struct ArchiveCenter {
   }
 
   onPageShow(): void {
-    if (AuthGuard.requireAuthenticated(this.getUIContext())) {
+    if (AuthGuard.requirePermission(this.getUIContext(), PermissionCode.DeviceRead)) {
       this.refreshCenterState();
     }
   }
@@ -140,9 +142,9 @@ struct ArchiveCenter {
 
       Column() {
         StatusInfoRow({
-          label: '待审核变更',
-          value: `${this.getPendingChangeCount()}项`,
-          tone: '#2F6FED'
+          label: '档案权限',
+          value: this.getArchivePermissionText(),
+          tone: this.getArchivePermissionTone()
         })
         this.CardDivider()
         StatusInfoRow({
@@ -211,12 +213,16 @@ struct ArchiveCenter {
     this.actions = WorkbenchService.getArchiveCenterActions();
   }
 
-  getPendingChangeCount(): number {
+  getArchivePermissionText(): string {
     if (this.workbenchRefreshRevision < 0) {
-      return 0;
+      return '-';
     }
 
-    return WorkbenchService.getPendingChangeCount();
+    return SessionStore.hasPermission(PermissionCode.DeviceChangeRequestCreate) ? '可申请变更' : '仅查询';
+  }
+
+  getArchivePermissionTone(): string {
+    return SessionStore.hasPermission(PermissionCode.DeviceChangeRequestCreate) ? '#2F6FED' : '#6B7280';
   }
 
   openFeature(action: WorkbenchAction): void {

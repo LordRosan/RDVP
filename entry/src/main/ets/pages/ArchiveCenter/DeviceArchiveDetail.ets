@@ -1,8 +1,10 @@
 import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { DeviceStatus, DeviceSummary } from '../../models/DeviceModels';
+import { PermissionCode } from '../../models/PermissionModels';
 import { DeviceService } from '../../services/DeviceService';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
+import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 
 const DEVICE_ARCHIVE_DETAIL_INFO_SECTIONS: InfoDialogSection[] = [
@@ -53,7 +55,7 @@ struct DeviceArchiveDetail {
   });
 
   aboutToAppear(): void {
-    if (!AuthGuard.requireAuthenticated(this.getUIContext())) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.DeviceRead)) {
       return;
     }
 
@@ -61,7 +63,7 @@ struct DeviceArchiveDetail {
   }
 
   onPageShow(): void {
-    if (!AuthGuard.requireAuthenticated(this.getUIContext())) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.DeviceRead)) {
       return;
     }
 
@@ -79,7 +81,8 @@ struct DeviceArchiveDetail {
 
     this.device = device;
     this.hasDevice = true;
-    this.canChangeArchive = !DeviceService.isArchiveChangeLocked(device);
+    this.canChangeArchive = SessionStore.hasPermission(PermissionCode.DeviceChangeRequestCreate) &&
+      !DeviceService.isArchiveChangeLocked(device);
     this.message = '';
   }
 
@@ -421,6 +424,11 @@ struct DeviceArchiveDetail {
   }
 
   openChangePage(): void {
+    if (!SessionStore.hasPermission(PermissionCode.DeviceChangeRequestCreate)) {
+      this.message = '当前账号无权申请设备档案变更';
+      return;
+    }
+
     if (DeviceService.isArchiveChangeLocked(this.device)) {
       this.message = DeviceService.formatArchiveChangeLockReason(this.device);
       return;

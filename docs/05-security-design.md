@@ -116,6 +116,19 @@ SUPERVISOR_AUDITOR
 READ_ONLY
 ```
 
+基础权限划分：
+
+| 角色 | 主要权限 | 说明 |
+| --- | --- | --- |
+| `SYSTEM_ADMIN` | `*` | 具备系统级管理和业务处理权限 |
+| `DEVICE_ADMIN` | `DEVICE_READ`, `DEVICE_CHANGE_REVIEW` | 查询设备档案，审核设备档案变更 |
+| `VERIFIER` | `DEVICE_READ`, `DEVICE_VERIFY` | 查询设备档案，提交设备状态核验记录 |
+| `FAULT_REPORTER` | `DEVICE_READ`, `DEVICE_CHANGE_REQUEST_CREATE`, `FAULT_REPORT_CREATE` | 查询设备档案，提交档案变更申请和故障报告 |
+| `MAINTAINER` | `DEVICE_READ`, `REPAIR_TASK_ACCEPT`, `REPAIR_REPORT_CREATE` | 查询设备档案，接取维修任务并提交维修报告 |
+| `REINSPECTOR` | `DEVICE_READ`, `REINSPECTION_CREATE` | 查询设备档案，处理复检任务并提交复检记录 |
+| `SUPERVISOR_AUDITOR` | `DEVICE_READ`, `AUDIT_LOG_READ` | 查询设备档案，查看操作记录和审计日志 |
+| `READ_ONLY` | `DEVICE_READ` | 仅查询授权范围内的设备档案 |
+
 ### 6.2 授权边界
 
 授权校验必须在后端完成。移动端隐藏或禁用无权限入口只用于界面控制，不作为安全依据。

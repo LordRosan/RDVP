@@ -6,6 +6,7 @@ import {
   ChangeRequestStatus,
   FaultSeverity,
   FaultType,
+  PermissionCode,
   ReinspectionResult,
   RepairReportResult,
   RepairTaskStatus,
@@ -118,21 +119,21 @@ export async function handleApiRequest(
     }
 
     if (method === 'GET' && segments[2] === 'devices' && segments[3] === 'by-code' && segments.length === 5) {
-      appContext.authService.requirePermission(actor, 'DEVICE_READ');
+      appContext.authService.requirePermission(actor, PermissionCode.DeviceRead);
       const deviceCode = requiredPathSegment(segments[4], 'deviceCode');
       sendSuccess(response, 200, appContext.deviceApplicationService.findByCode(deviceCode), requestContext.requestId);
       return;
     }
 
     if (method === 'GET' && segments[2] === 'devices' && segments.length === 4) {
-      appContext.authService.requirePermission(actor, 'DEVICE_READ');
+      appContext.authService.requirePermission(actor, PermissionCode.DeviceRead);
       const deviceId = requiredPathSegment(segments[3], 'deviceId');
       sendSuccess(response, 200, appContext.deviceApplicationService.findById(deviceId), requestContext.requestId);
       return;
     }
 
     if (method === 'POST' && segments[2] === 'device-qrcodes' && segments[3] === 'verify' && segments.length === 4) {
-      appContext.authService.requirePermission(actor, 'DEVICE_READ');
+      appContext.authService.requirePermission(actor, PermissionCode.DeviceRead);
       const body = await readJsonBody<QrVerifyBody>(request);
       const result = appContext.deviceApplicationService.verifyQrCode({
         qrContent: requiredString(body.qrContent, 'qrContent'),
@@ -151,7 +152,7 @@ export async function handleApiRequest(
       segments[4] === 'verification-records' &&
       segments.length === 5
     ) {
-      appContext.authService.requirePermission(actor, 'DEVICE_VERIFY');
+      appContext.authService.requirePermission(actor, PermissionCode.DeviceVerify);
       const body = await readJsonBody<DeviceVerificationBody>(request);
       const result = appContext.deviceApplicationService.submitVerificationRecord({
         deviceId: requiredPathSegment(segments[3], 'deviceId'),
@@ -173,7 +174,7 @@ export async function handleApiRequest(
       segments[4] === 'verification-records' &&
       segments.length === 5
     ) {
-      appContext.authService.requirePermission(actor, 'DEVICE_READ');
+      appContext.authService.requirePermission(actor, PermissionCode.DeviceRead);
       const result = appContext.deviceApplicationService.listVerificationRecords(
         requiredPathSegment(segments[3], 'deviceId')
       );
@@ -182,7 +183,7 @@ export async function handleApiRequest(
     }
 
     if (method === 'POST' && segments[2] === 'device-change-requests' && segments.length === 3) {
-      appContext.authService.requirePermission(actor, 'DEVICE_CHANGE_REQUEST_CREATE');
+      appContext.authService.requirePermission(actor, PermissionCode.DeviceChangeRequestCreate);
       const body = await readJsonBody<DeviceChangeRequestBody>(request);
       const result = appContext.deviceChangeService.createChangeRequest({
         deviceId: requiredString(body.deviceId, 'deviceId'),
@@ -196,7 +197,7 @@ export async function handleApiRequest(
     }
 
     if (method === 'GET' && segments[2] === 'device-change-requests' && segments.length === 3) {
-      appContext.authService.requirePermission(actor, 'DEVICE_CHANGE_REVIEW');
+      appContext.authService.requirePermission(actor, PermissionCode.DeviceChangeReview);
       const result = appContext.deviceChangeService.listChangeRequests({
         deviceCode: optionalString(url.searchParams.get('deviceCode')),
         status: optionalEnum<ChangeRequestStatus>(url.searchParams.get('status')),
@@ -212,7 +213,7 @@ export async function handleApiRequest(
       segments[4] === 'review' &&
       segments.length === 5
     ) {
-      appContext.authService.requirePermission(actor, 'DEVICE_CHANGE_REVIEW');
+      appContext.authService.requirePermission(actor, PermissionCode.DeviceChangeReview);
       const body = await readJsonBody<DeviceChangeReviewBody>(request);
       const result = appContext.deviceChangeService.reviewChangeRequest({
         requestId: requiredPathSegment(segments[3], 'requestId'),
@@ -226,7 +227,7 @@ export async function handleApiRequest(
     }
 
     if (method === 'POST' && segments[2] === 'fault-reports' && segments.length === 3) {
-      appContext.authService.requirePermission(actor, 'FAULT_REPORT_CREATE');
+      appContext.authService.requirePermission(actor, PermissionCode.FaultReportCreate);
       const body = await readJsonBody<FaultReportBody>(request);
       const result = appContext.faultWorkflowService.createFaultReport({
         deviceCode: requiredString(body.deviceCode, 'deviceCode'),
@@ -244,7 +245,7 @@ export async function handleApiRequest(
     }
 
     if (method === 'GET' && segments[2] === 'repair-tasks' && segments[3] === 'available' && segments.length === 4) {
-      appContext.authService.requirePermission(actor, 'REPAIR_TASK_ACCEPT');
+      appContext.authService.requirePermission(actor, PermissionCode.RepairTaskAccept);
       const result = appContext.faultWorkflowService.listAvailableRepairTasks({
         longitude: optionalNumber(url.searchParams.get('longitude')),
         latitude: optionalNumber(url.searchParams.get('latitude')),
@@ -256,7 +257,7 @@ export async function handleApiRequest(
     }
 
     if (method === 'POST' && segments[2] === 'fault-reports' && segments[4] === 'accept' && segments.length === 5) {
-      appContext.authService.requirePermission(actor, 'REPAIR_TASK_ACCEPT');
+      appContext.authService.requirePermission(actor, PermissionCode.RepairTaskAccept);
       const body = await readJsonBody<AcceptFaultBody>(request);
       const result = appContext.faultWorkflowService.acceptFaultReport({
         faultReportId: requiredPathSegment(segments[3], 'faultReportId'),
@@ -269,7 +270,7 @@ export async function handleApiRequest(
     }
 
     if (method === 'GET' && segments[2] === 'repair-tasks' && segments[3] === 'my' && segments.length === 4) {
-      appContext.authService.requirePermission(actor, 'REPAIR_REPORT_CREATE');
+      appContext.authService.requirePermission(actor, PermissionCode.RepairReportCreate);
       const result = appContext.faultWorkflowService.listMyRepairTasks({
         actor,
         status: optionalEnum<RepairTaskStatus>(url.searchParams.get('status'))
@@ -284,7 +285,7 @@ export async function handleApiRequest(
       segments[4] === 'repair-reports' &&
       segments.length === 5
     ) {
-      appContext.authService.requirePermission(actor, 'REPAIR_REPORT_CREATE');
+      appContext.authService.requirePermission(actor, PermissionCode.RepairReportCreate);
       const body = await readJsonBody<RepairReportBody>(request);
       const result = appContext.faultWorkflowService.submitRepairReport({
         repairTaskId: requiredPathSegment(segments[3], 'repairTaskId'),
@@ -300,7 +301,7 @@ export async function handleApiRequest(
     }
 
     if (method === 'GET' && segments[2] === 'reinspections' && segments[3] === 'pending' && segments.length === 4) {
-      appContext.authService.requirePermission(actor, 'REINSPECTION_CREATE');
+      appContext.authService.requirePermission(actor, PermissionCode.ReinspectionCreate);
       const result = appContext.faultWorkflowService.listPendingReinspections();
       sendSuccess(response, 200, { items: result, total: result.length }, requestContext.requestId);
       return;
@@ -312,7 +313,7 @@ export async function handleApiRequest(
       segments[4] === 'reinspection-records' &&
       segments.length === 5
     ) {
-      appContext.authService.requirePermission(actor, 'REINSPECTION_CREATE');
+      appContext.authService.requirePermission(actor, PermissionCode.ReinspectionCreate);
       const body = await readJsonBody<ReinspectionBody>(request);
       const result = appContext.faultWorkflowService.submitReinspectionRecord({
         faultReportId: requiredPathSegment(segments[3], 'faultReportId'),
@@ -327,7 +328,7 @@ export async function handleApiRequest(
     }
 
     if (method === 'GET' && segments[2] === 'audit-logs' && segments.length === 3) {
-      appContext.authService.requirePermission(actor, 'AUDIT_LOG_READ');
+      appContext.authService.requirePermission(actor, PermissionCode.AuditLogRead);
       const result = appContext.auditLogService.list();
       sendSuccess(response, 200, { items: result, total: result.length }, requestContext.requestId);
       return;

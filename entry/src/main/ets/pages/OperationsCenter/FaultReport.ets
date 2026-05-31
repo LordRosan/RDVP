@@ -1,6 +1,7 @@
 import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { FaultSeverity, FaultType } from '../../models/FaultModels';
+import { PermissionCode } from '../../models/PermissionModels';
 import { ApiClient } from '../../services/ApiClient';
 import { DeviceService } from '../../services/DeviceService';
 import { FaultReportService } from '../../services/FaultReportService';
@@ -87,7 +88,7 @@ struct FaultReport {
   });
 
   aboutToAppear(): void {
-    AuthGuard.requireAuthenticated(this.getUIContext());
+    AuthGuard.requirePermission(this.getUIContext(), PermissionCode.FaultReportCreate);
   }
 
   build() {

@@ -1,6 +1,7 @@
 import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { OperationRecordSummary } from '../../models/OperationRecordModels';
+import { PermissionCode } from '../../models/PermissionModels';
 import { ApiClient } from '../../services/ApiClient';
 import { OperationRecordService } from '../../services/OperationRecordService';
 import { AuthGuard } from '../../utils/AuthGuard';
@@ -39,7 +40,7 @@ struct OperationRecord {
   });
 
   aboutToAppear(): void {
-    if (!AuthGuard.requireAuthenticated(this.getUIContext())) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.AuditLogRead)) {
       return;
     }
 
@@ -47,7 +48,7 @@ struct OperationRecord {
   }
 
   onPageShow(): void {
-    if (AuthGuard.requireAuthenticated(this.getUIContext())) {
+    if (AuthGuard.requirePermission(this.getUIContext(), PermissionCode.AuditLogRead)) {
       this.refreshRecords();
     }
   }

@@ -2,6 +2,7 @@ import { ApiClient } from './ApiClient';
 import { ApiResponse } from '../models/ApiModels';
 import { AuthenticatedUser, AuthSession, LoginForm, LoginValidationResult, RoleCode } from '../models/AuthModels';
 import { OperationRecordType } from '../models/OperationRecordModels';
+import { PermissionCode } from '../models/PermissionModels';
 import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
 
 interface LoginApiResult {
@@ -107,8 +108,20 @@ export class AuthService {
 
   private static createLocalSession(form: LoginForm): ApiResponse<AuthSession> {
     const username = form.username.trim();
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
     const user = AuthService.createLocalUser(username);
+    if (form.password !== 'password' || user === undefined) {
+      return {
+        success: false,
+        error: {
+          code: 'LOGIN_FAILED',
+          message: '账号或密码错误'
+        },
+        requestId: 'local-auth-session',
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
     const session: AuthSession = {
       accessToken: `local-session-${Date.now()}`,
       expiresAt,
@@ -124,7 +137,7 @@ export class AuthService {
     };
   }
 
-  private static createLocalUser(username: string): AuthenticatedUser {
+  private static createLocalUser(username: string): AuthenticatedUser | undefined {
     if (username === 'admin') {
       return {
         id: 'local-user-admin',
@@ -141,32 +154,79 @@ export class AuthService {
         username,
         displayName: 'deviceadmin',
         roles: [RoleCode.DeviceAdmin],
-        permissions: ['DEVICE_READ', 'DEVICE_CHANGE_REVIEW']
+        permissions: [PermissionCode.DeviceRead, PermissionCode.DeviceChangeReview]
       };
     }
 
-    return {
-      id: `local-user-${username}`,
-      username,
-      displayName: username,
-      roles: [
-        RoleCode.Verifier,
-        RoleCode.FaultReporter,
-        RoleCode.Maintainer,
-        RoleCode.Reinspector,
-        RoleCode.SupervisorAuditor
-      ],
-      permissions: [
-        'DEVICE_READ',
-        'DEVICE_CHANGE_REQUEST_CREATE',
-        'DEVICE_VERIFY',
-        'FAULT_REPORT_CREATE',
-        'REPAIR_TASK_ACCEPT',
-        'REPAIR_REPORT_CREATE',
-        'REINSPECTION_CREATE',
-        'AUDIT_READ'
-      ]
-    };
+    if (username === 'verifier') {
+      return {
+        id: 'local-user-verifier',
+        username,
+        displayName: 'verifier',
+        roles: [RoleCode.Verifier],
+        permissions: [PermissionCode.DeviceRead, PermissionCode.DeviceVerify]
+      };
+    }
+
+    if (username === 'reporter') {
+      return {
+        id: 'local-user-reporter',
+        username,
+        displayName: 'reporter',
+        roles: [RoleCode.FaultReporter],
+        permissions: [
+          PermissionCode.DeviceRead,
+          PermissionCode.DeviceChangeRequestCreate,
+          PermissionCode.FaultReportCreate
+        ]
+      };
+    }
+
+    if (username === 'maintainer') {
+      return {
+        id: 'local-user-maintainer',
+        username,
+        displayName: 'maintainer',
+        roles: [RoleCode.Maintainer],
+        permissions: [
+          PermissionCode.DeviceRead,
+          PermissionCode.RepairTaskAccept,
+          PermissionCode.RepairReportCreate
+        ]
+      };
+    }
+
+    if (username === 'reinspector') {
+      return {
+        id: 'local-user-reinspector',
+        username,
+        displayName: 'reinspector',
+        roles: [RoleCode.Reinspector],
+        permissions: [PermissionCode.DeviceRead, PermissionCode.ReinspectionCreate]
+      };
+    }
+
+    if (username === 'auditor') {
+      return {
+        id: 'local-user-auditor',
+        username,
+        displayName: 'auditor',
+        roles: [RoleCode.SupervisorAuditor],
+        permissions: [PermissionCode.DeviceRead, PermissionCode.AuditLogRead]
+      };
+    }
+
+    if (username === 'readonly') {
+      return {
+        id: 'local-user-readonly',
+        username,
+        displayName: 'readonly',
+        roles: [RoleCode.ReadOnly],
+        permissions: [PermissionCode.DeviceRead]
+      };
+    }
+
+    return undefined;
   }
 
   private static createSessionFromApiResult(result: LoginApiResult): AuthSession {

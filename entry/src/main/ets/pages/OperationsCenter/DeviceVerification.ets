@@ -1,5 +1,6 @@
 import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
+import { PermissionCode } from '../../models/PermissionModels';
 import { VerificationResult } from '../../models/VerificationModels';
 import { ApiClient } from '../../services/ApiClient';
 import { DeviceService } from '../../services/DeviceService';
@@ -57,7 +58,7 @@ struct DeviceVerification {
   });
 
   aboutToAppear(): void {
-    AuthGuard.requireAuthenticated(this.getUIContext());
+    AuthGuard.requirePermission(this.getUIContext(), PermissionCode.DeviceVerify);
   }
 
   build() {

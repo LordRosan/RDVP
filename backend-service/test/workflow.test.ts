@@ -280,6 +280,26 @@ test('records audit logs for key workflow operations', async () => {
   });
 });
 
+test('enforces role permissions on management endpoints', async () => {
+  await withClient(async (client) => {
+    const reporterToken = await client.login('reporter');
+    const auditorToken = await client.login('auditor');
+
+    const forbiddenAudit = await client.request('GET', '/api/v1/audit-logs', undefined, reporterToken);
+    assert.equal(forbiddenAudit.status, 403);
+    assert.equal(forbiddenAudit.body.error.code, 'FORBIDDEN');
+
+    const allowedAudit = await client.request('GET', '/api/v1/audit-logs', undefined, auditorToken);
+    assert.equal(allowedAudit.status, 200);
+    assert.equal(allowedAudit.body.success, true);
+
+    const forbiddenReviewList = await client.request('GET', '/api/v1/device-change-requests?status=PENDING_REVIEW',
+      undefined, auditorToken);
+    assert.equal(forbiddenReviewList.status, 403);
+    assert.equal(forbiddenReviewList.body.error.code, 'FORBIDDEN');
+  });
+});
+
 async function withClient(run: (client: TestClient) => Promise<void>): Promise<void> {
   const appContext = createDefaultAppContext();
   const server = createHttpServer(appContext);

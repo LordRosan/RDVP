@@ -2,6 +2,7 @@ import { abilityAccessCtrl } from '@kit.AbilityKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { detectBarcode, scanBarcode, scanCore } from '@kit.ScanKit';
 import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
+import { PermissionCode } from '../../models/PermissionModels';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { DeviceQueryMode, DeviceSummary } from '../../models/DeviceModels';
 import { ApiClient } from '../../services/ApiClient';
@@ -49,7 +50,7 @@ struct DeviceArchiveQuery {
   });
 
   aboutToAppear(): void {
-    AuthGuard.requireAuthenticated(this.getUIContext());
+    AuthGuard.requirePermission(this.getUIContext(), PermissionCode.DeviceRead);
   }
 
   build() {

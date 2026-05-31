@@ -1,6 +1,7 @@
 import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { FaultSeverity } from '../../models/FaultModels';
+import { PermissionCode } from '../../models/PermissionModels';
 import { MyRepairTaskSummary, RepairReportResult } from '../../models/RepairTaskModels';
 import { ApiClient } from '../../services/ApiClient';
 import { DeviceService } from '../../services/DeviceService';
@@ -69,7 +70,7 @@ struct MyRepairTask {
   });
 
   aboutToAppear(): void {
-    if (!AuthGuard.requireAuthenticated(this.getUIContext())) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.RepairReportCreate)) {
       return;
     }
 

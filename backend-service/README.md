@@ -29,6 +29,8 @@ npm run backend:start
 | `reporter` | `FAULT_REPORTER` |
 | `maintainer` | `MAINTAINER` |
 | `reinspector` | `REINSPECTOR` |
+| `auditor` | `SUPERVISOR_AUDITOR` |
+| `readonly` | `READ_ONLY` |
 
 ## API 边界
 

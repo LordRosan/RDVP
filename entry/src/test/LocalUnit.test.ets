@@ -7,6 +7,7 @@ import { DeviceArchiveChangeRequestStatus } from '../main/ets/models/DeviceArchi
 import { DeviceService } from '../main/ets/services/DeviceService';
 import { DeviceStatus } from '../main/ets/models/DeviceModels';
 import { FaultSeverity, FaultType } from '../main/ets/models/FaultModels';
+import { PermissionCode } from '../main/ets/models/PermissionModels';
 import { RepairerAvailability, RepairReportResult } from '../main/ets/models/RepairTaskModels';
 import { ReinspectionResult } from '../main/ets/models/ReinspectionModels';
 import { VerificationResult } from '../main/ets/models/VerificationModels';
@@ -22,6 +23,7 @@ import { SessionStore } from '../main/ets/stores/SessionStore';
 export default function localUnitTest() {
   describe('workbenchConfiguration', () => {
     it('providesCoreActions', 0, () => {
+      signInLocal('admin');
       const actions = WorkbenchService.getActions();
 
       expect(actions.length).assertEqual(3);
@@ -32,6 +34,7 @@ export default function localUnitTest() {
     });
 
     it('providesOperationalMetrics', 0, () => {
+      signInLocal('admin');
       const metrics = WorkbenchService.getMetrics();
 
       expect(metrics.length).assertEqual(4);
@@ -40,9 +43,34 @@ export default function localUnitTest() {
     });
 
     it('groupsBusinessActionsByCenter', 0, () => {
+      signInLocal('admin');
       expect(WorkbenchService.getArchiveCenterActions()[0].id).assertEqual(WorkbenchActionId.DeviceQuery);
       expect(WorkbenchService.getOperationsCenterActions().length).assertEqual(5);
       expect(WorkbenchService.getOperationsCenterActions()[0].id).assertEqual(WorkbenchActionId.DeviceVerification);
+    });
+
+    it('filtersWorkbenchActionsByPermission', 0, () => {
+      signInLocal('reporter');
+      const actions = WorkbenchService.getActions();
+      expect(actions.some((item) => item.id === WorkbenchActionId.ArchiveCenter)).assertEqual(true);
+      expect(actions.some((item) => item.id === WorkbenchActionId.OperationsCenter)).assertEqual(true);
+      expect(actions.some((item) => item.id === WorkbenchActionId.ManagementCenter)).assertEqual(false);
+
+      const operationActions = WorkbenchService.getOperationsCenterActions();
+      expect(operationActions.length).assertEqual(1);
+      expect(operationActions[0].id).assertEqual(WorkbenchActionId.FaultReport);
+    });
+
+    it('separatesReviewAndAuditManagementActions', 0, () => {
+      signInLocal('deviceadmin');
+      let managementActions = WorkbenchService.getManagementCenterActions();
+      expect(managementActions.length).assertEqual(1);
+      expect(managementActions[0].id).assertEqual(WorkbenchActionId.DeviceChangeReview);
+
+      signInLocal('auditor');
+      managementActions = WorkbenchService.getManagementCenterActions();
+      expect(managementActions.length).assertEqual(1);
+      expect(managementActions[0].id).assertEqual(WorkbenchActionId.OperationRecord);
     });
   });
 
@@ -68,19 +96,29 @@ export default function localUnitTest() {
 
     it('returnsLocalSessionWhenBackendUnconfigured', 0, () => {
       const response = AuthService.login({
-        username: 'user001',
+        username: 'reporter',
         password: 'password'
       });
 
       expect(response.success).assertEqual(true);
-      expect(response.data?.user?.username).assertEqual('user001');
+      expect(response.data?.user?.username).assertEqual('reporter');
       if (response.data !== undefined) {
         SessionStore.setSession(response.data);
         expect(SessionStore.isAuthenticated()).assertEqual(true);
-        expect(SessionStore.getCurrentUser().displayName).assertEqual('user001');
+        expect(SessionStore.getCurrentUser().displayName).assertEqual('reporter');
       } else {
         expect(true).assertEqual(false);
       }
+    });
+
+    it('rejectsUnknownLocalDebugAccount', 0, () => {
+      const response = AuthService.login({
+        username: 'user001',
+        password: 'password'
+      });
+
+      expect(response.success).assertEqual(false);
+      expect(response.error?.message).assertEqual('账号或密码错误');
     });
 
     it('grantsLocalAdminReviewPermission', 0, () => {
@@ -92,7 +130,7 @@ export default function localUnitTest() {
       expect(response.success).assertEqual(true);
       if (response.data !== undefined) {
         SessionStore.setSession(response.data);
-        expect(SessionStore.hasPermission('DEVICE_CHANGE_REVIEW')).assertEqual(true);
+        expect(SessionStore.hasPermission(PermissionCode.DeviceChangeReview)).assertEqual(true);
         expect(WorkbenchService.getManagementCenterActions().some((item) => {
           return item.id === WorkbenchActionId.DeviceChangeReview;
         })).assertEqual(true);
@@ -315,6 +353,7 @@ export default function localUnitTest() {
     });
 
     it('submitsLocalChangeRequestWhenBackendUnconfigured', 0, () => {
+      signInLocal('deviceadmin');
       const pendingMetricBefore = WorkbenchService.getMetrics().find((item) => {
         return item.id === 'archiveCenter';
       });
@@ -755,4 +794,16 @@ export default function localUnitTest() {
       }
     });
   });
+}
+
+function signInLocal(username: string): void {
+  SessionStore.clearSession();
+  const response = AuthService.login({
+    username,
+    password: 'password'
+  });
+
+  if (response.data !== undefined) {
+    SessionStore.setSession(response.data);
+  }
 }

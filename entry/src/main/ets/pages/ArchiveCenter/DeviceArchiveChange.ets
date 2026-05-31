@@ -5,6 +5,7 @@ import {
   DeviceArchiveChangeRequestForm,
   DeviceArchiveChangeRequestStatus
 } from '../../models/DeviceArchiveChangeModels';
+import { PermissionCode } from '../../models/PermissionModels';
 import { ApiClient } from '../../services/ApiClient';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { DeviceArchiveChangeService } from '../../services/DeviceArchiveChangeService';
@@ -78,7 +79,7 @@ struct DeviceArchiveChange {
   });
 
   aboutToAppear(): void {
-    if (!AuthGuard.requireAuthenticated(this.getUIContext())) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.DeviceChangeRequestCreate)) {
       return;
     }
 

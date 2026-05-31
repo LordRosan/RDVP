@@ -1,4 +1,10 @@
 import { WorkbenchAction, WorkbenchActionId, WorkbenchMetric, WorkbenchStatusItem } from '../models/WorkbenchModels';
+import {
+  ArchiveCenterPermissions,
+  ManagementCenterPermissions,
+  OperationsCenterPermissions,
+  PermissionCode
+} from '../models/PermissionModels';
 import { ApiClient } from './ApiClient';
 import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
 import { LocalRepairTaskRepository } from './LocalRepairTaskRepository';
@@ -10,86 +16,132 @@ export class WorkbenchService {
     const pendingChangeCount = WorkbenchService.getPendingChangeCount();
     const pendingFaultCount = WorkbenchService.getPendingFaultCount();
     const pendingReinspectionCount = WorkbenchService.getPendingReinspectionCount();
+    const metrics: WorkbenchMetric[] = [];
 
-    return [
-      {
+    if (WorkbenchService.canAccessArchiveCenter()) {
+      metrics.push({
         id: 'archiveCenter',
         label: '档案中心',
-        value: `${pendingChangeCount}`,
-        status: '待审核变更',
+        value: WorkbenchService.canReviewDeviceChange() ? `${pendingChangeCount}` : '可用',
+        status: WorkbenchService.canReviewDeviceChange() ? '待审核变更' : '档案查询',
         tone: '#2F6FED'
-      },
-      {
+      });
+    }
+
+    if (WorkbenchService.canAccessOperationsCenter()) {
+      const visibleTaskCount =
+        (SessionStore.hasPermission(PermissionCode.RepairTaskAccept) ? pendingFaultCount : 0) +
+        (SessionStore.hasPermission(PermissionCode.ReinspectionCreate) ? pendingReinspectionCount : 0);
+      metrics.push({
         id: 'operationsCenter',
         label: '运维中心',
-        value: `${pendingFaultCount + pendingReinspectionCount}`,
-        status: '待处理任务',
+        value: visibleTaskCount > 0 ? `${visibleTaskCount}` : '可用',
+        status: visibleTaskCount > 0 ? '待处理任务' : '授权功能',
         tone: '#D9480F'
-      },
-      {
+      });
+    }
+
+    if (WorkbenchService.canAccessManagementCenter()) {
+      metrics.push({
         id: 'managementCenter',
         label: '管理中心',
-        value: `${SessionStore.hasPermission('DEVICE_CHANGE_REVIEW') ? pendingChangeCount : 0}`,
-        status: '待审核事项',
+        value: WorkbenchService.canReviewDeviceChange() ? `${pendingChangeCount}` : '可用',
+        status: WorkbenchService.canReviewDeviceChange() ? '待审核事项' : '操作审计',
         tone: '#845EF7'
-      },
-      {
-        id: 'offlineDrafts',
-        label: '待同步草稿',
-        value: '0',
-        status: '离线数据',
-        tone: '#087F5B'
-      }
-    ];
+      });
+    }
+
+    metrics.push({
+      id: 'offlineDrafts',
+      label: '待同步草稿',
+      value: '0',
+      status: '离线数据',
+      tone: '#087F5B'
+    });
+
+    return metrics;
   }
 
   static getActions(): WorkbenchAction[] {
-    return [
-      {
+    const actions: WorkbenchAction[] = [];
+
+    if (WorkbenchService.canAccessArchiveCenter()) {
+      actions.push({
         id: WorkbenchActionId.ArchiveCenter,
         title: '档案中心',
         summary: '查询档案与发起档案变更',
         tone: '#2F6FED'
-      },
-      {
+      });
+    }
+
+    if (WorkbenchService.canAccessOperationsCenter()) {
+      actions.push({
         id: WorkbenchActionId.OperationsCenter,
         title: '运维中心',
         summary: '核验、报修、维修与复检',
         tone: '#D9480F'
-      },
-      {
+      });
+    }
+
+    if (WorkbenchService.canAccessManagementCenter()) {
+      actions.push({
         id: WorkbenchActionId.ManagementCenter,
         title: '管理中心',
         summary: '审核变更与查看操作记录',
         tone: '#495057'
-      }
-    ];
+      });
+    }
+
+    return actions;
   }
 
   static getArchiveCenterActions(): WorkbenchAction[] {
-    return [
-      {
-        id: WorkbenchActionId.DeviceQuery,
-        title: '设备档案查询',
-        summary: '按编号或二维码定位档案',
-        tone: '#2F6FED'
-      }
-    ];
+    if (!SessionStore.hasPermission(PermissionCode.DeviceRead)) {
+      return [];
+    }
+
+    return [{
+      id: WorkbenchActionId.DeviceQuery,
+      title: '设备档案查询',
+      summary: '按编号或二维码定位档案',
+      tone: '#2F6FED'
+    }];
   }
 
   static getOperationsCenterActions(): WorkbenchAction[] {
-    return [
-      WorkbenchService.createAction(WorkbenchActionId.DeviceVerification, '状态核验', '提交现场核验记录', '#0B7285'),
-      WorkbenchService.createAction(WorkbenchActionId.FaultReport, '故障报告', '登记设备故障信息', '#D9480F'),
-      WorkbenchService.createAction(WorkbenchActionId.AvailableRepairTask, '附近故障', '查看可接取任务', '#5C7CFA'),
-      WorkbenchService.createAction(WorkbenchActionId.MyRepairTask, '我的维修', '处理已接取任务', '#E67700'),
-      WorkbenchService.createAction(WorkbenchActionId.ReinspectionTask, '复检任务', '确认高等级故障结果', '#845EF7')
-    ];
+    const actions: WorkbenchAction[] = [];
+
+    if (SessionStore.hasPermission(PermissionCode.DeviceVerify)) {
+      actions.push(WorkbenchService.createAction(WorkbenchActionId.DeviceVerification, '状态核验',
+        '提交现场核验记录', '#0B7285'));
+    }
+
+    if (SessionStore.hasPermission(PermissionCode.FaultReportCreate)) {
+      actions.push(WorkbenchService.createAction(WorkbenchActionId.FaultReport, '故障报告',
+        '登记设备故障信息', '#D9480F'));
+    }
+
+    if (SessionStore.hasPermission(PermissionCode.RepairTaskAccept)) {
+      actions.push(WorkbenchService.createAction(WorkbenchActionId.AvailableRepairTask, '附近故障',
+        '查看可接取任务', '#5C7CFA'));
+    }
+
+    if (SessionStore.hasPermission(PermissionCode.RepairReportCreate)) {
+      actions.push(WorkbenchService.createAction(WorkbenchActionId.MyRepairTask, '我的维修',
+        '处理已接取任务', '#E67700'));
+    }
+
+    if (SessionStore.hasPermission(PermissionCode.ReinspectionCreate)) {
+      actions.push(WorkbenchService.createAction(WorkbenchActionId.ReinspectionTask, '复检任务',
+        '确认高等级故障结果', '#845EF7'));
+    }
+
+    return actions;
   }
 
   static getManagementCenterActions(): WorkbenchAction[] {
     const actions: WorkbenchAction[] = [];
-    if (SessionStore.hasPermission('DEVICE_CHANGE_REVIEW')) {
+    if (WorkbenchService.canReviewDeviceChange()) {
       actions.push({
         id: WorkbenchActionId.DeviceChangeReview,
         title: '变更审核',
@@ -98,14 +150,14 @@ export class WorkbenchService {
       });
     }
 
-    actions.push(
-      {
+    if (SessionStore.hasPermission(PermissionCode.AuditLogRead)) {
+      actions.push({
         id: WorkbenchActionId.OperationRecord,
         title: '操作记录',
         summary: '查看业务流转记录',
         tone: '#495057'
-      }
-    );
+      });
+    }
 
     return actions;
   }
@@ -143,6 +195,22 @@ export class WorkbenchService {
 
   static getPendingReinspectionCount(): number {
     return ApiClient.isConfigured() ? 0 : LocalReinspectionRepository.getPendingTaskCount();
+  }
+
+  static canAccessArchiveCenter(): boolean {
+    return SessionStore.hasAnyPermission(ArchiveCenterPermissions);
+  }
+
+  static canAccessOperationsCenter(): boolean {
+    return SessionStore.hasAnyPermission(OperationsCenterPermissions);
+  }
+
+  static canAccessManagementCenter(): boolean {
+    return SessionStore.hasAnyPermission(ManagementCenterPermissions);
+  }
+
+  static canReviewDeviceChange(): boolean {
+    return SessionStore.hasPermission(PermissionCode.DeviceChangeReview);
   }
 
   private static createAction(id: WorkbenchActionId, title: string, summary: string, tone: string): WorkbenchAction {

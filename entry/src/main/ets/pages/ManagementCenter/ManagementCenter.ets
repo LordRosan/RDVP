@@ -1,5 +1,6 @@
 import { ActionTile } from '../../components/ActionTile';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
+import { ManagementCenterPermissions, PermissionCode } from '../../models/PermissionModels';
 import { WorkbenchAction, WorkbenchActionId } from '../../models/WorkbenchModels';
 import { ApiClient } from '../../services/ApiClient';
 import { WorkbenchService } from '../../services/WorkbenchService';
@@ -14,7 +15,7 @@ struct ManagementCenter {
   @StorageLink('rdvp_workbench_refresh_revision') workbenchRefreshRevision: number = 0;
 
   aboutToAppear(): void {
-    if (!AuthGuard.requireAuthenticated(this.getUIContext())) {
+    if (!AuthGuard.requireAnyPermission(this.getUIContext(), ManagementCenterPermissions)) {
       return;
     }
 
@@ -22,7 +23,7 @@ struct ManagementCenter {
   }
 
   onPageShow(): void {
-    if (AuthGuard.requireAuthenticated(this.getUIContext())) {
+    if (AuthGuard.requireAnyPermission(this.getUIContext(), ManagementCenterPermissions)) {
       this.refreshCenterState();
     }
   }
@@ -143,13 +144,13 @@ struct ManagementCenter {
         StatusInfoRow({
           label: '待审核变更',
           value: this.getPendingReviewText(),
-          tone: SessionStore.hasPermission('DEVICE_CHANGE_REVIEW') ? '#845EF7' : '#6B7280'
+          tone: SessionStore.hasPermission(PermissionCode.DeviceChangeReview) ? '#845EF7' : '#6B7280'
         })
         this.CardDivider()
         StatusInfoRow({
           label: '操作记录',
-          value: '可查看',
-          tone: '#495057'
+          value: this.getOperationRecordText(),
+          tone: SessionStore.hasPermission(PermissionCode.AuditLogRead) ? '#495057' : '#6B7280'
         })
         this.CardDivider()
         StatusInfoRow({
@@ -223,11 +224,15 @@ struct ManagementCenter {
       return '-';
     }
 
-    if (!SessionStore.hasPermission('DEVICE_CHANGE_REVIEW')) {
+    if (!SessionStore.hasPermission(PermissionCode.DeviceChangeReview)) {
       return '无审核权限';
     }
 
     return `${WorkbenchService.getPendingChangeCount()}项`;
+  }
+
+  getOperationRecordText(): string {
+    return SessionStore.hasPermission(PermissionCode.AuditLogRead) ? '可查看' : '无审计权限';
   }
 
   openFeature(action: WorkbenchAction): void {

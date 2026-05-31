@@ -1,8 +1,10 @@
 import { ActionTile } from '../../components/ActionTile';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
+import { OperationsCenterPermissions, PermissionCode } from '../../models/PermissionModels';
 import { WorkbenchAction, WorkbenchActionId } from '../../models/WorkbenchModels';
 import { ApiClient } from '../../services/ApiClient';
 import { WorkbenchService } from '../../services/WorkbenchService';
+import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 
 @Entry
@@ -13,7 +15,7 @@ struct OperationsCenter {
   @StorageLink('rdvp_workbench_refresh_revision') workbenchRefreshRevision: number = 0;
 
   aboutToAppear(): void {
-    if (!AuthGuard.requireAuthenticated(this.getUIContext())) {
+    if (!AuthGuard.requireAnyPermission(this.getUIContext(), OperationsCenterPermissions)) {
       return;
     }
 
@@ -21,7 +23,7 @@ struct OperationsCenter {
   }
 
   onPageShow(): void {
-    if (AuthGuard.requireAuthenticated(this.getUIContext())) {
+    if (AuthGuard.requireAnyPermission(this.getUIContext(), OperationsCenterPermissions)) {
       this.refreshCenterState();
     }
   }
@@ -141,14 +143,14 @@ struct OperationsCenter {
       Column() {
         StatusInfoRow({
           label: '待接取故障',
-          value: `${this.getPendingFaultCount()}项`,
-          tone: '#D9480F'
+          value: this.getPendingFaultText(),
+          tone: SessionStore.hasPermission(PermissionCode.RepairTaskAccept) ? '#D9480F' : '#6B7280'
         })
         this.CardDivider()
         StatusInfoRow({
           label: '待复检任务',
-          value: `${this.getPendingReinspectionCount()}项`,
-          tone: '#845EF7'
+          value: this.getPendingReinspectionText(),
+          tone: SessionStore.hasPermission(PermissionCode.ReinspectionCreate) ? '#845EF7' : '#6B7280'
         })
         this.CardDivider()
         StatusInfoRow({
@@ -225,12 +227,28 @@ struct OperationsCenter {
     return WorkbenchService.getPendingFaultCount();
   }
 
+  getPendingFaultText(): string {
+    if (!SessionStore.hasPermission(PermissionCode.RepairTaskAccept)) {
+      return '无接取权限';
+    }
+
+    return `${this.getPendingFaultCount()}项`;
+  }
+
   getPendingReinspectionCount(): number {
     if (this.workbenchRefreshRevision < 0) {
       return 0;
     }
 
     return WorkbenchService.getPendingReinspectionCount();
+  }
+
+  getPendingReinspectionText(): string {
+    if (!SessionStore.hasPermission(PermissionCode.ReinspectionCreate)) {
+      return '无复检权限';
+    }
+
+    return `${this.getPendingReinspectionCount()}项`;
   }
 
   openFeature(action: WorkbenchAction): void {

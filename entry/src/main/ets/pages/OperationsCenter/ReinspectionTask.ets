@@ -3,6 +3,7 @@ import { StatusInfoRow } from '../../components/StatusInfoRow';
 import {
   ReinspectionResult, ReinspectionTaskSummary
 } from '../../models/ReinspectionModels';
+import { PermissionCode } from '../../models/PermissionModels';
 import { ApiClient } from '../../services/ApiClient';
 import { ReinspectionService } from '../../services/ReinspectionService';
 import { AuthGuard } from '../../utils/AuthGuard';
@@ -50,7 +51,7 @@ struct ReinspectionTask {
   });
 
   aboutToAppear(): void {
-    if (!AuthGuard.requireAuthenticated(this.getUIContext())) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ReinspectionCreate)) {
       return;
     }
 

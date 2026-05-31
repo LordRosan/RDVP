@@ -18,6 +18,7 @@ import {
   FaultSeverity,
   FaultStatus,
   FaultType,
+  PermissionCode,
   RoleCode
 } from '../domain/models/enums.js';
 
@@ -107,7 +108,7 @@ export class InMemoryDatabase {
         passwordHash,
         displayName: 'Verifier',
         roles: [RoleCode.Verifier],
-        permissions: ['DEVICE_READ', 'DEVICE_VERIFY'],
+        permissions: [PermissionCode.DeviceRead, PermissionCode.DeviceVerify],
         status: 'ACTIVE'
       },
       {
@@ -116,7 +117,7 @@ export class InMemoryDatabase {
         passwordHash,
         displayName: 'Device Admin',
         roles: [RoleCode.DeviceAdmin],
-        permissions: ['DEVICE_READ', 'DEVICE_CHANGE_REVIEW'],
+        permissions: [PermissionCode.DeviceRead, PermissionCode.DeviceChangeReview],
         status: 'ACTIVE'
       },
       {
@@ -125,7 +126,11 @@ export class InMemoryDatabase {
         passwordHash,
         displayName: 'Fault Reporter',
         roles: [RoleCode.FaultReporter],
-        permissions: ['DEVICE_READ', 'DEVICE_CHANGE_REQUEST_CREATE', 'FAULT_REPORT_CREATE'],
+        permissions: [
+          PermissionCode.DeviceRead,
+          PermissionCode.DeviceChangeRequestCreate,
+          PermissionCode.FaultReportCreate
+        ],
         status: 'ACTIVE'
       },
       {
@@ -134,7 +139,7 @@ export class InMemoryDatabase {
         passwordHash,
         displayName: 'Maintainer',
         roles: [RoleCode.Maintainer],
-        permissions: ['DEVICE_READ', 'REPAIR_TASK_ACCEPT', 'REPAIR_REPORT_CREATE'],
+        permissions: [PermissionCode.DeviceRead, PermissionCode.RepairTaskAccept, PermissionCode.RepairReportCreate],
         status: 'ACTIVE'
       },
       {
@@ -143,7 +148,25 @@ export class InMemoryDatabase {
         passwordHash,
         displayName: 'Reinspector',
         roles: [RoleCode.Reinspector],
-        permissions: ['DEVICE_READ', 'REINSPECTION_CREATE'],
+        permissions: [PermissionCode.DeviceRead, PermissionCode.ReinspectionCreate],
+        status: 'ACTIVE'
+      },
+      {
+        id: 'user-auditor',
+        username: 'auditor',
+        passwordHash,
+        displayName: 'Auditor',
+        roles: [RoleCode.SupervisorAuditor],
+        permissions: [PermissionCode.DeviceRead, PermissionCode.AuditLogRead],
+        status: 'ACTIVE'
+      },
+      {
+        id: 'user-readonly',
+        username: 'readonly',
+        passwordHash,
+        displayName: 'Read Only',
+        roles: [RoleCode.ReadOnly],
+        permissions: [PermissionCode.DeviceRead],
         status: 'ACTIVE'
       }
     );

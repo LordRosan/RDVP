@@ -77,6 +77,24 @@ export class SessionStore {
     return permissions.includes('*') || permissions.includes(permission);
   }
 
+  static hasAnyPermission(permissions: string[]): boolean {
+    SessionStore.ensureInitialized();
+    if (!SessionStore.isAuthenticated()) {
+      return false;
+    }
+
+    const grantedPermissions = SessionStore.sessionState.session?.user?.permissions;
+    if (grantedPermissions === undefined) {
+      return false;
+    }
+
+    if (grantedPermissions.includes('*')) {
+      return true;
+    }
+
+    return permissions.some((permission: string) => grantedPermissions.includes(permission));
+  }
+
   private static formatRoleNames(roles: RoleCode[]): string {
     if (roles.length === 0) {
       return '权限未加载';

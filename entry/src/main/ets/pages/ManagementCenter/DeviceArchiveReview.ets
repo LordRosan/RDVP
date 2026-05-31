@@ -6,6 +6,7 @@ import {
   DeviceArchiveReviewDecision,
   DeviceArchiveReviewItem
 } from '../../models/DeviceArchiveReviewModels';
+import { PermissionCode } from '../../models/PermissionModels';
 import { ApiClient } from '../../services/ApiClient';
 import { DeviceArchiveReviewService } from '../../services/DeviceArchiveReviewService';
 import { SessionStore } from '../../stores/SessionStore';
@@ -52,13 +53,7 @@ struct DeviceArchiveReview {
   });
 
   aboutToAppear(): void {
-    if (!AuthGuard.requireAuthenticated(this.getUIContext())) {
-      return;
-    }
-
-    if (!this.canReview()) {
-      this.message = '当前账号无权审核设备档案变更';
-      this.messageTone = '#D9480F';
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.DeviceChangeReview)) {
       return;
     }
 
@@ -539,7 +534,7 @@ struct DeviceArchiveReview {
   }
 
   canReview(): boolean {
-    return SessionStore.hasPermission('DEVICE_CHANGE_REVIEW');
+    return SessionStore.hasPermission(PermissionCode.DeviceChangeReview);
   }
 
   isFailureMessageVisible(): boolean {
