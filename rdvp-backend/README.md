@@ -43,6 +43,40 @@ GET http://localhost:8080/readyz
 GET http://localhost:8080/actuator/health
 ```
 
+登录接口：
+
+```text
+POST http://localhost:8080/api/v1/auth/login
+```
+
+请求示例：
+
+```json
+{
+  "username": "fieldoperator",
+  "password": "password",
+  "clientDeviceId": "local-device"
+}
+```
+
+后续业务请求使用返回的访问凭证：
+
+```text
+Authorization: Bearer <accessToken>
+```
+
+## 本地引导账号
+
+| 用户名 | 密码 | 角色 |
+| --- | --- | --- |
+| `admin` | `password` | `SYSTEM_ADMIN` |
+| `deviceadmin` | `password` | `DEVICE_ADMIN` |
+| `fieldoperator` | `password` | `FIELD_OPERATOR` |
+| `maintainer` | `password` | `MAINTAINER` |
+| `reinspector` | `password` | `REINSPECTOR` |
+| `auditor` | `password` | `SUPERVISOR_AUDITOR` |
+| `readonly` | `password` | `READ_ONLY` |
+
 ## 环境变量
 
 | 变量 | 默认值 | 说明 |

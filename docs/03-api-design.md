@@ -160,7 +160,7 @@ POST /api/v1/auth/login
 
 ```json
 {
-  "accessToken": "token",
+  "accessToken": "opaque-token",
   "expiresIn": 604800,
   "user": {
     "id": "user-id",
@@ -946,7 +946,6 @@ REINSPECTION_RECORD
 
 ## 20. 待确认问题
 
-- 访问凭证使用 JWT 还是服务端会话令牌。
 - 是否需要刷新令牌接口。
 - 附件上传是否采用直传对象存储。
 - 二维码是否需要过期时间和轮换机制。
