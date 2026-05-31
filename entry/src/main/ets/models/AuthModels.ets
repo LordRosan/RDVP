@@ -1,8 +1,7 @@
 export enum RoleCode {
   SystemAdmin = 'SYSTEM_ADMIN',
   DeviceAdmin = 'DEVICE_ADMIN',
-  Verifier = 'VERIFIER',
-  FaultReporter = 'FAULT_REPORTER',
+  FieldOperator = 'FIELD_OPERATOR',
   Maintainer = 'MAINTAINER',
   Reinspector = 'REINSPECTOR',
   SupervisorAuditor = 'SUPERVISOR_AUDITOR',
@@ -32,4 +31,3 @@ export interface AuthSession {
   expiresAt: string;
   user?: AuthenticatedUser;
 }
-

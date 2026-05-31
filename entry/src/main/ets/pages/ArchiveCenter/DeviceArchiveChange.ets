@@ -79,7 +79,7 @@ struct DeviceArchiveChange {
   });
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.DeviceChangeRequestCreate)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveChangeRequestCreate)) {
       return;
     }
 

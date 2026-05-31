@@ -144,13 +144,13 @@ struct OperationsCenter {
         StatusInfoRow({
           label: '待接取故障',
           value: this.getPendingFaultText(),
-          tone: SessionStore.hasPermission(PermissionCode.RepairTaskAccept) ? '#D9480F' : '#6B7280'
+          tone: SessionStore.hasPermission(PermissionCode.OpsRepairTaskAccept) ? '#D9480F' : '#6B7280'
         })
         this.CardDivider()
         StatusInfoRow({
           label: '待复检任务',
           value: this.getPendingReinspectionText(),
-          tone: SessionStore.hasPermission(PermissionCode.ReinspectionCreate) ? '#845EF7' : '#6B7280'
+          tone: SessionStore.hasPermission(PermissionCode.OpsReinspectionCreate) ? '#845EF7' : '#6B7280'
         })
         this.CardDivider()
         StatusInfoRow({
@@ -228,7 +228,7 @@ struct OperationsCenter {
   }
 
   getPendingFaultText(): string {
-    if (!SessionStore.hasPermission(PermissionCode.RepairTaskAccept)) {
+    if (!SessionStore.hasPermission(PermissionCode.OpsRepairTaskAccept)) {
       return '无接取权限';
     }
 
@@ -244,7 +244,7 @@ struct OperationsCenter {
   }
 
   getPendingReinspectionText(): string {
-    if (!SessionStore.hasPermission(PermissionCode.ReinspectionCreate)) {
+    if (!SessionStore.hasPermission(PermissionCode.OpsReinspectionCreate)) {
       return '无复检权限';
     }
 

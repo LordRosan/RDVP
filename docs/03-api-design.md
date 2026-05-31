@@ -158,7 +158,7 @@ POST /api/v1/auth/login
     "username": "user001",
     "displayName": "User Name",
     "roles": ["MAINTAINER"],
-    "permissions": ["DEVICE_READ", "FAULT_REPORT_CREATE"]
+    "permissions": ["ARCHIVE_DEVICE_READ", "OPS_FAULT_REPORT_CREATE"]
   }
 }
 ```
@@ -177,7 +177,7 @@ GET /api/v1/auth/me
   "username": "user001",
   "displayName": "User Name",
   "roles": ["MAINTAINER"],
-  "permissions": ["DEVICE_READ", "FAULT_REPORT_CREATE"]
+  "permissions": ["ARCHIVE_DEVICE_READ", "OPS_FAULT_REPORT_CREATE"]
 }
 ```
 

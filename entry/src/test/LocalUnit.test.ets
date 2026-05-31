@@ -18,6 +18,7 @@ import { RepairTaskService } from '../main/ets/services/RepairTaskService';
 import { ReinspectionService } from '../main/ets/services/ReinspectionService';
 import { WorkbenchActionId } from '../main/ets/models/WorkbenchModels';
 import { WorkbenchService } from '../main/ets/services/WorkbenchService';
+import { OperationsFlowStore } from '../main/ets/stores/OperationsFlowStore';
 import { SessionStore } from '../main/ets/stores/SessionStore';
 
 export default function localUnitTest() {
@@ -50,15 +51,16 @@ export default function localUnitTest() {
     });
 
     it('filtersWorkbenchActionsByPermission', 0, () => {
-      signInLocal('reporter');
+      signInLocal('fieldoperator');
       const actions = WorkbenchService.getActions();
       expect(actions.some((item) => item.id === WorkbenchActionId.ArchiveCenter)).assertEqual(true);
       expect(actions.some((item) => item.id === WorkbenchActionId.OperationsCenter)).assertEqual(true);
       expect(actions.some((item) => item.id === WorkbenchActionId.ManagementCenter)).assertEqual(false);
 
       const operationActions = WorkbenchService.getOperationsCenterActions();
-      expect(operationActions.length).assertEqual(1);
-      expect(operationActions[0].id).assertEqual(WorkbenchActionId.FaultReport);
+      expect(operationActions.length).assertEqual(2);
+      expect(operationActions[0].id).assertEqual(WorkbenchActionId.DeviceVerification);
+      expect(operationActions[1].id).assertEqual(WorkbenchActionId.FaultReport);
     });
 
     it('separatesReviewAndAuditManagementActions', 0, () => {
@@ -96,16 +98,16 @@ export default function localUnitTest() {
 
     it('returnsLocalSessionWhenBackendUnconfigured', 0, () => {
       const response = AuthService.login({
-        username: 'reporter',
+        username: 'fieldoperator',
         password: 'password'
       });
 
       expect(response.success).assertEqual(true);
-      expect(response.data?.user?.username).assertEqual('reporter');
+      expect(response.data?.user?.username).assertEqual('fieldoperator');
       if (response.data !== undefined) {
         SessionStore.setSession(response.data);
         expect(SessionStore.isAuthenticated()).assertEqual(true);
-        expect(SessionStore.getCurrentUser().displayName).assertEqual('reporter');
+        expect(SessionStore.getCurrentUser().displayName).assertEqual('fieldoperator');
       } else {
         expect(true).assertEqual(false);
       }
@@ -130,7 +132,7 @@ export default function localUnitTest() {
       expect(response.success).assertEqual(true);
       if (response.data !== undefined) {
         SessionStore.setSession(response.data);
-        expect(SessionStore.hasPermission(PermissionCode.DeviceChangeReview)).assertEqual(true);
+        expect(SessionStore.hasPermission(PermissionCode.MgmtArchiveChangeReview)).assertEqual(true);
         expect(WorkbenchService.getManagementCenterActions().some((item) => {
           return item.id === WorkbenchActionId.DeviceChangeReview;
         })).assertEqual(true);
@@ -441,6 +443,19 @@ export default function localUnitTest() {
       });
       expect(deviceResponse.success).assertEqual(true);
       expect(deviceResponse.data?.lastVerificationTime).assertEqual(response.data?.submittedAt);
+    });
+
+    it('passesAbnormalVerificationContextToFaultReportOnce', 0, () => {
+      OperationsFlowStore.setFaultReportPrefill({
+        deviceCode: 'RDVP-DEVICE-0001',
+        description: '状态核验结果为异常。设备振动明显。',
+        sceneCondition: '现场已降低负载。'
+      });
+
+      const prefill = OperationsFlowStore.consumeFaultReportPrefill();
+      expect(prefill?.deviceCode).assertEqual('RDVP-DEVICE-0001');
+      expect(prefill?.description).assertEqual('状态核验结果为异常。设备振动明显。');
+      expect(OperationsFlowStore.consumeFaultReportPrefill() === undefined).assertEqual(true);
     });
   });
 

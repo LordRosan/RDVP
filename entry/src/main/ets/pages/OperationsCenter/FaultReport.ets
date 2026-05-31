@@ -5,6 +5,7 @@ import { PermissionCode } from '../../models/PermissionModels';
 import { ApiClient } from '../../services/ApiClient';
 import { DeviceService } from '../../services/DeviceService';
 import { FaultReportService } from '../../services/FaultReportService';
+import { OperationsFlowStore } from '../../stores/OperationsFlowStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 
 const FAULT_REPORT_INFO_SECTIONS: InfoDialogSection[] = [
@@ -88,7 +89,11 @@ struct FaultReport {
   });
 
   aboutToAppear(): void {
-    AuthGuard.requirePermission(this.getUIContext(), PermissionCode.FaultReportCreate);
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.OpsFaultReportCreate)) {
+      return;
+    }
+
+    this.applyPrefill();
   }
 
   build() {
@@ -664,6 +669,21 @@ struct FaultReport {
     const reportNo = response.data ? response.data.reportNo : '';
     this.message = reportNo.length > 0 ? `故障报告已提交：${reportNo}` : '故障报告已提交';
     this.messageTone = '#087F5B';
+  }
+
+  applyPrefill(): void {
+    const prefill = OperationsFlowStore.consumeFaultReportPrefill();
+    if (prefill === undefined) {
+      return;
+    }
+
+    this.deviceCode = prefill.deviceCode;
+    this.description = prefill.description;
+    this.sceneCondition = prefill.sceneCondition;
+    this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(prefill.deviceCode);
+    if (this.normalizedDeviceCode.length === 0) {
+      this.normalizedDeviceCode = '-';
+    }
   }
 
   getFaultTypeStatusText(): string {

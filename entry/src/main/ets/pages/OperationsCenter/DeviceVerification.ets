@@ -5,6 +5,8 @@ import { VerificationResult } from '../../models/VerificationModels';
 import { ApiClient } from '../../services/ApiClient';
 import { DeviceService } from '../../services/DeviceService';
 import { DeviceVerificationService } from '../../services/DeviceVerificationService';
+import { OperationsFlowStore } from '../../stores/OperationsFlowStore';
+import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 
 const VERIFICATION_INFO_SECTIONS: InfoDialogSection[] = [
@@ -47,6 +49,7 @@ struct DeviceVerification {
   @State messageTone: string = '#D9480F';
   @State normalizedDeviceCode: string = '-';
   @State submitting: boolean = false;
+  @State canReportFault: boolean = false;
   private verificationInfoDialogController: CustomDialogController = new CustomDialogController({
     builder: InfoDialog({
       title: '状态核验说明',
@@ -58,7 +61,7 @@ struct DeviceVerification {
   });
 
   aboutToAppear(): void {
-    AuthGuard.requirePermission(this.getUIContext(), PermissionCode.DeviceVerify);
+    AuthGuard.requirePermission(this.getUIContext(), PermissionCode.OpsDeviceVerify);
   }
 
   build() {
@@ -168,6 +171,11 @@ struct DeviceVerification {
         () => {
           this.submitVerification();
         })
+      if (this.canReportFault) {
+        this.ActionButton('上报故障', $r('sys.symbol.exclamationmark_message'), true, () => {
+          this.openFaultReport();
+        })
+      }
     }
     .padding({
       left: 18,
@@ -206,6 +214,7 @@ struct DeviceVerification {
           this.deviceCode = value;
           this.message = '';
           this.messageTone = '#D9480F';
+          this.canReportFault = false;
           this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(value);
           if (this.normalizedDeviceCode.length === 0) {
             this.normalizedDeviceCode = '-';
@@ -262,6 +271,7 @@ struct DeviceVerification {
       this.verificationResult = `${result}`;
       this.message = '';
       this.messageTone = '#D9480F';
+      this.canReportFault = false;
     })
   }
 
@@ -295,6 +305,7 @@ struct DeviceVerification {
           this.description = value;
           this.message = '';
           this.messageTone = '#D9480F';
+          this.canReportFault = false;
         })
     }
     .width('100%')
@@ -331,6 +342,7 @@ struct DeviceVerification {
           this.remark = value;
           this.message = '';
           this.messageTone = '#D9480F';
+          this.canReportFault = false;
         })
     }
     .width('100%')
@@ -472,6 +484,7 @@ struct DeviceVerification {
     const recordId = response.data ? response.data.id : '';
     this.message = recordId.length > 0 ? `核验记录已提交：${recordId}` : '核验记录已提交';
     this.messageTone = '#087F5B';
+    this.canReportFault = this.shouldOfferFaultReport();
   }
 
   getVerificationResultStatusText(): string {
@@ -498,6 +511,29 @@ struct DeviceVerification {
 
   showVerificationInfoDialog(): void {
     this.verificationInfoDialogController.open();
+  }
+
+  shouldOfferFaultReport(): boolean {
+    return this.verificationResult !== `${VerificationResult.Normal}` &&
+      SessionStore.hasPermission(PermissionCode.OpsFaultReportCreate);
+  }
+
+  openFaultReport(): void {
+    const resultText = DeviceVerificationService.formatVerificationResult(this.verificationResult as VerificationResult);
+    const description = this.description.trim();
+    const remark = this.remark.trim();
+    OperationsFlowStore.setFaultReportPrefill({
+      deviceCode: this.normalizedDeviceCode === '-' ? this.deviceCode : this.normalizedDeviceCode,
+      description: description.length > 0 ? `状态核验结果为${resultText}。${description}` : `状态核验结果为${resultText}。`,
+      sceneCondition: remark
+    });
+
+    try {
+      this.getUIContext().getRouter().pushUrl({ url: 'pages/OperationsCenter/FaultReport' });
+    } catch (err) {
+      this.message = '故障报告不可用';
+      this.messageTone = '#D9480F';
+    }
   }
 
   backToWorkbench(): void {

@@ -1,8 +1,7 @@
 export enum RoleCode {
   SystemAdmin = 'SYSTEM_ADMIN',
   DeviceAdmin = 'DEVICE_ADMIN',
-  Verifier = 'VERIFIER',
-  FaultReporter = 'FAULT_REPORTER',
+  FieldOperator = 'FIELD_OPERATOR',
   Maintainer = 'MAINTAINER',
   Reinspector = 'REINSPECTOR',
   SupervisorAuditor = 'SUPERVISOR_AUDITOR',
@@ -10,15 +9,15 @@ export enum RoleCode {
 }
 
 export enum PermissionCode {
-  DeviceRead = 'DEVICE_READ',
-  DeviceVerify = 'DEVICE_VERIFY',
-  DeviceChangeRequestCreate = 'DEVICE_CHANGE_REQUEST_CREATE',
-  DeviceChangeReview = 'DEVICE_CHANGE_REVIEW',
-  FaultReportCreate = 'FAULT_REPORT_CREATE',
-  RepairTaskAccept = 'REPAIR_TASK_ACCEPT',
-  RepairReportCreate = 'REPAIR_REPORT_CREATE',
-  ReinspectionCreate = 'REINSPECTION_CREATE',
-  AuditLogRead = 'AUDIT_LOG_READ'
+  ArchiveDeviceRead = 'ARCHIVE_DEVICE_READ',
+  ArchiveChangeRequestCreate = 'ARCHIVE_CHANGE_REQUEST_CREATE',
+  OpsDeviceVerify = 'OPS_DEVICE_VERIFY',
+  OpsFaultReportCreate = 'OPS_FAULT_REPORT_CREATE',
+  OpsRepairTaskAccept = 'OPS_REPAIR_TASK_ACCEPT',
+  OpsRepairReportCreate = 'OPS_REPAIR_REPORT_CREATE',
+  OpsReinspectionCreate = 'OPS_REINSPECTION_CREATE',
+  MgmtArchiveChangeReview = 'MGMT_ARCHIVE_CHANGE_REVIEW',
+  MgmtAuditLogRead = 'MGMT_AUDIT_LOG_READ'
 }
 
 export enum DeviceStatus {

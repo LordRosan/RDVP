@@ -103,33 +103,25 @@ export class InMemoryDatabase {
         status: 'ACTIVE'
       },
       {
-        id: 'user-verifier',
-        username: 'verifier',
-        passwordHash,
-        displayName: 'Verifier',
-        roles: [RoleCode.Verifier],
-        permissions: [PermissionCode.DeviceRead, PermissionCode.DeviceVerify],
-        status: 'ACTIVE'
-      },
-      {
         id: 'user-deviceadmin',
         username: 'deviceadmin',
         passwordHash,
         displayName: 'Device Admin',
         roles: [RoleCode.DeviceAdmin],
-        permissions: [PermissionCode.DeviceRead, PermissionCode.DeviceChangeReview],
+        permissions: [PermissionCode.ArchiveDeviceRead, PermissionCode.MgmtArchiveChangeReview],
         status: 'ACTIVE'
       },
       {
-        id: 'user-reporter',
-        username: 'reporter',
+        id: 'user-fieldoperator',
+        username: 'fieldoperator',
         passwordHash,
-        displayName: 'Fault Reporter',
-        roles: [RoleCode.FaultReporter],
+        displayName: 'Field Operator',
+        roles: [RoleCode.FieldOperator],
         permissions: [
-          PermissionCode.DeviceRead,
-          PermissionCode.DeviceChangeRequestCreate,
-          PermissionCode.FaultReportCreate
+          PermissionCode.ArchiveDeviceRead,
+          PermissionCode.ArchiveChangeRequestCreate,
+          PermissionCode.OpsDeviceVerify,
+          PermissionCode.OpsFaultReportCreate
         ],
         status: 'ACTIVE'
       },
@@ -139,7 +131,7 @@ export class InMemoryDatabase {
         passwordHash,
         displayName: 'Maintainer',
         roles: [RoleCode.Maintainer],
-        permissions: [PermissionCode.DeviceRead, PermissionCode.RepairTaskAccept, PermissionCode.RepairReportCreate],
+        permissions: [PermissionCode.ArchiveDeviceRead, PermissionCode.OpsRepairTaskAccept, PermissionCode.OpsRepairReportCreate],
         status: 'ACTIVE'
       },
       {
@@ -148,7 +140,7 @@ export class InMemoryDatabase {
         passwordHash,
         displayName: 'Reinspector',
         roles: [RoleCode.Reinspector],
-        permissions: [PermissionCode.DeviceRead, PermissionCode.ReinspectionCreate],
+        permissions: [PermissionCode.ArchiveDeviceRead, PermissionCode.OpsReinspectionCreate],
         status: 'ACTIVE'
       },
       {
@@ -157,7 +149,7 @@ export class InMemoryDatabase {
         passwordHash,
         displayName: 'Auditor',
         roles: [RoleCode.SupervisorAuditor],
-        permissions: [PermissionCode.DeviceRead, PermissionCode.AuditLogRead],
+        permissions: [PermissionCode.ArchiveDeviceRead, PermissionCode.MgmtAuditLogRead],
         status: 'ACTIVE'
       },
       {
@@ -166,7 +158,7 @@ export class InMemoryDatabase {
         passwordHash,
         displayName: 'Read Only',
         roles: [RoleCode.ReadOnly],
-        permissions: [PermissionCode.DeviceRead],
+        permissions: [PermissionCode.ArchiveDeviceRead],
         status: 'ACTIVE'
       }
     );
@@ -177,7 +169,7 @@ export class InMemoryDatabase {
     this.deviceChangeRequests.push({
       id: 'DCR-LOCAL-0002',
       deviceId: 'device-local-0002',
-      applicantId: 'user-reporter',
+      applicantId: 'user-fieldoperator',
       status: ChangeRequestStatus.PendingReview,
       reason: 'Site marker location requires archive correction.',
       changes: {
@@ -279,7 +271,7 @@ export class InMemoryDatabase {
       id: 'fault-local-0001',
       faultReportNo: 'FR-20260529-0001',
       deviceId: 'device-local-0003',
-      reporterId: 'user-reporter',
+      reporterId: 'user-fieldoperator',
       faultType: FaultType.CommunicationFault,
       severity: FaultSeverity.General,
       description: 'Communication link is unstable.',

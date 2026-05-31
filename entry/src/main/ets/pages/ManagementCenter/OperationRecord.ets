@@ -40,7 +40,7 @@ struct OperationRecord {
   });
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.AuditLogRead)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.MgmtAuditLogRead)) {
       return;
     }
 
@@ -48,7 +48,7 @@ struct OperationRecord {
   }
 
   onPageShow(): void {
-    if (AuthGuard.requirePermission(this.getUIContext(), PermissionCode.AuditLogRead)) {
+    if (AuthGuard.requirePermission(this.getUIContext(), PermissionCode.MgmtAuditLogRead)) {
       this.refreshRecords();
     }
   }

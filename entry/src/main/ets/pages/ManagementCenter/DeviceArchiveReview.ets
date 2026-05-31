@@ -53,7 +53,7 @@ struct DeviceArchiveReview {
   });
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.DeviceChangeReview)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.MgmtArchiveChangeReview)) {
       return;
     }
 
@@ -534,7 +534,7 @@ struct DeviceArchiveReview {
   }
 
   canReview(): boolean {
-    return SessionStore.hasPermission(PermissionCode.DeviceChangeReview);
+    return SessionStore.hasPermission(PermissionCode.MgmtArchiveChangeReview);
   }
 
   isFailureMessageVisible(): boolean {

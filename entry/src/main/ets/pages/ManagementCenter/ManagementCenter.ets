@@ -144,13 +144,13 @@ struct ManagementCenter {
         StatusInfoRow({
           label: '待审核变更',
           value: this.getPendingReviewText(),
-          tone: SessionStore.hasPermission(PermissionCode.DeviceChangeReview) ? '#845EF7' : '#6B7280'
+          tone: SessionStore.hasPermission(PermissionCode.MgmtArchiveChangeReview) ? '#845EF7' : '#6B7280'
         })
         this.CardDivider()
         StatusInfoRow({
           label: '操作记录',
           value: this.getOperationRecordText(),
-          tone: SessionStore.hasPermission(PermissionCode.AuditLogRead) ? '#495057' : '#6B7280'
+          tone: SessionStore.hasPermission(PermissionCode.MgmtAuditLogRead) ? '#495057' : '#6B7280'
         })
         this.CardDivider()
         StatusInfoRow({
@@ -224,7 +224,7 @@ struct ManagementCenter {
       return '-';
     }
 
-    if (!SessionStore.hasPermission(PermissionCode.DeviceChangeReview)) {
+    if (!SessionStore.hasPermission(PermissionCode.MgmtArchiveChangeReview)) {
       return '无审核权限';
     }
 
@@ -232,7 +232,7 @@ struct ManagementCenter {
   }
 
   getOperationRecordText(): string {
-    return SessionStore.hasPermission(PermissionCode.AuditLogRead) ? '可查看' : '无审计权限';
+    return SessionStore.hasPermission(PermissionCode.MgmtAuditLogRead) ? '可查看' : '无审计权限';
   }
 
   openFeature(action: WorkbenchAction): void {

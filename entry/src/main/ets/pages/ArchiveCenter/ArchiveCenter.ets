@@ -15,7 +15,7 @@ struct ArchiveCenter {
   @StorageLink('rdvp_workbench_refresh_revision') workbenchRefreshRevision: number = 0;
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.DeviceRead)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveDeviceRead)) {
       return;
     }
 
@@ -23,7 +23,7 @@ struct ArchiveCenter {
   }
 
   onPageShow(): void {
-    if (AuthGuard.requirePermission(this.getUIContext(), PermissionCode.DeviceRead)) {
+    if (AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveDeviceRead)) {
       this.refreshCenterState();
     }
   }
@@ -218,11 +218,11 @@ struct ArchiveCenter {
       return '-';
     }
 
-    return SessionStore.hasPermission(PermissionCode.DeviceChangeRequestCreate) ? '可申请变更' : '仅查询';
+    return SessionStore.hasPermission(PermissionCode.ArchiveChangeRequestCreate) ? '可申请变更' : '仅查询';
   }
 
   getArchivePermissionTone(): string {
-    return SessionStore.hasPermission(PermissionCode.DeviceChangeRequestCreate) ? '#2F6FED' : '#6B7280';
+    return SessionStore.hasPermission(PermissionCode.ArchiveChangeRequestCreate) ? '#2F6FED' : '#6B7280';
   }
 
   openFeature(action: WorkbenchAction): void {

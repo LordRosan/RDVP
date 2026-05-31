@@ -50,7 +50,7 @@ struct AvailableRepairTask {
   });
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.RepairTaskAccept)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.OpsRepairTaskAccept)) {
       return;
     }
 

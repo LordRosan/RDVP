@@ -1,28 +1,40 @@
 export enum PermissionCode {
-  DeviceRead = 'DEVICE_READ',
-  DeviceVerify = 'DEVICE_VERIFY',
-  DeviceChangeRequestCreate = 'DEVICE_CHANGE_REQUEST_CREATE',
-  DeviceChangeReview = 'DEVICE_CHANGE_REVIEW',
-  FaultReportCreate = 'FAULT_REPORT_CREATE',
-  RepairTaskAccept = 'REPAIR_TASK_ACCEPT',
-  RepairReportCreate = 'REPAIR_REPORT_CREATE',
-  ReinspectionCreate = 'REINSPECTION_CREATE',
-  AuditLogRead = 'AUDIT_LOG_READ'
+  ArchiveDeviceRead = 'ARCHIVE_DEVICE_READ',
+  ArchiveChangeRequestCreate = 'ARCHIVE_CHANGE_REQUEST_CREATE',
+  OpsDeviceVerify = 'OPS_DEVICE_VERIFY',
+  OpsFaultReportCreate = 'OPS_FAULT_REPORT_CREATE',
+  OpsRepairTaskAccept = 'OPS_REPAIR_TASK_ACCEPT',
+  OpsRepairReportCreate = 'OPS_REPAIR_REPORT_CREATE',
+  OpsReinspectionCreate = 'OPS_REINSPECTION_CREATE',
+  MgmtArchiveChangeReview = 'MGMT_ARCHIVE_CHANGE_REVIEW',
+  MgmtAuditLogRead = 'MGMT_AUDIT_LOG_READ'
 }
 
 export const ArchiveCenterPermissions: string[] = [
-  PermissionCode.DeviceRead
+  PermissionCode.ArchiveDeviceRead
 ];
 
 export const OperationsCenterPermissions: string[] = [
-  PermissionCode.DeviceVerify,
-  PermissionCode.FaultReportCreate,
-  PermissionCode.RepairTaskAccept,
-  PermissionCode.RepairReportCreate,
-  PermissionCode.ReinspectionCreate
+  PermissionCode.OpsDeviceVerify,
+  PermissionCode.OpsFaultReportCreate,
+  PermissionCode.OpsRepairTaskAccept,
+  PermissionCode.OpsRepairReportCreate,
+  PermissionCode.OpsReinspectionCreate
 ];
 
 export const ManagementCenterPermissions: string[] = [
-  PermissionCode.DeviceChangeReview,
-  PermissionCode.AuditLogRead
+  PermissionCode.MgmtArchiveChangeReview,
+  PermissionCode.MgmtAuditLogRead
+];
+
+export const AllPermissionCodes: string[] = [
+  PermissionCode.ArchiveDeviceRead,
+  PermissionCode.ArchiveChangeRequestCreate,
+  PermissionCode.OpsDeviceVerify,
+  PermissionCode.OpsFaultReportCreate,
+  PermissionCode.OpsRepairTaskAccept,
+  PermissionCode.OpsRepairReportCreate,
+  PermissionCode.OpsReinspectionCreate,
+  PermissionCode.MgmtArchiveChangeReview,
+  PermissionCode.MgmtAuditLogRead
 ];

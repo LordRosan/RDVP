@@ -108,8 +108,7 @@ RDVP 使用基于角色的访问控制模型。用户通过角色获得权限，
 ```text
 SYSTEM_ADMIN
 DEVICE_ADMIN
-VERIFIER
-FAULT_REPORTER
+FIELD_OPERATOR
 MAINTAINER
 REINSPECTOR
 SUPERVISOR_AUDITOR
@@ -121,13 +120,12 @@ READ_ONLY
 | 角色 | 主要权限 | 说明 |
 | --- | --- | --- |
 | `SYSTEM_ADMIN` | `*` | 具备系统级管理和业务处理权限 |
-| `DEVICE_ADMIN` | `DEVICE_READ`, `DEVICE_CHANGE_REVIEW` | 查询设备档案，审核设备档案变更 |
-| `VERIFIER` | `DEVICE_READ`, `DEVICE_VERIFY` | 查询设备档案，提交设备状态核验记录 |
-| `FAULT_REPORTER` | `DEVICE_READ`, `DEVICE_CHANGE_REQUEST_CREATE`, `FAULT_REPORT_CREATE` | 查询设备档案，提交档案变更申请和故障报告 |
-| `MAINTAINER` | `DEVICE_READ`, `REPAIR_TASK_ACCEPT`, `REPAIR_REPORT_CREATE` | 查询设备档案，接取维修任务并提交维修报告 |
-| `REINSPECTOR` | `DEVICE_READ`, `REINSPECTION_CREATE` | 查询设备档案，处理复检任务并提交复检记录 |
-| `SUPERVISOR_AUDITOR` | `DEVICE_READ`, `AUDIT_LOG_READ` | 查询设备档案，查看操作记录和审计日志 |
-| `READ_ONLY` | `DEVICE_READ` | 仅查询授权范围内的设备档案 |
+| `DEVICE_ADMIN` | `ARCHIVE_DEVICE_READ`, `MGMT_ARCHIVE_CHANGE_REVIEW` | 查询设备档案，审核设备档案变更 |
+| `FIELD_OPERATOR` | `ARCHIVE_DEVICE_READ`, `ARCHIVE_CHANGE_REQUEST_CREATE`, `OPS_DEVICE_VERIFY`, `OPS_FAULT_REPORT_CREATE` | 查询设备档案，提交档案变更申请、状态核验和故障报告 |
+| `MAINTAINER` | `ARCHIVE_DEVICE_READ`, `OPS_REPAIR_TASK_ACCEPT`, `OPS_REPAIR_REPORT_CREATE` | 查询设备档案，接取维修任务并提交维修报告 |
+| `REINSPECTOR` | `ARCHIVE_DEVICE_READ`, `OPS_REINSPECTION_CREATE` | 查询设备档案，处理复检任务并提交复检记录 |
+| `SUPERVISOR_AUDITOR` | `ARCHIVE_DEVICE_READ`, `MGMT_AUDIT_LOG_READ` | 查询设备档案，查看操作记录和审计日志 |
+| `READ_ONLY` | `ARCHIVE_DEVICE_READ` | 仅查询授权范围内的设备档案 |
 
 ### 6.2 授权边界
 
@@ -154,6 +152,7 @@ READ_ONLY
 数据范围示例：
 
 - 只读人员只能查询被授权范围内的设备。
+- 现场运维人员可以提交核验记录、档案变更申请和故障报告，但不能审核变更或处理维修任务。
 - 维修人员只能查看可接取故障、自己接取的任务和关联报告。
 - 设备管理员可以审核设备信息变更申请。
 - 主管/审计人员可以查询操作日志，但不一定具备修改设备数据的权限。

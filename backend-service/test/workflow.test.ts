@@ -13,7 +13,7 @@ interface TestClient {
 
 test('authenticates and queries device archive by code', async () => {
   await withClient(async (client) => {
-    const token = await client.login('reporter');
+    const token = await client.login('fieldoperator');
     const response = await client.request('GET', '/api/v1/devices/by-code/RDVP-DEVICE-0001', undefined, token);
 
     assert.equal(response.status, 200);
@@ -25,7 +25,7 @@ test('authenticates and queries device archive by code', async () => {
 
 test('verifies signed QR content and rejects tampered signatures', async () => {
   await withClient(async (client) => {
-    const token = await client.login('reporter');
+    const token = await client.login('fieldoperator');
     const qrContent = client.appContext.database.buildQrContentForDeviceCode('RDVP-DEVICE-0001');
 
     const validResponse = await client.request('POST', '/api/v1/device-qrcodes/verify', { qrContent }, token);
@@ -46,8 +46,8 @@ test('verifies signed QR content and rejects tampered signatures', async () => {
 
 test('submits device verification record and updates last verification time', async () => {
   await withClient(async (client) => {
-    const verifierToken = await client.login('verifier');
-    const device = await client.request('GET', '/api/v1/devices/by-code/RDVP-DEVICE-0001', undefined, verifierToken);
+    const operatorToken = await client.login('fieldoperator');
+    const device = await client.request('GET', '/api/v1/devices/by-code/RDVP-DEVICE-0001', undefined, operatorToken);
     assert.equal(device.status, 200);
 
     const verifiedAt = '2026-05-29T09:30:00.000Z';
@@ -56,28 +56,28 @@ test('submits device verification record and updates last verification time', as
       description: 'Device is operating normally during site verification.',
       remark: 'No abnormal noise.',
       verifiedAt
-    }, verifierToken);
+    }, operatorToken);
 
     assert.equal(created.status, 201);
     assert.equal(created.body.data.deviceId, device.body.data.id);
     assert.equal(created.body.data.result, 'NORMAL');
     assert.equal(created.body.data.verifiedAt, verifiedAt);
 
-    const records = await client.request('GET', `/api/v1/devices/${device.body.data.id}/verification-records`, undefined, verifierToken);
+    const records = await client.request('GET', `/api/v1/devices/${device.body.data.id}/verification-records`, undefined, operatorToken);
     assert.equal(records.status, 200);
     assert.equal(records.body.data.total, 1);
 
-    const updatedDevice = await client.request('GET', '/api/v1/devices/by-code/RDVP-DEVICE-0001', undefined, verifierToken);
+    const updatedDevice = await client.request('GET', '/api/v1/devices/by-code/RDVP-DEVICE-0001', undefined, operatorToken);
     assert.equal(updatedDevice.body.data.lastVerificationTime, verifiedAt);
   });
 });
 
 test('locks device archive changes until review and enforces freeze after approval', async () => {
   await withClient(async (client) => {
-    const reporterToken = await client.login('reporter');
+    const operatorToken = await client.login('fieldoperator');
     const adminToken = await client.login('admin');
 
-    const device = await client.request('GET', '/api/v1/devices/by-code/RDVP-DEVICE-0001', undefined, reporterToken);
+    const device = await client.request('GET', '/api/v1/devices/by-code/RDVP-DEVICE-0001', undefined, operatorToken);
     assert.equal(device.status, 200);
 
     const changeRequest = await client.request('POST', '/api/v1/device-change-requests', {
@@ -89,11 +89,11 @@ test('locks device archive changes until review and enforces freeze after approv
           newValue: 'Cooling Pump A-01 Updated'
         }
       }
-    }, reporterToken);
+    }, operatorToken);
     assert.equal(changeRequest.status, 201);
     assert.equal(changeRequest.body.data.status, 'PENDING_REVIEW');
 
-    const lockedDevice = await client.request('GET', '/api/v1/devices/by-code/RDVP-DEVICE-0001', undefined, reporterToken);
+    const lockedDevice = await client.request('GET', '/api/v1/devices/by-code/RDVP-DEVICE-0001', undefined, operatorToken);
     assert.equal(lockedDevice.body.data.status, device.body.data.status);
     assert.equal(lockedDevice.body.data.changeState.locked, true);
 
@@ -106,7 +106,7 @@ test('locks device archive changes until review and enforces freeze after approv
           newValue: 'CP-1000-B'
         }
       }
-    }, reporterToken);
+    }, operatorToken);
     assert.equal(duplicate.status, 409);
     assert.equal(duplicate.body.error.code, 'DEVICE_CHANGE_LOCKED');
 
@@ -118,7 +118,7 @@ test('locks device archive changes until review and enforces freeze after approv
     assert.equal(review.body.data.status, 'APPROVED');
     assert.ok(typeof review.body.data.freezeUntil === 'string');
 
-    const updatedDevice = await client.request('GET', '/api/v1/devices/by-code/RDVP-DEVICE-0001', undefined, reporterToken);
+    const updatedDevice = await client.request('GET', '/api/v1/devices/by-code/RDVP-DEVICE-0001', undefined, operatorToken);
     assert.equal(updatedDevice.body.data.name, 'Cooling Pump A-01 Updated');
     assert.equal(updatedDevice.body.data.status, 'NORMAL');
     assert.equal(updatedDevice.body.data.changeState.locked, false);
@@ -132,7 +132,7 @@ test('locks device archive changes until review and enforces freeze after approv
           newValue: 'CP-1000-C'
         }
       }
-    }, reporterToken);
+    }, operatorToken);
     assert.equal(frozen.status, 409);
     assert.equal(frozen.body.error.code, 'DEVICE_CHANGE_FROZEN');
   });
@@ -153,7 +153,7 @@ test('allows device administrators to list seeded pending archive changes', asyn
 
 test('creates a fault report and prevents duplicate task acceptance', async () => {
   await withClient(async (client) => {
-    const reporterToken = await client.login('reporter');
+    const operatorToken = await client.login('fieldoperator');
     const maintainerToken = await client.login('maintainer');
 
     const created = await client.request('POST', '/api/v1/fault-reports', {
@@ -167,7 +167,7 @@ test('creates a fault report and prevents duplicate task acceptance', async () =
         longitude: 114.1694,
         latitude: 22.3193
       }
-    }, reporterToken);
+    }, operatorToken);
 
     assert.equal(created.status, 201);
     assert.equal(created.body.data.status, 'PENDING_ACCEPTANCE');
@@ -193,7 +193,7 @@ test('creates a fault report and prevents duplicate task acceptance', async () =
 
 test('routes severe repair through reinspection before restoring device status', async () => {
   await withClient(async (client) => {
-    const reporterToken = await client.login('reporter');
+    const operatorToken = await client.login('fieldoperator');
     const maintainerToken = await client.login('maintainer');
     const reinspectorToken = await client.login('reinspector');
 
@@ -208,7 +208,7 @@ test('routes severe repair through reinspection before restoring device status',
         longitude: 114.1662,
         latitude: 22.321
       }
-    }, reporterToken);
+    }, operatorToken);
     assert.equal(created.status, 201);
 
     const accepted = await client.request('POST', `/api/v1/fault-reports/${created.body.data.id}/accept`, {}, maintainerToken);
@@ -253,7 +253,7 @@ test('routes severe repair through reinspection before restoring device status',
     assert.equal(reinspection.body.data.nextFaultStatus, 'CLOSED');
     assert.equal(reinspection.body.data.nextDeviceStatus, 'NORMAL');
 
-    const device = await client.request('GET', '/api/v1/devices/by-code/RDVP-DEVICE-0003', undefined, reporterToken);
+    const device = await client.request('GET', '/api/v1/devices/by-code/RDVP-DEVICE-0003', undefined, operatorToken);
     assert.equal(device.status, 200);
     assert.equal(device.body.data.status, 'NORMAL');
   });
@@ -261,7 +261,7 @@ test('routes severe repair through reinspection before restoring device status',
 
 test('records audit logs for key workflow operations', async () => {
   await withClient(async (client) => {
-    const reporterToken = await client.login('reporter');
+    const operatorToken = await client.login('fieldoperator');
     const adminToken = await client.login('admin');
 
     const created = await client.request('POST', '/api/v1/fault-reports', {
@@ -270,7 +270,7 @@ test('records audit logs for key workflow operations', async () => {
       severity: 'MINOR',
       occurredAt: '2026-05-29T08:00:00.000Z',
       description: 'Minor abnormal vibration detected.'
-    }, reporterToken);
+    }, operatorToken);
     assert.equal(created.status, 201);
 
     const auditLogs = await client.request('GET', '/api/v1/audit-logs', undefined, adminToken);
@@ -282,10 +282,10 @@ test('records audit logs for key workflow operations', async () => {
 
 test('enforces role permissions on management endpoints', async () => {
   await withClient(async (client) => {
-    const reporterToken = await client.login('reporter');
+    const operatorToken = await client.login('fieldoperator');
     const auditorToken = await client.login('auditor');
 
-    const forbiddenAudit = await client.request('GET', '/api/v1/audit-logs', undefined, reporterToken);
+    const forbiddenAudit = await client.request('GET', '/api/v1/audit-logs', undefined, operatorToken);
     assert.equal(forbiddenAudit.status, 403);
     assert.equal(forbiddenAudit.body.error.code, 'FORBIDDEN');
 

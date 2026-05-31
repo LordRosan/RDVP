@@ -50,7 +50,7 @@ struct DeviceArchiveQuery {
   });
 
   aboutToAppear(): void {
-    AuthGuard.requirePermission(this.getUIContext(), PermissionCode.DeviceRead);
+    AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveDeviceRead);
   }
 
   build() {

@@ -1,4 +1,5 @@
 import { AuthSession, RoleCode } from '../models/AuthModels';
+import { AllPermissionCodes } from '../models/PermissionModels';
 import { CurrentUserSnapshot, SessionState } from '../models/SessionModels';
 import { WorkbenchRefreshStore } from './WorkbenchRefreshStore';
 
@@ -111,10 +112,8 @@ export class SessionStore {
         return '系统管理员';
       case RoleCode.DeviceAdmin:
         return '设备管理员';
-      case RoleCode.Verifier:
-        return '核验人员';
-      case RoleCode.FaultReporter:
-        return '报修人员';
+      case RoleCode.FieldOperator:
+        return '现场运维人员';
       case RoleCode.Maintainer:
         return '维修人员';
       case RoleCode.Reinspector:
@@ -173,10 +172,21 @@ export class SessionStore {
         return undefined;
       }
 
-      return session;
+      return SessionStore.hasSupportedPermissionSet(session) ? session : undefined;
     } catch (err) {
       return undefined;
     }
+  }
+
+  private static hasSupportedPermissionSet(session: AuthSession): boolean {
+    const permissions = session.user?.permissions;
+    if (permissions === undefined || permissions.length === 0) {
+      return false;
+    }
+
+    return permissions.every((permission: string) => {
+      return permission === '*' || AllPermissionCodes.includes(permission);
+    });
   }
 
   private static isSessionExpired(session: AuthSession | undefined): boolean {

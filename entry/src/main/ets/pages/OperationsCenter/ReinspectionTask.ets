@@ -51,7 +51,7 @@ struct ReinspectionTask {
   });
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ReinspectionCreate)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.OpsReinspectionCreate)) {
       return;
     }
 

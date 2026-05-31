@@ -70,7 +70,7 @@ struct MyRepairTask {
   });
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.RepairReportCreate)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.OpsRepairReportCreate)) {
       return;
     }
 

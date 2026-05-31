@@ -55,7 +55,7 @@ struct DeviceArchiveDetail {
   });
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.DeviceRead)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveDeviceRead)) {
       return;
     }
 
@@ -63,7 +63,7 @@ struct DeviceArchiveDetail {
   }
 
   onPageShow(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.DeviceRead)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveDeviceRead)) {
       return;
     }
 
@@ -81,7 +81,7 @@ struct DeviceArchiveDetail {
 
     this.device = device;
     this.hasDevice = true;
-    this.canChangeArchive = SessionStore.hasPermission(PermissionCode.DeviceChangeRequestCreate) &&
+    this.canChangeArchive = SessionStore.hasPermission(PermissionCode.ArchiveChangeRequestCreate) &&
       !DeviceService.isArchiveChangeLocked(device);
     this.message = '';
   }
@@ -424,7 +424,7 @@ struct DeviceArchiveDetail {
   }
 
   openChangePage(): void {
-    if (!SessionStore.hasPermission(PermissionCode.DeviceChangeRequestCreate)) {
+    if (!SessionStore.hasPermission(PermissionCode.ArchiveChangeRequestCreate)) {
       this.message = '当前账号无权申请设备档案变更';
       return;
     }

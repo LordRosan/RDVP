@@ -30,8 +30,8 @@ export class WorkbenchService {
 
     if (WorkbenchService.canAccessOperationsCenter()) {
       const visibleTaskCount =
-        (SessionStore.hasPermission(PermissionCode.RepairTaskAccept) ? pendingFaultCount : 0) +
-        (SessionStore.hasPermission(PermissionCode.ReinspectionCreate) ? pendingReinspectionCount : 0);
+        (SessionStore.hasPermission(PermissionCode.OpsRepairTaskAccept) ? pendingFaultCount : 0) +
+        (SessionStore.hasPermission(PermissionCode.OpsReinspectionCreate) ? pendingReinspectionCount : 0);
       metrics.push({
         id: 'operationsCenter',
         label: '运维中心',
@@ -96,7 +96,7 @@ export class WorkbenchService {
   }
 
   static getArchiveCenterActions(): WorkbenchAction[] {
-    if (!SessionStore.hasPermission(PermissionCode.DeviceRead)) {
+    if (!SessionStore.hasPermission(PermissionCode.ArchiveDeviceRead)) {
       return [];
     }
 
@@ -111,27 +111,27 @@ export class WorkbenchService {
   static getOperationsCenterActions(): WorkbenchAction[] {
     const actions: WorkbenchAction[] = [];
 
-    if (SessionStore.hasPermission(PermissionCode.DeviceVerify)) {
+    if (SessionStore.hasPermission(PermissionCode.OpsDeviceVerify)) {
       actions.push(WorkbenchService.createAction(WorkbenchActionId.DeviceVerification, '状态核验',
         '提交现场核验记录', '#0B7285'));
     }
 
-    if (SessionStore.hasPermission(PermissionCode.FaultReportCreate)) {
+    if (SessionStore.hasPermission(PermissionCode.OpsFaultReportCreate)) {
       actions.push(WorkbenchService.createAction(WorkbenchActionId.FaultReport, '故障报告',
         '登记设备故障信息', '#D9480F'));
     }
 
-    if (SessionStore.hasPermission(PermissionCode.RepairTaskAccept)) {
+    if (SessionStore.hasPermission(PermissionCode.OpsRepairTaskAccept)) {
       actions.push(WorkbenchService.createAction(WorkbenchActionId.AvailableRepairTask, '附近故障',
         '查看可接取任务', '#5C7CFA'));
     }
 
-    if (SessionStore.hasPermission(PermissionCode.RepairReportCreate)) {
+    if (SessionStore.hasPermission(PermissionCode.OpsRepairReportCreate)) {
       actions.push(WorkbenchService.createAction(WorkbenchActionId.MyRepairTask, '我的维修',
         '处理已接取任务', '#E67700'));
     }
 
-    if (SessionStore.hasPermission(PermissionCode.ReinspectionCreate)) {
+    if (SessionStore.hasPermission(PermissionCode.OpsReinspectionCreate)) {
       actions.push(WorkbenchService.createAction(WorkbenchActionId.ReinspectionTask, '复检任务',
         '确认高等级故障结果', '#845EF7'));
     }
@@ -150,7 +150,7 @@ export class WorkbenchService {
       });
     }
 
-    if (SessionStore.hasPermission(PermissionCode.AuditLogRead)) {
+    if (SessionStore.hasPermission(PermissionCode.MgmtAuditLogRead)) {
       actions.push({
         id: WorkbenchActionId.OperationRecord,
         title: '操作记录',
@@ -210,7 +210,7 @@ export class WorkbenchService {
   }
 
   static canReviewDeviceChange(): boolean {
-    return SessionStore.hasPermission(PermissionCode.DeviceChangeReview);
+    return SessionStore.hasPermission(PermissionCode.MgmtArchiveChangeReview);
   }
 
   private static createAction(id: WorkbenchActionId, title: string, summary: string, tone: string): WorkbenchAction {

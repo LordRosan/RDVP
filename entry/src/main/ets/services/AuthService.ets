@@ -154,30 +154,21 @@ export class AuthService {
         username,
         displayName: 'deviceadmin',
         roles: [RoleCode.DeviceAdmin],
-        permissions: [PermissionCode.DeviceRead, PermissionCode.DeviceChangeReview]
+        permissions: [PermissionCode.ArchiveDeviceRead, PermissionCode.MgmtArchiveChangeReview]
       };
     }
 
-    if (username === 'verifier') {
+    if (username === 'fieldoperator') {
       return {
-        id: 'local-user-verifier',
+        id: 'local-user-fieldoperator',
         username,
-        displayName: 'verifier',
-        roles: [RoleCode.Verifier],
-        permissions: [PermissionCode.DeviceRead, PermissionCode.DeviceVerify]
-      };
-    }
-
-    if (username === 'reporter') {
-      return {
-        id: 'local-user-reporter',
-        username,
-        displayName: 'reporter',
-        roles: [RoleCode.FaultReporter],
+        displayName: 'fieldoperator',
+        roles: [RoleCode.FieldOperator],
         permissions: [
-          PermissionCode.DeviceRead,
-          PermissionCode.DeviceChangeRequestCreate,
-          PermissionCode.FaultReportCreate
+          PermissionCode.ArchiveDeviceRead,
+          PermissionCode.ArchiveChangeRequestCreate,
+          PermissionCode.OpsDeviceVerify,
+          PermissionCode.OpsFaultReportCreate
         ]
       };
     }
@@ -189,9 +180,9 @@ export class AuthService {
         displayName: 'maintainer',
         roles: [RoleCode.Maintainer],
         permissions: [
-          PermissionCode.DeviceRead,
-          PermissionCode.RepairTaskAccept,
-          PermissionCode.RepairReportCreate
+          PermissionCode.ArchiveDeviceRead,
+          PermissionCode.OpsRepairTaskAccept,
+          PermissionCode.OpsRepairReportCreate
         ]
       };
     }
@@ -202,7 +193,7 @@ export class AuthService {
         username,
         displayName: 'reinspector',
         roles: [RoleCode.Reinspector],
-        permissions: [PermissionCode.DeviceRead, PermissionCode.ReinspectionCreate]
+        permissions: [PermissionCode.ArchiveDeviceRead, PermissionCode.OpsReinspectionCreate]
       };
     }
 
@@ -212,7 +203,7 @@ export class AuthService {
         username,
         displayName: 'auditor',
         roles: [RoleCode.SupervisorAuditor],
-        permissions: [PermissionCode.DeviceRead, PermissionCode.AuditLogRead]
+        permissions: [PermissionCode.ArchiveDeviceRead, PermissionCode.MgmtAuditLogRead]
       };
     }
 
@@ -222,7 +213,7 @@ export class AuthService {
         username,
         displayName: 'readonly',
         roles: [RoleCode.ReadOnly],
-        permissions: [PermissionCode.DeviceRead]
+        permissions: [PermissionCode.ArchiveDeviceRead]
       };
     }
 
