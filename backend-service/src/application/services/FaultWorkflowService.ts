@@ -169,7 +169,13 @@ export class FaultWorkflowService {
   listMyRepairTasks(input: { actor: UserAccount; status?: RepairTaskStatus }) {
     return this.database.repairTasks
       .filter((task) => task.maintainerId === input.actor.id)
-      .filter((task) => input.status === undefined || task.status === input.status)
+      .filter((task) => {
+        if (input.status !== undefined) {
+          return task.status === input.status;
+        }
+
+        return task.status !== RepairTaskStatus.ReportSubmitted;
+      })
       .map((task) => {
         const fault = this.findFaultById(task.faultReportId);
         const device = this.findDeviceById(fault.deviceId);

@@ -46,6 +46,12 @@ struct OperationRecord {
     this.refreshRecords();
   }
 
+  onPageShow(): void {
+    if (AuthGuard.requireAuthenticated(this.getUIContext())) {
+      this.refreshRecords();
+    }
+  }
+
   build() {
     Scroll() {
       Column() {

@@ -234,6 +234,12 @@ test('routes severe repair through reinspection before restoring device status',
     assert.equal(repeatedRepairReport.status, 422);
     assert.equal(repeatedRepairReport.body.error.code, 'REPAIR_TASK_STATUS_INVALID');
 
+    const myTasksAfterReport = await client.request('GET', '/api/v1/repair-tasks/my', undefined, maintainerToken);
+    assert.equal(myTasksAfterReport.status, 200);
+    assert.equal(myTasksAfterReport.body.data.items.some((item: any) => {
+      return item.id === accepted.body.data.repairTaskId;
+    }), false);
+
     const pending = await client.request('GET', '/api/v1/reinspections/pending', undefined, reinspectorToken);
     assert.equal(pending.status, 200);
     assert.ok(pending.body.data.items.some((item: any) => item.faultReportId === created.body.data.id));

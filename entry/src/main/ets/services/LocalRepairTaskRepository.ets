@@ -1,4 +1,5 @@
 import { FaultReportForm, FaultReportRecord, FaultSeverity, FaultType } from '../models/FaultModels';
+import { DeviceStatus } from '../models/DeviceModels';
 import {
   AvailableRepairTaskListResult,
   AvailableRepairTaskSummary,
@@ -11,6 +12,9 @@ import {
   RepairTaskStatus
 } from '../models/RepairTaskModels';
 import { DeviceService } from './DeviceService';
+import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
+import { LocalReinspectionRepository } from './LocalReinspectionRepository';
+import { WorkbenchRefreshStore } from '../stores/WorkbenchRefreshStore';
 
 interface LocalRepairTaskSeed {
   id: string;
@@ -100,6 +104,8 @@ export class LocalRepairTaskRepository {
       submittedAt,
       status: RepairTaskStatus.Available
     });
+    LocalDeviceArchiveRepository.updateOperationalStatus(deviceCode, DeviceStatus.Faulted);
+    WorkbenchRefreshStore.notifyChanged();
 
     return record;
   }
@@ -146,6 +152,8 @@ export class LocalRepairTaskRepository {
       acceptedAt,
       status: RepairTaskStatus.Accepted
     });
+    LocalDeviceArchiveRepository.updateOperationalStatus(availableTask.deviceCode, DeviceStatus.UnderRepair);
+    WorkbenchRefreshStore.notifyChanged();
 
     return {
       taskId: taskNo,
@@ -180,6 +188,7 @@ export class LocalRepairTaskRepository {
     }
 
     task.status = RepairTaskStatus.ReportSubmitted;
+    LocalRepairTaskRepository.syncDeviceAfterRepairReport(task, form);
 
     const submittedAt = LocalRepairTaskRepository.formatDateTime(new Date());
     const sequenceText = LocalRepairTaskRepository.nextSequenceText();
@@ -191,6 +200,7 @@ export class LocalRepairTaskRepository {
       submittedAt
     };
     LocalRepairTaskRepository.reports.unshift(report);
+    WorkbenchRefreshStore.notifyChanged();
     return report;
   }
 
@@ -296,6 +306,32 @@ export class LocalRepairTaskRepository {
       default:
         return 9.5;
     }
+  }
+
+  private static syncDeviceAfterRepairReport(task: MyRepairTaskSummary, form: RepairReportForm): void {
+    if (form.result === RepairReportResult.Unresolved) {
+      LocalDeviceArchiveRepository.updateOperationalStatus(task.deviceCode, DeviceStatus.UnderRepair);
+      return;
+    }
+
+    if (LocalRepairTaskRepository.requiresReinspection(task.severity)) {
+      LocalDeviceArchiveRepository.updateOperationalStatus(task.deviceCode, DeviceStatus.PendingReinspection);
+      LocalReinspectionRepository.createPendingTask({
+        faultNo: task.faultNo,
+        deviceCode: task.deviceCode,
+        deviceName: task.deviceName,
+        severity: task.severity,
+        location: LocalRepairTaskRepository.resolveDeviceLocation(task.deviceCode),
+        repairedAt: form.repairedAt.trim()
+      });
+      return;
+    }
+
+    LocalDeviceArchiveRepository.updateOperationalStatus(task.deviceCode, DeviceStatus.Normal);
+  }
+
+  private static requiresReinspection(severity: FaultSeverity): boolean {
+    return severity === FaultSeverity.Emergency || severity === FaultSeverity.Severe;
   }
 
   private static nextSequenceText(): string {

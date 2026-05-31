@@ -2,10 +2,14 @@ import { FaultSeverity } from '../models/FaultModels';
 import {
   ReinspectionRecord,
   ReinspectionRecordForm,
+  ReinspectionResult,
   ReinspectionTaskListResult,
   ReinspectionTaskStatus,
   ReinspectionTaskSummary
 } from '../models/ReinspectionModels';
+import { DeviceStatus } from '../models/DeviceModels';
+import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
+import { WorkbenchRefreshStore } from '../stores/WorkbenchRefreshStore';
 
 const LOCAL_REINSPECTION_TASKS: ReinspectionTaskSummary[] = [
   {
@@ -32,12 +36,40 @@ const LOCAL_REINSPECTION_TASKS: ReinspectionTaskSummary[] = [
   }
 ];
 
+export interface LocalReinspectionTaskInput {
+  faultNo: string;
+  deviceCode: string;
+  deviceName: string;
+  severity: FaultSeverity;
+  location: string;
+  repairedAt: string;
+}
+
 export class LocalReinspectionRepository {
   private static tasks: ReinspectionTaskSummary[] = LOCAL_REINSPECTION_TASKS.map((item: ReinspectionTaskSummary) => {
     return LocalReinspectionRepository.cloneTask(item);
   });
   private static records: ReinspectionRecord[] = [];
   private static sequence: number = 100;
+
+  static createPendingTask(input: LocalReinspectionTaskInput): ReinspectionTaskSummary {
+    const sequenceText = LocalReinspectionRepository.nextSequenceText();
+    const task: ReinspectionTaskSummary = {
+      id: `local-reinspection-${sequenceText}`,
+      taskNo: `RDI-LOCAL-${sequenceText}`,
+      faultNo: input.faultNo,
+      deviceCode: input.deviceCode,
+      deviceName: input.deviceName,
+      severity: input.severity,
+      location: input.location,
+      repairedAt: input.repairedAt,
+      status: ReinspectionTaskStatus.Pending
+    };
+
+    LocalReinspectionRepository.tasks.unshift(task);
+    WorkbenchRefreshStore.notifyChanged();
+    return LocalReinspectionRepository.cloneTask(task);
+  }
 
   static queryPendingTasks(): ReinspectionTaskListResult {
     const items = LocalReinspectionRepository.tasks
@@ -65,6 +97,8 @@ export class LocalReinspectionRepository {
     }
 
     task.status = ReinspectionTaskStatus.Completed;
+    LocalDeviceArchiveRepository.updateOperationalStatus(task.deviceCode,
+      form.result === ReinspectionResult.Passed ? DeviceStatus.Normal : DeviceStatus.Faulted);
     const submittedAt = new Date().toISOString();
     const sequenceText = LocalReinspectionRepository.nextSequenceText();
     const record: ReinspectionRecord = {
@@ -75,6 +109,7 @@ export class LocalReinspectionRepository {
       submittedAt
     };
     LocalReinspectionRepository.records.unshift(record);
+    WorkbenchRefreshStore.notifyChanged();
     return record;
   }
 

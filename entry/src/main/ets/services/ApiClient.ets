@@ -1,6 +1,7 @@
 import { http } from '@kit.NetworkKit';
 import { ApiErrorCode, ApiRequestOptions, ApiResponse } from '../models/ApiModels';
 import { SessionStore } from '../stores/SessionStore';
+import { WorkbenchRefreshStore } from '../stores/WorkbenchRefreshStore';
 
 const DEFAULT_API_BASE_URL = '';
 const API_BASE_URL_STORAGE_KEY = 'rdvp_api_base_url';
@@ -93,6 +94,7 @@ export class ApiClient {
     ApiClient.ensureInitialized();
     ApiClient.baseUrl = ApiClient.normalizeBaseUrl(baseUrl);
     ApiClient.persistBaseUrl(ApiClient.baseUrl);
+    WorkbenchRefreshStore.notifyChanged();
   }
 
   private static ensureInitialized(): void {

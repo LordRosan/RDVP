@@ -59,6 +59,26 @@ export class LocalDeviceArchiveRepository {
     return count;
   }
 
+  static updateOperationalStatus(deviceCode: string, status: DeviceStatus): void {
+    const device = LocalDeviceArchiveRepository.findMutableByCode(deviceCode);
+    if (device === undefined || device.status === status) {
+      return;
+    }
+
+    device.status = status;
+    WorkbenchRefreshStore.notifyChanged();
+  }
+
+  static updateLastVerificationTime(deviceCode: string, verifiedAt: string): void {
+    const device = LocalDeviceArchiveRepository.findMutableByCode(deviceCode);
+    if (device === undefined) {
+      return;
+    }
+
+    device.lastVerificationTime = verifiedAt;
+    WorkbenchRefreshStore.notifyChanged();
+  }
+
   static applyApprovedChange(deviceCode: string, changes: DeviceArchiveChangeFieldDiff[], freezeUntil: string): void {
     const device = LocalDeviceArchiveRepository.findMutableByCode(deviceCode);
     if (device === undefined) {

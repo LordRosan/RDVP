@@ -4,6 +4,7 @@ import {
   OperationRecordSummary,
   OperationRecordType
 } from '../models/OperationRecordModels';
+import { WorkbenchRefreshStore } from '../stores/WorkbenchRefreshStore';
 
 const LOCAL_OPERATION_SEEDS: OperationRecordSummary[] = [
   {
@@ -49,6 +50,7 @@ export class LocalOperationRecordRepository {
     };
 
     LocalOperationRecordRepository.records.unshift(record);
+    WorkbenchRefreshStore.notifyChanged();
     return LocalOperationRecordRepository.cloneRecord(record);
   }
 

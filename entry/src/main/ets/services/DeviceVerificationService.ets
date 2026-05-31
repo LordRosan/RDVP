@@ -8,6 +8,7 @@ import {
 } from '../models/VerificationModels';
 import { ApiClient } from './ApiClient';
 import { DeviceService } from './DeviceService';
+import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
 import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
 
 const MAX_DESCRIPTION_LENGTH = 500;
@@ -203,6 +204,7 @@ export class DeviceVerificationService {
 
     LocalOperationRecordRepository.append(OperationRecordType.DeviceVerification, '提交状态核验', deviceCode,
       `核验结果：${DeviceVerificationService.formatVerificationResult(form.result)}`);
+    LocalDeviceArchiveRepository.updateLastVerificationTime(deviceCode, submittedAt);
     return {
       success: true,
       data: record,

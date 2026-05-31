@@ -36,6 +36,7 @@ struct ReinspectionTask {
   @State recordMessageTone: string = '#D9480F';
   @State refreshStatus: string = '未刷新';
   @State normalizedTaskId: string = '-';
+  @State submittedReinspectionTaskId: string = '';
   @State refreshing: boolean = false;
   @State submitting: boolean = false;
   private reinspectionInfoDialogController: CustomDialogController = new CustomDialogController({
@@ -299,6 +300,9 @@ struct ReinspectionTask {
       .onClick(() => {
         this.taskId = item.taskNo;
         this.normalizedTaskId = item.taskNo;
+        if (this.normalizedTaskId !== this.submittedReinspectionTaskId) {
+          this.submittedReinspectionTaskId = '';
+        }
         this.recordMessage = '';
         this.recordMessageTone = '#D9480F';
       })
@@ -318,7 +322,7 @@ struct ReinspectionTask {
       this.ReinspectedAtField()
       this.DescriptionField()
       this.RecordMessageText()
-      this.ActionButton(this.submitting ? '提交中' : '提交复检', $r('sys.symbol.checkmark_circle'), !this.submitting,
+      this.ActionButton(this.getSubmitButtonLabel(), $r('sys.symbol.checkmark_circle'), this.canSubmitRecord(),
         () => {
           this.submitRecord();
         })
@@ -361,6 +365,9 @@ struct ReinspectionTask {
           this.normalizedTaskId = value.trim().toUpperCase();
           if (this.normalizedTaskId.length === 0) {
             this.normalizedTaskId = '-';
+          }
+          if (this.normalizedTaskId !== this.submittedReinspectionTaskId) {
+            this.submittedReinspectionTaskId = '';
           }
           this.recordMessage = '';
           this.recordMessageTone = '#D9480F';
@@ -570,7 +577,7 @@ struct ReinspectionTask {
 
   @Builder
   ActionButton(label: string, icon: Resource, enabled: boolean, action: () => void) {
-    Button({ type: ButtonType.Capsule, stateEffect: true }) {
+    Button({ type: ButtonType.Capsule, stateEffect: enabled }) {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
           .fontSize(20)
@@ -588,7 +595,7 @@ struct ReinspectionTask {
     }
     .height(54)
     .width('100%')
-    .backgroundColor('#2F6FED')
+    .backgroundColor(enabled ? '#2F6FED' : '#AEB6C2')
     .enabled(enabled)
     .onClick(() => {
       action();
@@ -644,7 +651,7 @@ struct ReinspectionTask {
   }
 
   async submitRecord(): Promise<void> {
-    if (this.submitting) {
+    if (this.submitting || this.isSelectedReinspectionTaskSubmitted()) {
       return;
     }
 
@@ -672,10 +679,31 @@ struct ReinspectionTask {
     const recordNo = response.data ? response.data.recordNo : '';
     this.recordMessage = recordNo.length > 0 ? `复检记录已提交：${recordNo}` : '复检记录已提交';
     this.recordMessageTone = '#087F5B';
+    this.submittedReinspectionTaskId = this.normalizedTaskId;
     this.taskItems = this.taskItems.filter((item: ReinspectionTaskSummary) => {
       return item.taskNo !== this.normalizedTaskId && item.id !== this.normalizedTaskId;
     });
     this.refreshStatus = '已更新';
+  }
+
+  getSubmitButtonLabel(): string {
+    if (this.submitting) {
+      return '提交中';
+    }
+
+    if (this.isSelectedReinspectionTaskSubmitted()) {
+      return '已提交';
+    }
+
+    return '提交复检';
+  }
+
+  canSubmitRecord(): boolean {
+    return !this.submitting && !this.isSelectedReinspectionTaskSubmitted();
+  }
+
+  isSelectedReinspectionTaskSubmitted(): boolean {
+    return this.submittedReinspectionTaskId.length > 0 && this.normalizedTaskId === this.submittedReinspectionTaskId;
   }
 
   showReinspectedAtPicker(): void {

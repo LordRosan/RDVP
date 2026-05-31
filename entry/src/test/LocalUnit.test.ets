@@ -396,6 +396,12 @@ export default function localUnitTest() {
       expect(response.success).assertEqual(true);
       expect(response.data?.deviceCode).assertEqual('RDVP-DEVICE-0001');
       expect(response.data?.result).assertEqual(VerificationResult.Normal);
+
+      const deviceResponse = DeviceService.queryByCode({
+        deviceCode: 'RDVP-DEVICE-0001'
+      });
+      expect(deviceResponse.success).assertEqual(true);
+      expect(deviceResponse.data?.lastVerificationTime).assertEqual(response.data?.submittedAt);
     });
   });
 
@@ -456,6 +462,7 @@ export default function localUnitTest() {
     });
 
     it('submitsLocalFaultReportWhenBackendUnconfigured', 0, () => {
+      const pendingFaultCountBefore = WorkbenchService.getPendingFaultCount();
       const response = FaultReportService.submitFaultReport({
         deviceCode: 'RDVP-DEVICE-0001',
         faultType: FaultType.OperationAbnormal,
@@ -468,6 +475,12 @@ export default function localUnitTest() {
       expect(response.success).assertEqual(true);
       expect(response.data?.deviceCode).assertEqual('RDVP-DEVICE-0001');
       expect(response.data?.status).assertEqual('PENDING_ACCEPTANCE');
+      expect(WorkbenchService.getPendingFaultCount()).assertEqual(pendingFaultCountBefore + 1);
+
+      const deviceResponse = DeviceService.queryByCode({
+        deviceCode: 'RDVP-DEVICE-0001'
+      });
+      expect(deviceResponse.data?.status).assertEqual(DeviceStatus.Faulted);
     });
 
     it('formatsUpdatedFaultCategories', 0, () => {
@@ -531,6 +544,7 @@ export default function localUnitTest() {
     });
 
     it('acceptsAndReportsLocalRepairTaskWhenBackendUnconfigured', 0, () => {
+      const pendingFaultCountBefore = WorkbenchService.getPendingFaultCount();
       const listResponse = RepairTaskService.queryAvailableRepairTasks({
         radiusKm: 10,
         availability: RepairerAvailability.Idle
@@ -543,6 +557,7 @@ export default function localUnitTest() {
 
       const acceptResponse = RepairTaskService.acceptRepairTask(taskId);
       expect(acceptResponse.success).assertEqual(true);
+      expect(WorkbenchService.getPendingFaultCount() < pendingFaultCountBefore).assertEqual(true);
       const acceptedTaskId = acceptResponse.data?.taskId;
       if (acceptedTaskId === undefined) {
         expect(true).assertEqual(false);
@@ -572,6 +587,56 @@ export default function localUnitTest() {
 
       expect(repeatedReportResponse.success).assertEqual(false);
       expect(repeatedReportResponse.error?.message).assertEqual('维修任务不存在或已完成');
+    });
+
+    it('syncsSevereLocalRepairReportToReinspectionTask', 0, () => {
+      const pendingFaultCountBefore = WorkbenchService.getPendingFaultCount();
+      const pendingReinspectionCountBefore = WorkbenchService.getPendingReinspectionCount();
+      const faultResponse = FaultReportService.submitFaultReport({
+        deviceCode: 'RDVP-DEVICE-0003',
+        faultType: FaultType.CommunicationFault,
+        severity: FaultSeverity.Severe,
+        occurredAt: '2026-05-29 13:00',
+        description: '通信网关连续掉线，需要维修人员处理。',
+        sceneCondition: '现场已切换本地备用链路。'
+      });
+
+      expect(faultResponse.success).assertEqual(true);
+      expect(WorkbenchService.getPendingFaultCount()).assertEqual(pendingFaultCountBefore + 1);
+      const faultNo = faultResponse.data?.reportNo;
+      if (faultNo === undefined) {
+        expect(true).assertEqual(false);
+        return;
+      }
+
+      const acceptResponse = RepairTaskService.acceptRepairTask(faultNo);
+      expect(acceptResponse.success).assertEqual(true);
+      expect(WorkbenchService.getPendingFaultCount()).assertEqual(pendingFaultCountBefore);
+      const acceptedTaskId = acceptResponse.data?.taskId;
+      if (acceptedTaskId === undefined) {
+        expect(true).assertEqual(false);
+        return;
+      }
+
+      const repairingDevice = DeviceService.queryByCode({
+        deviceCode: 'RDVP-DEVICE-0003'
+      });
+      expect(repairingDevice.data?.status).assertEqual(DeviceStatus.UnderRepair);
+
+      const reportResponse = RepairTaskService.submitRepairReport({
+        taskId: acceptedTaskId,
+        result: RepairReportResult.Repaired,
+        repairedAt: '2026-05-29 14:10',
+        processDescription: '已更换通信模块并完成现场连通性验证。',
+        partsUsed: '通信模块 1 个'
+      });
+
+      expect(reportResponse.success).assertEqual(true);
+      expect(WorkbenchService.getPendingReinspectionCount()).assertEqual(pendingReinspectionCountBefore + 1);
+      const pendingDevice = DeviceService.queryByCode({
+        deviceCode: 'RDVP-DEVICE-0003'
+      });
+      expect(pendingDevice.data?.status).assertEqual(DeviceStatus.PendingReinspection);
     });
 
     it('rejectsEmptyRepairTaskAcceptId', 0, () => {
@@ -647,6 +712,7 @@ export default function localUnitTest() {
     });
 
     it('submitsLocalReinspectionRecordWhenBackendUnconfigured', 0, () => {
+      const pendingReinspectionCountBefore = WorkbenchService.getPendingReinspectionCount();
       const listResponse = ReinspectionService.queryPendingTasks();
       const taskId = listResponse.data?.items[0].taskNo;
       if (taskId === undefined) {
@@ -663,6 +729,16 @@ export default function localUnitTest() {
 
       expect(response.success).assertEqual(true);
       expect(response.data?.taskId).assertEqual(taskId);
+      expect(WorkbenchService.getPendingReinspectionCount()).assertEqual(pendingReinspectionCountBefore - 1);
+
+      const repeatedResponse = ReinspectionService.submitRecord({
+        taskId,
+        result: ReinspectionResult.Passed,
+        reinspectedAt: '2026-05-29 14:40',
+        description: '重复提交同一复检任务记录。'
+      });
+      expect(repeatedResponse.success).assertEqual(false);
+      expect(repeatedResponse.error?.message).assertEqual('复检任务不存在或已完成');
     });
   });
 

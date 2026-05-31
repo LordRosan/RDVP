@@ -1,5 +1,6 @@
 import { AuthSession, RoleCode } from '../models/AuthModels';
 import { CurrentUserSnapshot, SessionState } from '../models/SessionModels';
+import { WorkbenchRefreshStore } from './WorkbenchRefreshStore';
 
 const SESSION_STORAGE_KEY = 'rdvp_auth_session';
 
@@ -30,6 +31,7 @@ export class SessionStore {
       session
     };
     SessionStore.persistSession(session);
+    WorkbenchRefreshStore.notifyChanged();
   }
 
   static clearSession(): void {
@@ -37,6 +39,7 @@ export class SessionStore {
       authenticated: false
     };
     SessionStore.persistSession(undefined);
+    WorkbenchRefreshStore.notifyChanged();
   }
 
   static getCurrentUser(): CurrentUserSnapshot {
