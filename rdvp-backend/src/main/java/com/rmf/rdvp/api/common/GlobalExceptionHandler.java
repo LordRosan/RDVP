@@ -2,6 +2,8 @@ package com.rmf.rdvp.api.common;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -18,6 +20,8 @@ import jakarta.validation.ConstraintViolationException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(BusinessException.class)
     ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException exception, HttpServletRequest request) {
@@ -72,6 +76,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiResponse<Void>> handleUnexpected(Exception exception, HttpServletRequest request) {
+        LOGGER.error(
+                "Unhandled API exception. requestId={}, method={}, path={}",
+                RequestIds.resolve(request),
+                request.getMethod(),
+                request.getRequestURI(),
+                exception);
         return build(
                 ErrorCode.INTERNAL_ERROR.status(),
                 ErrorCode.INTERNAL_ERROR.code(),

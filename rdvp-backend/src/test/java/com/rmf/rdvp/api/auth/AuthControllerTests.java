@@ -44,6 +44,16 @@ class AuthControllerTests {
     }
 
     @Test
+    void normalizesUsernameBeforeLogin() throws Exception {
+        String token = login(" FieldOperator ", "password");
+
+        mockMvc.perform(get("/api/v1/auth/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.username").value("fieldoperator"));
+    }
+
+    @Test
     void rejectsInvalidCredentials() throws Exception {
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

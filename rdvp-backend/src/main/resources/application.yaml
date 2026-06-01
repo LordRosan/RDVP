@@ -40,5 +40,7 @@ rdvp:
   service:
     name: ${RDVP_SERVICE_NAME:rdvp-backend}
     version: ${RDVP_SERVICE_VERSION:0.1.0}
+  bootstrap-users:
+    default-password: ${RDVP_BOOTSTRAP_PASSWORD:password}
   qr-code:
     signing-secret: ${RDVP_QR_SIGNING_SECRET:rdvp-local-development-secret}

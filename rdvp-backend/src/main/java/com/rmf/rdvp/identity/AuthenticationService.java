@@ -2,6 +2,7 @@ package com.rmf.rdvp.identity;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Locale;
 import java.util.Optional;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -32,7 +33,8 @@ public class AuthenticationService {
     }
 
     public LoginResponse login(LoginRequest request) {
-        BootstrapUser user = userStore.findByUsername(request.username())
+        String username = request.username().trim().toLowerCase(Locale.ROOT);
+        BootstrapUser user = userStore.findByUsername(username)
                 .filter(candidate -> passwordEncoder.matches(request.password(), candidate.passwordHash()))
                 .filter(candidate -> candidate.status() == UserStatus.ACTIVE)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));

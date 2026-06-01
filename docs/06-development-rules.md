@@ -14,8 +14,9 @@
 RDVP/
   AppScope/
   entry/
-  docs/
+  rdvp-backend/
   backend-service/
+  docs/
   database/
   deployment/
 ```

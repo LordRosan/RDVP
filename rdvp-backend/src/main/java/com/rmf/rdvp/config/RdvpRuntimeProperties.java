@@ -6,10 +6,15 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class RdvpRuntimeProperties {
 
     private final Service service = new Service();
+    private final BootstrapUsers bootstrapUsers = new BootstrapUsers();
     private final QrCode qrCode = new QrCode();
 
     public Service getService() {
         return service;
+    }
+
+    public BootstrapUsers getBootstrapUsers() {
+        return bootstrapUsers;
     }
 
     public QrCode getQrCode() {
@@ -37,6 +42,20 @@ public class RdvpRuntimeProperties {
         public void setVersion(String version) {
             if (version != null && !version.isBlank()) {
                 this.version = version;
+            }
+        }
+    }
+
+    public static class BootstrapUsers {
+        private String defaultPassword = "password";
+
+        public String getDefaultPassword() {
+            return defaultPassword;
+        }
+
+        public void setDefaultPassword(String defaultPassword) {
+            if (defaultPassword != null && !defaultPassword.isBlank()) {
+                this.defaultPassword = defaultPassword;
             }
         }
     }

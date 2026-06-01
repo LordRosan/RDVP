@@ -19,6 +19,7 @@ public class TokenSessionStore {
     private final ConcurrentMap<String, TokenSession> sessions = new ConcurrentHashMap<>();
 
     public String create(String userId, String clientDeviceId, Instant expiresAt) {
+        pruneExpiredSessions();
         String token = newToken();
         sessions.put(token, new TokenSession(token, userId, clientDeviceId, expiresAt, Instant.now()));
         return token;
@@ -40,6 +41,11 @@ public class TokenSessionStore {
 
     public void remove(String token) {
         sessions.remove(token);
+    }
+
+    private void pruneExpiredSessions() {
+        Instant now = Instant.now();
+        sessions.entrySet().removeIf(entry -> !entry.getValue().expiresAt().isAfter(now));
     }
 
     private String newToken() {

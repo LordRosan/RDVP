@@ -143,21 +143,23 @@ RDVP 采用移动端、后端服务、数据库和文件存储分层架构。
 
 ## 4. 后端分层建议
 
-后端服务建议采用清晰的分层结构：
+后端服务采用 Spring Boot 分层结构：
 
 ```text
-backend-service/
+rdvp-backend/
   src/
-    api/          接口入口和请求响应模型
-    application/ 业务用例编排
-    domain/      领域模型、状态规则和业务约束
-    infrastructure/
-                 数据库、文件存储、推送、外部服务适配
-    security/    认证、授权、凭证、密码和安全过滤
-    audit/       操作日志和审计事件
+    main/java/com/rmf/rdvp/
+      api/       HTTP 接口入口和请求响应模型
+      archive/   设备档案与二维码核验用例
+      identity/  身份认证、角色和权限模型
+      security/  安全过滤器和统一鉴权响应
+      config/    运行配置
+      domain/    跨领域通用模型和异常
+    main/resources/db/migration/
+      Flyway 数据库迁移
 ```
 
-当前 `backend-service` 的第一阶段实现使用内存型基础设施适配器，用于验证 API 边界、领域状态流转和本地开发流程。后续接入数据库时应保持 `application` 与 `domain` 层规则稳定，将持久化实现替换到 `infrastructure` 层。
+当前 `backend-service` 是早期 TypeScript 原型，用于保留业务流转验证样例；正式后端实现以 `rdvp-backend` 为准。后续新增故障、维修、复检、审计和附件能力时，应继续保持接口层、业务用例层、领域规则和基础设施适配的职责边界清晰。
 
 分层规则：
 
@@ -351,11 +353,10 @@ Web Admin Console
 
 以下技术选型后续需要单独确认：
 
-- 后端语言和框架。
-- 数据库类型。
+- 故障、维修、复检和审计 API 的 Spring Boot 实现顺序。
 - 文件存储方式。
 - 推送服务实现方式。
-- 二维码签名算法和密钥管理方式。
+- 二维码密钥轮换和密钥管理方式。
 - 离线草稿本地存储和加密方案。
 - 是否需要 Web 管理后台。
 - 是否需要多组织或多租户能力。

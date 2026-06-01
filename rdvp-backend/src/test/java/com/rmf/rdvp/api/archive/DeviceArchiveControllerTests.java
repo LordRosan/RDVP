@@ -83,6 +83,17 @@ class DeviceArchiveControllerTests {
     }
 
     @Test
+    void rejectsInvalidDeviceId() throws Exception {
+        String token = login("fieldoperator", "password");
+
+        mockMvc.perform(get("/api/v1/devices/bad$id")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"));
+    }
+
+    @Test
     void verifiesQrCodeAndReturnsDeviceArchive() throws Exception {
         String token = login("fieldoperator", "password");
 
@@ -133,6 +144,23 @@ class DeviceArchiveControllerTests {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("QR_CODE_EXPIRED"));
+    }
+
+    @Test
+    void rejectsMalformedQrCodeNonce() throws Exception {
+        String token = login("fieldoperator", "password");
+
+        mockMvc.perform(post("/api/v1/device-qrcodes/verify")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "qrContent": "RDVP:1:RDVP-DEVICE-0001:bad nonce:f36d5f8b2a520071a5955968704a6dd4017a01e6457f573527867e47813c2807"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("QR_CODE_INVALID"));
     }
 
     @Test

@@ -214,6 +214,12 @@ GET /api/v1/devices/by-code/{deviceCode}
 
 权限要求：`ARCHIVE_DEVICE_READ`
 
+当前设备编号格式：
+
+```text
+RDVP-DEVICE-0001
+```
+
 响应数据：
 
 ```json

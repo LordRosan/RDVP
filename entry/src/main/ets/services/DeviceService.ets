@@ -15,6 +15,9 @@ interface QrVerifyApiResult {
   device: DeviceSummary;
 }
 
+const DEVICE_CODE_PATTERN = /^RDVP-DEVICE-\d{4}$/;
+const QR_CONTENT_MAX_LENGTH = 512;
+
 export class DeviceService {
   static normalizeDeviceCode(deviceCode: string): string {
     return deviceCode.trim().toUpperCase();
@@ -22,7 +25,6 @@ export class DeviceService {
 
   static validateDeviceCodeQuery(form: DeviceCodeQueryForm): DeviceCodeValidationResult {
     const deviceCode = DeviceService.normalizeDeviceCode(form.deviceCode);
-    const pattern = /^[A-Z0-9][A-Z0-9_-]{2,63}$/;
 
     if (deviceCode.length === 0) {
       return {
@@ -31,10 +33,10 @@ export class DeviceService {
       };
     }
 
-    if (!pattern.test(deviceCode)) {
+    if (!DEVICE_CODE_PATTERN.test(deviceCode)) {
       return {
         valid: false,
-        message: '设备编号格式无效'
+        message: '设备编号格式应为 RDVP-DEVICE-0001'
       };
     }
 
@@ -58,7 +60,7 @@ export class DeviceService {
       };
     }
 
-    if (qrContent.length > 1024) {
+    if (qrContent.length > QR_CONTENT_MAX_LENGTH) {
       return {
         valid: false,
         message: '二维码内容过长'

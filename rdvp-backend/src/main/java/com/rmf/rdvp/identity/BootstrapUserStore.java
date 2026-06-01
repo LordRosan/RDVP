@@ -10,20 +10,22 @@ import java.util.stream.Collectors;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Repository;
 
+import com.rmf.rdvp.config.RdvpRuntimeProperties;
+
 @Repository
 public class BootstrapUserStore {
-
-    private static final String DEFAULT_PASSWORD = "password";
 
     private final Map<String, BootstrapUser> usersById;
     private final Map<String, BootstrapUser> usersByUsername;
 
-    public BootstrapUserStore(PasswordEncoder passwordEncoder) {
+    public BootstrapUserStore(PasswordEncoder passwordEncoder, RdvpRuntimeProperties runtimeProperties) {
+        String defaultPassword = runtimeProperties.getBootstrapUsers().getDefaultPassword();
         Set<PermissionCode> allPermissions = EnumSet.allOf(PermissionCode.class);
         Set<BootstrapUser> users = Set.of(
-                create(passwordEncoder, "usr-admin", "admin", "系统管理员", RoleCode.SYSTEM_ADMIN, allPermissions),
+                create(passwordEncoder, defaultPassword, "usr-admin", "admin", "系统管理员", RoleCode.SYSTEM_ADMIN, allPermissions),
                 create(
                         passwordEncoder,
+                        defaultPassword,
                         "usr-device-admin",
                         "deviceadmin",
                         "设备管理员",
@@ -32,6 +34,7 @@ public class BootstrapUserStore {
                         PermissionCode.MGMT_ARCHIVE_CHANGE_REVIEW),
                 create(
                         passwordEncoder,
+                        defaultPassword,
                         "usr-field-operator",
                         "fieldoperator",
                         "现场运维人员",
@@ -42,6 +45,7 @@ public class BootstrapUserStore {
                         PermissionCode.OPS_FAULT_REPORT_CREATE),
                 create(
                         passwordEncoder,
+                        defaultPassword,
                         "usr-maintainer",
                         "maintainer",
                         "维修人员",
@@ -51,6 +55,7 @@ public class BootstrapUserStore {
                         PermissionCode.OPS_REPAIR_REPORT_CREATE),
                 create(
                         passwordEncoder,
+                        defaultPassword,
                         "usr-reinspector",
                         "reinspector",
                         "复检人员",
@@ -59,6 +64,7 @@ public class BootstrapUserStore {
                         PermissionCode.OPS_REINSPECTION_CREATE),
                 create(
                         passwordEncoder,
+                        defaultPassword,
                         "usr-auditor",
                         "auditor",
                         "监督审计人员",
@@ -67,6 +73,7 @@ public class BootstrapUserStore {
                         PermissionCode.MGMT_AUDIT_LOG_READ),
                 create(
                         passwordEncoder,
+                        defaultPassword,
                         "usr-readonly",
                         "readonly",
                         "只读用户",
@@ -88,16 +95,18 @@ public class BootstrapUserStore {
 
     private BootstrapUser create(
             PasswordEncoder passwordEncoder,
+            String password,
             String id,
             String username,
             String displayName,
             RoleCode role,
             PermissionCode... permissions) {
-        return create(passwordEncoder, id, username, displayName, role, Set.of(permissions));
+        return create(passwordEncoder, password, id, username, displayName, role, Set.of(permissions));
     }
 
     private BootstrapUser create(
             PasswordEncoder passwordEncoder,
+            String password,
             String id,
             String username,
             String displayName,
@@ -106,7 +115,7 @@ public class BootstrapUserStore {
         return new BootstrapUser(
                 id,
                 username,
-                passwordEncoder.encode(DEFAULT_PASSWORD),
+                passwordEncoder.encode(password),
                 displayName,
                 UserStatus.ACTIVE,
                 Set.of(role),

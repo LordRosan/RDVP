@@ -12,6 +12,7 @@ interface ApiHttpHeaders {
   'Content-Type': string;
   'Accept': string;
   'X-Client-Version': string;
+  'X-Request-Id': string;
   'Authorization'?: string;
 }
 
@@ -143,6 +144,7 @@ export class ApiClient {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'X-Client-Version': CLIENT_VERSION,
+        'X-Request-Id': ApiClient.createRequestId(),
         'Authorization': `Bearer ${session.accessToken}`
       };
     }
@@ -150,8 +152,13 @@ export class ApiClient {
     return {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'X-Client-Version': CLIENT_VERSION
+      'X-Client-Version': CLIENT_VERSION,
+      'X-Request-Id': ApiClient.createRequestId()
     };
+  }
+
+  private static createRequestId(): string {
+    return `rdvp-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
   }
 
   private static toRequestMethod(method: string): http.RequestMethod {

@@ -10,7 +10,7 @@ RDVP Backend 是 RDVP 移动端应用的后端服务，负责认证、设备档�
 - Spring Security
 - Spring Boot Actuator
 - Spring Validation
-- MyBatis
+- Spring JDBC
 - PostgreSQL + PostGIS
 - Flyway
 - Maven
@@ -122,6 +122,7 @@ POST http://localhost:8080/api/v1/device-qrcodes/verify
 | `RDVP_DATASOURCE_PASSWORD` | `rdvp_dev_password` | 数据库密码 |
 | `RDVP_POSTGIS_IMAGE` | `postgis/postgis:17-3.5` | 本地 PostGIS 镜像 |
 | `RDVP_POSTGRES_PORT` | `5432` | 本地 PostgreSQL 映射端口 |
+| `RDVP_BOOTSTRAP_PASSWORD` | `password` | 本地引导账号默认密码 |
 | `RDVP_QR_SIGNING_SECRET` | `rdvp-local-development-secret` | 二维码 HMAC 签名密钥 |
 
 本地可复制 `.env.example` 为 `.env` 后按需修改，`.env` 不应提交到版本库。

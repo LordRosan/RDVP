@@ -20,9 +20,12 @@ import com.rmf.rdvp.domain.common.ErrorCode;
 public class DeviceArchiveService {
 
     private static final Pattern DEVICE_CODE_PATTERN = Pattern.compile("^RDVP-DEVICE-\\d{4}$");
+    private static final Pattern DEVICE_ID_PATTERN = Pattern.compile("^[A-Za-z0-9_-]{1,64}$");
+    private static final Pattern QR_NONCE_PATTERN = Pattern.compile("^[A-Za-z0-9._-]{1,128}$");
     private static final Pattern QR_SIGNATURE_PATTERN = Pattern.compile("^[0-9a-fA-F]{64}$");
     private static final String QR_PREFIX = "RDVP";
     private static final String QR_HMAC_ALGORITHM = "HmacSHA256";
+    private static final int MAX_QR_VERSION = 999;
 
     private final DeviceArchiveRepository archiveRepository;
     private final DeviceQrCodeRepository qrCodeRepository;
@@ -44,11 +47,11 @@ public class DeviceArchiveService {
     }
 
     public DeviceArchive findById(String deviceId) {
-        if (deviceId == null || deviceId.isBlank()) {
+        if (deviceId == null || !DEVICE_ID_PATTERN.matcher(deviceId.trim()).matches()) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "deviceId is required.");
         }
 
-        return archiveRepository.findById(deviceId)
+        return archiveRepository.findById(deviceId.trim())
                 .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
     }
 
@@ -109,11 +112,15 @@ public class DeviceArchiveService {
         }
 
         String signature = segments[4].trim();
-        if (version <= 0 || segments[3].isBlank() || !QR_SIGNATURE_PATTERN.matcher(signature).matches()) {
+        String nonce = segments[3].trim();
+        if (version <= 0
+                || version > MAX_QR_VERSION
+                || !QR_NONCE_PATTERN.matcher(nonce).matches()
+                || !QR_SIGNATURE_PATTERN.matcher(signature).matches()) {
             throw new BusinessException(ErrorCode.QR_CODE_INVALID);
         }
 
-        return new ParsedQrContent(version, normalizeDeviceCode(segments[2]), segments[3], signature.toLowerCase(Locale.ROOT));
+        return new ParsedQrContent(version, normalizeDeviceCode(segments[2]), nonce, signature.toLowerCase(Locale.ROOT));
     }
 
     private String buildSignature(int version, String deviceCode, String nonce) {
