@@ -212,6 +212,8 @@ POST /api/v1/auth/logout
 GET /api/v1/devices/by-code/{deviceCode}
 ```
 
+权限要求：`ARCHIVE_DEVICE_READ`
+
 响应数据：
 
 ```json
@@ -241,6 +243,8 @@ GET /api/v1/devices/by-code/{deviceCode}
 ```text
 GET /api/v1/devices/{deviceId}
 ```
+
+权限要求：`ARCHIVE_DEVICE_READ`
 
 响应数据：
 
@@ -292,6 +296,16 @@ GET /api/v1/devices
 POST /api/v1/device-qrcodes/verify
 ```
 
+权限要求：`ARCHIVE_DEVICE_READ`
+
+二维码内容格式：
+
+```text
+RDVP:<version>:<deviceCode>:<nonce>:<signature>
+```
+
+`signature` 使用 HMAC-SHA256 计算，签名原文为 `<version>:<deviceCode>:<nonce>`。服务端会同时校验设备编号、随机标识、二维码状态、过期时间和签名摘要。
+
 请求体：
 
 ```json
@@ -304,6 +318,8 @@ POST /api/v1/device-qrcodes/verify
   "scannedAt": "2026-05-27T07:30:00Z"
 }
 ```
+
+`scanLocation` 和 `scannedAt` 为预留字段，用于后续审计、风控和现场核验联动；当前最小实现只要求 `qrContent`。
 
 响应数据：
 
