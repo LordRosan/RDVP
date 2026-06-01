@@ -103,7 +103,7 @@ struct ArchiveCenter {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-        Text('查询设备档案并从详情发起变更')
+    Text('查询设备档案并从详情发起变更')
           .fontSize(15)
           .fontColor('#6B7280')
           .maxLines(1)
@@ -218,11 +218,18 @@ struct ArchiveCenter {
       return '-';
     }
 
+    if (SessionStore.hasPermission(PermissionCode.ArchiveDeviceCreate) ||
+      SessionStore.hasPermission(PermissionCode.ArchiveDeviceDelete)) {
+      return '可管理档案';
+    }
+
     return SessionStore.hasPermission(PermissionCode.ArchiveChangeRequestCreate) ? '可申请变更' : '仅查询';
   }
 
   getArchivePermissionTone(): string {
-    return SessionStore.hasPermission(PermissionCode.ArchiveChangeRequestCreate) ? '#2F6FED' : '#6B7280';
+    return SessionStore.hasPermission(PermissionCode.ArchiveChangeRequestCreate) ||
+      SessionStore.hasPermission(PermissionCode.ArchiveDeviceCreate) ||
+      SessionStore.hasPermission(PermissionCode.ArchiveDeviceDelete) ? '#2F6FED' : '#6B7280';
   }
 
   openFeature(action: WorkbenchAction): void {
@@ -232,6 +239,15 @@ struct ArchiveCenter {
         this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveQuery' });
       } catch (err) {
         this.message = '设备档案查询不可用';
+      }
+      return;
+    }
+
+    if (action.id === WorkbenchActionId.DeviceArchiveCreate) {
+      try {
+        this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveCreate' });
+      } catch (err) {
+        this.message = '添加设备档案不可用';
       }
       return;
     }

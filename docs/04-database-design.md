@@ -101,6 +101,7 @@ erDiagram
 | `updated_at` | datetime | 是 |  | 更新时间 |
 | `updated_by` | id | 否 | FK users.id | 更新人 |
 | `deleted_at` | datetime | 否 |  | 软删除时间 |
+| `deleted_reason` | text | 否 |  | 软删除原因 |
 
 用户状态：
 
@@ -323,7 +324,9 @@ INDEX(verifier_id, verified_at)
 | 字段 | 类型 | 必填 | 约束 | 说明 |
 | --- | --- | --- | --- | --- |
 | `id` | id | 是 | PK | 变更申请 ID |
-| `device_id` | id | 是 | FK devices.id, INDEX | 设备 ID |
+| `request_type` | string(32) | 是 |  | 申请类型：修改、添加、删除 |
+| `device_id` | id | 否 | FK devices.id, INDEX | 已存在设备 ID；添加档案申请可为空 |
+| `target_device_code` | string(64) | 否 | INDEX | 申请目标设备编号 |
 | `applicant_id` | id | 是 | FK users.id, INDEX | 申请人 |
 | `status` | string(32) | 是 | INDEX | 申请状态 |
 | `previous_device_status` | string(32) | 是 |  | 申请创建前设备状态 |
@@ -347,10 +350,6 @@ INDEX(verifier_id, verified_at)
   "location.address": {
     "oldValue": "Old address",
     "newValue": "New address"
-  },
-  "status": {
-    "oldValue": "NORMAL",
-    "newValue": "PENDING_VERIFICATION"
   }
 }
 ```
@@ -359,6 +358,7 @@ INDEX(verifier_id, verified_at)
 
 ```text
 INDEX(device_id, status)
+UNIQUE(target_device_code) WHERE status = 'PENDING_REVIEW'
 INDEX(applicant_id, created_at)
 INDEX(reviewer_id, reviewed_at)
 ```

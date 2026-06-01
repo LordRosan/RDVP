@@ -389,16 +389,17 @@ GET /api/v1/devices/{deviceId}/verification-records
 
 ## 9. 设备信息变更申请接口
 
-### 9.1 创建设备信息变更申请
+### 9.1 创建设备档案变更申请
 
 ```text
 POST /api/v1/device-change-requests
 ```
 
-请求体：
+修改档案请求体：
 
 ```json
 {
+  "type": "UPDATE",
   "deviceId": "device-id",
   "reason": "Location information is outdated.",
   "changes": {
@@ -410,7 +411,47 @@ POST /api/v1/device-change-requests
 }
 ```
 
-权限要求：`ARCHIVE_CHANGE_REQUEST_CREATE`
+添加档案请求体：
+
+```json
+{
+  "type": "CREATE",
+  "deviceCode": "RDVP-DEVICE-0099",
+  "reason": "New device installation.",
+  "changes": {
+    "name": {
+      "newValue": "Inspection Gateway G-99"
+    },
+    "model": {
+      "newValue": "IG-900"
+    },
+    "manufacturer": {
+      "newValue": "North Equipment"
+    },
+    "location.address": {
+      "newValue": "Plant 9 Inspection Area"
+    }
+  }
+}
+```
+
+删除档案请求体：
+
+```json
+{
+  "type": "DELETE",
+  "deviceId": "device-id",
+  "reason": "Device retired."
+}
+```
+
+权限要求：
+
+| 申请类型 | 权限 |
+| --- | --- |
+| `UPDATE` | `ARCHIVE_CHANGE_REQUEST_CREATE` |
+| `CREATE` | `ARCHIVE_DEVICE_CREATE` |
+| `DELETE` | `ARCHIVE_DEVICE_DELETE` |
 
 当前可变更字段：`name`、`model`、`manufacturer`、`location.address`。设备运行状态不通过档案变更申请直接修改，应由核验、故障、维修和复检流程驱动。
 
@@ -420,6 +461,8 @@ POST /api/v1/device-change-requests
 - 设备不处于变更冻结期。
 - 提交的新值与当前设备档案存在有效差异。
 - 申请中的 `oldValue` 必须与后端当前档案值一致，避免基于过期页面提交覆盖更新。
+- 添加和删除档案申请在审核通过前不直接写入或删除正式档案。
+- 同一设备或同一目标设备编号不存在待审核申请。
 
 响应数据：
 
@@ -462,6 +505,7 @@ POST /api/v1/device-change-requests/{requestId}/review
 ```json
 {
   "decision": "APPROVED",
+  "reviewedAt": "2026-05-27T07:30:00Z",
   "reviewComment": "Approved."
 }
 ```
@@ -477,7 +521,7 @@ POST /api/v1/device-change-requests/{requestId}/review
 }
 ```
 
-审核通过后，后端应用已审核的档案字段并设置 12 小时变更冻结期；审核驳回时必须保留驳回意见。
+审核通过后，后端按申请类型应用档案修改、添加或删除；修改档案申请通过后设置 12 小时变更冻结期。审核驳回时必须保留驳回意见。
 
 ## 10. 故障报告接口
 

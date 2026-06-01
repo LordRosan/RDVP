@@ -6,6 +6,7 @@ import {
   DeviceArchiveReviewForm,
   DeviceArchiveReviewItem,
   DeviceArchiveReviewListResult,
+  DeviceArchiveReviewRequestType,
   DeviceArchiveReviewResult
 } from '../models/DeviceArchiveReviewModels';
 import { ApiClient } from './ApiClient';
@@ -23,6 +24,7 @@ interface DeviceArchiveChangeApiValue {
 
 interface DeviceArchiveReviewApiItem {
   id: string;
+  type?: DeviceArchiveReviewRequestType;
   deviceId?: string;
   deviceCode: string;
   deviceName: string;
@@ -99,8 +101,20 @@ export class DeviceArchiveReviewService {
       };
     }
 
+    const reviewedAt = DeviceArchiveReviewService.toApiReviewedAt(form.reviewedAt);
+    if (reviewedAt.length === 0) {
+      return {
+        success: false,
+        error: {
+          code: 'CHANGE_REVIEW_TIME_INVALID',
+          message: '请选择审核时间'
+        }
+      };
+    }
+
     if (!ApiClient.isConfigured()) {
-      const result = LocalDeviceChangeRequestRepository.review(form.requestId, form.decision, form.reviewComment);
+      const result = LocalDeviceChangeRequestRepository.review(form.requestId, form.decision, form.reviewComment,
+        form.reviewedAt);
       if (result === undefined) {
         return {
           success: false,
@@ -125,9 +139,36 @@ export class DeviceArchiveReviewService {
       true,
       JSON.stringify({
         decision: form.decision,
+        reviewedAt,
         reviewComment: form.reviewComment.trim()
       })
     );
+  }
+
+  static formatRequestType(type: DeviceArchiveReviewRequestType): string {
+    switch (type) {
+      case DeviceArchiveReviewRequestType.Create:
+        return '添加档案';
+      case DeviceArchiveReviewRequestType.Delete:
+        return '删除档案';
+      case DeviceArchiveReviewRequestType.Update:
+        return '修改档案';
+      default:
+        return '-';
+    }
+  }
+
+  static getRequestTypeTone(type: DeviceArchiveReviewRequestType): string {
+    switch (type) {
+      case DeviceArchiveReviewRequestType.Create:
+        return '#087F5B';
+      case DeviceArchiveReviewRequestType.Delete:
+        return '#D9480F';
+      case DeviceArchiveReviewRequestType.Update:
+        return '#2F6FED';
+      default:
+        return '#374151';
+    }
   }
 
   static formatDecision(decision: DeviceArchiveReviewDecision): string {
@@ -185,6 +226,7 @@ export class DeviceArchiveReviewService {
   private static mapApiItem(item: DeviceArchiveReviewApiItem): DeviceArchiveReviewItem {
     return {
       id: item.id,
+      type: item.type === undefined ? DeviceArchiveReviewRequestType.Update : item.type,
       deviceId: item.deviceId,
       deviceCode: item.deviceCode,
       deviceName: item.deviceName,
@@ -211,5 +253,35 @@ export class DeviceArchiveReviewService {
     }
 
     return result;
+  }
+
+  private static toApiReviewedAt(value: string): string {
+    const date = DeviceArchiveReviewService.parseLocalDateTime(value);
+    return date === undefined ? '' : date.toISOString();
+  }
+
+  private static parseLocalDateTime(value: string): Date | undefined {
+    const trimmed = value.trim();
+    const segments = trimmed.split(' ');
+    if (segments.length !== 2) {
+      return undefined;
+    }
+
+    const dateSegments = segments[0].split('-');
+    const timeSegments = segments[1].split(':');
+    if (dateSegments.length !== 3 || timeSegments.length < 2) {
+      return undefined;
+    }
+
+    const year = Number(dateSegments[0]);
+    const month = Number(dateSegments[1]);
+    const day = Number(dateSegments[2]);
+    const hour = Number(timeSegments[0]);
+    const minute = Number(timeSegments[1]);
+    if (year !== year || month !== month || day !== day || hour !== hour || minute !== minute) {
+      return undefined;
+    }
+
+    return new Date(year, month - 1, day, hour, minute);
   }
 }

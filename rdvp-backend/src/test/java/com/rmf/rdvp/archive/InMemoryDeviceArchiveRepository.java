@@ -2,8 +2,10 @@ package com.rmf.rdvp.archive;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.context.annotation.Profile;
@@ -14,6 +16,7 @@ import org.springframework.stereotype.Repository;
 public class InMemoryDeviceArchiveRepository implements DeviceArchiveRepository {
 
     private final Map<String, DeviceArchive> devicesById = new ConcurrentHashMap<>();
+    private final Set<String> deletedDeviceCodes = java.util.Collections.synchronizedSet(new HashSet<>());
 
     public InMemoryDeviceArchiveRepository() {
         OffsetDateTime frozenUntil = OffsetDateTime.now().plusHours(12);
@@ -72,6 +75,44 @@ public class InMemoryDeviceArchiveRepository implements DeviceArchiveRepository 
     @Override
     public Optional<DeviceArchive> findById(String id) {
         return Optional.ofNullable(devicesById.get(id));
+    }
+
+    @Override
+    public boolean existsByCode(String deviceCode) {
+        if (deletedDeviceCodes.contains(deviceCode)) {
+            return true;
+        }
+
+        return devicesById.values()
+                .stream()
+                .anyMatch(device -> device.deviceCode().equals(deviceCode));
+    }
+
+    @Override
+    public void create(DeviceArchiveCreate create) {
+        devicesById.put(create.id(), new DeviceArchive(
+                create.id(),
+                create.deviceCode(),
+                create.name(),
+                create.model(),
+                create.manufacturer(),
+                create.status(),
+                create.address(),
+                create.longitude(),
+                create.latitude(),
+                null,
+                new DeviceArchive.ChangeState(false, null, null)));
+    }
+
+    @Override
+    public boolean softDelete(String id, String deletedBy, String deleteReason) {
+        DeviceArchive removed = devicesById.remove(id);
+        if (removed == null) {
+            return false;
+        }
+
+        deletedDeviceCodes.add(removed.deviceCode());
+        return true;
     }
 
     public void markPending(String deviceId, String requestId) {

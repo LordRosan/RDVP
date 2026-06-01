@@ -7,6 +7,7 @@
     "pages/OperationsCenter/OperationsCenter",
     "pages/ManagementCenter/ManagementCenter",
     "pages/ArchiveCenter/DeviceArchiveQuery",
+    "pages/ArchiveCenter/DeviceArchiveCreate",
     "pages/ArchiveCenter/DeviceArchiveDetail",
     "pages/ArchiveCenter/DeviceArchiveChange",
     "pages/OperationsCenter/DeviceVerification",

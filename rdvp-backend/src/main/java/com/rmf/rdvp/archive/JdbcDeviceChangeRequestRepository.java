@@ -60,7 +60,7 @@ public class JdbcDeviceChangeRequestRepository implements DeviceChangeRequestRep
                 """
                         SELECT count(*)
                         FROM device_change_requests cr
-                        JOIN devices d ON d.id = cr.device_id
+                        LEFT JOIN devices d ON d.id = cr.device_id
                         """
                         + where,
                 parameters,
@@ -78,6 +78,20 @@ public class JdbcDeviceChangeRequestRepository implements DeviceChangeRequestRep
                           AND status = 'PENDING_REVIEW'
                         """,
                 Map.of("deviceId", deviceId),
+                Integer.class);
+        return count != null && count > 0;
+    }
+
+    @Override
+    public boolean hasPendingByTargetDeviceCode(String deviceCode) {
+        Integer count = jdbcTemplate.queryForObject(
+                """
+                        SELECT count(*)
+                        FROM device_change_requests
+                        WHERE target_device_code = :deviceCode
+                          AND status = 'PENDING_REVIEW'
+                        """,
+                Map.of("deviceCode", deviceCode),
                 Integer.class);
         return count != null && count > 0;
     }
@@ -105,7 +119,9 @@ public class JdbcDeviceChangeRequestRepository implements DeviceChangeRequestRep
                 """
                         INSERT INTO device_change_requests (
                             id,
+                            request_type,
                             device_id,
+                            target_device_code,
                             applicant_id,
                             status,
                             previous_device_status,
@@ -117,7 +133,9 @@ public class JdbcDeviceChangeRequestRepository implements DeviceChangeRequestRep
                             updated_by
                         ) VALUES (
                             :id,
+                            :requestType,
                             :deviceId,
+                            :targetDeviceCode,
                             :applicantId,
                             'PENDING_REVIEW',
                             :previousDeviceStatus,
@@ -131,7 +149,9 @@ public class JdbcDeviceChangeRequestRepository implements DeviceChangeRequestRep
                         """,
                 new MapSqlParameterSource()
                         .addValue("id", request.id())
+                        .addValue("requestType", request.type().name())
                         .addValue("deviceId", request.deviceId())
+                        .addValue("targetDeviceCode", request.targetDeviceCode())
                         .addValue("applicantId", request.applicantId())
                         .addValue("previousDeviceStatus", request.previousDeviceStatus())
                         .addValue("reason", request.reason())
@@ -188,6 +208,33 @@ public class JdbcDeviceChangeRequestRepository implements DeviceChangeRequestRep
     }
 
     @Override
+    public void markApprovedReview(
+            String requestId,
+            String reviewerId,
+            String reviewComment,
+            OffsetDateTime reviewedAt,
+            OffsetDateTime freezeUntil) {
+        jdbcTemplate.update(
+                """
+                        UPDATE device_change_requests
+                        SET status = 'APPROVED',
+                            reviewer_id = :reviewerId,
+                            review_comment = :reviewComment,
+                            reviewed_at = :reviewedAt,
+                            freeze_until = :freezeUntil,
+                            updated_at = :reviewedAt,
+                            updated_by = :reviewerId
+                        WHERE id = :requestId
+                        """,
+                new MapSqlParameterSource()
+                        .addValue("requestId", requestId)
+                        .addValue("reviewerId", reviewerId)
+                        .addValue("reviewComment", reviewComment)
+                        .addValue("reviewedAt", reviewedAt)
+                        .addValue("freezeUntil", freezeUntil));
+    }
+
+    @Override
     public void applyRejectedReview(
             String requestId,
             String reviewerId,
@@ -215,8 +262,9 @@ public class JdbcDeviceChangeRequestRepository implements DeviceChangeRequestRep
         return """
                 SELECT
                     cr.id,
+                    cr.request_type,
                     cr.device_id,
-                    d.device_code,
+                    COALESCE(d.device_code, cr.target_device_code) AS device_code,
                     d.name AS device_name,
                     cr.applicant_id,
                     cr.status,
@@ -228,7 +276,7 @@ public class JdbcDeviceChangeRequestRepository implements DeviceChangeRequestRep
                     cr.reviewed_at,
                     cr.freeze_until
                 FROM device_change_requests cr
-                JOIN devices d ON d.id = cr.device_id
+                LEFT JOIN devices d ON d.id = cr.device_id
                 """;
     }
 
@@ -240,7 +288,7 @@ public class JdbcDeviceChangeRequestRepository implements DeviceChangeRequestRep
         }
 
         if (query.deviceCode() != null && !query.deviceCode().isBlank()) {
-            conditions.add("d.device_code = :deviceCode");
+            conditions.add("COALESCE(d.device_code, cr.target_device_code) = :deviceCode");
             parameters.addValue("deviceCode", query.deviceCode());
         }
 
@@ -257,21 +305,36 @@ public class JdbcDeviceChangeRequestRepository implements DeviceChangeRequestRep
     }
 
     private DeviceChangeRequest mapChangeRequest(ResultSet resultSet, int rowNumber) throws SQLException {
+        Map<String, DeviceChangeValue> changes = readChanges(resultSet.getString("changes"));
         return new DeviceChangeRequest(
                 resultSet.getString("id"),
+                DeviceChangeRequestType.valueOf(resultSet.getString("request_type")),
                 resultSet.getString("device_id"),
                 resultSet.getString("device_code"),
-                resultSet.getString("device_name"),
+                resolveDeviceName(resultSet.getString("device_name"), changes),
                 resultSet.getString("applicant_id"),
                 null,
                 DeviceChangeRequestStatus.valueOf(resultSet.getString("status")),
                 resultSet.getString("reason"),
-                readChanges(resultSet.getString("changes")),
+                changes,
                 resultSet.getObject("created_at", OffsetDateTime.class),
                 resultSet.getString("reviewer_id"),
                 resultSet.getString("review_comment"),
                 resultSet.getObject("reviewed_at", OffsetDateTime.class),
                 resultSet.getObject("freeze_until", OffsetDateTime.class));
+    }
+
+    private String resolveDeviceName(String deviceName, Map<String, DeviceChangeValue> changes) {
+        if (deviceName != null && !deviceName.isBlank()) {
+            return deviceName;
+        }
+
+        DeviceChangeValue nameChange = changes.get("name");
+        if (nameChange != null && nameChange.newValue() != null && !nameChange.newValue().isBlank()) {
+            return nameChange.newValue();
+        }
+
+        return "-";
     }
 
     private String writeChanges(Map<String, DeviceChangeValue> changes) {

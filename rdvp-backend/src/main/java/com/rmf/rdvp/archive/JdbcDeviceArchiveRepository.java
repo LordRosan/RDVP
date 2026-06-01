@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.context.annotation.Profile;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -93,6 +94,86 @@ public class JdbcDeviceArchiveRepository implements DeviceArchiveRepository {
                 Map.of("id", id),
                 this::mapDeviceArchive);
         return results.stream().findFirst();
+    }
+
+    @Override
+    public boolean existsByCode(String deviceCode) {
+        Integer count = jdbcTemplate.queryForObject(
+                """
+                        SELECT count(*)
+                        FROM devices
+                        WHERE device_code = :deviceCode
+                        """,
+                Map.of("deviceCode", deviceCode),
+                Integer.class);
+        return count != null && count > 0;
+    }
+
+    @Override
+    public void create(DeviceArchiveCreate create) {
+        jdbcTemplate.update(
+                """
+                        INSERT INTO devices (
+                            id,
+                            device_code,
+                            name,
+                            model,
+                            manufacturer,
+                            status,
+                            address,
+                            longitude,
+                            latitude,
+                            created_at,
+                            created_by,
+                            updated_at,
+                            updated_by
+                        ) VALUES (
+                            :id,
+                            :deviceCode,
+                            :name,
+                            :model,
+                            :manufacturer,
+                            :status,
+                            :address,
+                            :longitude,
+                            :latitude,
+                            :createdAt,
+                            :createdBy,
+                            :createdAt,
+                            :createdBy
+                        )
+                        """,
+                new MapSqlParameterSource()
+                        .addValue("id", create.id())
+                        .addValue("deviceCode", create.deviceCode())
+                        .addValue("name", create.name())
+                        .addValue("model", create.model())
+                        .addValue("manufacturer", create.manufacturer())
+                        .addValue("status", create.status())
+                        .addValue("address", create.address())
+                        .addValue("longitude", create.longitude())
+                        .addValue("latitude", create.latitude())
+                        .addValue("createdAt", create.createdAt())
+                        .addValue("createdBy", create.createdBy()));
+    }
+
+    @Override
+    public boolean softDelete(String id, String deletedBy, String deleteReason) {
+        int updated = jdbcTemplate.update(
+                """
+                        UPDATE devices
+                        SET deleted_at = now(),
+                            deleted_reason = NULLIF(:deleteReason, ''),
+                            updated_at = now(),
+                            updated_by = :deletedBy
+                        WHERE id = :id
+                          AND deleted_at IS NULL
+                        """,
+                new MapSqlParameterSource()
+                        .addValue("id", id)
+                        .addValue("deletedBy", deletedBy)
+                        .addValue("deleteReason", deleteReason));
+        return updated > 0;
     }
 
     private DeviceArchive mapDeviceArchive(ResultSet resultSet, int rowNumber) throws SQLException {

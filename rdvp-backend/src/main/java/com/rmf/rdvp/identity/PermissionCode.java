@@ -2,6 +2,8 @@ package com.rmf.rdvp.identity;
 
 public enum PermissionCode {
     ARCHIVE_DEVICE_READ,
+    ARCHIVE_DEVICE_CREATE,
+    ARCHIVE_DEVICE_DELETE,
     ARCHIVE_CHANGE_REQUEST_CREATE,
     OPS_DEVICE_VERIFY,
     OPS_FAULT_REPORT_CREATE,

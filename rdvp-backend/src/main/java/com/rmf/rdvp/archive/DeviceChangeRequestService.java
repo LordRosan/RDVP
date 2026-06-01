@@ -16,13 +16,16 @@ import com.rmf.rdvp.domain.common.BusinessException;
 import com.rmf.rdvp.domain.common.ErrorCode;
 import com.rmf.rdvp.identity.AuthenticatedUser;
 import com.rmf.rdvp.identity.BootstrapUserStore;
+import com.rmf.rdvp.identity.PermissionCode;
 
 @Service
 public class DeviceChangeRequestService {
 
     private static final Duration CHANGE_FREEZE_DURATION = Duration.ofHours(12);
     private static final Pattern REQUEST_ID_PATTERN = Pattern.compile("^[A-Za-z0-9_-]{1,64}$");
+    private static final Pattern DEVICE_CODE_PATTERN = Pattern.compile("^RDVP-DEVICE-\\d{4}$");
     private static final Set<String> SUPPORTED_FIELDS = Set.of("name", "model", "manufacturer", "location.address");
+    private static final Set<String> DELETE_BLOCKING_STATUSES = Set.of("FAULTED", "UNDER_REPAIR", "PENDING_REINSPECTION");
 
     private final DeviceArchiveRepository archiveRepository;
     private final DeviceChangeRequestRepository changeRequestRepository;
@@ -39,35 +42,18 @@ public class DeviceChangeRequestService {
 
     @Transactional
     public DeviceChangeRequest create(
+            DeviceChangeRequestType type,
             String deviceId,
+            String deviceCode,
             String reason,
             Map<String, DeviceChangeValue> changes,
             AuthenticatedUser applicant) {
-        DeviceArchive device = archiveRepository.findById(normalizeRequiredId(deviceId, "deviceId"))
-                .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
-        OffsetDateTime now = now();
-
-        if (changeRequestRepository.hasPendingByDeviceId(device.id())) {
-            throw new BusinessException(ErrorCode.DEVICE_CHANGE_LOCKED);
-        }
-
-        if (changeRequestRepository.findActiveFreezeUntil(device.id(), now).isPresent()) {
-            throw new BusinessException(ErrorCode.DEVICE_CHANGE_FROZEN);
-        }
-
-        Map<String, DeviceChangeValue> normalizedChanges = normalizeAndValidateChanges(device, changes);
-        String normalizedReason = normalizeRequiredText(reason, "reason", 500);
-        String requestId = "DCR-" + UUID.randomUUID();
-        changeRequestRepository.create(new DeviceChangeRequestCreate(
-                requestId,
-                device.id(),
-                applicant.id(),
-                device.status(),
-                normalizedReason,
-                normalizedChanges,
-                now));
-        return enrichApplicantName(changeRequestRepository.findById(requestId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR)));
+        DeviceChangeRequestType requestType = type == null ? DeviceChangeRequestType.UPDATE : type;
+        return switch (requestType) {
+            case UPDATE -> createUpdateRequest(deviceId, reason, changes, applicant);
+            case CREATE -> createArchiveCreateRequest(deviceCode, reason, changes, applicant);
+            case DELETE -> createArchiveDeleteRequest(deviceId, reason, applicant);
+        };
     }
 
     public DeviceChangeRequestPage list(
@@ -96,6 +82,7 @@ public class DeviceChangeRequestService {
     public DeviceChangeRequest review(
             String requestId,
             DeviceChangeReviewDecision decision,
+            String reviewedAtText,
             String reviewComment,
             AuthenticatedUser reviewer) {
         String normalizedRequestId = normalizeRequiredId(requestId, "requestId");
@@ -106,7 +93,7 @@ public class DeviceChangeRequestService {
             throw new BusinessException(ErrorCode.CHANGE_REQUEST_ALREADY_REVIEWED);
         }
 
-        OffsetDateTime reviewedAt = now();
+        OffsetDateTime reviewedAt = parseReviewedAt(reviewedAtText);
         String normalizedComment = reviewComment == null ? "" : reviewComment.trim();
         if (decision == DeviceChangeReviewDecision.REJECTED && normalizedComment.isBlank()) {
             throw new BusinessException(
@@ -115,17 +102,7 @@ public class DeviceChangeRequestService {
         }
 
         if (decision == DeviceChangeReviewDecision.APPROVED) {
-            DeviceArchive currentDevice = archiveRepository.findById(request.deviceId())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
-            DeviceArchiveUpdate archiveUpdate = buildArchiveUpdate(currentDevice, request.changes(), reviewer.id(), reviewedAt);
-            OffsetDateTime freezeUntil = reviewedAt.plus(CHANGE_FREEZE_DURATION);
-            changeRequestRepository.applyApprovedReview(
-                    request.id(),
-                    reviewer.id(),
-                    normalizedComment,
-                    reviewedAt,
-                    freezeUntil,
-                    archiveUpdate);
+            applyApprovedRequest(request, normalizedComment, reviewer, reviewedAt);
         } else {
             changeRequestRepository.applyRejectedReview(request.id(), reviewer.id(), normalizedComment, reviewedAt);
         }
@@ -134,7 +111,144 @@ public class DeviceChangeRequestService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR)));
     }
 
-    private Map<String, DeviceChangeValue> normalizeAndValidateChanges(
+    private DeviceChangeRequest createUpdateRequest(
+            String deviceId,
+            String reason,
+            Map<String, DeviceChangeValue> changes,
+            AuthenticatedUser applicant) {
+        requirePermission(applicant, PermissionCode.ARCHIVE_CHANGE_REQUEST_CREATE);
+        DeviceArchive device = archiveRepository.findById(normalizeRequiredId(deviceId, "deviceId"))
+                .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
+        OffsetDateTime now = now();
+
+        if (changeRequestRepository.hasPendingByDeviceId(device.id())) {
+            throw new BusinessException(ErrorCode.DEVICE_CHANGE_LOCKED);
+        }
+
+        if (changeRequestRepository.findActiveFreezeUntil(device.id(), now).isPresent()) {
+            throw new BusinessException(ErrorCode.DEVICE_CHANGE_FROZEN);
+        }
+
+        Map<String, DeviceChangeValue> normalizedChanges = normalizeAndValidateUpdateChanges(device, changes);
+        return createRequest(new DeviceChangeRequestCreate(
+                newRequestId(),
+                DeviceChangeRequestType.UPDATE,
+                device.id(),
+                device.deviceCode(),
+                applicant.id(),
+                device.status(),
+                normalizeRequiredText(reason, "reason", 500),
+                normalizedChanges,
+                now));
+    }
+
+    private DeviceChangeRequest createArchiveCreateRequest(
+            String deviceCode,
+            String reason,
+            Map<String, DeviceChangeValue> changes,
+            AuthenticatedUser applicant) {
+        requirePermission(applicant, PermissionCode.ARCHIVE_DEVICE_CREATE);
+        String normalizedDeviceCode = normalizeDeviceCode(deviceCode);
+        if (archiveRepository.existsByCode(normalizedDeviceCode)
+                || changeRequestRepository.hasPendingByTargetDeviceCode(normalizedDeviceCode)) {
+            throw new BusinessException(ErrorCode.DEVICE_CODE_DUPLICATED);
+        }
+
+        Map<String, DeviceChangeValue> normalizedChanges = normalizeAndValidateCreateChanges(changes);
+        return createRequest(new DeviceChangeRequestCreate(
+                newRequestId(),
+                DeviceChangeRequestType.CREATE,
+                null,
+                normalizedDeviceCode,
+                applicant.id(),
+                "NEW",
+                normalizeRequiredText(reason, "reason", 500),
+                normalizedChanges,
+                now()));
+    }
+
+    private DeviceChangeRequest createArchiveDeleteRequest(
+            String deviceId,
+            String reason,
+            AuthenticatedUser applicant) {
+        requirePermission(applicant, PermissionCode.ARCHIVE_DEVICE_DELETE);
+        DeviceArchive device = archiveRepository.findById(normalizeRequiredId(deviceId, "deviceId"))
+                .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
+        OffsetDateTime now = now();
+
+        if (changeRequestRepository.hasPendingByDeviceId(device.id())) {
+            throw new BusinessException(ErrorCode.DEVICE_CHANGE_LOCKED);
+        }
+
+        if (changeRequestRepository.findActiveFreezeUntil(device.id(), now).isPresent()
+                || DELETE_BLOCKING_STATUSES.contains(device.status())) {
+            throw new BusinessException(ErrorCode.DEVICE_ARCHIVE_DELETE_BLOCKED);
+        }
+
+        return createRequest(new DeviceChangeRequestCreate(
+                newRequestId(),
+                DeviceChangeRequestType.DELETE,
+                device.id(),
+                device.deviceCode(),
+                applicant.id(),
+                device.status(),
+                normalizeRequiredText(reason, "reason", 500),
+                buildDeleteSnapshot(device),
+                now));
+    }
+
+    private DeviceChangeRequest createRequest(DeviceChangeRequestCreate request) {
+        changeRequestRepository.create(request);
+        return enrichApplicantName(changeRequestRepository.findById(request.id())
+                .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR)));
+    }
+
+    private void applyApprovedRequest(
+            DeviceChangeRequest request,
+            String reviewComment,
+            AuthenticatedUser reviewer,
+            OffsetDateTime reviewedAt) {
+        switch (request.type()) {
+            case UPDATE -> {
+                DeviceArchive currentDevice = archiveRepository.findById(request.deviceId())
+                        .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
+                DeviceArchiveUpdate archiveUpdate = buildArchiveUpdate(currentDevice, request.changes(), reviewer.id(), reviewedAt);
+                OffsetDateTime freezeUntil = reviewedAt.plus(CHANGE_FREEZE_DURATION);
+                changeRequestRepository.applyApprovedReview(
+                        request.id(),
+                        reviewer.id(),
+                        reviewComment,
+                        reviewedAt,
+                        freezeUntil,
+                        archiveUpdate);
+            }
+            case CREATE -> {
+                if (archiveRepository.existsByCode(request.deviceCode())) {
+                    throw new BusinessException(ErrorCode.DEVICE_CODE_DUPLICATED);
+                }
+
+                archiveRepository.create(buildArchiveCreate(request, reviewer.id(), reviewedAt));
+                changeRequestRepository.markApprovedReview(request.id(), reviewer.id(), reviewComment, reviewedAt, null);
+            }
+            case DELETE -> {
+                DeviceArchive currentDevice = archiveRepository.findById(request.deviceId())
+                        .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
+                if (DELETE_BLOCKING_STATUSES.contains(currentDevice.status())
+                        || changeRequestRepository.findActiveFreezeUntil(currentDevice.id(), reviewedAt).isPresent()) {
+                    throw new BusinessException(ErrorCode.DEVICE_ARCHIVE_DELETE_BLOCKED);
+                }
+
+                boolean deleted = archiveRepository.softDelete(currentDevice.id(), reviewer.id(), reviewComment);
+                if (!deleted) {
+                    throw new BusinessException(ErrorCode.DEVICE_NOT_FOUND);
+                }
+
+                changeRequestRepository.markApprovedReview(request.id(), reviewer.id(), reviewComment, reviewedAt, null);
+            }
+        }
+    }
+
+    private Map<String, DeviceChangeValue> normalizeAndValidateUpdateChanges(
             DeviceArchive device,
             Map<String, DeviceChangeValue> changes) {
         if (changes == null || changes.isEmpty()) {
@@ -143,21 +257,17 @@ public class DeviceChangeRequestService {
 
         Map<String, DeviceChangeValue> normalizedChanges = new HashMap<>();
         for (Map.Entry<String, DeviceChangeValue> entry : changes.entrySet()) {
-            String field = entry.getKey() == null ? "" : entry.getKey().trim();
-            if (!SUPPORTED_FIELDS.contains(field)) {
+            String field = normalizeSupportedField(entry.getKey());
+            DeviceChangeValue value = requireChangeValue(entry.getValue());
+            if (value.oldValue() == null) {
                 throw new BusinessException(
                         ErrorCode.DEVICE_CHANGE_REQUEST_INVALID,
-                        "Unsupported archive change field: " + field);
-            }
-
-            DeviceChangeValue value = entry.getValue();
-            if (value == null) {
-                throw new BusinessException(ErrorCode.DEVICE_CHANGE_REQUEST_INVALID);
+                        "oldValue is required when updating a device archive.");
             }
 
             String currentValue = currentFieldValue(device, field);
             String oldValue = normalizeText(value.oldValue());
-            String newValue = normalizeChangeValue(field, value.newValue());
+            String newValue = normalizeChangeValue(field, value.newValue(), true);
             if (!oldValue.equals(currentValue)) {
                 throw new BusinessException(ErrorCode.CONFLICT, "Archive baseline is stale.");
             }
@@ -174,6 +284,54 @@ public class DeviceChangeRequestService {
         }
 
         return Map.copyOf(normalizedChanges);
+    }
+
+    private Map<String, DeviceChangeValue> normalizeAndValidateCreateChanges(Map<String, DeviceChangeValue> changes) {
+        if (changes == null || changes.isEmpty()) {
+            throw new BusinessException(ErrorCode.DEVICE_CHANGE_REQUEST_INVALID);
+        }
+
+        Map<String, DeviceChangeValue> normalizedChanges = new HashMap<>();
+        for (Map.Entry<String, DeviceChangeValue> entry : changes.entrySet()) {
+            String field = normalizeSupportedField(entry.getKey());
+            DeviceChangeValue value = requireChangeValue(entry.getValue());
+            String newValue = normalizeChangeValue(field, value.newValue(), "name".equals(field));
+            if (!newValue.isBlank()) {
+                normalizedChanges.put(field, new DeviceChangeValue("", newValue));
+            }
+        }
+
+        if (!normalizedChanges.containsKey("name")) {
+            throw new BusinessException(
+                    ErrorCode.DEVICE_CHANGE_REQUEST_INVALID,
+                    "name is required when creating a device archive.");
+        }
+
+        return Map.copyOf(normalizedChanges);
+    }
+
+    private Map<String, DeviceChangeValue> buildDeleteSnapshot(DeviceArchive device) {
+        Map<String, DeviceChangeValue> snapshot = new HashMap<>();
+        snapshot.put("name", new DeviceChangeValue(normalizeText(device.name()), ""));
+        snapshot.put("model", new DeviceChangeValue(normalizeText(device.model()), ""));
+        snapshot.put("manufacturer", new DeviceChangeValue(normalizeText(device.manufacturer()), ""));
+        snapshot.put("location.address", new DeviceChangeValue(normalizeText(device.address()), ""));
+        return Map.copyOf(snapshot);
+    }
+
+    private DeviceArchiveCreate buildArchiveCreate(DeviceChangeRequest request, String reviewerId, OffsetDateTime reviewedAt) {
+        return new DeviceArchiveCreate(
+                "device-" + UUID.randomUUID(),
+                request.deviceCode(),
+                requireCreatedValue(request, "name"),
+                createdValue(request, "model"),
+                createdValue(request, "manufacturer"),
+                "PENDING_VERIFICATION",
+                createdValue(request, "location.address"),
+                null,
+                null,
+                reviewerId,
+                reviewedAt);
     }
 
     private DeviceArchiveUpdate buildArchiveUpdate(
@@ -209,22 +367,79 @@ public class DeviceChangeRequestService {
         };
     }
 
-    private String normalizeChangeValue(String field, String value) {
+    private String normalizeChangeValue(String field, String value, boolean required) {
         int maxLength = switch (field) {
             case "name", "model" -> 80;
             case "manufacturer" -> 100;
             case "location.address" -> 200;
             default -> throw new BusinessException(ErrorCode.DEVICE_CHANGE_REQUEST_INVALID);
         };
-        return normalizeRequiredText(value, field, maxLength);
+        return required ? normalizeRequiredText(value, field, maxLength) : normalizeOptionalText(value, maxLength);
+    }
+
+    private String normalizeSupportedField(String field) {
+        String normalized = field == null ? "" : field.trim();
+        if (!SUPPORTED_FIELDS.contains(normalized)) {
+            throw new BusinessException(
+                    ErrorCode.DEVICE_CHANGE_REQUEST_INVALID,
+                    "Unsupported archive change field: " + normalized);
+        }
+
+        return normalized;
+    }
+
+    private DeviceChangeValue requireChangeValue(DeviceChangeValue value) {
+        if (value == null) {
+            throw new BusinessException(ErrorCode.DEVICE_CHANGE_REQUEST_INVALID);
+        }
+
+        return value;
+    }
+
+    private String normalizeDeviceCode(String deviceCode) {
+        String normalized = deviceCode == null ? "" : deviceCode.trim().toUpperCase();
+        if (!DEVICE_CODE_PATTERN.matcher(normalized).matches()) {
+            throw new BusinessException(ErrorCode.DEVICE_CODE_INVALID);
+        }
+
+        return normalized;
+    }
+
+    private void requirePermission(AuthenticatedUser user, PermissionCode permission) {
+        if (user == null || !user.permissions().contains(permission)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+    }
+
+    private String requireCreatedValue(DeviceChangeRequest request, String field) {
+        String value = createdValue(request, field);
+        if (value.isBlank()) {
+            throw new BusinessException(ErrorCode.DEVICE_CHANGE_REQUEST_INVALID);
+        }
+
+        return value;
+    }
+
+    private String createdValue(DeviceChangeRequest request, String field) {
+        DeviceChangeValue value = request.changes().get(field);
+        return value == null ? "" : normalizeText(value.newValue());
     }
 
     private String normalizeRequiredText(String value, String field, int maxLength) {
-        String normalized = normalizeText(value);
-        if (normalized.isBlank() || normalized.length() > maxLength) {
+        String normalized = normalizeOptionalText(value, maxLength);
+        if (normalized.isBlank()) {
             throw new BusinessException(
                     ErrorCode.DEVICE_CHANGE_REQUEST_INVALID,
                     field + " is required and must not exceed " + maxLength + " characters.");
+        }
+
+        return normalized;
+    }
+
+    private String normalizeOptionalText(String value, int maxLength) {
+        String normalized = normalizeText(value);
+        if (normalized.length() > maxLength) {
+            throw new BusinessException(ErrorCode.DEVICE_CHANGE_REQUEST_INVALID);
         }
 
         return normalized;
@@ -255,6 +470,18 @@ public class DeviceChangeRequestService {
         }
     }
 
+    private OffsetDateTime parseReviewedAt(String reviewedAtText) {
+        if (reviewedAtText == null || reviewedAtText.isBlank()) {
+            return now();
+        }
+
+        try {
+            return OffsetDateTime.parse(reviewedAtText.trim()).withOffsetSameInstant(ZoneOffset.UTC);
+        } catch (RuntimeException exception) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "reviewedAt is invalid.");
+        }
+    }
+
     private int normalizePage(int page) {
         return Math.max(page, 1);
     }
@@ -267,6 +494,10 @@ public class DeviceChangeRequestService {
         return Math.min(pageSize, 100);
     }
 
+    private String newRequestId() {
+        return "DCR-" + UUID.randomUUID();
+    }
+
     private OffsetDateTime now() {
         return OffsetDateTime.now(ZoneOffset.UTC);
     }
@@ -277,6 +508,7 @@ public class DeviceChangeRequestService {
                 .orElse(request.applicantId());
         return new DeviceChangeRequest(
                 request.id(),
+                request.type(),
                 request.deviceId(),
                 request.deviceCode(),
                 request.deviceName(),

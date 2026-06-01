@@ -11,6 +11,8 @@ public interface DeviceChangeRequestRepository {
 
     boolean hasPendingByDeviceId(String deviceId);
 
+    boolean hasPendingByTargetDeviceCode(String deviceCode);
+
     Optional<OffsetDateTime> findActiveFreezeUntil(String deviceId, OffsetDateTime now);
 
     void create(DeviceChangeRequestCreate request);
@@ -22,6 +24,13 @@ public interface DeviceChangeRequestRepository {
             OffsetDateTime reviewedAt,
             OffsetDateTime freezeUntil,
             DeviceArchiveUpdate archiveUpdate);
+
+    void markApprovedReview(
+            String requestId,
+            String reviewerId,
+            String reviewComment,
+            OffsetDateTime reviewedAt,
+            OffsetDateTime freezeUntil);
 
     void applyRejectedReview(
             String requestId,

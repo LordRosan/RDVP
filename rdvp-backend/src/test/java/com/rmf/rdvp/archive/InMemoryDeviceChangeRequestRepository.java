@@ -22,6 +22,7 @@ public class InMemoryDeviceChangeRequestRepository implements DeviceChangeReques
                 "DCR-LOCAL-0002",
                 new DeviceChangeRequest(
                         "DCR-LOCAL-0002",
+                        DeviceChangeRequestType.UPDATE,
                         "device-local-0002",
                         "RDVP-DEVICE-0002",
                         "Conveyor Line B-02",
@@ -68,14 +69,21 @@ public class InMemoryDeviceChangeRequestRepository implements DeviceChangeReques
     public boolean hasPendingByDeviceId(String deviceId) {
         return requestsById.values()
                 .stream()
-                .anyMatch(item -> item.deviceId().equals(deviceId) && item.status() == DeviceChangeRequestStatus.PENDING_REVIEW);
+                .anyMatch(item -> deviceId.equals(item.deviceId()) && item.status() == DeviceChangeRequestStatus.PENDING_REVIEW);
+    }
+
+    @Override
+    public boolean hasPendingByTargetDeviceCode(String deviceCode) {
+        return requestsById.values()
+                .stream()
+                .anyMatch(item -> deviceCode.equals(item.deviceCode()) && item.status() == DeviceChangeRequestStatus.PENDING_REVIEW);
     }
 
     @Override
     public Optional<OffsetDateTime> findActiveFreezeUntil(String deviceId, OffsetDateTime now) {
         Optional<OffsetDateTime> requestFreeze = requestsById.values()
                 .stream()
-                .filter(item -> item.deviceId().equals(deviceId))
+                .filter(item -> deviceId.equals(item.deviceId()))
                 .map(DeviceChangeRequest::freezeUntil)
                 .filter(freezeUntil -> freezeUntil != null && freezeUntil.isAfter(now))
                 .max(Comparator.naturalOrder());
@@ -88,12 +96,15 @@ public class InMemoryDeviceChangeRequestRepository implements DeviceChangeReques
 
     @Override
     public void create(DeviceChangeRequestCreate request) {
-        DeviceArchive device = archiveRepository.findById(request.deviceId()).orElseThrow();
+        DeviceArchive device = request.deviceId() == null
+                ? null
+                : archiveRepository.findById(request.deviceId()).orElseThrow();
         DeviceChangeRequest item = new DeviceChangeRequest(
                 request.id(),
+                request.type(),
                 request.deviceId(),
-                device.deviceCode(),
-                device.name(),
+                request.targetDeviceCode(),
+                resolveDeviceName(device, request.changes()),
                 request.applicantId(),
                 null,
                 DeviceChangeRequestStatus.PENDING_REVIEW,
@@ -105,7 +116,9 @@ public class InMemoryDeviceChangeRequestRepository implements DeviceChangeReques
                 null,
                 null);
         requestsById.put(request.id(), item);
-        archiveRepository.markPending(request.deviceId(), request.id());
+        if (request.deviceId() != null) {
+            archiveRepository.markPending(request.deviceId(), request.id());
+        }
     }
 
     @Override
@@ -119,6 +132,7 @@ public class InMemoryDeviceChangeRequestRepository implements DeviceChangeReques
         DeviceChangeRequest request = requestsById.get(requestId);
         requestsById.put(requestId, new DeviceChangeRequest(
                 request.id(),
+                request.type(),
                 request.deviceId(),
                 request.deviceCode(),
                 request.deviceName(),
@@ -136,6 +150,35 @@ public class InMemoryDeviceChangeRequestRepository implements DeviceChangeReques
     }
 
     @Override
+    public void markApprovedReview(
+            String requestId,
+            String reviewerId,
+            String reviewComment,
+            OffsetDateTime reviewedAt,
+            OffsetDateTime freezeUntil) {
+        DeviceChangeRequest request = requestsById.get(requestId);
+        requestsById.put(requestId, new DeviceChangeRequest(
+                request.id(),
+                request.type(),
+                request.deviceId(),
+                request.deviceCode(),
+                request.deviceName(),
+                request.applicantId(),
+                request.applicantName(),
+                DeviceChangeRequestStatus.APPROVED,
+                request.reason(),
+                request.changes(),
+                request.createdAt(),
+                reviewerId,
+                reviewComment,
+                reviewedAt,
+                freezeUntil));
+        if (request.deviceId() != null) {
+            archiveRepository.clearPending(request.deviceId());
+        }
+    }
+
+    @Override
     public void applyRejectedReview(
             String requestId,
             String reviewerId,
@@ -144,6 +187,7 @@ public class InMemoryDeviceChangeRequestRepository implements DeviceChangeReques
         DeviceChangeRequest request = requestsById.get(requestId);
         requestsById.put(requestId, new DeviceChangeRequest(
                 request.id(),
+                request.type(),
                 request.deviceId(),
                 request.deviceCode(),
                 request.deviceName(),
@@ -157,6 +201,21 @@ public class InMemoryDeviceChangeRequestRepository implements DeviceChangeReques
                 reviewComment,
                 reviewedAt,
                 null));
-        archiveRepository.clearPending(request.deviceId());
+        if (request.deviceId() != null) {
+            archiveRepository.clearPending(request.deviceId());
+        }
+    }
+
+    private String resolveDeviceName(DeviceArchive device, Map<String, DeviceChangeValue> changes) {
+        if (device != null) {
+            return device.name();
+        }
+
+        DeviceChangeValue name = changes.get("name");
+        if (name != null && name.newValue() != null && !name.newValue().isBlank()) {
+            return name.newValue();
+        }
+
+        return "-";
     }
 }

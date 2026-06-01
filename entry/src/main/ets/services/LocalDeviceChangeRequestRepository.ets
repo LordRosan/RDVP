@@ -8,8 +8,10 @@ import {
   DeviceArchiveChangeFieldDiff,
   DeviceArchiveReviewDecision,
   DeviceArchiveReviewItem,
+  DeviceArchiveReviewRequestType,
   DeviceArchiveReviewResult
 } from '../models/DeviceArchiveReviewModels';
+import { DeviceSummary } from '../models/DeviceModels';
 import { OperationRecordType } from '../models/OperationRecordModels';
 import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
 import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
@@ -17,6 +19,7 @@ import { LocalOperationRecordRepository } from './LocalOperationRecordRepository
 const LOCAL_REVIEW_SEEDS: DeviceArchiveReviewItem[] = [
   {
     id: 'DCR-LOCAL-0002',
+    type: DeviceArchiveReviewRequestType.Update,
     deviceCode: 'RDVP-DEVICE-0002',
     deviceName: '输送线B-02',
     applicantName: '本地用户',
@@ -42,6 +45,7 @@ export class LocalDeviceChangeRequestRepository {
   static appendFromSubmission(form: DeviceArchiveChangeRequestForm, record: DeviceArchiveChangeRequestRecord): void {
     LocalDeviceChangeRequestRepository.requests.unshift({
       id: record.id,
+      type: DeviceArchiveReviewRequestType.Update,
       deviceId: form.deviceId,
       deviceCode: record.deviceCode,
       deviceName: record.deviceName === undefined ? form.deviceName.trim() : record.deviceName,
@@ -53,41 +57,93 @@ export class LocalDeviceChangeRequestRepository {
     });
   }
 
+  static appendCreateSubmission(deviceCode: string, deviceName: string, model: string, manufacturer: string,
+    locationAddress: string, reason: string, requestId: string, submittedAt: string): void {
+    LocalDeviceChangeRequestRepository.requests.unshift({
+      id: requestId,
+      type: DeviceArchiveReviewRequestType.Create,
+      deviceCode,
+      deviceName,
+      applicantName: '本地用户',
+      reason,
+      status: DeviceArchiveChangeRequestStatus.PendingReview,
+      submittedAt,
+      changes: LocalDeviceChangeRequestRepository.buildCreateDiffs(deviceName, model, manufacturer, locationAddress)
+    });
+  }
+
+  static appendDeleteSubmission(device: DeviceSummary, reason: string, requestId: string, submittedAt: string): void {
+    LocalDeviceChangeRequestRepository.requests.unshift({
+      id: requestId,
+      type: DeviceArchiveReviewRequestType.Delete,
+      deviceId: device.id,
+      deviceCode: device.deviceCode,
+      deviceName: device.name,
+      applicantName: '本地用户',
+      reason,
+      status: DeviceArchiveChangeRequestStatus.PendingReview,
+      submittedAt,
+      changes: LocalDeviceChangeRequestRepository.buildDeleteDiffs(device)
+    });
+  }
+
   static listPending(): DeviceArchiveReviewItem[] {
     return LocalDeviceChangeRequestRepository.requests
       .filter((item: DeviceArchiveReviewItem) => item.status === DeviceArchiveChangeRequestStatus.PendingReview)
       .map((item: DeviceArchiveReviewItem) => LocalDeviceChangeRequestRepository.cloneItem(item));
   }
 
-  static review(requestId: string, decision: DeviceArchiveReviewDecision, reviewComment: string): DeviceArchiveReviewResult | undefined {
+  static getPendingCount(): number {
+    return LocalDeviceChangeRequestRepository.requests
+      .filter((item: DeviceArchiveReviewItem) => item.status === DeviceArchiveChangeRequestStatus.PendingReview)
+      .length;
+  }
+
+  static hasPendingByDeviceCode(deviceCode: string): boolean {
+    const normalizedDeviceCode = deviceCode.trim().toUpperCase();
+    return LocalDeviceChangeRequestRepository.requests.some((item: DeviceArchiveReviewItem) => {
+      return item.status === DeviceArchiveChangeRequestStatus.PendingReview &&
+        item.deviceCode.trim().toUpperCase() === normalizedDeviceCode;
+    });
+  }
+
+  static review(requestId: string, decision: DeviceArchiveReviewDecision, reviewComment: string,
+    reviewedAt: string): DeviceArchiveReviewResult | undefined {
     const request = LocalDeviceChangeRequestRepository.requests.find((item: DeviceArchiveReviewItem) => item.id === requestId);
     if (request === undefined || request.status !== DeviceArchiveChangeRequestStatus.PendingReview) {
       return undefined;
     }
 
-    const reviewedAt = LocalDeviceChangeRequestRepository.formatDateTime(new Date());
+    const normalizedReviewedAt = reviewedAt.trim().length === 0 ?
+      LocalDeviceChangeRequestRepository.formatDateTime(new Date()) : reviewedAt.trim();
     if (decision === DeviceArchiveReviewDecision.Approved) {
       const freezeUntil = new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString();
       request.status = DeviceArchiveChangeRequestStatus.Approved;
-      LocalDeviceArchiveRepository.applyApprovedChange(request.deviceCode, request.changes, freezeUntil);
+      LocalDeviceChangeRequestRepository.applyApprovedArchiveRequest(request, freezeUntil);
       LocalOperationRecordRepository.append(OperationRecordType.DeviceChangeRequest, '档案审核通过', request.deviceCode,
         LocalDeviceChangeRequestRepository.formatReviewDescription(reviewComment, true));
-      return {
+      const result: DeviceArchiveReviewResult = {
         id: request.id,
         status: request.status,
-        reviewedAt,
-        freezeUntil
+        reviewedAt: normalizedReviewedAt
       };
+      if (request.type === DeviceArchiveReviewRequestType.Update) {
+        result.freezeUntil = freezeUntil;
+      }
+
+      return result;
     }
 
     request.status = DeviceArchiveChangeRequestStatus.Rejected;
-    LocalDeviceArchiveRepository.releaseChangeLock(request.deviceCode);
+    if (request.type !== DeviceArchiveReviewRequestType.Create) {
+      LocalDeviceArchiveRepository.releaseChangeLock(request.deviceCode);
+    }
     LocalOperationRecordRepository.append(OperationRecordType.DeviceChangeRequest, '档案审核驳回', request.deviceCode,
       LocalDeviceChangeRequestRepository.formatReviewDescription(reviewComment, false));
     return {
       id: request.id,
       status: request.status,
-      reviewedAt
+      reviewedAt: normalizedReviewedAt
     };
   }
 
@@ -103,6 +159,60 @@ export class LocalDeviceChangeRequestRepository {
       form.locationAddress);
 
     return diffs;
+  }
+
+  private static buildCreateDiffs(deviceName: string, model: string, manufacturer: string,
+    locationAddress: string): DeviceArchiveChangeFieldDiff[] {
+    const diffs: DeviceArchiveChangeFieldDiff[] = [];
+    LocalDeviceChangeRequestRepository.appendCreatedValue(diffs, 'name', '设备名称', deviceName);
+    LocalDeviceChangeRequestRepository.appendCreatedValue(diffs, 'model', '设备型号', model);
+    LocalDeviceChangeRequestRepository.appendCreatedValue(diffs, 'manufacturer', '生产厂商', manufacturer);
+    LocalDeviceChangeRequestRepository.appendCreatedValue(diffs, 'location.address', '设备位置', locationAddress);
+    return diffs;
+  }
+
+  private static buildDeleteDiffs(device: DeviceSummary): DeviceArchiveChangeFieldDiff[] {
+    return [
+      {
+        field: 'name',
+        label: '设备名称',
+        oldValue: device.name,
+        newValue: '-'
+      },
+      {
+        field: 'model',
+        label: '设备型号',
+        oldValue: device.model,
+        newValue: '-'
+      },
+      {
+        field: 'manufacturer',
+        label: '生产厂商',
+        oldValue: device.manufacturer,
+        newValue: '-'
+      },
+      {
+        field: 'location.address',
+        label: '设备位置',
+        oldValue: device.location.address,
+        newValue: '-'
+      }
+    ];
+  }
+
+  private static appendCreatedValue(diffs: DeviceArchiveChangeFieldDiff[], field: string, label: string,
+    value: string): void {
+    const normalizedValue = value.trim();
+    if (normalizedValue.length === 0) {
+      return;
+    }
+
+    diffs.push({
+      field,
+      label,
+      oldValue: '-',
+      newValue: normalizedValue
+    });
   }
 
   private static appendDiff(diffs: DeviceArchiveChangeFieldDiff[], baseline: DeviceArchiveChangeBaseline | undefined,
@@ -148,6 +258,7 @@ export class LocalDeviceChangeRequestRepository {
   private static cloneItem(item: DeviceArchiveReviewItem): DeviceArchiveReviewItem {
     return {
       id: item.id,
+      type: item.type,
       deviceId: item.deviceId,
       deviceCode: item.deviceCode,
       deviceName: item.deviceName,
@@ -164,6 +275,20 @@ export class LocalDeviceChangeRequestRepository {
         };
       })
     };
+  }
+
+  private static applyApprovedArchiveRequest(request: DeviceArchiveReviewItem, freezeUntil: string): void {
+    if (request.type === DeviceArchiveReviewRequestType.Create) {
+      LocalDeviceArchiveRepository.createFromReview(request.deviceCode, request.changes);
+      return;
+    }
+
+    if (request.type === DeviceArchiveReviewRequestType.Delete) {
+      LocalDeviceArchiveRepository.deleteByCode(request.deviceCode);
+      return;
+    }
+
+    LocalDeviceArchiveRepository.applyApprovedChange(request.deviceCode, request.changes, freezeUntil);
   }
 
   private static formatReviewDescription(reviewComment: string, approved: boolean): string {

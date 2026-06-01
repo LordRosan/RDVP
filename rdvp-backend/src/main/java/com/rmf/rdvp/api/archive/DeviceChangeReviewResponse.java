@@ -8,6 +8,7 @@ import com.rmf.rdvp.archive.DeviceChangeRequest;
 
 public record DeviceChangeReviewResponse(
         String id,
+        String type,
         String deviceId,
         String deviceCode,
         String deviceName,
@@ -20,6 +21,7 @@ public record DeviceChangeReviewResponse(
     public static DeviceChangeReviewResponse from(DeviceChangeRequest request) {
         return new DeviceChangeReviewResponse(
                 request.id(),
+                request.type().name(),
                 request.deviceId(),
                 request.deviceCode(),
                 request.deviceName(),

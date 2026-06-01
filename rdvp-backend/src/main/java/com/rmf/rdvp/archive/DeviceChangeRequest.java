@@ -5,6 +5,7 @@ import java.util.Map;
 
 public record DeviceChangeRequest(
         String id,
+        DeviceChangeRequestType type,
         String deviceId,
         String deviceCode,
         String deviceName,

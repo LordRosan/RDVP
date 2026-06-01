@@ -19,6 +19,7 @@ import com.rmf.rdvp.api.common.RequestIds;
 import com.rmf.rdvp.archive.DeviceChangeRequestPage;
 import com.rmf.rdvp.archive.DeviceChangeRequestService;
 import com.rmf.rdvp.archive.DeviceChangeReviewDecision;
+import com.rmf.rdvp.archive.DeviceChangeRequestType;
 import com.rmf.rdvp.archive.DeviceChangeValue;
 import com.rmf.rdvp.domain.common.BusinessException;
 import com.rmf.rdvp.domain.common.ErrorCode;
@@ -38,13 +39,15 @@ public class DeviceChangeRequestController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('ARCHIVE_CHANGE_REQUEST_CREATE')")
+    @PreAuthorize("hasAnyAuthority('ARCHIVE_CHANGE_REQUEST_CREATE','ARCHIVE_DEVICE_CREATE','ARCHIVE_DEVICE_DELETE')")
     public ResponseEntity<ApiResponse<DeviceChangeCreateResponse>> create(
             @Valid @RequestBody CreateDeviceChangeRequest requestBody,
             @AuthenticationPrincipal AuthenticatedUser user,
             HttpServletRequest request) {
         var created = changeRequestService.create(
+                parseType(requestBody.type()),
                 requestBody.deviceId(),
+                requestBody.deviceCode(),
                 requestBody.reason(),
                 toDomainChanges(requestBody.changes()),
                 user);
@@ -74,17 +77,39 @@ public class DeviceChangeRequestController {
         var reviewed = changeRequestService.review(
                 requestId,
                 parseDecision(requestBody.decision()),
+                requestBody.reviewedAt(),
                 requestBody.reviewComment(),
                 user);
         return ResponseEntity.ok(ApiResponse.success(DeviceChangeReviewResultResponse.from(reviewed), RequestIds.resolve(request)));
     }
 
     private Map<String, DeviceChangeValue> toDomainChanges(Map<String, DeviceChangeValueRequest> changes) {
+        if (changes == null) {
+            return Map.of();
+        }
+
         return changes.entrySet()
                 .stream()
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
-                        entry -> new DeviceChangeValue(entry.getValue().oldValue(), entry.getValue().newValue())));
+                        entry -> {
+                            DeviceChangeValueRequest value = entry.getValue();
+                            return new DeviceChangeValue(
+                                    value == null ? null : value.oldValue(),
+                                    value == null ? null : value.newValue());
+                        }));
+    }
+
+    private DeviceChangeRequestType parseType(String type) {
+        if (type == null || type.isBlank()) {
+            return DeviceChangeRequestType.UPDATE;
+        }
+
+        try {
+            return DeviceChangeRequestType.valueOf(type.trim().toUpperCase());
+        } catch (IllegalArgumentException exception) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "type is invalid.");
+        }
     }
 
     private DeviceChangeReviewDecision parseDecision(String decision) {

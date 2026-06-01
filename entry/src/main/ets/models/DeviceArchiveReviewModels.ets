@@ -5,6 +5,12 @@ export enum DeviceArchiveReviewDecision {
   Rejected = 'REJECTED'
 }
 
+export enum DeviceArchiveReviewRequestType {
+  Update = 'UPDATE',
+  Create = 'CREATE',
+  Delete = 'DELETE'
+}
+
 export interface DeviceArchiveChangeFieldDiff {
   field: string;
   label: string;
@@ -14,6 +20,7 @@ export interface DeviceArchiveChangeFieldDiff {
 
 export interface DeviceArchiveReviewItem {
   id: string;
+  type: DeviceArchiveReviewRequestType;
   deviceId?: string;
   deviceCode: string;
   deviceName: string;
@@ -32,6 +39,7 @@ export interface DeviceArchiveReviewListResult {
 export interface DeviceArchiveReviewForm {
   requestId: string;
   decision: DeviceArchiveReviewDecision;
+  reviewedAt: string;
   reviewComment: string;
 }
 

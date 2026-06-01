@@ -3,6 +3,7 @@ export enum WorkbenchActionId {
   OperationsCenter = 'OPERATIONS_CENTER',
   ManagementCenter = 'MANAGEMENT_CENTER',
   DeviceQuery = 'DEVICE_QUERY',
+  DeviceArchiveCreate = 'DEVICE_ARCHIVE_CREATE',
   DeviceVerification = 'DEVICE_VERIFICATION',
   FaultReport = 'FAULT_REPORT',
   AvailableRepairTask = 'AVAILABLE_REPAIR_TASK',

@@ -361,7 +361,7 @@ export class DeviceArchiveChangeService {
   }
 
   private static buildCreateRequestBody(form: DeviceArchiveChangeRequestForm): string {
-    return `{"deviceId":${JSON.stringify(form.deviceId)},"reason":${JSON.stringify(DeviceArchiveChangeService.normalizeText(form.reason))},"changes":${DeviceArchiveChangeService.buildApiChangesPayload(form)}}`;
+    return `{"type":"UPDATE","deviceId":${JSON.stringify(form.deviceId)},"reason":${JSON.stringify(DeviceArchiveChangeService.normalizeText(form.reason))},"changes":${DeviceArchiveChangeService.buildApiChangesPayload(form)}}`;
   }
 
   private static formatApiChangeItem(field: string, oldValue: string, newValue: string): string {

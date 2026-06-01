@@ -43,20 +43,39 @@ export class LocalDeviceArchiveRepository {
     }
   }
 
-  static getPendingChangeCount(): number {
-    const devices = LocalDeviceArchiveRepository.getDevices();
-    let count = 0;
-
-    for (let i = 0; i < devices.length; i += 1) {
-      const device = devices[i];
-      const changeState = device.changeState;
-      if (device.status === DeviceStatus.ChangePendingReview ||
-        (changeState !== undefined && changeState.locked)) {
-        count += 1;
-      }
+  static createFromReview(deviceCode: string, changes: DeviceArchiveChangeFieldDiff[]): void {
+    const normalizedDeviceCode = LocalDeviceArchiveRepository.normalizeDeviceCode(deviceCode);
+    if (LocalDeviceArchiveRepository.findMutableByCode(normalizedDeviceCode) !== undefined) {
+      return;
     }
 
-    return count;
+    const createdAt = Date.now();
+    LocalDeviceArchiveRepository.getDevices().unshift({
+      id: `device-local-${createdAt}`,
+      deviceCode: normalizedDeviceCode,
+      name: LocalDeviceArchiveRepository.findChangeValue(changes, 'name'),
+      model: LocalDeviceArchiveRepository.findChangeValue(changes, 'model'),
+      manufacturer: LocalDeviceArchiveRepository.findChangeValue(changes, 'manufacturer'),
+      location: {
+        address: LocalDeviceArchiveRepository.findChangeValue(changes, 'location.address')
+      },
+      status: DeviceStatus.PendingVerification
+    });
+    WorkbenchRefreshStore.notifyChanged();
+  }
+
+  static deleteByCode(deviceCode: string): void {
+    const normalizedDeviceCode = LocalDeviceArchiveRepository.normalizeDeviceCode(deviceCode);
+    const devices = LocalDeviceArchiveRepository.getDevices();
+    const index = devices.findIndex((device: DeviceSummary) => {
+      return device.deviceCode === normalizedDeviceCode;
+    });
+    if (index < 0) {
+      return;
+    }
+
+    devices.splice(index, 1);
+    WorkbenchRefreshStore.notifyChanged();
   }
 
   static updateOperationalStatus(deviceCode: string, status: DeviceStatus): void {
@@ -145,6 +164,13 @@ export class LocalDeviceArchiveRepository {
 
   private static normalizeDeviceCode(deviceCode: string): string {
     return deviceCode.trim().toUpperCase();
+  }
+
+  private static findChangeValue(changes: DeviceArchiveChangeFieldDiff[], field: string): string {
+    const change = changes.find((item: DeviceArchiveChangeFieldDiff) => {
+      return item.field === field;
+    });
+    return change === undefined ? '' : change.newValue;
   }
 
   private static getDevices(): DeviceSummary[] {

@@ -11,7 +11,13 @@ public enum ErrorCode {
     CONFLICT("CONFLICT", HttpStatus.CONFLICT, "Resource state conflict."),
     VALIDATION_FAILED("VALIDATION_FAILED", HttpStatus.UNPROCESSABLE_CONTENT, "Request validation failed."),
     DEVICE_NOT_FOUND("DEVICE_NOT_FOUND", HttpStatus.NOT_FOUND, "Device not found."),
+    DEVICE_CODE_DUPLICATED("DEVICE_CODE_DUPLICATED", HttpStatus.CONFLICT, "Device code already exists."),
     DEVICE_CODE_INVALID("DEVICE_CODE_INVALID", HttpStatus.BAD_REQUEST, "Device code format is invalid."),
+    DEVICE_ARCHIVE_INVALID("DEVICE_ARCHIVE_INVALID", HttpStatus.UNPROCESSABLE_CONTENT, "Device archive is invalid."),
+    DEVICE_ARCHIVE_DELETE_BLOCKED(
+            "DEVICE_ARCHIVE_DELETE_BLOCKED",
+            HttpStatus.CONFLICT,
+            "Device archive cannot be deleted in its current state."),
     QR_CODE_INVALID("QR_CODE_INVALID", HttpStatus.BAD_REQUEST, "QR code content is invalid."),
     QR_CODE_EXPIRED("QR_CODE_EXPIRED", HttpStatus.BAD_REQUEST, "QR code is expired."),
     QR_CODE_SIGNATURE_INVALID("QR_CODE_SIGNATURE_INVALID", HttpStatus.BAD_REQUEST, "QR code signature verification failed."),

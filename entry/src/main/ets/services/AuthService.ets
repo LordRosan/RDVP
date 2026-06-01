@@ -154,7 +154,12 @@ export class AuthService {
         username,
         displayName: 'deviceadmin',
         roles: [RoleCode.DeviceAdmin],
-        permissions: [PermissionCode.ArchiveDeviceRead, PermissionCode.MgmtArchiveChangeReview]
+        permissions: [
+          PermissionCode.ArchiveDeviceRead,
+          PermissionCode.ArchiveDeviceCreate,
+          PermissionCode.ArchiveDeviceDelete,
+          PermissionCode.MgmtArchiveChangeReview
+        ]
       };
     }
 

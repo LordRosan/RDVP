@@ -72,14 +72,15 @@ class DeviceChangeRequestControllerTests {
                         .content("""
                                 {
                                   "decision": "APPROVED",
+                                  "reviewedAt": "2026-06-01T08:00:00Z",
                                   "reviewComment": "Approved."
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.id").value(requestId))
                 .andExpect(jsonPath("$.data.status").value("APPROVED"))
-                .andExpect(jsonPath("$.data.reviewedAt").isString())
-                .andExpect(jsonPath("$.data.freezeUntil").isString());
+                .andExpect(jsonPath("$.data.reviewedAt").value("2026-06-01T08:00:00Z"))
+                .andExpect(jsonPath("$.data.freezeUntil").value("2026-06-01T20:00:00Z"));
 
         mockMvc.perform(get("/api/v1/devices/device-local-0001")
                         .header("Authorization", "Bearer " + reviewerToken))
@@ -88,6 +89,68 @@ class DeviceChangeRequestControllerTests {
                 .andExpect(jsonPath("$.data.changeState.locked").value(true))
                 .andExpect(jsonPath("$.data.changeState.pendingRequestId").doesNotExist())
                 .andExpect(jsonPath("$.data.changeState.freezeUntil").isString());
+    }
+
+    @Test
+    void createsDeviceArchiveOnlyAfterCreateRequestApproval() throws Exception {
+        String token = login("deviceadmin", "password");
+        String requestId = createArchiveCreateRequest(token, "RDVP-DEVICE-0099");
+
+        mockMvc.perform(get("/api/v1/devices/by-code/RDVP-DEVICE-0099")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("DEVICE_NOT_FOUND"));
+
+        mockMvc.perform(post("/api/v1/device-change-requests/{requestId}/review", requestId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "decision": "APPROVED",
+                                  "reviewedAt": "2026-06-01T09:00:00Z",
+                                  "reviewComment": "New device accepted."
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("APPROVED"))
+                .andExpect(jsonPath("$.data.reviewedAt").value("2026-06-01T09:00:00Z"));
+
+        mockMvc.perform(get("/api/v1/devices/by-code/RDVP-DEVICE-0099")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.deviceCode").value("RDVP-DEVICE-0099"))
+                .andExpect(jsonPath("$.data.name").value("Inspection Gateway G-99"))
+                .andExpect(jsonPath("$.data.status").value("PENDING_VERIFICATION"));
+    }
+
+    @Test
+    void deletesDeviceArchiveOnlyAfterDeleteRequestApproval() throws Exception {
+        String token = login("deviceadmin", "password");
+        String requestId = createArchiveDeleteRequest(token, "device-local-0001");
+
+        mockMvc.perform(get("/api/v1/devices/device-local-0001")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.changeState.locked").value(true))
+                .andExpect(jsonPath("$.data.changeState.pendingRequestId").value(requestId));
+
+        mockMvc.perform(post("/api/v1/device-change-requests/{requestId}/review", requestId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "decision": "APPROVED",
+                                  "reviewedAt": "2026-06-01T10:00:00Z",
+                                  "reviewComment": "Device retired."
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("APPROVED"));
+
+        mockMvc.perform(get("/api/v1/devices/device-local-0001")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("DEVICE_NOT_FOUND"));
     }
 
     @Test
@@ -185,6 +248,68 @@ class DeviceChangeRequestControllerTests {
                                   }
                                 }
                                 """.formatted(newName)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.status").value("PENDING_REVIEW"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+
+        JsonNode root = objectMapper.readTree(response);
+        String requestId = root.path("data").path("id").asText();
+        assertThat(requestId).startsWith("DCR-");
+        return requestId;
+    }
+
+    private String createArchiveCreateRequest(String token, String deviceCode) throws Exception {
+        String response = mockMvc.perform(post("/api/v1/device-change-requests")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "type": "CREATE",
+                                  "deviceCode": "%s",
+                                  "reason": "New device installation.",
+                                  "changes": {
+                                    "name": {
+                                      "newValue": "Inspection Gateway G-99"
+                                    },
+                                    "model": {
+                                      "newValue": "IG-900"
+                                    },
+                                    "manufacturer": {
+                                      "newValue": "North Equipment"
+                                    },
+                                    "location.address": {
+                                      "newValue": "Plant 9 Inspection Area"
+                                    }
+                                  }
+                                }
+                                """.formatted(deviceCode)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.status").value("PENDING_REVIEW"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+
+        JsonNode root = objectMapper.readTree(response);
+        String requestId = root.path("data").path("id").asText();
+        assertThat(requestId).startsWith("DCR-");
+        return requestId;
+    }
+
+    private String createArchiveDeleteRequest(String token, String deviceId) throws Exception {
+        String response = mockMvc.perform(post("/api/v1/device-change-requests")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "type": "DELETE",
+                                  "deviceId": "%s",
+                                  "reason": "Device retired."
+                                }
+                                """.formatted(deviceId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.status").value("PENDING_REVIEW"))

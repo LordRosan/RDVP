@@ -31,6 +31,8 @@ public class BootstrapUserStore {
                         "设备管理员",
                         RoleCode.DEVICE_ADMIN,
                         PermissionCode.ARCHIVE_DEVICE_READ,
+                        PermissionCode.ARCHIVE_DEVICE_CREATE,
+                        PermissionCode.ARCHIVE_DEVICE_DELETE,
                         PermissionCode.MGMT_ARCHIVE_CHANGE_REVIEW),
                 create(
                         passwordEncoder,

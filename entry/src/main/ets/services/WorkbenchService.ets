@@ -6,7 +6,7 @@ import {
   PermissionCode
 } from '../models/PermissionModels';
 import { ApiClient } from './ApiClient';
-import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
+import { LocalDeviceChangeRequestRepository } from './LocalDeviceChangeRequestRepository';
 import { LocalRepairTaskRepository } from './LocalRepairTaskRepository';
 import { LocalReinspectionRepository } from './LocalReinspectionRepository';
 import { SessionStore } from '../stores/SessionStore';
@@ -100,12 +100,23 @@ export class WorkbenchService {
       return [];
     }
 
-    return [{
+    const actions: WorkbenchAction[] = [{
       id: WorkbenchActionId.DeviceQuery,
       title: '设备档案查询',
       summary: '按编号或二维码定位档案',
       tone: '#2F6FED'
     }];
+
+    if (SessionStore.hasPermission(PermissionCode.ArchiveDeviceCreate)) {
+      actions.push({
+        id: WorkbenchActionId.DeviceArchiveCreate,
+        title: '添加设备档案',
+        summary: '提交新设备建档申请',
+        tone: '#087F5B'
+      });
+    }
+
+    return actions;
   }
 
   static getOperationsCenterActions(): WorkbenchAction[] {
@@ -186,7 +197,7 @@ export class WorkbenchService {
   }
 
   static getPendingChangeCount(): number {
-    return ApiClient.isConfigured() ? 0 : LocalDeviceArchiveRepository.getPendingChangeCount();
+    return ApiClient.isConfigured() ? 0 : LocalDeviceChangeRequestRepository.getPendingCount();
   }
 
   static getPendingFaultCount(): number {
