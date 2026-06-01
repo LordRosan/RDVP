@@ -405,21 +405,21 @@ POST /api/v1/device-change-requests
     "location.address": {
       "oldValue": "Old address",
       "newValue": "New address"
-    },
-    "status": {
-      "oldValue": "NORMAL",
-      "newValue": "PENDING_VERIFICATION"
     }
-  },
-  "attachmentIds": ["attachment-id"]
+  }
 }
 ```
+
+权限要求：`ARCHIVE_CHANGE_REQUEST_CREATE`
+
+当前可变更字段：`name`、`model`、`manufacturer`、`location.address`。设备运行状态不通过档案变更申请直接修改，应由核验、故障、维修和复检流程驱动。
 
 后端创建申请前必须校验：
 
 - 设备不存在待审核变更申请。
 - 设备不处于变更冻结期。
 - 提交的新值与当前设备档案存在有效差异。
+- 申请中的 `oldValue` 必须与后端当前档案值一致，避免基于过期页面提交覆盖更新。
 
 响应数据：
 
@@ -437,6 +437,8 @@ POST /api/v1/device-change-requests
 GET /api/v1/device-change-requests
 ```
 
+权限要求：`MGMT_ARCHIVE_CHANGE_REVIEW`
+
 查询参数：
 
 | 参数 | 说明 |
@@ -452,6 +454,8 @@ GET /api/v1/device-change-requests
 ```text
 POST /api/v1/device-change-requests/{requestId}/review
 ```
+
+权限要求：`MGMT_ARCHIVE_CHANGE_REVIEW`
 
 请求体：
 
@@ -472,6 +476,8 @@ POST /api/v1/device-change-requests/{requestId}/review
   "freezeUntil": "2026-05-27T19:30:00Z"
 }
 ```
+
+审核通过后，后端应用已审核的档案字段并设置 12 小时变更冻结期；审核驳回时必须保留驳回意见。
 
 ## 10. 故障报告接口
 

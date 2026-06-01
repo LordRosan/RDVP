@@ -4,8 +4,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
@@ -14,12 +13,11 @@ import org.springframework.stereotype.Repository;
 @Profile("test")
 public class InMemoryDeviceArchiveRepository implements DeviceArchiveRepository {
 
-    private final Map<String, DeviceArchive> devicesById;
-    private final Map<String, DeviceArchive> devicesByCode;
+    private final Map<String, DeviceArchive> devicesById = new ConcurrentHashMap<>();
 
     public InMemoryDeviceArchiveRepository() {
         OffsetDateTime frozenUntil = OffsetDateTime.now().plusHours(12);
-        this.devicesById = Map.of(
+        devicesById.put(
                 "device-local-0001",
                 new DeviceArchive(
                         "device-local-0001",
@@ -32,7 +30,8 @@ public class InMemoryDeviceArchiveRepository implements DeviceArchiveRepository 
                         new BigDecimal("114.1694000"),
                         new BigDecimal("22.3193000"),
                         OffsetDateTime.parse("2026-05-28T09:30:00Z"),
-                        new DeviceArchive.ChangeState(false, null, null)),
+                        new DeviceArchive.ChangeState(false, null, null)));
+        devicesById.put(
                 "device-local-0002",
                 new DeviceArchive(
                         "device-local-0002",
@@ -45,7 +44,8 @@ public class InMemoryDeviceArchiveRepository implements DeviceArchiveRepository 
                         new BigDecimal("114.1721000"),
                         new BigDecimal("22.3188000"),
                         OffsetDateTime.parse("2026-05-27T15:20:00Z"),
-                        new DeviceArchive.ChangeState(true, "DCR-LOCAL-0002", null)),
+                        new DeviceArchive.ChangeState(true, "DCR-LOCAL-0002", null)));
+        devicesById.put(
                 "device-local-0003",
                 new DeviceArchive(
                         "device-local-0003",
@@ -59,18 +59,71 @@ public class InMemoryDeviceArchiveRepository implements DeviceArchiveRepository 
                         new BigDecimal("22.3210000"),
                         OffsetDateTime.parse("2026-05-26T11:10:00Z"),
                         new DeviceArchive.ChangeState(true, null, frozenUntil)));
-        this.devicesByCode = devicesById.values()
-                .stream()
-                .collect(Collectors.toUnmodifiableMap(DeviceArchive::deviceCode, Function.identity()));
     }
 
     @Override
     public Optional<DeviceArchive> findByCode(String deviceCode) {
-        return Optional.ofNullable(devicesByCode.get(deviceCode));
+        return devicesById.values()
+                .stream()
+                .filter(device -> device.deviceCode().equals(deviceCode))
+                .findFirst();
     }
 
     @Override
     public Optional<DeviceArchive> findById(String id) {
         return Optional.ofNullable(devicesById.get(id));
+    }
+
+    public void markPending(String deviceId, String requestId) {
+        DeviceArchive device = devicesById.get(deviceId);
+        if (device == null) {
+            return;
+        }
+
+        devicesById.put(deviceId, copyWithChangeState(device, new DeviceArchive.ChangeState(true, requestId, null)));
+    }
+
+    public void applyUpdate(DeviceArchiveUpdate update, OffsetDateTime freezeUntil) {
+        DeviceArchive device = devicesById.get(update.deviceId());
+        if (device == null) {
+            return;
+        }
+
+        devicesById.put(update.deviceId(), new DeviceArchive(
+                device.id(),
+                device.deviceCode(),
+                update.name(),
+                update.model(),
+                update.manufacturer(),
+                device.status(),
+                update.address(),
+                device.longitude(),
+                device.latitude(),
+                device.lastVerificationTime(),
+                new DeviceArchive.ChangeState(true, null, freezeUntil)));
+    }
+
+    public void clearPending(String deviceId) {
+        DeviceArchive device = devicesById.get(deviceId);
+        if (device == null) {
+            return;
+        }
+
+        devicesById.put(deviceId, copyWithChangeState(device, new DeviceArchive.ChangeState(false, null, null)));
+    }
+
+    private DeviceArchive copyWithChangeState(DeviceArchive device, DeviceArchive.ChangeState changeState) {
+        return new DeviceArchive(
+                device.id(),
+                device.deviceCode(),
+                device.name(),
+                device.model(),
+                device.manufacturer(),
+                device.status(),
+                device.address(),
+                device.longitude(),
+                device.latitude(),
+                device.lastVerificationTime(),
+                changeState);
     }
 }

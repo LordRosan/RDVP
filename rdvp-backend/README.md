@@ -98,6 +98,43 @@ POST http://localhost:8080/api/v1/device-qrcodes/verify
 
 二维码签名密钥通过 `RDVP_QR_SIGNING_SECRET` 配置。本地默认值仅用于开发联调，部署环境必须使用独立密钥。
 
+设备档案变更申请：
+
+```text
+POST http://localhost:8080/api/v1/device-change-requests
+```
+
+请求示例：
+
+```json
+{
+  "deviceId": "device-local-0001",
+  "reason": "Device name correction.",
+  "changes": {
+    "name": {
+      "oldValue": "Cooling Pump A-01",
+      "newValue": "Cooling Pump A-02"
+    }
+  }
+}
+```
+
+管理员查询和审核变更申请：
+
+```text
+GET http://localhost:8080/api/v1/device-change-requests?status=PENDING_REVIEW
+POST http://localhost:8080/api/v1/device-change-requests/{requestId}/review
+```
+
+审核请求示例：
+
+```json
+{
+  "decision": "APPROVED",
+  "reviewComment": "Approved."
+}
+```
+
 ## 本地引导账号
 
 | 用户名 | 密码 | 角色 |

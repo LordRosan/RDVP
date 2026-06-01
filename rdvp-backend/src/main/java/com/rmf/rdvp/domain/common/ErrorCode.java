@@ -15,6 +15,17 @@ public enum ErrorCode {
     QR_CODE_INVALID("QR_CODE_INVALID", HttpStatus.BAD_REQUEST, "QR code content is invalid."),
     QR_CODE_EXPIRED("QR_CODE_EXPIRED", HttpStatus.BAD_REQUEST, "QR code is expired."),
     QR_CODE_SIGNATURE_INVALID("QR_CODE_SIGNATURE_INVALID", HttpStatus.BAD_REQUEST, "QR code signature verification failed."),
+    DEVICE_CHANGE_REQUEST_INVALID(
+            "DEVICE_CHANGE_REQUEST_INVALID",
+            HttpStatus.UNPROCESSABLE_CONTENT,
+            "Device change request is invalid."),
+    DEVICE_CHANGE_LOCKED("DEVICE_CHANGE_LOCKED", HttpStatus.CONFLICT, "Device has a pending change request."),
+    DEVICE_CHANGE_FROZEN("DEVICE_CHANGE_FROZEN", HttpStatus.CONFLICT, "Device archive change is frozen."),
+    CHANGE_REQUEST_NOT_FOUND("CHANGE_REQUEST_NOT_FOUND", HttpStatus.NOT_FOUND, "Device change request not found."),
+    CHANGE_REQUEST_ALREADY_REVIEWED(
+            "CHANGE_REQUEST_ALREADY_REVIEWED",
+            HttpStatus.CONFLICT,
+            "Device change request has already been reviewed."),
     INTERNAL_ERROR("INTERNAL_ERROR", HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error.");
 
     private final String code;
