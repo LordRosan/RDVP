@@ -12,7 +12,7 @@ import { AuthGuard } from '../../utils/AuthGuard';
 
 const DEVICE_ARCHIVE_QUERY_INFO_SECTIONS: InfoDialogSection[] = [
   {
-    title: '设备档案查询',
+    title: '查询设备档案',
     items: [
       {
         label: '设备编号',
@@ -41,7 +41,7 @@ struct DeviceArchiveQuery {
   @State querying: boolean = false;
   private queryInfoDialogController: CustomDialogController = new CustomDialogController({
     builder: InfoDialog({
-      title: '设备档案查询说明',
+      title: '查询设备档案说明',
       sections: DEVICE_ARCHIVE_QUERY_INFO_SECTIONS
     }),
     autoCancel: true,
@@ -122,7 +122,7 @@ struct DeviceArchiveQuery {
     Row({ space: 16 }) {
       Column({ space: 6 }) {
         Row({ space: 6 }) {
-          Text('设备档案查询')
+          Text('查询设备档案')
             .fontSize(34)
             .fontWeight(FontWeight.Bold)
             .fontColor('#111827')
@@ -477,7 +477,7 @@ struct DeviceArchiveQuery {
   }
 
   getModeTitle(): string {
-    return '设备档案查询';
+    return '查询设备档案';
   }
 
   getModeSubtitle(): string {
@@ -502,7 +502,7 @@ struct DeviceArchiveQuery {
 
     if (!response.success) {
       const error = response.error;
-      this.message = error ? error.message : '设备档案查询失败';
+      this.message = error ? error.message : '查询设备档案失败';
       return;
     }
 

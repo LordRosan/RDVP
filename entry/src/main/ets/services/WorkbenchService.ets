@@ -102,7 +102,7 @@ export class WorkbenchService {
 
     const actions: WorkbenchAction[] = [{
       id: WorkbenchActionId.DeviceQuery,
-      title: '设备档案查询',
+      title: '查询设备档案',
       summary: '按编号或二维码定位档案',
       tone: '#2F6FED'
     }];

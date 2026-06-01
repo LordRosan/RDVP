@@ -305,11 +305,11 @@ struct MyRepairTask {
 
       Button({ type: ButtonType.Capsule, stateEffect: true }) {
         Row({ space: 8 }) {
-          SymbolGlyph($r('sys.symbol.text_clipboard'))
+          SymbolGlyph(this.isTaskSelected(item) ? $r('sys.symbol.checkmark_circle') : $r('sys.symbol.text_clipboard'))
             .fontSize(18)
             .fontColor(['#FFFFFF'])
 
-          Text('填写维修报告')
+          Text(this.isTaskSelected(item) ? '已选择' : '填写维修报告')
             .fontSize(15)
             .fontWeight(FontWeight.Medium)
             .fontColor('#FFFFFF')
@@ -321,7 +321,7 @@ struct MyRepairTask {
       }
       .height(46)
       .width('100%')
-      .backgroundColor('#2F6FED')
+      .backgroundColor(this.isTaskSelected(item) ? '#087F5B' : '#2F6FED')
       .onClick(() => {
         this.taskId = item.taskNo;
         this.normalizedTaskId = item.taskNo;
@@ -336,6 +336,10 @@ struct MyRepairTask {
     .width('100%')
     .backgroundColor('#FFFFFF')
     .borderRadius(24)
+    .border({
+      width: this.isTaskSelected(item) ? 2 : 0,
+      color: this.isTaskSelected(item) ? '#2F6FED' : '#00000000'
+    })
   }
 
   @Builder
@@ -768,6 +772,15 @@ struct MyRepairTask {
 
   isSelectedRepairTaskSubmitted(): boolean {
     return this.submittedRepairTaskId.length > 0 && this.normalizedTaskId === this.submittedRepairTaskId;
+  }
+
+  isTaskSelected(item: MyRepairTaskSummary): boolean {
+    const selectedTaskId = this.normalizedTaskId.trim();
+    if (selectedTaskId.length === 0 || selectedTaskId === '-') {
+      return false;
+    }
+
+    return item.taskNo === selectedTaskId || item.id === selectedTaskId;
   }
 
   getRepairResultStatusText(): string {

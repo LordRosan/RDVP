@@ -60,7 +60,6 @@ struct DeviceArchiveReview {
       return;
     }
 
-    this.reviewedAt = this.formatDateTime(new Date());
     this.refreshRequests();
   }
 
@@ -251,6 +250,25 @@ struct DeviceArchiveReview {
           .fontSize(12)
           .fontColor('#6B7280')
           .maxLines(1)
+      }
+      .width('100%')
+
+      Row() {
+        Text('审核记录编号')
+          .fontSize(13)
+          .fontColor('#374151')
+          .fontWeight(FontWeight.Medium)
+          .layoutWeight(1)
+          .maxLines(1)
+
+        Text(item.id)
+          .fontSize(13)
+          .fontColor('#2F6FED')
+          .fontWeight(FontWeight.Medium)
+          .textAlign(TextAlign.End)
+          .width('58%')
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
       .width('100%')
 
@@ -682,9 +700,7 @@ struct DeviceArchiveReview {
     this.selectedRequestId = item.id;
     this.reviewDecision = '';
     this.reviewComment = '';
-    if (this.reviewedAt.length === 0) {
-      this.reviewedAt = this.formatDateTime(new Date());
-    }
+    this.reviewedAt = '';
     this.message = '';
     this.messageTone = '#D9480F';
   }
@@ -722,7 +738,7 @@ struct DeviceArchiveReview {
   canSubmitReview(): boolean {
     return this.canReview() && !this.refreshing && !this.submitting &&
       this.selectedRequestId.length > 0 &&
-      this.reviewDecision.length > 0 &&
+      this.hasReviewDecision() &&
       this.reviewedAt.length > 0 &&
       (this.reviewDecision !== `${DeviceArchiveReviewDecision.Rejected}` || this.reviewComment.trim().length > 0);
   }
@@ -730,7 +746,7 @@ struct DeviceArchiveReview {
   fillSubmitValidationMessage(): void {
     if (this.selectedRequestId.length === 0) {
       this.message = '请先选择待审核申请';
-    } else if (this.reviewDecision.length === 0) {
+    } else if (!this.hasReviewDecision()) {
       this.message = '请选择审核结论';
     } else if (this.reviewedAt.length === 0) {
       this.message = '请选择审核时间';
@@ -747,7 +763,7 @@ struct DeviceArchiveReview {
     this.selectedRequestId = '';
     this.reviewDecision = '';
     this.reviewComment = '';
-    this.reviewedAt = this.formatDateTime(new Date());
+    this.reviewedAt = '';
   }
 
   canReview(): boolean {
@@ -758,6 +774,11 @@ struct DeviceArchiveReview {
     return this.requests.some((item: DeviceArchiveReviewItem) => {
       return item.id === requestId;
     });
+  }
+
+  hasReviewDecision(): boolean {
+    return this.reviewDecision === `${DeviceArchiveReviewDecision.Approved}` ||
+      this.reviewDecision === `${DeviceArchiveReviewDecision.Rejected}`;
   }
 
   isFailureMessageVisible(): boolean {

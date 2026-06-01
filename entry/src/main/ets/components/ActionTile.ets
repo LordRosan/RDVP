@@ -66,6 +66,10 @@ export struct ActionTile {
       SymbolGlyph($r('sys.symbol.magnifyingglass'))
         .fontSize(22)
         .fontColor(['#FFFFFF'])
+    } else if (this.action.id === WorkbenchActionId.DeviceArchiveCreate) {
+      SymbolGlyph($r('sys.symbol.plus_circle'))
+        .fontSize(23)
+        .fontColor(['#FFFFFF'])
     } else if (this.action.id === WorkbenchActionId.DeviceVerification) {
       SymbolGlyph($r('sys.symbol.checkmark_shield'))
         .fontSize(23)

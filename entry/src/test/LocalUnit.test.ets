@@ -45,7 +45,9 @@ export default function localUnitTest() {
 
     it('groupsBusinessActionsByCenter', 0, () => {
       signInLocal('admin');
-      expect(WorkbenchService.getArchiveCenterActions()[0].id).assertEqual(WorkbenchActionId.DeviceQuery);
+      const archiveActions = WorkbenchService.getArchiveCenterActions();
+      expect(archiveActions[0].id).assertEqual(WorkbenchActionId.DeviceQuery);
+      expect(archiveActions[0].title).assertEqual('查询设备档案');
       expect(WorkbenchService.getOperationsCenterActions().length).assertEqual(5);
       expect(WorkbenchService.getOperationsCenterActions()[0].id).assertEqual(WorkbenchActionId.DeviceVerification);
     });

@@ -238,7 +238,7 @@ struct ArchiveCenter {
       try {
         this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveQuery' });
       } catch (err) {
-        this.message = '设备档案查询不可用';
+        this.message = '查询设备档案不可用';
       }
       return;
     }
