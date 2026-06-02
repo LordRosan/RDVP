@@ -13,6 +13,7 @@ import {
 import { ApiClient } from './ApiClient';
 import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
 import { LocalReinspectionRepository } from './LocalReinspectionRepository';
+import { SessionStore } from '../stores/SessionStore';
 
 const MAX_REINSPECTION_DESCRIPTION_LENGTH = 800;
 
@@ -291,7 +292,7 @@ export class ReinspectionService {
     }
 
     LocalOperationRecordRepository.append(OperationRecordType.ReinspectionRecord, '提交复检记录', record.recordNo,
-      `复检结论：${ReinspectionService.formatResult(form.result)}`);
+      `复检结论：${ReinspectionService.formatResult(form.result)}`, SessionStore.getCurrentOperatorName());
     return {
       success: true,
       data: record,

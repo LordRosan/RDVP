@@ -10,6 +10,7 @@ import { ApiClient } from './ApiClient';
 import { DeviceService } from './DeviceService';
 import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
 import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
+import { SessionStore } from '../stores/SessionStore';
 
 const MAX_DESCRIPTION_LENGTH = 500;
 const MAX_REMARK_LENGTH = 300;
@@ -203,7 +204,8 @@ export class DeviceVerificationService {
     };
 
     LocalOperationRecordRepository.append(OperationRecordType.DeviceVerification, '提交状态核验', deviceCode,
-      `核验结果：${DeviceVerificationService.formatVerificationResult(form.result)}`);
+      `核验结果：${DeviceVerificationService.formatVerificationResult(form.result)}`,
+      SessionStore.getCurrentOperatorName());
     LocalDeviceArchiveRepository.updateLastVerificationTime(deviceCode, submittedAt);
     return {
       success: true,

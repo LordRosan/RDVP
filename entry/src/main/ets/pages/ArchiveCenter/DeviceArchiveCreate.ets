@@ -9,6 +9,7 @@ import {
 } from '../../services/DeviceArchiveLifecycleService';
 import { DeviceArchiveChangeService } from '../../services/DeviceArchiveChangeService';
 import { DeviceService } from '../../services/DeviceService';
+import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 
 const DEVICE_ARCHIVE_CREATE_INFO_SECTIONS: InfoDialogSection[] = [
@@ -278,6 +279,8 @@ struct DeviceArchiveCreate {
 
       Column() {
         StatusInfoRow({ label: '标准编号', value: this.normalizedDeviceCode, tone: '#374151' })
+        this.CardDivider()
+        StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: '#374151' })
         this.CardDivider()
         StatusInfoRow({ label: '档案字段', value: `${this.fieldCount}项`, tone: '#374151' })
         this.CardDivider()

@@ -3,6 +3,7 @@ import { ApiResponse } from '../models/ApiModels';
 import { AuthenticatedUser, AuthSession, LoginForm, LoginValidationResult, RoleCode } from '../models/AuthModels';
 import { OperationRecordType } from '../models/OperationRecordModels';
 import { PermissionCode } from '../models/PermissionModels';
+import { SessionStore } from '../stores/SessionStore';
 import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
 
 interface LoginApiResult {
@@ -101,6 +102,80 @@ export class AuthService {
     return {
       success: true,
       data: AuthService.createSessionFromApiResult(response.data),
+      requestId: response.requestId,
+      timestamp: response.timestamp
+    };
+  }
+
+  static async verifyCurrentUserPasswordRemoteFirst(password: string): Promise<ApiResponse<boolean>> {
+    if (!SessionStore.isAuthenticated()) {
+      return {
+        success: false,
+        error: {
+          code: 'AUTH_SESSION_REQUIRED',
+          message: '请先登录'
+        }
+      };
+    }
+
+    if (password.length === 0) {
+      return {
+        success: false,
+        error: {
+          code: 'PASSWORD_REQUIRED',
+          message: '请输入当前账号密码'
+        }
+      };
+    }
+
+    const currentUser = SessionStore.getCurrentUser();
+    if (currentUser.username === undefined || currentUser.username.length === 0) {
+      return {
+        success: false,
+        error: {
+          code: 'AUTH_USER_INVALID',
+          message: '当前账号信息无效'
+        }
+      };
+    }
+
+    if (!ApiClient.isConfigured()) {
+      if (password === 'password') {
+        return {
+          success: true,
+          data: true,
+          requestId: 'local-password-verification',
+          timestamp: new Date().toISOString()
+        };
+      }
+
+      return {
+        success: false,
+        error: {
+          code: 'LOGIN_FAILED',
+          message: '账号密码校验失败'
+        },
+        requestId: 'local-password-verification',
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    const response = await ApiClient.request<LoginApiResult>('/api/v1/auth/login', 'POST', false, JSON.stringify({
+      username: currentUser.username,
+      password
+    }));
+    if (!response.success) {
+      return {
+        success: false,
+        error: response.error,
+        requestId: response.requestId,
+        timestamp: response.timestamp
+      };
+    }
+
+    return {
+      success: true,
+      data: true,
       requestId: response.requestId,
       timestamp: response.timestamp
     };

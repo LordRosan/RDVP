@@ -424,6 +424,8 @@ struct DeviceVerification {
       Column() {
         StatusInfoRow({ label: '标准编号', value: this.normalizedDeviceCode, tone: '#374151' })
         this.CardDivider()
+        StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: '#374151' })
+        this.CardDivider()
         StatusInfoRow({
           label: '核验结果',
           value: this.getVerificationResultStatusText(),

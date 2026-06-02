@@ -272,6 +272,25 @@ struct DeviceArchiveReview {
       }
       .width('100%')
 
+      Row() {
+        Text('操作人')
+          .fontSize(13)
+          .fontColor('#374151')
+          .fontWeight(FontWeight.Medium)
+          .layoutWeight(1)
+          .maxLines(1)
+
+        Text(this.getApplicantName(item))
+          .fontSize(13)
+          .fontColor('#374151')
+          .fontWeight(FontWeight.Medium)
+          .textAlign(TextAlign.End)
+          .width('58%')
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .width('100%')
+
       Text(item.reason)
         .fontSize(14)
         .fontColor('#374151')
@@ -779,6 +798,10 @@ struct DeviceArchiveReview {
   hasReviewDecision(): boolean {
     return this.reviewDecision === `${DeviceArchiveReviewDecision.Approved}` ||
       this.reviewDecision === `${DeviceArchiveReviewDecision.Rejected}`;
+  }
+
+  getApplicantName(item: DeviceArchiveReviewItem): string {
+    return item.applicantName === undefined || item.applicantName.length === 0 ? '-' : item.applicantName;
   }
 
   isFailureMessageVisible(): boolean {

@@ -7,6 +7,7 @@ import { ApiClient } from '../../services/ApiClient';
 import { DeviceService } from '../../services/DeviceService';
 import { FaultReportService } from '../../services/FaultReportService';
 import { RepairTaskService } from '../../services/RepairTaskService';
+import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 
 const MY_REPAIR_TASK_INFO_SECTIONS: InfoDialogSection[] = [
@@ -582,6 +583,8 @@ struct MyRepairTask {
 
       Column() {
         StatusInfoRow({ label: '标准任务号', value: this.normalizedTaskId, tone: '#374151' })
+        this.CardDivider()
+        StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: '#374151' })
         this.CardDivider()
         StatusInfoRow({
           label: '维修结果',

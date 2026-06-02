@@ -10,6 +10,7 @@
     "pages/ArchiveCenter/DeviceArchiveCreate",
     "pages/ArchiveCenter/DeviceArchiveDetail",
     "pages/ArchiveCenter/DeviceArchiveChange",
+    "pages/ArchiveCenter/DeviceArchiveDelete",
     "pages/OperationsCenter/DeviceVerification",
     "pages/OperationsCenter/FaultReport",
     "pages/OperationsCenter/AvailableRepairTask",

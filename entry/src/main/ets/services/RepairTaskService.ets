@@ -18,6 +18,7 @@ import { OperationRecordType } from '../models/OperationRecordModels';
 import { ApiClient } from './ApiClient';
 import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
 import { LocalRepairTaskRepository } from './LocalRepairTaskRepository';
+import { SessionStore } from '../stores/SessionStore';
 
 const DEFAULT_RADIUS_KM = 10;
 const MIN_RADIUS_KM = 1;
@@ -542,7 +543,7 @@ export class RepairTaskService {
     }
 
     LocalOperationRecordRepository.append(OperationRecordType.RepairTaskAccept, '接取维修任务', result.taskId,
-      '维修任务已分配给当前维修人员');
+      '维修任务已分配给当前维修人员', SessionStore.getCurrentOperatorName());
     return {
       success: true,
       data: result,
@@ -573,7 +574,7 @@ export class RepairTaskService {
     }
 
     LocalOperationRecordRepository.append(OperationRecordType.RepairReport, '提交维修报告', record.reportNo,
-      `维修结果：${RepairTaskService.formatRepairReportResult(form.result)}`);
+      `维修结果：${RepairTaskService.formatRepairReportResult(form.result)}`, SessionStore.getCurrentOperatorName());
     return {
       success: true,
       data: record,

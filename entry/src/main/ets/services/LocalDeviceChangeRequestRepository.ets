@@ -13,6 +13,7 @@ import {
 } from '../models/DeviceArchiveReviewModels';
 import { DeviceSummary } from '../models/DeviceModels';
 import { OperationRecordType } from '../models/OperationRecordModels';
+import { SessionStore } from '../stores/SessionStore';
 import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
 import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
 
@@ -42,14 +43,15 @@ export class LocalDeviceChangeRequestRepository {
     return LocalDeviceChangeRequestRepository.cloneItem(item);
   });
 
-  static appendFromSubmission(form: DeviceArchiveChangeRequestForm, record: DeviceArchiveChangeRequestRecord): void {
+  static appendFromSubmission(form: DeviceArchiveChangeRequestForm, record: DeviceArchiveChangeRequestRecord,
+    applicantName: string): void {
     LocalDeviceChangeRequestRepository.requests.unshift({
       id: record.id,
       type: DeviceArchiveReviewRequestType.Update,
       deviceId: form.deviceId,
       deviceCode: record.deviceCode,
       deviceName: record.deviceName === undefined ? form.deviceName.trim() : record.deviceName,
-      applicantName: '本地用户',
+      applicantName,
       reason: record.reason,
       status: DeviceArchiveChangeRequestStatus.PendingReview,
       submittedAt: record.submittedAt,
@@ -58,13 +60,13 @@ export class LocalDeviceChangeRequestRepository {
   }
 
   static appendCreateSubmission(deviceCode: string, deviceName: string, model: string, manufacturer: string,
-    locationAddress: string, reason: string, requestId: string, submittedAt: string): void {
+    locationAddress: string, reason: string, requestId: string, submittedAt: string, applicantName: string): void {
     LocalDeviceChangeRequestRepository.requests.unshift({
       id: requestId,
       type: DeviceArchiveReviewRequestType.Create,
       deviceCode,
       deviceName,
-      applicantName: '本地用户',
+      applicantName,
       reason,
       status: DeviceArchiveChangeRequestStatus.PendingReview,
       submittedAt,
@@ -72,14 +74,15 @@ export class LocalDeviceChangeRequestRepository {
     });
   }
 
-  static appendDeleteSubmission(device: DeviceSummary, reason: string, requestId: string, submittedAt: string): void {
+  static appendDeleteSubmission(device: DeviceSummary, reason: string, requestId: string, submittedAt: string,
+    applicantName: string): void {
     LocalDeviceChangeRequestRepository.requests.unshift({
       id: requestId,
       type: DeviceArchiveReviewRequestType.Delete,
       deviceId: device.id,
       deviceCode: device.deviceCode,
       deviceName: device.name,
-      applicantName: '本地用户',
+      applicantName,
       reason,
       status: DeviceArchiveChangeRequestStatus.PendingReview,
       submittedAt,
@@ -121,7 +124,8 @@ export class LocalDeviceChangeRequestRepository {
       request.status = DeviceArchiveChangeRequestStatus.Approved;
       LocalDeviceChangeRequestRepository.applyApprovedArchiveRequest(request, freezeUntil);
       LocalOperationRecordRepository.append(OperationRecordType.DeviceChangeRequest, '档案审核通过', request.deviceCode,
-        LocalDeviceChangeRequestRepository.formatReviewDescription(reviewComment, true));
+        LocalDeviceChangeRequestRepository.formatReviewDescription(reviewComment, true),
+        SessionStore.getCurrentOperatorName());
       const result: DeviceArchiveReviewResult = {
         id: request.id,
         status: request.status,
@@ -139,7 +143,8 @@ export class LocalDeviceChangeRequestRepository {
       LocalDeviceArchiveRepository.releaseChangeLock(request.deviceCode);
     }
     LocalOperationRecordRepository.append(OperationRecordType.DeviceChangeRequest, '档案审核驳回', request.deviceCode,
-      LocalDeviceChangeRequestRepository.formatReviewDescription(reviewComment, false));
+      LocalDeviceChangeRequestRepository.formatReviewDescription(reviewComment, false),
+      SessionStore.getCurrentOperatorName());
     return {
       id: request.id,
       status: request.status,

@@ -6,6 +6,7 @@ import { ApiClient } from '../../services/ApiClient';
 import { DeviceService } from '../../services/DeviceService';
 import { FaultReportService } from '../../services/FaultReportService';
 import { OperationsFlowStore } from '../../stores/OperationsFlowStore';
+import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 
 const FAULT_REPORT_INFO_SECTIONS: InfoDialogSection[] = [
@@ -600,6 +601,8 @@ struct FaultReport {
 
       Column() {
         StatusInfoRow({ label: '标准编号', value: this.normalizedDeviceCode, tone: '#374151' })
+        this.CardDivider()
+        StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: '#374151' })
         this.CardDivider()
         StatusInfoRow({
           label: '故障类型',

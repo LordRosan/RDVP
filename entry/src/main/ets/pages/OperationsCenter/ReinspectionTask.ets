@@ -6,6 +6,7 @@ import {
 import { PermissionCode } from '../../models/PermissionModels';
 import { ApiClient } from '../../services/ApiClient';
 import { ReinspectionService } from '../../services/ReinspectionService';
+import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 
 const REINSPECTION_INFO_SECTIONS: InfoDialogSection[] = [
@@ -516,6 +517,8 @@ struct ReinspectionTask {
 
       Column() {
         StatusInfoRow({ label: '标准任务号', value: this.normalizedTaskId, tone: '#374151' })
+        this.CardDivider()
+        StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: '#374151' })
         this.CardDivider()
         StatusInfoRow({
           label: '复检结论',

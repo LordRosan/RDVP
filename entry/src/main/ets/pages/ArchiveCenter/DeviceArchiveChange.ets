@@ -11,6 +11,7 @@ import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { DeviceArchiveChangeService } from '../../services/DeviceArchiveChangeService';
 import { DeviceService } from '../../services/DeviceService';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
+import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 
 const DEVICE_CHANGE_INFO_SECTIONS: InfoDialogSection[] = [
@@ -499,6 +500,8 @@ struct DeviceArchiveChange {
 
       Column() {
         StatusInfoRow({ label: '标准编号', value: this.normalizedDeviceCode, tone: '#374151' })
+        this.CardDivider()
+        StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: '#374151' })
         this.CardDivider()
         StatusInfoRow({ label: '变更字段', value: `${this.changeCount}项`, tone: '#374151' })
         this.CardDivider()

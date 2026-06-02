@@ -2,7 +2,7 @@ import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { DeviceStatus, DeviceSummary } from '../../models/DeviceModels';
 import { PermissionCode } from '../../models/PermissionModels';
-import { DeviceArchiveLifecycleService } from '../../services/DeviceArchiveLifecycleService';
+import { DeviceArchiveDeleteGuardService } from '../../services/DeviceArchiveDeleteGuardService';
 import { DeviceService } from '../../services/DeviceService';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
 import { SessionStore } from '../../stores/SessionStore';
@@ -47,9 +47,6 @@ struct DeviceArchiveDetail {
   @State messageTone: string = '#D9480F';
   @State canChangeArchive: boolean = false;
   @State canDeleteArchive: boolean = false;
-  @State deleteReason: string = '';
-  @State showDeleteForm: boolean = false;
-  @State deleting: boolean = false;
   private detailInfoDialogController: CustomDialogController = new CustomDialogController({
     builder: InfoDialog({
       title: '设备档案详情说明',
@@ -92,7 +89,14 @@ struct DeviceArchiveDetail {
     this.canChangeArchive = SessionStore.hasPermission(PermissionCode.ArchiveChangeRequestCreate) &&
       !DeviceService.isArchiveChangeLocked(device);
     this.canDeleteArchive = SessionStore.hasPermission(PermissionCode.ArchiveDeviceDelete) &&
-      !DeviceService.isArchiveChangeLocked(device);
+      !DeviceService.isArchiveChangeLocked(device) &&
+      !DeviceArchiveDeleteGuardService.isDeleteLocked(device.deviceCode);
+    if (DeviceArchiveDeleteGuardService.isDeleteLocked(device.deviceCode)) {
+      this.message = DeviceArchiveDeleteGuardService.getDeleteLockMessage(device.deviceCode);
+      this.messageTone = '#D9480F';
+      return;
+    }
+
     this.message = '';
     this.messageTone = '#D9480F';
   }
@@ -302,7 +306,7 @@ struct DeviceArchiveDetail {
     Column({ space: 12 }) {
       this.MessageText()
       this.ChangeArchiveButton()
-      this.DeleteArchiveSection()
+      this.DeleteArchiveButton()
     }
     .padding({
       left: 18,
@@ -388,125 +392,32 @@ struct DeviceArchiveDetail {
   }
 
   @Builder
-  DeleteArchiveSection() {
+  DeleteArchiveButton() {
     if (SessionStore.hasPermission(PermissionCode.ArchiveDeviceDelete)) {
-      if (this.showDeleteForm) {
-        Column({ space: 12 }) {
-          this.FieldTitle('删除原因')
-          TextArea({
-            placeholder: '填写设备退役、撤场、误建档或其他删除依据',
-            text: this.deleteReason
-          })
-            .height(104)
-            .width('100%')
-            .fontSize(15)
-            .lineHeight(22)
-            .maxLength(500)
-            .backgroundColor('#F7F9FC')
-            .borderRadius(18)
-            .padding({
-              left: 14,
-              right: 14,
-              top: 12,
-              bottom: 12
-            })
-            .border({ width: 1, color: '#D6DAE1' })
-            .enabled(!this.deleting && this.canDeleteArchive)
-            .onChange((value: string) => {
-              this.deleteReason = value;
-              this.message = '';
-              this.messageTone = '#D9480F';
-            })
+      Button({ type: ButtonType.Capsule, stateEffect: this.canDeleteArchive }) {
+        Row({ space: 8 }) {
+          SymbolGlyph($r('sys.symbol.trash'))
+            .fontSize(20)
+            .fontColor(['#FFFFFF'])
 
-          Row({ space: 10 }) {
-            Column() {
-              this.ActionButton(this.deleting ? '提交中' : '提交删除申请', $r('sys.symbol.trash'),
-                this.canDeleteArchive && !this.deleting, () => {
-                  this.submitDeleteRequest();
-                })
-            }
-            .layoutWeight(1)
-
-            Column() {
-              this.SecondaryButton('取消', () => {
-                this.showDeleteForm = false;
-                this.deleteReason = '';
-                this.message = '';
-                this.messageTone = '#D9480F';
-              })
-            }
-            .layoutWeight(1)
-          }
-          .width('100%')
+          Text('删除设备档案')
+            .fontSize(17)
+            .fontWeight(FontWeight.Medium)
+            .fontColor('#FFFFFF')
+            .maxLines(1)
         }
         .width('100%')
-        .alignItems(HorizontalAlign.Start)
-      } else {
-        this.ActionButton('申请删除档案', $r('sys.symbol.trash'), this.canDeleteArchive, () => {
-          if (!this.canDeleteArchive) {
-            this.message = DeviceService.formatArchiveChangeLockReason(this.device);
-            this.messageTone = '#D9480F';
-            return;
-          }
-
-          this.showDeleteForm = true;
-        })
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
       }
-    }
-  }
-
-  @Builder
-  ActionButton(label: string, icon: Resource, enabled: boolean, action: () => void) {
-    Button({ type: ButtonType.Capsule, stateEffect: enabled }) {
-      Row({ space: 8 }) {
-        SymbolGlyph(icon)
-          .fontSize(20)
-          .fontColor(['#FFFFFF'])
-
-        Text(label)
-          .fontSize(17)
-          .fontWeight(FontWeight.Medium)
-          .fontColor('#FFFFFF')
-          .maxLines(1)
-      }
+      .height(54)
       .width('100%')
-      .justifyContent(FlexAlign.Center)
-      .alignItems(VerticalAlign.Center)
+      .backgroundColor(this.canDeleteArchive ? '#D9480F' : '#AEB6C2')
+      .enabled(this.canDeleteArchive)
+      .onClick(() => {
+        this.openDeletePage();
+      })
     }
-    .height(54)
-    .width('100%')
-    .backgroundColor(enabled ? '#2F6FED' : '#AEB6C2')
-    .enabled(enabled)
-    .onClick(() => {
-      action();
-    })
-  }
-
-  @Builder
-  SecondaryButton(label: string, action: () => void) {
-    Button({ type: ButtonType.Capsule, stateEffect: true }) {
-      Text(label)
-        .fontSize(17)
-        .fontWeight(FontWeight.Medium)
-        .fontColor('#111827')
-        .maxLines(1)
-    }
-    .height(54)
-    .width('100%')
-    .backgroundColor('#F7F9FC')
-    .border({ width: 1, color: '#D6DAE1' })
-    .onClick(() => {
-      action();
-    })
-  }
-
-  @Builder
-  FieldTitle(title: string) {
-    Text(title)
-      .fontSize(17)
-      .fontWeight(FontWeight.Bold)
-      .fontColor('#111827')
-      .maxLines(1)
   }
 
   @Builder
@@ -545,45 +456,31 @@ struct DeviceArchiveDetail {
     }
   }
 
-  async submitDeleteRequest(): Promise<void> {
-    if (this.deleting || !this.canDeleteArchive) {
-      return;
-    }
-
-    const validation = DeviceArchiveLifecycleService.validateDeleteRequestForm({
-      device: this.device,
-      reason: this.deleteReason
-    });
-    if (!validation.valid) {
-      this.message = validation.message;
+  openDeletePage(): void {
+    if (!SessionStore.hasPermission(PermissionCode.ArchiveDeviceDelete)) {
+      this.message = '当前账号无权申请删除设备档案';
       this.messageTone = '#D9480F';
       return;
     }
 
-    this.deleting = true;
-    const response = await DeviceArchiveLifecycleService.submitDeleteRequestRemoteFirst({
-      device: this.device,
-      reason: this.deleteReason
-    });
-    this.deleting = false;
-
-    if (!response.success) {
-      const error = response.error;
-      this.message = error ? error.message : '删除申请提交失败';
+    if (DeviceArchiveDeleteGuardService.isDeleteLocked(this.device.deviceCode)) {
+      this.message = DeviceArchiveDeleteGuardService.getDeleteLockMessage(this.device.deviceCode);
       this.messageTone = '#D9480F';
       return;
     }
 
-    DeviceArchiveFlowStore.markChangePending(response.data ? response.data.id : '');
-    const pendingDevice = DeviceArchiveFlowStore.getCurrentDevice();
-    if (pendingDevice !== undefined) {
-      this.device = pendingDevice;
+    if (DeviceService.isArchiveChangeLocked(this.device)) {
+      this.message = DeviceService.formatArchiveChangeLockReason(this.device);
+      this.messageTone = '#D9480F';
+      return;
     }
-    this.canChangeArchive = false;
-    this.canDeleteArchive = false;
-    this.showDeleteForm = false;
-    this.message = '删除申请已提交，等待管理员审核';
-    this.messageTone = '#087F5B';
+
+    try {
+      this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveDelete' });
+    } catch (err) {
+      this.message = '设备档案删除不可用';
+      this.messageTone = '#D9480F';
+    }
   }
 
   returnToQuery(): void {

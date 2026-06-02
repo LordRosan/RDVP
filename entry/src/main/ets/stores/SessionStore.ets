@@ -64,6 +64,15 @@ export class SessionStore {
     };
   }
 
+  static getCurrentOperatorName(): string {
+    const currentUser = SessionStore.getCurrentUser();
+    if (!currentUser.online) {
+      return '未登录用户';
+    }
+
+    return currentUser.displayName.length > 0 ? currentUser.displayName : '未命名用户';
+  }
+
   static hasPermission(permission: string): boolean {
     SessionStore.ensureInitialized();
     if (!SessionStore.isAuthenticated()) {

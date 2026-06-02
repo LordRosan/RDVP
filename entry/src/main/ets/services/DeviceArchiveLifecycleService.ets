@@ -11,6 +11,7 @@ import { DeviceService } from './DeviceService';
 import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
 import { LocalDeviceChangeRequestRepository } from './LocalDeviceChangeRequestRepository';
 import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
+import { SessionStore } from '../stores/SessionStore';
 
 interface DeviceArchiveLifecycleApiResult {
   id: string;
@@ -219,6 +220,7 @@ export class DeviceArchiveLifecycleService {
     normalizedDeviceCode: string): ApiResponse<DeviceArchiveChangeRequestRecord> {
     const submittedAt = new Date().toISOString();
     const requestId = DeviceArchiveLifecycleService.newLocalRequestId(submittedAt);
+    const operatorName = SessionStore.getCurrentOperatorName();
     LocalDeviceChangeRequestRepository.appendCreateSubmission(
       normalizedDeviceCode,
       DeviceArchiveLifecycleService.normalizeText(form.deviceName),
@@ -227,9 +229,10 @@ export class DeviceArchiveLifecycleService {
       DeviceArchiveLifecycleService.normalizeText(form.locationAddress),
       DeviceArchiveLifecycleService.normalizeText(form.reason),
       requestId,
-      submittedAt);
+      submittedAt,
+      operatorName);
     LocalOperationRecordRepository.append(OperationRecordType.DeviceChangeRequest, '提交档案新增', normalizedDeviceCode,
-      '设备新增档案进入待审核状态');
+      '设备新增档案进入待审核状态', operatorName);
     return {
       success: true,
       data: DeviceArchiveLifecycleService.createRecord(
@@ -251,14 +254,16 @@ export class DeviceArchiveLifecycleService {
   ): ApiResponse<DeviceArchiveChangeRequestRecord> {
     const submittedAt = new Date().toISOString();
     const requestId = DeviceArchiveLifecycleService.newLocalRequestId(submittedAt);
+    const operatorName = SessionStore.getCurrentOperatorName();
     LocalDeviceArchiveRepository.markChangePending(form.device.deviceCode, requestId);
     LocalDeviceChangeRequestRepository.appendDeleteSubmission(
       form.device,
       DeviceArchiveLifecycleService.normalizeText(form.reason),
       requestId,
-      submittedAt);
+      submittedAt,
+      operatorName);
     LocalOperationRecordRepository.append(OperationRecordType.DeviceChangeRequest, '提交档案删除', form.device.deviceCode,
-      '设备删除档案进入待审核状态');
+      '设备删除档案进入待审核状态', operatorName);
     return {
       success: true,
       data: DeviceArchiveLifecycleService.createRecord(

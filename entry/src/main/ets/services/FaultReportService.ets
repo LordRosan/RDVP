@@ -11,6 +11,7 @@ import { ApiClient } from './ApiClient';
 import { DeviceService } from './DeviceService';
 import { LocalRepairTaskRepository } from './LocalRepairTaskRepository';
 import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
+import { SessionStore } from '../stores/SessionStore';
 
 const MAX_DESCRIPTION_LENGTH = 800;
 const MAX_SCENE_CONDITION_LENGTH = 500;
@@ -263,7 +264,7 @@ export class FaultReportService {
   private static createLocalFaultReportResponse(form: FaultReportForm): ApiResponse<FaultReportRecord> {
     const record = LocalRepairTaskRepository.createFaultReport(form);
     LocalOperationRecordRepository.append(OperationRecordType.FaultReport, '提交故障报告', record.reportNo,
-      `设备 ${record.deviceCode} 进入待接取状态`);
+      `设备 ${record.deviceCode} 进入待接取状态`, SessionStore.getCurrentOperatorName());
     return {
       success: true,
       data: record,
