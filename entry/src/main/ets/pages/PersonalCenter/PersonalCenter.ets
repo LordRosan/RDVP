@@ -214,19 +214,19 @@ struct PersonalCenter {
         .maxLines(1)
 
       Column({ space: 12 }) {
-        this.InfoRow('服务模式', ApiClient.getRuntimeStatusLabel(), ApiClient.getRuntimeStatusTone())
+        this.InfoRow('服务模式', this.getSelectedRuntimeStatusLabel(), this.getSelectedRuntimeStatusTone())
         this.CardDivider()
         this.InfoRow('同步队列', OfflineSyncService.getStatusLabel(), OfflineSyncService.getStatusTone())
         this.CardDivider()
 
         Row({ space: 10 }) {
           Column() {
-            this.ServiceModeButton('在线模式', $r('sys.symbol.checkmark_circle'), ServiceMode.Online)
+            this.OnlineServiceModeButton()
           }
           .layoutWeight(1)
 
           Column() {
-            this.ServiceModeButton('离线模式', $r('sys.symbol.xmark_circle'), ServiceMode.Offline)
+            this.OfflineServiceModeButton()
           }
           .layoutWeight(1)
         }
@@ -256,10 +256,14 @@ struct PersonalCenter {
               this.messageTone = AppColors.Danger;
             })
 
-          this.ServiceButton('保存地址', $r('sys.symbol.checkmark_circle'), AppColors.Primary, AppColors.Surface, () => {
-            this.saveApiBaseUrl();
-          })
         }
+
+        this.ServiceButton('保存设置', $r('sys.symbol.checkmark_circle'),
+          this.serviceMode === ServiceMode.Online ? AppColors.Primary : AppColors.Warning,
+          AppColors.Surface,
+          () => {
+            this.applyServiceSettings();
+          })
 
         if (this.message.length > 0) {
           Text(this.message)
@@ -406,28 +410,23 @@ struct PersonalCenter {
   }
 
   @Builder
-  ServiceModeButton(label: string, icon: Resource, mode: ServiceMode) {
-    this.ServiceButton(label, icon,
-      this.serviceMode === mode ? (mode === ServiceMode.Online ? AppColors.Primary : AppColors.Warning) : AppColors.Surface,
-      this.serviceMode === mode ? AppColors.Surface : AppColors.TextPrimary,
+  OnlineServiceModeButton() {
+    this.ServiceButton('在线模式', $r('sys.symbol.checkmark_circle'),
+      this.serviceMode === ServiceMode.Online ? AppColors.Primary : AppColors.Surface,
+      this.serviceMode === ServiceMode.Online ? AppColors.Surface : AppColors.TextPrimary,
       () => {
-        this.selectServiceMode(mode);
+        this.selectServiceMode(ServiceMode.Online);
       })
   }
 
-  saveApiBaseUrl(): void {
-    const value = this.apiBaseUrl.trim();
-    const validationMessage = ApiClient.validateRequiredBaseUrlInput(value);
-    if (validationMessage.length > 0) {
-      this.message = validationMessage;
-      this.messageTone = AppColors.Danger;
-      return;
-    }
-
-    ApiClient.setBaseUrl(value);
-    this.apiBaseUrl = ApiClient.getBaseUrl();
-    this.message = '服务地址已保存';
-    this.messageTone = AppColors.Success;
+  @Builder
+  OfflineServiceModeButton() {
+    this.ServiceButton('离线模式', $r('sys.symbol.xmark_circle'),
+      this.serviceMode === ServiceMode.Offline ? AppColors.Warning : AppColors.Surface,
+      this.serviceMode === ServiceMode.Offline ? AppColors.Surface : AppColors.TextPrimary,
+      () => {
+        this.selectServiceMode(ServiceMode.Offline);
+      })
   }
 
   selectServiceMode(mode: ServiceMode): void {
@@ -437,10 +436,39 @@ struct PersonalCenter {
       return;
     }
 
-    ApiClient.setServiceMode(mode);
-    this.serviceMode = ApiClient.getServiceMode();
-    this.apiBaseUrl = ApiClient.getBaseUrl();
-    this.openLoginPage();
+    this.serviceMode = mode;
+    this.message = mode === ServiceMode.Online ? '已选择在线模式，保存设置后需要重新登录' : '已选择离线模式，保存设置后需要重新登录';
+    this.messageTone = mode === ServiceMode.Online ? AppColors.Primary : AppColors.Warning;
+  }
+
+  applyServiceSettings(): void {
+    if (this.serviceMode === ServiceMode.Online) {
+      const validationMessage = ApiClient.validateRequiredBaseUrlInput(this.apiBaseUrl);
+      if (validationMessage.length > 0) {
+        this.message = validationMessage;
+        this.messageTone = AppColors.Danger;
+        return;
+      }
+
+      ApiClient.setBaseUrl(this.apiBaseUrl);
+      this.apiBaseUrl = ApiClient.getBaseUrl();
+    }
+
+    ApiClient.setServiceMode(this.serviceMode);
+    this.message = this.serviceMode === ServiceMode.Online ? '在线模式已保存，请重新登录以使用后端会话' : '离线模式已保存，请重新登录以使用本地会话';
+    this.messageTone = this.serviceMode === ServiceMode.Online ? AppColors.Primary : AppColors.Warning;
+  }
+
+  getSelectedRuntimeStatusLabel(): string {
+    if (this.serviceMode === ServiceMode.Online) {
+      return this.apiBaseUrl.trim().length > 0 ? '在线模式' : '在线模式未配置';
+    }
+
+    return '离线模式';
+  }
+
+  getSelectedRuntimeStatusTone(): string {
+    return this.serviceMode === ServiceMode.Online ? AppColors.Primary : AppColors.Warning;
   }
 
   formatSessionExpiresAt(): string {

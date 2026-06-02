@@ -184,10 +184,10 @@ struct Login {
           .layoutWeight(1)
           .maxLines(1)
 
-        Text(ApiClient.getRuntimeStatusLabel())
+        Text(this.getSelectedRuntimeStatusLabel())
           .fontSize(13)
           .fontWeight(FontWeight.Medium)
-          .fontColor(ApiClient.getRuntimeStatusTone())
+          .fontColor(this.getSelectedRuntimeStatusTone())
           .maxLines(1)
       }
       .width('100%')
@@ -195,12 +195,12 @@ struct Login {
 
       Row({ space: 10 }) {
         Column() {
-          this.ServiceModeButton('在线模式', $r('sys.symbol.checkmark_circle'), ServiceMode.Online)
+          this.OnlineServiceModeButton()
         }
         .layoutWeight(1)
 
         Column() {
-          this.ServiceModeButton('离线模式', $r('sys.symbol.xmark_circle'), ServiceMode.Offline)
+          this.OfflineServiceModeButton()
         }
         .layoutWeight(1)
       }
@@ -283,12 +283,22 @@ struct Login {
   }
 
   @Builder
-  ServiceModeButton(label: string, icon: Resource, mode: ServiceMode) {
-    this.ServiceButton(label, icon,
-      this.serviceMode === mode ? (mode === ServiceMode.Online ? AppColors.Primary : AppColors.Warning) : AppColors.Surface,
-      this.serviceMode === mode ? AppColors.Surface : AppColors.TextPrimary,
+  OnlineServiceModeButton() {
+    this.ServiceButton('在线模式', $r('sys.symbol.checkmark_circle'),
+      this.serviceMode === ServiceMode.Online ? AppColors.Primary : AppColors.Surface,
+      this.serviceMode === ServiceMode.Online ? AppColors.Surface : AppColors.TextPrimary,
       () => {
-        this.selectServiceMode(mode);
+        this.selectServiceMode(ServiceMode.Online);
+      })
+  }
+
+  @Builder
+  OfflineServiceModeButton() {
+    this.ServiceButton('离线模式', $r('sys.symbol.xmark_circle'),
+      this.serviceMode === ServiceMode.Offline ? AppColors.Warning : AppColors.Surface,
+      this.serviceMode === ServiceMode.Offline ? AppColors.Surface : AppColors.TextPrimary,
+      () => {
+        this.selectServiceMode(ServiceMode.Offline);
       })
   }
 
@@ -385,6 +395,18 @@ struct Login {
 
     this.message = '已选择离线模式';
     this.messageTone = AppColors.Warning;
+  }
+
+  getSelectedRuntimeStatusLabel(): string {
+    if (this.serviceMode === ServiceMode.Online) {
+      return this.apiBaseUrl.trim().length > 0 ? '在线模式' : '在线模式未配置';
+    }
+
+    return '离线模式';
+  }
+
+  getSelectedRuntimeStatusTone(): string {
+    return this.serviceMode === ServiceMode.Online ? AppColors.Primary : AppColors.Warning;
   }
 
   openWorkbench(): void {
