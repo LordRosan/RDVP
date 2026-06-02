@@ -79,7 +79,9 @@ struct FaultReport {
   @State message: string = '';
   @State messageTone: string = AppColors.Danger;
   @State normalizedDeviceCode: string = '-';
+  @State latestReportNo: string = '-';
   @State submitting: boolean = false;
+  @State submitted: boolean = false;
   private faultInfoDialogController: CustomDialogController = new CustomDialogController({
     builder: InfoDialog({
       title: '故障分类说明',
@@ -205,7 +207,7 @@ struct FaultReport {
       this.MessageText()
       this.ActionButton(this.submitting ? '提交中' : '提交报告', $r('sys.symbol.exclamationmark_message'), () => {
         this.submitFaultReport();
-      }, !this.submitting)
+      }, !this.submitting && !this.submitted)
     }
     .padding({
       left: 18,
@@ -242,8 +244,7 @@ struct FaultReport {
         })
         .onChange((value: string) => {
           this.deviceCode = value;
-          this.message = '';
-          this.messageTone = AppColors.Danger;
+          this.markFormChanged();
           this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(value);
           if (this.normalizedDeviceCode.length === 0) {
             this.normalizedDeviceCode = '-';
@@ -350,8 +351,7 @@ struct FaultReport {
     })
     .onClick(() => {
       this.faultType = `${type}`;
-      this.message = '';
-      this.messageTone = AppColors.Danger;
+      this.markFormChanged();
     })
   }
 
@@ -408,8 +408,7 @@ struct FaultReport {
     })
     .onClick(() => {
       this.severity = `${severity}`;
-      this.message = '';
-      this.messageTone = AppColors.Danger;
+      this.markFormChanged();
     })
   }
 
@@ -448,8 +447,7 @@ struct FaultReport {
       })
       .onClick(() => {
         this.showOccurredAtPicker();
-        this.message = '';
-        this.messageTone = AppColors.Danger;
+        this.markFormChanged();
       })
     }
     .width('100%')
@@ -484,8 +482,7 @@ struct FaultReport {
         })
         .onChange((value: string) => {
           this.description = value;
-          this.message = '';
-          this.messageTone = AppColors.Danger;
+          this.markFormChanged();
         })
     }
     .width('100%')
@@ -520,8 +517,7 @@ struct FaultReport {
         })
         .onChange((value: string) => {
           this.sceneCondition = value;
-          this.message = '';
-          this.messageTone = AppColors.Danger;
+          this.markFormChanged();
         })
     }
     .width('100%')
@@ -603,6 +599,8 @@ struct FaultReport {
       Column() {
         StatusInfoRow({ label: '标准编号', value: this.normalizedDeviceCode, tone: AppColors.TextSecondary })
         this.CardDivider()
+        StatusInfoRow({ label: '报告编号', value: this.latestReportNo, tone: AppColors.TextSecondary })
+        this.CardDivider()
         StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: AppColors.TextSecondary })
         this.CardDivider()
         StatusInfoRow({
@@ -643,7 +641,7 @@ struct FaultReport {
   }
 
   async submitFaultReport(): Promise<void> {
-    if (this.submitting) {
+    if (this.submitting || this.submitted) {
       return;
     }
 
@@ -653,26 +651,41 @@ struct FaultReport {
     }
 
     this.submitting = true;
-    const response = await FaultReportService.submitFaultReportRemoteFirst({
-      deviceCode: this.deviceCode,
-      faultType: this.faultType as FaultType,
-      severity: this.severity as FaultSeverity,
-      occurredAt: this.occurredAt,
-      description: this.description,
-      sceneCondition: this.sceneCondition
-    });
-    this.submitting = false;
+    try {
+      const response = await FaultReportService.submitFaultReportRemoteFirst({
+        deviceCode: this.deviceCode,
+        faultType: this.faultType as FaultType,
+        severity: this.severity as FaultSeverity,
+        occurredAt: this.occurredAt,
+        description: this.description,
+        sceneCondition: this.sceneCondition
+      });
 
-    if (!response.success) {
-      const error = response.error;
-      this.message = error ? error.message : '故障报告提交失败';
+      if (!response.success) {
+        const error = response.error;
+        this.message = error ? error.message : '故障报告提交失败';
+        this.messageTone = AppColors.Danger;
+        return;
+      }
+
+      const reportNo = response.data ? response.data.reportNo : '';
+      this.latestReportNo = reportNo.length > 0 ? reportNo : '-';
+      this.submitted = true;
+      this.message = '故障报告已提交';
+      this.messageTone = AppColors.Success;
+    } catch (err) {
+      this.message = '故障报告提交失败，请稍后重试';
       this.messageTone = AppColors.Danger;
-      return;
+    } finally {
+      this.submitting = false;
     }
+  }
 
-    const reportNo = response.data ? response.data.reportNo : '';
-    this.message = reportNo.length > 0 ? `故障报告已提交：${reportNo}` : '故障报告已提交';
-    this.messageTone = AppColors.Success;
+  markFormChanged(): void {
+    this.message = '';
+    this.messageTone = AppColors.Danger;
+    this.latestReportNo = '-';
+    this.submitted = false;
   }
 
   applyPrefill(): void {
@@ -730,8 +743,7 @@ struct FaultReport {
       useMilitaryTime: true,
       onDateAccept: (value: Date) => {
         this.occurredAt = this.formatDateTime(value);
-        this.message = '';
-        this.messageTone = AppColors.Danger;
+        this.markFormChanged();
       }
     });
   }

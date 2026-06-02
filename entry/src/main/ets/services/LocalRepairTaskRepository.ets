@@ -32,24 +32,13 @@ const LOCAL_AVAILABLE_TASK_SEEDS: LocalRepairTaskSeed[] = [
   {
     id: 'local-task-0001',
     faultNo: 'RDF-LOCAL-0001',
-    deviceCode: 'RDVP-DEVICE-0003',
-    deviceName: '供能网关C-03',
-    faultType: FaultType.CommunicationFault,
-    severity: FaultSeverity.Severe,
-    distanceKm: 3.8,
-    location: '二号厂房通信机柜',
-    submittedAt: '2026-05-29 09:40'
-  },
-  {
-    id: 'local-task-0002',
-    faultNo: 'RDF-LOCAL-0002',
     deviceCode: 'RDVP-DEVICE-0001',
     deviceName: '冷却泵A-01',
     faultType: FaultType.OperationAbnormal,
     severity: FaultSeverity.General,
-    distanceKm: 8.6,
+    distanceKm: 3.8,
     location: '一号厂房动力区',
-    submittedAt: '2026-05-29 10:15'
+    submittedAt: '2026-05-29 09:40'
   }
 ];
 
@@ -59,7 +48,7 @@ const LOCAL_MY_TASK_SEEDS: MyRepairTaskSummary[] = [
     taskNo: 'RDT-LOCAL-0001',
     faultNo: 'RDF-LOCAL-0003',
     deviceCode: 'RDVP-DEVICE-0002',
-    deviceName: '视觉采集终端B-02',
+    deviceName: '输送线B-02',
     faultType: FaultType.HardwareDamage,
     severity: FaultSeverity.General,
     acceptedAt: '2026-05-29 10:50',
@@ -76,10 +65,14 @@ export class LocalRepairTaskRepository {
   private static reports: RepairReportRecord[] = [];
   private static sequence: number = 100;
 
-  static createFaultReport(form: FaultReportForm): FaultReportRecord {
+  static createFaultReport(form: FaultReportForm): FaultReportRecord | undefined {
     const submittedAt = LocalRepairTaskRepository.formatDateTime(new Date());
-    const sequenceText = LocalRepairTaskRepository.nextSequenceText();
     const deviceCode = DeviceService.normalizeDeviceCode(form.deviceCode);
+    if (LocalRepairTaskRepository.hasActiveFaultForDevice(deviceCode)) {
+      return undefined;
+    }
+
+    const sequenceText = LocalRepairTaskRepository.nextSequenceText();
     const faultNo = `RDF-LOCAL-${sequenceText}`;
 
     const record: FaultReportRecord = {
@@ -108,6 +101,37 @@ export class LocalRepairTaskRepository {
     WorkbenchRefreshStore.notifyChanged();
 
     return record;
+  }
+
+  static hasActiveFaultForDevice(deviceCode: string): boolean {
+    const normalizedDeviceCode = DeviceService.normalizeDeviceCode(deviceCode);
+    if (normalizedDeviceCode.length === 0) {
+      return false;
+    }
+
+    const device = LocalDeviceArchiveRepository.findByCode(normalizedDeviceCode);
+    if (device !== undefined &&
+      (device.status === DeviceStatus.Faulted ||
+        device.status === DeviceStatus.UnderRepair ||
+        device.status === DeviceStatus.PendingReinspection)) {
+      return true;
+    }
+
+    const hasAvailableTask = LocalRepairTaskRepository.availableTasks.some((item: AvailableRepairTaskSummary) => {
+      return item.deviceCode === normalizedDeviceCode && item.status === RepairTaskStatus.Available;
+    });
+    if (hasAvailableTask) {
+      return true;
+    }
+
+    const hasActiveMyTask = LocalRepairTaskRepository.myTasks.some((item: MyRepairTaskSummary) => {
+      return item.deviceCode === normalizedDeviceCode && item.status !== RepairTaskStatus.ReportSubmitted;
+    });
+    if (hasActiveMyTask) {
+      return true;
+    }
+
+    return LocalReinspectionRepository.hasPendingTaskForDevice(normalizedDeviceCode);
   }
 
   static queryAvailableTasks(radiusKm: number): AvailableRepairTaskListResult {

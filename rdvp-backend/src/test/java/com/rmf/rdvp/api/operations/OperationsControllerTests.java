@@ -98,6 +98,41 @@ class OperationsControllerTests {
     }
 
     @Test
+    void rejectsDuplicateActiveFaultReportForSameDevice() throws Exception {
+        String operatorToken = login("fieldoperator", "password");
+        String maintainerToken = login("maintainer", "password");
+
+        createFaultReport(
+                operatorToken,
+                "RDVP-DEVICE-0001",
+                "ENERGY_FAULT",
+                "GENERAL",
+                "Power supply fluctuates under load.");
+
+        mockMvc.perform(post("/api/v1/fault-reports")
+                        .header("Authorization", "Bearer " + operatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "deviceCode": "RDVP-DEVICE-0001",
+                                  "faultType": "COMMUNICATION_FAULT",
+                                  "severity": "GENERAL",
+                                  "occurredAt": "2026-05-29T04:10:00Z",
+                                  "description": "Repeated report for the same active device fault.",
+                                  "sceneCondition": "Duplicate submission should be rejected."
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("DEVICE_ACTIVE_FAULT_EXISTS"));
+
+        mockMvc.perform(get("/api/v1/repair-tasks/available?radiusKm=10")
+                        .header("Authorization", "Bearer " + maintainerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items[0].deviceCode").value("RDVP-DEVICE-0001"));
+    }
+
+    @Test
     void derivesMaintainerWorkloadBeforeListingOrAcceptingTasks() throws Exception {
         String operatorToken = login("fieldoperator", "password");
         String maintainerToken = login("maintainer", "password");

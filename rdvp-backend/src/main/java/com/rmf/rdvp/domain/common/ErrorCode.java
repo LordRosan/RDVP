@@ -34,6 +34,10 @@ public enum ErrorCode {
             "Device change request has already been reviewed."),
     FAULT_REPORT_INVALID("FAULT_REPORT_INVALID", HttpStatus.UNPROCESSABLE_CONTENT, "Fault report is invalid."),
     FAULT_REPORT_NOT_FOUND("FAULT_REPORT_NOT_FOUND", HttpStatus.NOT_FOUND, "Fault report not found."),
+    DEVICE_ACTIVE_FAULT_EXISTS(
+            "DEVICE_ACTIVE_FAULT_EXISTS",
+            HttpStatus.CONFLICT,
+            "Device already has an active fault workflow."),
     FAULT_ALREADY_ACCEPTED("FAULT_ALREADY_ACCEPTED", HttpStatus.CONFLICT, "Fault has already been accepted."),
     REPAIR_REPORT_INVALID("REPAIR_REPORT_INVALID", HttpStatus.UNPROCESSABLE_CONTENT, "Repair report is invalid."),
     REPAIR_REPORT_NOT_FOUND("REPAIR_REPORT_NOT_FOUND", HttpStatus.NOT_FOUND, "Repair report not found."),

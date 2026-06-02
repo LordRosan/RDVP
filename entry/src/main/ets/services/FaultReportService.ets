@@ -1,4 +1,4 @@
-import { ApiResponse } from '../models/ApiModels';
+import { ApiError, ApiResponse } from '../models/ApiModels';
 import {
   FaultReportForm,
   FaultReportRecord,
@@ -146,7 +146,8 @@ export class FaultReportService {
     if (!response.success) {
       return {
         success: false,
-        error: response.error,
+        error: FaultReportService.createSubmitError(response.error === undefined ? '' : `${response.error.code}`,
+          response.error === undefined ? '' : response.error.message),
         requestId: response.requestId,
         timestamp: response.timestamp
       };
@@ -263,6 +264,15 @@ export class FaultReportService {
 
   private static createLocalFaultReportResponse(form: FaultReportForm): ApiResponse<FaultReportRecord> {
     const record = LocalRepairTaskRepository.createFaultReport(form);
+    if (record === undefined) {
+      return {
+        success: false,
+        error: FaultReportService.createSubmitError('DEVICE_ACTIVE_FAULT_EXISTS', ''),
+        requestId: 'local-fault-report-blocked',
+        timestamp: new Date().toISOString()
+      };
+    }
+
     LocalOperationRecordRepository.append(OperationRecordType.FaultReport, '提交故障报告', record.reportNo,
       `设备 ${record.deviceCode} 进入待接取状态`, SessionStore.getCurrentOperatorName());
     return {
@@ -282,6 +292,20 @@ export class FaultReportService {
       severity: form.severity,
       status: result.status,
       submittedAt: result.createdAt
+    };
+  }
+
+  private static createSubmitError(code: string, fallbackMessage: string): ApiError {
+    if (code === 'DEVICE_ACTIVE_FAULT_EXISTS') {
+      return {
+        code,
+        message: '该设备已有进行中的故障处理流程，请勿重复提交故障报告'
+      };
+    }
+
+    return {
+      code: code.length === 0 ? 'FAULT_REPORT_SUBMIT_FAILED' : code,
+      message: fallbackMessage.length === 0 ? '故障报告提交失败' : fallbackMessage
     };
   }
 }

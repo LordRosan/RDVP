@@ -105,6 +105,20 @@ public class JdbcOperationsRepository implements OperationsRepository {
     }
 
     @Override
+    public boolean hasActiveFaultForDevice(String deviceId) {
+        Integer count = jdbcTemplate.queryForObject(
+                """
+                        SELECT count(*)
+                        FROM fault_reports
+                        WHERE device_id = :deviceId
+                          AND status <> 'CLOSED'
+                        """,
+                Map.of("deviceId", deviceId),
+                Integer.class);
+        return count != null && count > 0;
+    }
+
+    @Override
     public List<AvailableRepairTaskSummary> listAvailableRepairTasks(FaultSeverity severity, int limit) {
         List<String> conditions = new ArrayList<>();
         MapSqlParameterSource parameters = new MapSqlParameterSource()

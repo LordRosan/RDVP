@@ -187,7 +187,7 @@ export class LocalDeviceArchiveRepository {
             longitude: 114.1694,
             latitude: 22.3193
           },
-          status: DeviceStatus.Normal,
+          status: DeviceStatus.Faulted,
           lastVerificationTime: '2026-05-28T09:30:00Z'
         },
         {
@@ -201,7 +201,7 @@ export class LocalDeviceArchiveRepository {
             longitude: 114.1721,
             latitude: 22.3188
           },
-          status: DeviceStatus.Normal,
+          status: DeviceStatus.UnderRepair,
           lastVerificationTime: '2026-05-27T15:20:00Z',
           changeState: {
             locked: true,
@@ -219,7 +219,7 @@ export class LocalDeviceArchiveRepository {
             longitude: 114.1662,
             latitude: 22.321
           },
-          status: DeviceStatus.UnderRepair,
+          status: DeviceStatus.PendingReinspection,
           lastVerificationTime: '2026-05-26T11:10:00Z'
         }
       ];

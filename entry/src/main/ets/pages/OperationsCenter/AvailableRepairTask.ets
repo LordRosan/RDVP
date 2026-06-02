@@ -8,6 +8,7 @@ import {
   RepairerWorkloadSnapshot,
   RepairerWorkloadStatus
 } from '../../models/RepairTaskModels';
+import { ApiResponse } from '../../models/ApiModels';
 import { ApiClient } from '../../services/ApiClient';
 import { FaultReportService } from '../../services/FaultReportService';
 import { RepairTaskService } from '../../services/RepairTaskService';
@@ -55,6 +56,7 @@ const RADIUS_PICKER_OPTIONS: string[] = [
   '19 km',
   '20 km'
 ];
+const REFRESH_TIMEOUT_MS = 5000;
 
 @Entry
 @Component
@@ -600,51 +602,65 @@ struct AvailableRepairTask {
     }
 
     this.refreshing = true;
-    const workloadResponse = await RepairTaskService.getCurrentWorkloadSnapshotRemoteFirst();
-    if (!workloadResponse.success || workloadResponse.data === undefined) {
-      this.refreshing = false;
-      const error = workloadResponse.error;
-      this.message = error ? error.message : '维修负载状态刷新失败';
+    this.refreshStatus = '刷新中';
+    this.message = '';
+    this.messageTone = AppColors.Danger;
+    try {
+      const workloadResponse = await this.withRefreshTimeout<RepairerWorkloadSnapshot>(
+        RepairTaskService.getCurrentWorkloadSnapshotRemoteFirst(),
+        '维修负载状态刷新超时，请稍后手动刷新'
+      );
+      if (!workloadResponse.success || workloadResponse.data === undefined) {
+        const error = workloadResponse.error;
+        this.message = error ? error.message : '维修负载状态刷新失败';
+        this.messageTone = AppColors.Danger;
+        this.refreshStatus = this.isRefreshTimeout(workloadResponse) ? '刷新超时' : '刷新失败';
+        return;
+      }
+
+      this.applyWorkloadSnapshot(workloadResponse.data);
+      if (!this.workloadSnapshot.canAccept) {
+        this.taskItems = [];
+        this.message = this.workloadSnapshot.message;
+        this.messageTone = AppColors.Danger;
+        this.refreshStatus = '不可接取';
+        return;
+      }
+
+      const response = await this.withRefreshTimeout(
+        RepairTaskService.queryAvailableRepairTasksRemoteFirst({
+          radiusKm: this.radiusKm
+        }, this.workloadSnapshot),
+        '附近故障刷新超时，请稍后手动刷新'
+      );
+
+      if (!response.success) {
+        const error = response.error;
+        this.message = error ? error.message : '附近故障刷新失败';
+        this.messageTone = AppColors.Danger;
+        this.refreshStatus = this.isRefreshTimeout(response) ? '刷新超时' : '刷新失败';
+        return;
+      }
+
+      const data = response.data;
+      if (data?.workload !== undefined) {
+        this.applyWorkloadSnapshot(data.workload);
+      }
+      this.taskItems = data ? data.items : [];
+      this.refreshStatus = '已刷新';
+      if (this.workloadSnapshot.status === RepairerWorkloadStatus.LowLoad) {
+        this.message = this.workloadSnapshot.message;
+        this.messageTone = AppColors.Primary;
+      } else {
+        this.message = '';
+        this.messageTone = AppColors.Danger;
+      }
+    } catch (err) {
+      this.message = '附近故障刷新失败，请稍后手动刷新';
       this.messageTone = AppColors.Danger;
       this.refreshStatus = '刷新失败';
-      return;
-    }
-
-    this.applyWorkloadSnapshot(workloadResponse.data);
-    if (!this.workloadSnapshot.canAccept) {
+    } finally {
       this.refreshing = false;
-      this.taskItems = [];
-      this.message = this.workloadSnapshot.message;
-      this.messageTone = AppColors.Danger;
-      this.refreshStatus = '不可接取';
-      return;
-    }
-
-    const response = await RepairTaskService.queryAvailableRepairTasksRemoteFirst({
-      radiusKm: this.radiusKm
-    }, this.workloadSnapshot);
-    this.refreshing = false;
-
-    if (!response.success) {
-      const error = response.error;
-      this.message = error ? error.message : '附近故障刷新失败';
-      this.messageTone = AppColors.Danger;
-      this.refreshStatus = '刷新失败';
-      return;
-    }
-
-    const data = response.data;
-    if (data?.workload !== undefined) {
-      this.applyWorkloadSnapshot(data.workload);
-    }
-    this.taskItems = data ? data.items : [];
-    this.refreshStatus = '已刷新';
-    if (this.workloadSnapshot.status === RepairerWorkloadStatus.LowLoad) {
-      this.message = this.workloadSnapshot.message;
-      this.messageTone = AppColors.Primary;
-    } else {
-      this.message = '';
-      this.messageTone = AppColors.Danger;
     }
   }
 
@@ -654,46 +670,50 @@ struct AvailableRepairTask {
     }
 
     this.acceptingTaskId = taskId;
-    const workloadResponse = await RepairTaskService.getCurrentWorkloadSnapshotRemoteFirst();
-    if (!workloadResponse.success || workloadResponse.data === undefined) {
+    try {
+      const workloadResponse = await RepairTaskService.getCurrentWorkloadSnapshotRemoteFirst();
+      if (!workloadResponse.success || workloadResponse.data === undefined) {
+        const error = workloadResponse.error;
+        this.message = error ? error.message : '维修负载状态刷新失败';
+        this.messageTone = AppColors.Danger;
+        return;
+      }
+
+      this.applyWorkloadSnapshot(workloadResponse.data);
+      const selectedTask = this.findTaskItem(taskId);
+      if (!this.workloadSnapshot.canAccept ||
+        (selectedTask !== undefined && selectedTask.distanceKm > this.workloadSnapshot.maxRadiusKm)) {
+        this.message = this.workloadSnapshot.canAccept ?
+          `当前处于${RepairTaskService.formatWorkloadStatus(this.workloadSnapshot.status)}状态，仅可接取${this.workloadSnapshot.maxRadiusKm}公里内的维修任务。` :
+          this.workloadSnapshot.message;
+        this.messageTone = AppColors.Danger;
+        return;
+      }
+
+      const response = await RepairTaskService.acceptRepairTaskRemoteFirst(taskId);
+
+      if (!response.success) {
+        const error = response.error;
+        this.message = error ? error.message : '维修任务接取失败';
+        this.messageTone = AppColors.Danger;
+        return;
+      }
+
+      this.taskItems = this.taskItems.filter((item: AvailableRepairTaskSummary) => {
+        return item.id !== taskId;
+      });
+      this.refreshStatus = '已接取';
+      this.message = '维修任务已接取，可在我的维修中处理';
+      this.messageTone = AppColors.Success;
+      const nextWorkloadResponse = await RepairTaskService.getCurrentWorkloadSnapshotRemoteFirst();
+      if (nextWorkloadResponse.success && nextWorkloadResponse.data !== undefined) {
+        this.applyWorkloadSnapshot(nextWorkloadResponse.data);
+      }
+    } catch (err) {
+      this.message = '维修任务接取失败，请稍后重试';
+      this.messageTone = AppColors.Danger;
+    } finally {
       this.acceptingTaskId = '';
-      const error = workloadResponse.error;
-      this.message = error ? error.message : '维修负载状态刷新失败';
-      this.messageTone = AppColors.Danger;
-      return;
-    }
-
-    this.applyWorkloadSnapshot(workloadResponse.data);
-    const selectedTask = this.findTaskItem(taskId);
-    if (!this.workloadSnapshot.canAccept ||
-      (selectedTask !== undefined && selectedTask.distanceKm > this.workloadSnapshot.maxRadiusKm)) {
-      this.acceptingTaskId = '';
-      this.message = this.workloadSnapshot.canAccept ?
-        `当前处于${RepairTaskService.formatWorkloadStatus(this.workloadSnapshot.status)}状态，仅可接取${this.workloadSnapshot.maxRadiusKm}公里内的维修任务。` :
-        this.workloadSnapshot.message;
-      this.messageTone = AppColors.Danger;
-      return;
-    }
-
-    const response = await RepairTaskService.acceptRepairTaskRemoteFirst(taskId);
-    this.acceptingTaskId = '';
-
-    if (!response.success) {
-      const error = response.error;
-      this.message = error ? error.message : '维修任务接取失败';
-      this.messageTone = AppColors.Danger;
-      return;
-    }
-
-    this.taskItems = this.taskItems.filter((item: AvailableRepairTaskSummary) => {
-      return item.id !== taskId;
-    });
-    this.refreshStatus = '已接取';
-    this.message = '维修任务已接取，可在我的维修中处理';
-    this.messageTone = AppColors.Success;
-    const nextWorkloadResponse = await RepairTaskService.getCurrentWorkloadSnapshotRemoteFirst();
-    if (nextWorkloadResponse.success && nextWorkloadResponse.data !== undefined) {
-      this.applyWorkloadSnapshot(nextWorkloadResponse.data);
     }
   }
 
@@ -805,6 +825,40 @@ struct AvailableRepairTask {
       !this.refreshing &&
       this.workloadSnapshot.canAccept &&
       item.distanceKm <= this.workloadSnapshot.maxRadiusKm;
+  }
+
+  withRefreshTimeout<T>(request: Promise<ApiResponse<T>>, timeoutMessage: string): Promise<ApiResponse<T>> {
+    return new Promise<ApiResponse<T>>((resolve: (value: ApiResponse<T>) => void) => {
+      const timerId = setTimeout(() => {
+        resolve({
+          success: false,
+          error: {
+            code: 'REFRESH_TIMEOUT',
+            message: timeoutMessage
+          },
+          timestamp: new Date().toISOString()
+        });
+      }, REFRESH_TIMEOUT_MS);
+
+      request.then((response: ApiResponse<T>) => {
+        clearTimeout(timerId);
+        resolve(response);
+      }).catch(() => {
+        clearTimeout(timerId);
+        resolve({
+          success: false,
+          error: {
+            code: 'REFRESH_FAILED',
+            message: '附近故障刷新失败，请稍后手动刷新'
+          },
+          timestamp: new Date().toISOString()
+        });
+      });
+    });
+  }
+
+  isRefreshTimeout<T>(response: ApiResponse<T>): boolean {
+    return response.error !== undefined && `${response.error.code}` === 'REFRESH_TIMEOUT';
   }
 
   findTaskItem(taskId: string): AvailableRepairTaskSummary | undefined {

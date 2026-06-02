@@ -57,6 +57,13 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     }
 
     @Override
+    public boolean hasActiveFaultForDevice(String deviceId) {
+        return faultReportsById.values()
+                .stream()
+                .anyMatch(item -> item.deviceId().equals(deviceId) && item.status() != FaultStatus.CLOSED);
+    }
+
+    @Override
     public List<AvailableRepairTaskSummary> listAvailableRepairTasks(FaultSeverity severity, int limit) {
         return faultReportsById.values()
                 .stream()

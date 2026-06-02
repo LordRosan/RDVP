@@ -10,6 +10,8 @@ public interface OperationsRepository {
 
     Optional<FaultReportRecord> findFaultReportByIdOrNo(String idOrNo);
 
+    boolean hasActiveFaultForDevice(String deviceId);
+
     List<AvailableRepairTaskSummary> listAvailableRepairTasks(FaultSeverity severity, int limit);
 
     long countPendingAcceptanceFaults();

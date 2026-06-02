@@ -17,21 +17,10 @@ const LOCAL_REINSPECTION_TASKS: ReinspectionTaskSummary[] = [
     taskNo: 'RDI-LOCAL-0001',
     faultNo: 'RDF-LOCAL-0004',
     deviceCode: 'RDVP-DEVICE-0003',
-    deviceName: '供能网关C-03',
+    deviceName: '储能柜C-03',
     severity: FaultSeverity.Emergency,
-    location: '二号厂房通信机柜',
+    location: '三号厂房储能区',
     repairedAt: '2026-05-29 13:20',
-    status: ReinspectionTaskStatus.Pending
-  },
-  {
-    id: 'local-reinspection-0002',
-    taskNo: 'RDI-LOCAL-0002',
-    faultNo: 'RDF-LOCAL-0005',
-    deviceCode: 'RDVP-DEVICE-0001',
-    deviceName: '冷却泵A-01',
-    severity: FaultSeverity.Severe,
-    location: '一号厂房动力区',
-    repairedAt: '2026-05-29 13:45',
     status: ReinspectionTaskStatus.Pending
   }
 ];
@@ -117,6 +106,13 @@ export class LocalReinspectionRepository {
     return LocalReinspectionRepository.tasks.filter((item: ReinspectionTaskSummary) => {
       return item.status === ReinspectionTaskStatus.Pending;
     }).length;
+  }
+
+  static hasPendingTaskForDevice(deviceCode: string): boolean {
+    const normalizedDeviceCode = deviceCode.trim().toUpperCase();
+    return LocalReinspectionRepository.tasks.some((item: ReinspectionTaskSummary) => {
+      return item.deviceCode === normalizedDeviceCode && item.status === ReinspectionTaskStatus.Pending;
+    });
   }
 
   private static cloneTask(item: ReinspectionTaskSummary): ReinspectionTaskSummary {

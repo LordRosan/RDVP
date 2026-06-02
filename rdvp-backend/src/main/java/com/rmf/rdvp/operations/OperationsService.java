@@ -55,6 +55,10 @@ public class OperationsService {
             AuthenticatedUser reporter) {
         DeviceArchive device = archiveRepository.findByCode(normalizeDeviceCode(deviceCode))
                 .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
+        if (operationsRepository.hasActiveFaultForDevice(device.id())) {
+            throw new BusinessException(ErrorCode.DEVICE_ACTIVE_FAULT_EXISTS);
+        }
+
         OffsetDateTime now = now();
         FaultReportCreate create = new FaultReportCreate(
                 "fault-" + UUID.randomUUID(),
@@ -70,7 +74,12 @@ public class OperationsService {
                 latitude,
                 now);
 
-        operationsRepository.createFaultReport(create);
+        try {
+            operationsRepository.createFaultReport(create);
+        } catch (DataIntegrityViolationException exception) {
+            throw new BusinessException(ErrorCode.DEVICE_ACTIVE_FAULT_EXISTS);
+        }
+
         archiveRepository.updateStatus(device.id(), "FAULTED", reporter.id());
         return operationsRepository.findFaultReportByIdOrNo(create.id())
                 .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR));
