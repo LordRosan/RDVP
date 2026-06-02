@@ -79,7 +79,8 @@ export class AuthService {
 
     const response = await ApiClient.request<LoginApiResult>('/api/v1/auth/login', 'POST', false, JSON.stringify({
       username: form.username.trim(),
-      password: form.password
+      password: form.password,
+      clientDeviceId: 'rdvp-harmony-app'
     }));
 
     if (!response.success) {

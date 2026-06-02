@@ -98,6 +98,19 @@ export class ApiClient {
     WorkbenchRefreshStore.notifyChanged();
   }
 
+  static validateBaseUrlInput(baseUrl: string): string {
+    const normalized = baseUrl.trim();
+    if (normalized.length === 0) {
+      return '';
+    }
+
+    if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
+      return '后端服务地址必须以 http:// 或 https:// 开头';
+    }
+
+    return '';
+  }
+
   private static ensureInitialized(): void {
     if (ApiClient.initialized) {
       return;

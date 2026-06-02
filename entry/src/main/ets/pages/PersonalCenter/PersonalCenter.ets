@@ -398,8 +398,9 @@ struct PersonalCenter {
 
   saveApiBaseUrl(): void {
     const value = this.apiBaseUrl.trim();
-    if (value.length > 0 && !value.startsWith('http://') && !value.startsWith('https://')) {
-      this.message = '后端服务地址必须以 http:// 或 https:// 开头';
+    const validationMessage = ApiClient.validateBaseUrlInput(value);
+    if (validationMessage.length > 0) {
+      this.message = validationMessage;
       this.messageTone = '#D9480F';
       return;
     }

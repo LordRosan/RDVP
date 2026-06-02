@@ -63,6 +63,22 @@ RDVP/
 - Docker Desktop
 - PostgreSQL + PostGIS
 
+## 本地联调
+
+后端服务独立运行，不会随 HarmonyOS App 安装到模拟器或真机。联调时先启动 `rdvp-backend`，再在 App 登录页填写后端服务地址并保存。
+
+```powershell
+cd rdvp-backend
+docker compose up -d postgres
+.\mvnw.cmd spring-boot:run
+```
+
+模拟器访问电脑本机服务时，通常应填写电脑在局域网中的地址，例如：
+
+```text
+http://192.168.x.x:8080
+```
+
 ## 仓库要求
 
 - 不提交本地 IDE 配置、构建产物、依赖目录和本机路径配置。

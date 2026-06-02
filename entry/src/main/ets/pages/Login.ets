@@ -1,4 +1,5 @@
 import { AuthService } from '../services/AuthService';
+import { ApiClient } from '../services/ApiClient';
 import { SessionStore } from '../stores/SessionStore';
 
 @Entry
@@ -6,22 +7,27 @@ import { SessionStore } from '../stores/SessionStore';
 struct Login {
   @State username: string = '';
   @State password: string = '';
+  @State apiBaseUrl: string = ApiClient.getBaseUrl();
   @State message: string = '';
+  @State messageTone: string = '#D9480F';
   @State submitting: boolean = false;
 
   aboutToAppear(): void {
     if (SessionStore.isAuthenticated()) {
       this.openWorkbench();
+      return;
     }
+
+    this.apiBaseUrl = ApiClient.getBaseUrl();
   }
 
   build() {
-    Stack() {
-      Column({ space: 0 }) {
+    Scroll() {
+      Column({ space: 24 }) {
         Blank()
-          .height(26)
+          .height(12)
 
-        Column({ space: 28 }) {
+        Column({ space: 22 }) {
           this.BrandHeader()
           this.LoginPanel()
         }
@@ -32,9 +38,10 @@ struct Login {
         })
 
         Blank()
+          .height(12)
       }
       .width('100%')
-      .height('100%')
+      .constraintSize({ minHeight: '100%' })
       .justifyContent(FlexAlign.Center)
     }
     .height('100%')
@@ -106,6 +113,7 @@ struct Login {
 
       this.InputField('账号', '输入账号', false)
       this.InputField('密码', '输入密码', true)
+      this.ServiceConfigPanel()
       this.MessageText()
       this.LoginButton()
     }
@@ -154,7 +162,72 @@ struct Login {
             this.username = value;
           }
           this.message = '';
+          this.messageTone = '#D9480F';
         })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  ServiceConfigPanel() {
+    Column({ space: 10 }) {
+      Row() {
+        Text('后端服务')
+          .fontSize(14)
+          .fontWeight(FontWeight.Medium)
+          .fontColor('#111827')
+          .layoutWeight(1)
+          .maxLines(1)
+
+        Text(ApiClient.getRuntimeStatusLabel())
+          .fontSize(13)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(ApiClient.getRuntimeStatusTone())
+          .maxLines(1)
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+
+      TextInput({
+        placeholder: 'http://192.168.x.x:8080',
+        text: this.apiBaseUrl
+      })
+        .height(50)
+        .fontSize(15)
+        .backgroundColor('#F7F9FC')
+        .borderRadius(18)
+        .padding({
+          left: 16,
+          right: 16
+        })
+        .border({
+          width: 1,
+          color: '#D6DAE1'
+        })
+        .onChange((value: string) => {
+          this.apiBaseUrl = value;
+          this.message = '';
+          this.messageTone = '#D9480F';
+        })
+
+      Row({ space: 10 }) {
+        Column() {
+          this.ServiceButton('保存地址', $r('sys.symbol.checkmark_circle'), '#2F6FED', '#FFFFFF', () => {
+            this.saveApiBaseUrl();
+          })
+        }
+        .layoutWeight(1)
+
+        Column() {
+          this.ServiceButton('本地模式', $r('sys.symbol.xmark_circle'), '#FFFFFF', '#111827', () => {
+            this.clearApiBaseUrl();
+          })
+        }
+        .layoutWeight(1)
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -165,12 +238,42 @@ struct Login {
     if (this.message.length > 0) {
       Text(this.message)
         .fontSize(13)
-        .fontColor('#D9480F')
+        .fontColor(this.messageTone)
         .lineHeight(18)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
     }
+  }
+
+  @Builder
+  ServiceButton(label: string, icon: Resource, backgroundColor: string, textColor: string, action: () => void) {
+    Button({ type: ButtonType.Capsule, stateEffect: true }) {
+      Row({ space: 6 }) {
+        SymbolGlyph(icon)
+          .fontSize(18)
+          .fontColor([textColor])
+
+        Text(label)
+          .fontSize(15)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(textColor)
+          .maxLines(1)
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+    }
+    .height(44)
+    .width('100%')
+    .backgroundColor(backgroundColor)
+    .border({
+      width: 1,
+      color: backgroundColor === '#FFFFFF' ? '#D6DAE1' : backgroundColor
+    })
+    .onClick(() => {
+      action();
+    })
   }
 
   @Builder
@@ -215,6 +318,7 @@ struct Login {
     if (!response.success) {
       const error = response.error;
       this.message = error ? error.message : '登录失败';
+      this.messageTone = '#D9480F';
       return;
     }
 
@@ -223,6 +327,28 @@ struct Login {
     }
 
     this.openWorkbench();
+  }
+
+  saveApiBaseUrl(): void {
+    const value = this.apiBaseUrl.trim();
+    const validationMessage = ApiClient.validateBaseUrlInput(value);
+    if (validationMessage.length > 0) {
+      this.message = validationMessage;
+      this.messageTone = '#D9480F';
+      return;
+    }
+
+    ApiClient.setBaseUrl(value);
+    this.apiBaseUrl = ApiClient.getBaseUrl();
+    this.message = ApiClient.isConfigured() ? '服务地址已保存' : '已切换为本地模式';
+    this.messageTone = ApiClient.isConfigured() ? '#087F5B' : '#2F6FED';
+  }
+
+  clearApiBaseUrl(): void {
+    ApiClient.setBaseUrl('');
+    this.apiBaseUrl = '';
+    this.message = '已切换为本地模式';
+    this.messageTone = '#2F6FED';
   }
 
   openWorkbench(): void {
