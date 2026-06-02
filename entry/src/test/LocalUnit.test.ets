@@ -561,7 +561,17 @@ export default function localUnitTest() {
       });
 
       expect(result.valid).assertEqual(false);
-      expect(result.message).assertEqual('查询范围必须在1到100公里之间');
+      expect(result.message).assertEqual('查询范围必须在1到20公里之间');
+    });
+
+    it('rejectsOutOfRangeRepairTaskRadius', 0, () => {
+      const result = RepairTaskService.validateAvailableRepairTaskQuery({
+        radiusKm: 21,
+        availability: RepairerAvailability.Idle
+      });
+
+      expect(result.valid).assertEqual(false);
+      expect(result.message).assertEqual('查询范围必须在1到20公里之间');
     });
 
     it('rejectsBusyRepairerWhenRefreshingNearbyFaults', 0, () => {

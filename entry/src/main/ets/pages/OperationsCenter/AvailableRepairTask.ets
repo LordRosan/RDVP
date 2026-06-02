@@ -28,6 +28,29 @@ const AVAILABLE_TASK_INFO_SECTIONS: InfoDialogSection[] = [
   }
 ];
 
+const RADIUS_PICKER_OPTIONS: string[] = [
+  '1 km',
+  '2 km',
+  '3 km',
+  '4 km',
+  '5 km',
+  '6 km',
+  '7 km',
+  '8 km',
+  '9 km',
+  '10 km',
+  '11 km',
+  '12 km',
+  '13 km',
+  '14 km',
+  '15 km',
+  '16 km',
+  '17 km',
+  '18 km',
+  '19 km',
+  '20 km'
+];
+
 @Entry
 @Component
 struct AvailableRepairTask {
@@ -157,13 +180,7 @@ struct AvailableRepairTask {
   FilterPanel() {
     Column({ space: 16 }) {
       this.FieldTitle('查询范围')
-      Row({ space: 10 }) {
-        this.RadiusOption(5)
-        this.RadiusOption(10)
-        this.RadiusOption(20)
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
+      this.RadiusPicker()
 
       this.FieldTitle('维修状态')
       Row({ space: 10 }) {
@@ -192,25 +209,40 @@ struct AvailableRepairTask {
   }
 
   @Builder
-  RadiusOption(radiusKm: number) {
-    Button({ type: ButtonType.Capsule, stateEffect: true }) {
-      Text(`${radiusKm} km`)
-        .fontSize(14)
+  RadiusPicker() {
+    Column({ space: 8 }) {
+      TextPicker({
+        range: RADIUS_PICKER_OPTIONS,
+        selected: this.radiusKm - 1
+      })
+        .height(126)
+        .width('100%')
+        .backgroundColor('#F7F9FC')
+        .borderRadius(18)
+        .onChange((value: string | string[], index: number | number[]) => {
+          this.applyRadiusPickerIndex(index);
+        })
+
+      Text(`当前选择：${this.radiusKm} km`)
+        .fontSize(13)
+        .fontColor('#2F6FED')
         .fontWeight(FontWeight.Medium)
-        .fontColor(this.radiusKm === radiusKm ? '#FFFFFF' : '#111827')
+        .width('100%')
+        .textAlign(TextAlign.Center)
         .maxLines(1)
     }
-    .height(42)
-    .layoutWeight(1)
-    .backgroundColor(this.radiusKm === radiusKm ? '#2F6FED' : '#F7F9FC')
+    .width('100%')
+    .padding({
+      left: 12,
+      right: 12,
+      top: 8,
+      bottom: 10
+    })
+    .backgroundColor('#F7F9FC')
+    .borderRadius(18)
     .border({
       width: 1,
-      color: this.radiusKm === radiusKm ? '#2F6FED' : '#D6DAE1'
-    })
-    .onClick(() => {
-      this.radiusKm = radiusKm;
-      this.message = '';
-      this.messageTone = '#D9480F';
+      color: '#D6DAE1'
     })
   }
 
@@ -601,6 +633,19 @@ struct AvailableRepairTask {
 
   isFailureMessageVisible(): boolean {
     return this.message.length > 0 && this.messageTone === '#D9480F';
+  }
+
+  applyRadiusPickerIndex(index: number | number[]): void {
+    let selectedIndex = 0;
+    if (typeof index === 'number') {
+      selectedIndex = index;
+    } else if (index.length > 0) {
+      selectedIndex = index[0];
+    }
+
+    this.radiusKm = selectedIndex + 1;
+    this.message = '';
+    this.messageTone = '#D9480F';
   }
 
   showAvailableTaskInfoDialog(): void {

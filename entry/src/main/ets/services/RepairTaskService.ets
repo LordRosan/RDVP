@@ -22,7 +22,7 @@ import { SessionStore } from '../stores/SessionStore';
 
 const DEFAULT_RADIUS_KM = 10;
 const MIN_RADIUS_KM = 1;
-const MAX_RADIUS_KM = 100;
+const MAX_RADIUS_KM = 20;
 const MAX_REPAIR_PROCESS_LENGTH = 1000;
 const MAX_PARTS_USED_LENGTH = 500;
 
@@ -91,7 +91,7 @@ export class RepairTaskService {
     if (radiusKm !== radiusKm || radiusKm < MIN_RADIUS_KM || radiusKm > MAX_RADIUS_KM) {
       return {
         valid: false,
-        message: '查询范围必须在1到100公里之间'
+        message: '查询范围必须在1到20公里之间'
       };
     }
 

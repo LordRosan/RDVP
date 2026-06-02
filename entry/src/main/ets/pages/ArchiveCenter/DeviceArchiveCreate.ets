@@ -444,7 +444,7 @@ struct DeviceArchiveCreate {
       return '已提交';
     }
 
-    return '提交建档申请';
+    return '提交申请';
   }
 
   getStatusTone(status: DeviceArchiveChangeRequestStatus): string {
