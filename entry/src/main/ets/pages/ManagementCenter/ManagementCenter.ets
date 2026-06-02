@@ -142,18 +142,22 @@ struct ManagementCenter {
         .maxLines(1)
 
       Column() {
-        StatusInfoRow({
-          label: '待审核变更',
-          value: this.getPendingReviewText(),
-          tone: SessionStore.hasPermission(PermissionCode.MgmtArchiveChangeReview) ? AppColors.Primary : AppColors.TextSecondary
-        })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '操作记录',
-          value: this.getOperationRecordText(),
-          tone: SessionStore.hasPermission(PermissionCode.MgmtAuditLogRead) ? AppColors.TextSecondary : AppColors.TextSecondary
-        })
-        this.CardDivider()
+        if (SessionStore.hasPermission(PermissionCode.MgmtArchiveChangeReview)) {
+          StatusInfoRow({
+            label: '待审核变更',
+            value: this.getPendingReviewText(),
+            tone: AppColors.Primary
+          })
+          this.CardDivider()
+        }
+        if (SessionStore.hasPermission(PermissionCode.MgmtAuditLogRead)) {
+          StatusInfoRow({
+            label: '操作记录',
+            value: this.getOperationRecordText(),
+            tone: AppColors.TextSecondary
+          })
+          this.CardDivider()
+        }
         StatusInfoRow({
           label: '服务状态',
           value: ApiClient.getRuntimeStatusLabel(),
@@ -228,15 +232,11 @@ struct ManagementCenter {
       return '-';
     }
 
-    if (!SessionStore.hasPermission(PermissionCode.MgmtArchiveChangeReview)) {
-      return '无审核权限';
-    }
-
     return `${WorkbenchService.getPendingChangeCount()}项`;
   }
 
   getOperationRecordText(): string {
-    return SessionStore.hasPermission(PermissionCode.MgmtAuditLogRead) ? '可查看' : '无审计权限';
+    return '可查看';
   }
 
   openFeature(action: WorkbenchAction): void {

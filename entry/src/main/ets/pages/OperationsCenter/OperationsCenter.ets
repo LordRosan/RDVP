@@ -142,24 +142,30 @@ struct OperationsCenter {
         .maxLines(1)
 
       Column() {
-        StatusInfoRow({
-          label: '待接取故障',
-          value: this.getPendingFaultText(),
-          tone: SessionStore.hasPermission(PermissionCode.OpsRepairTaskAccept) ? AppColors.Danger : AppColors.TextSecondary
-        })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '已接取维修',
-          value: this.getActiveRepairTaskText(),
-          tone: SessionStore.hasPermission(PermissionCode.OpsRepairReportCreate) ? AppColors.Warning : AppColors.TextSecondary
-        })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '待复检任务',
-          value: this.getPendingReinspectionText(),
-          tone: SessionStore.hasPermission(PermissionCode.OpsReinspectionCreate) ? AppColors.Primary : AppColors.TextSecondary
-        })
-        this.CardDivider()
+        if (SessionStore.hasPermission(PermissionCode.OpsRepairTaskAccept)) {
+          StatusInfoRow({
+            label: '待接取故障',
+            value: this.getPendingFaultText(),
+            tone: AppColors.Danger
+          })
+          this.CardDivider()
+        }
+        if (SessionStore.hasPermission(PermissionCode.OpsRepairReportCreate)) {
+          StatusInfoRow({
+            label: '已接取维修',
+            value: this.getActiveRepairTaskText(),
+            tone: AppColors.Warning
+          })
+          this.CardDivider()
+        }
+        if (SessionStore.hasPermission(PermissionCode.OpsReinspectionCreate)) {
+          StatusInfoRow({
+            label: '待复检任务',
+            value: this.getPendingReinspectionText(),
+            tone: AppColors.Primary
+          })
+          this.CardDivider()
+        }
         StatusInfoRow({
           label: '服务状态',
           value: ApiClient.getRuntimeStatusLabel(),
@@ -238,18 +244,10 @@ struct OperationsCenter {
   }
 
   getPendingFaultText(): string {
-    if (!SessionStore.hasPermission(PermissionCode.OpsRepairTaskAccept)) {
-      return '无接取权限';
-    }
-
     return `${this.getPendingFaultCount()}项`;
   }
 
   getActiveRepairTaskText(): string {
-    if (!SessionStore.hasPermission(PermissionCode.OpsRepairReportCreate)) {
-      return '无维修报告权限';
-    }
-
     return `${WorkbenchService.getActiveRepairTaskCount()}项`;
   }
 
@@ -262,10 +260,6 @@ struct OperationsCenter {
   }
 
   getPendingReinspectionText(): string {
-    if (!SessionStore.hasPermission(PermissionCode.OpsReinspectionCreate)) {
-      return '无复检权限';
-    }
-
     return `${this.getPendingReinspectionCount()}项`;
   }
 
