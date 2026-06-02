@@ -255,9 +255,10 @@ export async function handleApiRequest(
         longitude: optionalNumber(url.searchParams.get('longitude')),
         latitude: optionalNumber(url.searchParams.get('latitude')),
         radiusKm: optionalNumber(url.searchParams.get('radiusKm')),
-        severity: optionalEnum<FaultSeverity>(url.searchParams.get('severity'))
+        severity: optionalEnum<FaultSeverity>(url.searchParams.get('severity')),
+        actor
       });
-      sendSuccess(response, 200, { items: result, total: result.length }, requestContext.requestId);
+      sendSuccess(response, 200, result, requestContext.requestId);
       return;
     }
 

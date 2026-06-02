@@ -79,6 +79,12 @@ export enum RepairTaskStatus {
   ReportSubmitted = 'REPORT_SUBMITTED'
 }
 
+export enum RepairerWorkloadStatus {
+  Idle = 'IDLE',
+  LowLoad = 'LOW_LOAD',
+  Busy = 'BUSY'
+}
+
 export enum RepairReportResult {
   Repaired = 'REPAIRED',
   TemporaryRestored = 'TEMPORARY_RESTORED',

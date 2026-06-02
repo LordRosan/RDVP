@@ -7,11 +7,18 @@ import {
   FaultStatus,
   FaultType,
   ReinspectionResult,
+  RepairerWorkloadStatus,
   RepairReportResult,
   RepairTaskStatus
 } from '../../domain/models/enums.js';
 import { resolveRepairTransition } from '../../domain/rules/faultRules.js';
 import { InMemoryDatabase } from '../../infrastructure/InMemoryDatabase.js';
+
+const DEFAULT_REPAIR_RADIUS_KM = 10;
+const MIN_REPAIR_RADIUS_KM = 1;
+const IDLE_MAX_REPAIR_RADIUS_KM = 20;
+const LOW_LOAD_MAX_REPAIR_RADIUS_KM = 10;
+const MAX_ACTIVE_REPAIR_TASK_COUNT = 2;
 
 export class FaultWorkflowService {
   constructor(
@@ -82,11 +89,18 @@ export class FaultWorkflowService {
     latitude?: number;
     radiusKm?: number;
     severity?: FaultSeverity;
+    actor: UserAccount;
   }) {
-    const radiusKm = query.radiusKm ?? 10;
+    const radiusKm = query.radiusKm ?? DEFAULT_REPAIR_RADIUS_KM;
+    if (radiusKm < MIN_REPAIR_RADIUS_KM || radiusKm > IDLE_MAX_REPAIR_RADIUS_KM) {
+      throw validationFailed('REPAIR_TASK_RADIUS_INVALID', '查询范围必须在1到20公里之间。');
+    }
+
+    const workload = this.resolveRepairerWorkload(query.actor.id);
+    this.assertWorkloadAllowsRefresh(workload, radiusKm);
     const hasPoint = query.longitude !== undefined && query.latitude !== undefined;
 
-    return this.database.faultReports
+    const items = this.database.faultReports
       .filter((fault) => fault.status === FaultStatus.PendingAcceptance)
       .filter((fault) => query.severity === undefined || fault.severity === query.severity)
       .map((fault) => {
@@ -109,6 +123,13 @@ export class FaultWorkflowService {
         };
       })
       .filter((item) => !hasPoint || item.distanceKm <= radiusKm);
+
+    return {
+      radiusKm,
+      workload,
+      items,
+      total: items.length
+    };
   }
 
   acceptFaultReport(input: {
@@ -118,12 +139,33 @@ export class FaultWorkflowService {
     requestId?: string;
   }) {
     const fault = this.findFaultById(input.faultReportId);
+    const workload = this.resolveRepairerWorkload(input.actor.id);
+    this.assertWorkloadAllowsAccept(workload);
+
     const activeTask = this.database.repairTasks.find((task) => {
       return task.faultReportId === fault.id && task.status !== RepairTaskStatus.ReportSubmitted;
     });
 
     if (activeTask !== undefined || fault.status !== FaultStatus.PendingAcceptance) {
       throw conflict('FAULT_ALREADY_ACCEPTED', 'Fault has already been accepted.');
+    }
+
+    if (input.acceptedLocation !== undefined) {
+      const targetDevice = this.findDeviceById(fault.deviceId);
+      if (targetDevice.location.longitude !== undefined && targetDevice.location.latitude !== undefined) {
+        const distanceKm = this.distanceKm(
+          input.acceptedLocation.latitude,
+          input.acceptedLocation.longitude,
+          targetDevice.location.latitude,
+          targetDevice.location.longitude
+        );
+        if (distanceKm > workload.maxRadiusKm) {
+          throw validationFailed(
+            'REPAIR_TASK_OUT_OF_WORKLOAD_RANGE',
+            `当前处于${workload.label}状态，仅可接取${workload.maxRadiusKm}公里内的维修任务。`
+          );
+        }
+      }
     }
 
     const now = this.database.now();
@@ -391,6 +433,69 @@ export class FaultWorkflowService {
 
   private findLatestRepairReport(faultReportId: string) {
     return this.database.repairReports.find((item) => item.faultReportId === faultReportId);
+  }
+
+  private resolveRepairerWorkload(maintainerId: string) {
+    const activeTaskCount = this.database.repairTasks.filter((task) => {
+      return task.maintainerId === maintainerId &&
+        [RepairTaskStatus.Accepted, RepairTaskStatus.Processing].includes(task.status);
+    }).length;
+
+    if (activeTaskCount >= MAX_ACTIVE_REPAIR_TASK_COUNT) {
+      return {
+        status: RepairerWorkloadStatus.Busy,
+        label: '忙碌',
+        activeTaskCount,
+        maxActiveTaskCount: MAX_ACTIVE_REPAIR_TASK_COUNT,
+        maxRadiusKm: 0,
+        recommendedRadiusKm: 0,
+        message: '当前进行中的维修任务已达到上限，暂不可继续接取。请完成并提交维修报告后再刷新任务。',
+        canAccept: false
+      };
+    }
+
+    if (activeTaskCount > 0) {
+      return {
+        status: RepairerWorkloadStatus.LowLoad,
+        label: '低负载',
+        activeTaskCount,
+        maxActiveTaskCount: MAX_ACTIVE_REPAIR_TASK_COUNT,
+        maxRadiusKm: LOW_LOAD_MAX_REPAIR_RADIUS_KM,
+        recommendedRadiusKm: LOW_LOAD_MAX_REPAIR_RADIUS_KM,
+        message: '当前已有进行中的维修任务，系统已限制可接取范围。请优先处理已接取任务。',
+        canAccept: true
+      };
+    }
+
+    return {
+      status: RepairerWorkloadStatus.Idle,
+      label: '空闲',
+      activeTaskCount,
+      maxActiveTaskCount: MAX_ACTIVE_REPAIR_TASK_COUNT,
+      maxRadiusKm: IDLE_MAX_REPAIR_RADIUS_KM,
+      recommendedRadiusKm: DEFAULT_REPAIR_RADIUS_KM,
+      message: '当前无进行中的维修任务，可接取服务范围内的故障任务。',
+      canAccept: true
+    };
+  }
+
+  private assertWorkloadAllowsRefresh(
+    workload: ReturnType<FaultWorkflowService['resolveRepairerWorkload']>,
+    radiusKm: number
+  ): void {
+    this.assertWorkloadAllowsAccept(workload);
+    if (radiusKm > workload.maxRadiusKm) {
+      throw validationFailed(
+        'REPAIR_TASK_RADIUS_EXCEEDS_WORKLOAD',
+        `当前处于${workload.label}状态，查询范围不能超过${workload.maxRadiusKm}公里。`
+      );
+    }
+  }
+
+  private assertWorkloadAllowsAccept(workload: ReturnType<FaultWorkflowService['resolveRepairerWorkload']>): void {
+    if (!workload.canAccept) {
+      throw conflict('REPAIRER_BUSY', workload.message);
+    }
   }
 
   private assertEnumValue<T extends Record<string, string>>(

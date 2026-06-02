@@ -2,7 +2,7 @@ import { describe, it, expect } from '@ohos/hypium';
 import { AuthService } from '../../../main/ets/services/AuthService';
 import { DeviceService } from '../../../main/ets/services/DeviceService';
 import { FaultSeverity, FaultType } from '../../../main/ets/models/FaultModels';
-import { RepairerAvailability, RepairReportResult } from '../../../main/ets/models/RepairTaskModels';
+import { RepairReportResult } from '../../../main/ets/models/RepairTaskModels';
 import { VerificationResult } from '../../../main/ets/models/VerificationModels';
 import { FaultReportService } from '../../../main/ets/services/FaultReportService';
 import { DeviceVerificationService } from '../../../main/ets/services/DeviceVerificationService';
@@ -68,9 +68,8 @@ export default function abilityTest() {
 
     it('validatesAvailableRepairTaskQuery', 0, () => {
       const result = RepairTaskService.validateAvailableRepairTaskQuery({
-        radiusKm: 10,
-        availability: RepairerAvailability.Idle
-      });
+        radiusKm: 10
+      }, RepairTaskService.createWorkloadSnapshot(0));
 
       expect(result.valid).assertEqual(true);
     });

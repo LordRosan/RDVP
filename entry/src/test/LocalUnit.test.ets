@@ -8,7 +8,7 @@ import { DeviceService } from '../main/ets/services/DeviceService';
 import { DeviceStatus } from '../main/ets/models/DeviceModels';
 import { FaultSeverity, FaultType } from '../main/ets/models/FaultModels';
 import { PermissionCode } from '../main/ets/models/PermissionModels';
-import { RepairerAvailability, RepairReportResult } from '../main/ets/models/RepairTaskModels';
+import { RepairerWorkloadStatus, RepairReportResult } from '../main/ets/models/RepairTaskModels';
 import { ReinspectionResult } from '../main/ets/models/ReinspectionModels';
 import { VerificationResult } from '../main/ets/models/VerificationModels';
 import { FaultReportService } from '../main/ets/services/FaultReportService';
@@ -556,8 +556,7 @@ export default function localUnitTest() {
 
     it('rejectsInvalidRepairTaskRadius', 0, () => {
       const result = RepairTaskService.validateAvailableRepairTaskQuery({
-        radiusKm: 0,
-        availability: RepairerAvailability.Idle
+        radiusKm: 0
       });
 
       expect(result.valid).assertEqual(false);
@@ -566,8 +565,7 @@ export default function localUnitTest() {
 
     it('rejectsOutOfRangeRepairTaskRadius', 0, () => {
       const result = RepairTaskService.validateAvailableRepairTaskQuery({
-        radiusKm: 21,
-        availability: RepairerAvailability.Idle
+        radiusKm: 21
       });
 
       expect(result.valid).assertEqual(false);
@@ -576,28 +574,35 @@ export default function localUnitTest() {
 
     it('rejectsBusyRepairerWhenRefreshingNearbyFaults', 0, () => {
       const result = RepairTaskService.validateAvailableRepairTaskQuery({
-        radiusKm: 10,
-        availability: RepairerAvailability.Busy
-      });
+        radiusKm: 10
+      }, RepairTaskService.createWorkloadSnapshot(RepairTaskService.getMaxActiveRepairTaskCount()));
 
       expect(result.valid).assertEqual(false);
-      expect(result.message).assertEqual('仅空闲状态可刷新附近故障');
+      expect(result.message).assertEqual('当前进行中的维修任务已达到上限，暂不可继续接取。请完成并提交维修报告后再刷新任务。');
+    });
+
+    it('limitsLowLoadRepairTaskRadius', 0, () => {
+      const result = RepairTaskService.validateAvailableRepairTaskQuery({
+        radiusKm: RepairTaskService.getLowLoadMaxRadiusKm() + 1
+      }, RepairTaskService.createWorkloadSnapshot(1));
+
+      expect(result.valid).assertEqual(false);
+      expect(result.message).assertEqual('当前处于低负载状态，查询范围不能超过10公里。');
     });
 
     it('acceptsIdleRepairTaskQuery', 0, () => {
       const result = RepairTaskService.validateAvailableRepairTaskQuery({
-        radiusKm: 10,
-        availability: RepairerAvailability.Idle
-      });
+        radiusKm: 10
+      }, RepairTaskService.createWorkloadSnapshot(0));
 
       expect(result.valid).assertEqual(true);
       expect(result.normalizedRadiusKm).assertEqual(10);
+      expect(RepairTaskService.createWorkloadSnapshot(1).status).assertEqual(RepairerWorkloadStatus.LowLoad);
     });
 
     it('returnsLocalAvailableRepairTasksWhenBackendUnconfigured', 0, () => {
       const response = RepairTaskService.queryAvailableRepairTasks({
-        radiusKm: 10,
-        availability: RepairerAvailability.Idle
+        radiusKm: 10
       });
 
       expect(response.success).assertEqual(true);
@@ -612,8 +617,7 @@ export default function localUnitTest() {
     it('acceptsAndReportsLocalRepairTaskWhenBackendUnconfigured', 0, () => {
       const pendingFaultCountBefore = WorkbenchService.getPendingFaultCount();
       const listResponse = RepairTaskService.queryAvailableRepairTasks({
-        radiusKm: 10,
-        availability: RepairerAvailability.Idle
+        radiusKm: 10
       });
       const taskId = listResponse.data?.items[0].id;
       if (taskId === undefined) {

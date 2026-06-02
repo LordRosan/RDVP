@@ -1,7 +1,8 @@
 import { FaultSeverity, FaultType } from './FaultModels';
 
-export enum RepairerAvailability {
+export enum RepairerWorkloadStatus {
   Idle = 'IDLE',
+  LowLoad = 'LOW_LOAD',
   Busy = 'BUSY',
   Offline = 'OFFLINE'
 }
@@ -21,7 +22,16 @@ export enum RepairReportResult {
 
 export interface AvailableRepairTaskQuery {
   radiusKm: number;
-  availability: RepairerAvailability;
+}
+
+export interface RepairerWorkloadSnapshot {
+  status: RepairerWorkloadStatus;
+  activeTaskCount: number;
+  maxActiveTaskCount: number;
+  maxRadiusKm: number;
+  recommendedRadiusKm: number;
+  message: string;
+  canAccept: boolean;
 }
 
 export interface RepairTaskValidationResult {
@@ -47,6 +57,7 @@ export interface AvailableRepairTaskListResult {
   radiusKm: number;
   items: AvailableRepairTaskSummary[];
   total: number;
+  workload?: RepairerWorkloadSnapshot;
 }
 
 export interface MyRepairTaskSummary {

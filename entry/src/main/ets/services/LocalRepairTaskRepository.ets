@@ -216,6 +216,19 @@ export class LocalRepairTaskRepository {
     }).length;
   }
 
+  static getAvailableTaskDistanceKm(taskId: string): number | undefined {
+    const normalizedTaskId = taskId.trim();
+    const task = LocalRepairTaskRepository.availableTasks.find((item: AvailableRepairTaskSummary) => {
+      return item.id === normalizedTaskId || item.faultNo === normalizedTaskId;
+    });
+
+    if (task === undefined || task.status !== RepairTaskStatus.Available) {
+      return undefined;
+    }
+
+    return task.distanceKm;
+  }
+
   private static createAvailableSeeds(): AvailableRepairTaskSummary[] {
     return LOCAL_AVAILABLE_TASK_SEEDS.map((item: LocalRepairTaskSeed): AvailableRepairTaskSummary => {
       return {

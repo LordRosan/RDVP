@@ -2,7 +2,11 @@ import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { FaultSeverity } from '../../models/FaultModels';
 import { PermissionCode } from '../../models/PermissionModels';
-import { AvailableRepairTaskSummary, RepairerAvailability } from '../../models/RepairTaskModels';
+import {
+  AvailableRepairTaskSummary,
+  RepairerWorkloadSnapshot,
+  RepairerWorkloadStatus
+} from '../../models/RepairTaskModels';
 import { ApiClient } from '../../services/ApiClient';
 import { FaultReportService } from '../../services/FaultReportService';
 import { RepairTaskService } from '../../services/RepairTaskService';
@@ -14,15 +18,15 @@ const AVAILABLE_TASK_INFO_SECTIONS: InfoDialogSection[] = [
     items: [
       {
         label: '服务范围',
-        description: '按当前位置、服务半径和任务状态筛选可接取任务，减少无效响应和跨区处理'
+        description: '按当前位置、服务半径和系统判定的维修负载筛选可接取任务，减少无效响应和跨区处理'
       },
       {
         label: '接取',
         description: '维修人员主动接取后承担处理责任，任务进入我的维修页面继续跟进'
       },
       {
-        label: '空闲状态',
-        description: '仅空闲人员可刷新任务列表，避免忙碌状态下误接任务影响故障响应效率'
+        label: '负载状态',
+        description: '系统根据进行中的维修任务数判定空闲、低负载或忙碌状态，并据此限制刷新范围和接取能力'
       }
     ]
   }
@@ -55,7 +59,7 @@ const RADIUS_PICKER_OPTIONS: string[] = [
 @Component
 struct AvailableRepairTask {
   @State radiusKm: number = RepairTaskService.getDefaultRadiusKm();
-  @State availability: RepairerAvailability = RepairerAvailability.Idle;
+  @State workloadSnapshot: RepairerWorkloadSnapshot = RepairTaskService.getCurrentWorkloadSnapshot();
   @State message: string = '';
   @State messageTone: string = '#D9480F';
   @State refreshStatus: string = '未刷新';
@@ -182,16 +186,11 @@ struct AvailableRepairTask {
       this.FieldTitle('查询范围')
       this.RadiusPicker()
 
-      this.FieldTitle('维修状态')
-      Row({ space: 10 }) {
-        this.AvailabilityOption(RepairerAvailability.Idle, $r('sys.symbol.checkmark_circle'))
-        this.AvailabilityOption(RepairerAvailability.Busy, $r('sys.symbol.wrench_and_screwdriver'))
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
+      this.FieldTitle('负载状态')
+      this.WorkloadSnapshotPanel()
 
       this.MessageText()
-      this.ActionButton(this.refreshing ? '刷新中' : '刷新任务', $r('sys.symbol.arrow_clockwise'), !this.refreshing,
+      this.ActionButton(this.refreshing ? '刷新中' : '刷新任务', $r('sys.symbol.arrow_clockwise'), this.isRefreshEnabled(),
         () => {
           this.refreshTasks();
         })
@@ -211,21 +210,41 @@ struct AvailableRepairTask {
   @Builder
   RadiusPicker() {
     Column({ space: 8 }) {
-      TextPicker({
-        range: RADIUS_PICKER_OPTIONS,
-        selected: this.radiusKm - 1
-      })
-        .height(126)
-        .width('100%')
-        .backgroundColor('#F7F9FC')
-        .borderRadius(18)
-        .onChange((value: string | string[], index: number | number[]) => {
-          this.applyRadiusPickerIndex(index);
+      if (this.workloadSnapshot.canAccept) {
+        TextPicker({
+          range: this.getRadiusPickerOptions(),
+          selected: this.getRadiusPickerSelectedIndex()
         })
+          .height(126)
+          .width('100%')
+          .backgroundColor('#F7F9FC')
+          .borderRadius(18)
+          .onChange((value: string | string[], index: number | number[]) => {
+            this.applyRadiusPickerIndex(index);
+          })
+      } else {
+        Row({ space: 8 }) {
+          SymbolGlyph($r('sys.symbol.exclamationmark_circle'))
+            .fontSize(22)
+            .fontColor(['#D9480F'])
 
-      Text(`当前选择：${this.radiusKm} km`)
+          Text('当前状态暂不可接取')
+            .fontSize(17)
+            .fontWeight(FontWeight.Medium)
+            .fontColor('#D9480F')
+            .maxLines(1)
+        }
+        .height(88)
+        .width('100%')
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+        .backgroundColor('#FFF4E6')
+        .borderRadius(18)
+      }
+
+      Text(`当前选择：${this.getCurrentRadiusText()}`)
         .fontSize(13)
-        .fontColor('#2F6FED')
+        .fontColor(this.workloadSnapshot.canAccept ? '#2F6FED' : '#D9480F')
         .fontWeight(FontWeight.Medium)
         .width('100%')
         .textAlign(TextAlign.Center)
@@ -247,34 +266,49 @@ struct AvailableRepairTask {
   }
 
   @Builder
-  AvailabilityOption(availability: RepairerAvailability, icon: Resource) {
-    Button({ type: ButtonType.Capsule, stateEffect: true }) {
-      Row({ space: 6 }) {
-        SymbolGlyph(icon)
-          .fontSize(17)
-          .fontColor([this.availability === availability ? '#FFFFFF' : '#111827'])
+  WorkloadSnapshotPanel() {
+    Column({ space: 10 }) {
+      Row({ space: 10 }) {
+        SymbolGlyph(this.getWorkloadSymbol())
+          .fontSize(21)
+          .fontColor([RepairTaskService.getWorkloadStatusTone(this.workloadSnapshot.status)])
 
-        Text(RepairTaskService.formatAvailability(availability))
+        Text(RepairTaskService.formatWorkloadStatus(this.workloadSnapshot.status))
+          .fontSize(17)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(RepairTaskService.getWorkloadStatusTone(this.workloadSnapshot.status))
+          .maxLines(1)
+
+        Blank()
+
+        Text(`${this.workloadSnapshot.activeTaskCount}/${this.workloadSnapshot.maxActiveTaskCount}`)
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
-          .fontColor(this.availability === availability ? '#FFFFFF' : '#111827')
+          .fontColor('#374151')
           .maxLines(1)
       }
       .width('100%')
-      .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
+
+      Text(this.workloadSnapshot.message)
+        .fontSize(13)
+        .fontColor('#6B7280')
+        .lineHeight(19)
+        .maxLines(3)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
-    .height(42)
-    .layoutWeight(1)
-    .backgroundColor(this.availability === availability ? '#2F6FED' : '#F7F9FC')
+    .width('100%')
+    .padding({
+      left: 14,
+      right: 14,
+      top: 12,
+      bottom: 12
+    })
+    .backgroundColor('#F7F9FC')
+    .borderRadius(18)
     .border({
       width: 1,
-      color: this.availability === availability ? '#2F6FED' : '#D6DAE1'
-    })
-    .onClick(() => {
-      this.availability = availability;
-      this.message = '';
-      this.messageTone = '#D9480F';
+      color: '#D6DAE1'
     })
   }
 
@@ -401,7 +435,7 @@ struct AvailableRepairTask {
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
       this.ActionButton(this.acceptingTaskId === item.id ? '接取中' : '接取任务', $r('sys.symbol.checkmark_circle'),
-        this.acceptingTaskId.length === 0 && !this.refreshing, () => {
+        this.isTaskAcceptEnabled(item), () => {
           this.acceptTask(item.id);
         })
     }
@@ -422,17 +456,23 @@ struct AvailableRepairTask {
 
       Column() {
         StatusInfoRow({
-          label: '推荐范围',
-          value: `${RepairTaskService.getDefaultRadiusKm()} km`,
+          label: '可接取范围',
+          value: this.getAvailableRadiusText(),
           tone: '#374151'
         })
         this.CardDivider()
-        StatusInfoRow({ label: '当前范围', value: `${this.radiusKm} km`, tone: '#2F6FED' })
+        StatusInfoRow({ label: '当前范围', value: this.getCurrentRadiusText(), tone: '#2F6FED' })
         this.CardDivider()
         StatusInfoRow({
-          label: '维修状态',
-          value: RepairTaskService.formatAvailability(this.availability),
-          tone: this.availability === RepairerAvailability.Idle ? '#087F5B' : '#D9480F'
+          label: '负载状态',
+          value: RepairTaskService.formatWorkloadStatus(this.workloadSnapshot.status),
+          tone: RepairTaskService.getWorkloadStatusTone(this.workloadSnapshot.status)
+        })
+        this.CardDivider()
+        StatusInfoRow({
+          label: '进行中任务',
+          value: `${this.workloadSnapshot.activeTaskCount}/${this.workloadSnapshot.maxActiveTaskCount}`,
+          tone: '#374151'
         })
         this.CardDivider()
         this.RefreshStatusRow()
@@ -559,10 +599,29 @@ struct AvailableRepairTask {
     }
 
     this.refreshing = true;
+    const workloadResponse = await RepairTaskService.getCurrentWorkloadSnapshotRemoteFirst();
+    if (!workloadResponse.success || workloadResponse.data === undefined) {
+      this.refreshing = false;
+      const error = workloadResponse.error;
+      this.message = error ? error.message : '维修负载状态刷新失败';
+      this.messageTone = '#D9480F';
+      this.refreshStatus = '刷新失败';
+      return;
+    }
+
+    this.applyWorkloadSnapshot(workloadResponse.data);
+    if (!this.workloadSnapshot.canAccept) {
+      this.refreshing = false;
+      this.taskItems = [];
+      this.message = this.workloadSnapshot.message;
+      this.messageTone = '#D9480F';
+      this.refreshStatus = '不可接取';
+      return;
+    }
+
     const response = await RepairTaskService.queryAvailableRepairTasksRemoteFirst({
-      radiusKm: this.radiusKm,
-      availability: this.availability
-    });
+      radiusKm: this.radiusKm
+    }, this.workloadSnapshot);
     this.refreshing = false;
 
     if (!response.success) {
@@ -574,10 +633,18 @@ struct AvailableRepairTask {
     }
 
     const data = response.data;
+    if (data?.workload !== undefined) {
+      this.applyWorkloadSnapshot(data.workload);
+    }
     this.taskItems = data ? data.items : [];
     this.refreshStatus = '已刷新';
-    this.message = '';
-    this.messageTone = '#D9480F';
+    if (this.workloadSnapshot.status === RepairerWorkloadStatus.LowLoad) {
+      this.message = this.workloadSnapshot.message;
+      this.messageTone = '#2F6FED';
+    } else {
+      this.message = '';
+      this.messageTone = '#D9480F';
+    }
   }
 
   async acceptTask(taskId: string): Promise<void> {
@@ -586,6 +653,27 @@ struct AvailableRepairTask {
     }
 
     this.acceptingTaskId = taskId;
+    const workloadResponse = await RepairTaskService.getCurrentWorkloadSnapshotRemoteFirst();
+    if (!workloadResponse.success || workloadResponse.data === undefined) {
+      this.acceptingTaskId = '';
+      const error = workloadResponse.error;
+      this.message = error ? error.message : '维修负载状态刷新失败';
+      this.messageTone = '#D9480F';
+      return;
+    }
+
+    this.applyWorkloadSnapshot(workloadResponse.data);
+    const selectedTask = this.findTaskItem(taskId);
+    if (!this.workloadSnapshot.canAccept ||
+      (selectedTask !== undefined && selectedTask.distanceKm > this.workloadSnapshot.maxRadiusKm)) {
+      this.acceptingTaskId = '';
+      this.message = this.workloadSnapshot.canAccept ?
+        `当前处于${RepairTaskService.formatWorkloadStatus(this.workloadSnapshot.status)}状态，仅可接取${this.workloadSnapshot.maxRadiusKm}公里内的维修任务。` :
+        this.workloadSnapshot.message;
+      this.messageTone = '#D9480F';
+      return;
+    }
+
     const response = await RepairTaskService.acceptRepairTaskRemoteFirst(taskId);
     this.acceptingTaskId = '';
 
@@ -602,6 +690,10 @@ struct AvailableRepairTask {
     this.refreshStatus = '已接取';
     this.message = '维修任务已接取，可在我的维修中处理';
     this.messageTone = '#087F5B';
+    const nextWorkloadResponse = await RepairTaskService.getCurrentWorkloadSnapshotRemoteFirst();
+    if (nextWorkloadResponse.success && nextWorkloadResponse.data !== undefined) {
+      this.applyWorkloadSnapshot(nextWorkloadResponse.data);
+    }
   }
 
   getSeverityTone(severity: FaultSeverity): string {
@@ -643,9 +735,81 @@ struct AvailableRepairTask {
       selectedIndex = index[0];
     }
 
-    this.radiusKm = selectedIndex + 1;
+    this.radiusKm = Math.min(selectedIndex + 1, this.workloadSnapshot.maxRadiusKm);
     this.message = '';
     this.messageTone = '#D9480F';
+  }
+
+  applyWorkloadSnapshot(workloadSnapshot: RepairerWorkloadSnapshot): void {
+    this.workloadSnapshot = workloadSnapshot;
+    if (!workloadSnapshot.canAccept) {
+      return;
+    }
+
+    if (this.radiusKm > workloadSnapshot.maxRadiusKm) {
+      this.radiusKm = workloadSnapshot.maxRadiusKm;
+    }
+
+    if (this.radiusKm < 1) {
+      this.radiusKm = 1;
+    }
+  }
+
+  getRadiusPickerOptions(): string[] {
+    return RADIUS_PICKER_OPTIONS.slice(0, this.workloadSnapshot.maxRadiusKm);
+  }
+
+  getRadiusPickerSelectedIndex(): number {
+    if (!this.workloadSnapshot.canAccept) {
+      return 0;
+    }
+
+    return Math.max(0, Math.min(this.radiusKm, this.workloadSnapshot.maxRadiusKm) - 1);
+  }
+
+  getCurrentRadiusText(): string {
+    if (!this.workloadSnapshot.canAccept) {
+      return '不可接取';
+    }
+
+    return `${this.radiusKm} km`;
+  }
+
+  getAvailableRadiusText(): string {
+    if (!this.workloadSnapshot.canAccept) {
+      return '暂不可接取';
+    }
+
+    return `1-${this.workloadSnapshot.maxRadiusKm} km`;
+  }
+
+  getWorkloadSymbol(): Resource {
+    if (this.workloadSnapshot.status === RepairerWorkloadStatus.Busy) {
+      return $r('sys.symbol.exclamationmark_circle');
+    }
+
+    if (this.workloadSnapshot.status === RepairerWorkloadStatus.LowLoad) {
+      return $r('sys.symbol.wrench_and_screwdriver');
+    }
+
+    return $r('sys.symbol.checkmark_circle');
+  }
+
+  isRefreshEnabled(): boolean {
+    return !this.refreshing && this.acceptingTaskId.length === 0;
+  }
+
+  isTaskAcceptEnabled(item: AvailableRepairTaskSummary): boolean {
+    return this.acceptingTaskId.length === 0 &&
+      !this.refreshing &&
+      this.workloadSnapshot.canAccept &&
+      item.distanceKm <= this.workloadSnapshot.maxRadiusKm;
+  }
+
+  findTaskItem(taskId: string): AvailableRepairTaskSummary | undefined {
+    return this.taskItems.find((item: AvailableRepairTaskSummary) => {
+      return item.id === taskId;
+    });
   }
 
   showAvailableTaskInfoDialog(): void {

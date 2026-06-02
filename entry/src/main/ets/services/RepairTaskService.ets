@@ -6,7 +6,8 @@ import {
   AvailableRepairTaskSummary,
   MyRepairTaskListResult,
   MyRepairTaskSummary,
-  RepairerAvailability,
+  RepairerWorkloadSnapshot,
+  RepairerWorkloadStatus,
   RepairReportForm,
   RepairReportRecord,
   RepairReportResult,
@@ -22,7 +23,10 @@ import { SessionStore } from '../stores/SessionStore';
 
 const DEFAULT_RADIUS_KM = 10;
 const MIN_RADIUS_KM = 1;
-const MAX_RADIUS_KM = 20;
+const IDLE_MAX_RADIUS_KM = 20;
+const LOW_LOAD_MAX_RADIUS_KM = 10;
+const MAX_RADIUS_KM = IDLE_MAX_RADIUS_KM;
+const MAX_ACTIVE_REPAIR_TASK_COUNT = 2;
 const MAX_REPAIR_PROCESS_LENGTH = 1000;
 const MAX_PARTS_USED_LENGTH = 500;
 
@@ -82,11 +86,100 @@ export class RepairTaskService {
     return DEFAULT_RADIUS_KM;
   }
 
+  static getMaxRadiusKm(): number {
+    return MAX_RADIUS_KM;
+  }
+
+  static getLowLoadMaxRadiusKm(): number {
+    return LOW_LOAD_MAX_RADIUS_KM;
+  }
+
+  static getMaxActiveRepairTaskCount(): number {
+    return MAX_ACTIVE_REPAIR_TASK_COUNT;
+  }
+
   static normalizeRadiusKm(radiusKm: number): number {
     return Math.round(radiusKm);
   }
 
-  static validateAvailableRepairTaskQuery(query: AvailableRepairTaskQuery): RepairTaskValidationResult {
+  static createWorkloadSnapshot(activeTaskCount: number): RepairerWorkloadSnapshot {
+    const normalizedActiveTaskCount = Math.max(0, Math.round(activeTaskCount));
+    if (normalizedActiveTaskCount >= MAX_ACTIVE_REPAIR_TASK_COUNT) {
+      return {
+        status: RepairerWorkloadStatus.Busy,
+        activeTaskCount: normalizedActiveTaskCount,
+        maxActiveTaskCount: MAX_ACTIVE_REPAIR_TASK_COUNT,
+        maxRadiusKm: 0,
+        recommendedRadiusKm: 0,
+        message: '当前进行中的维修任务已达到上限，暂不可继续接取。请完成并提交维修报告后再刷新任务。',
+        canAccept: false
+      };
+    }
+
+    if (normalizedActiveTaskCount > 0) {
+      return {
+        status: RepairerWorkloadStatus.LowLoad,
+        activeTaskCount: normalizedActiveTaskCount,
+        maxActiveTaskCount: MAX_ACTIVE_REPAIR_TASK_COUNT,
+        maxRadiusKm: LOW_LOAD_MAX_RADIUS_KM,
+        recommendedRadiusKm: LOW_LOAD_MAX_RADIUS_KM,
+        message: '当前已有进行中的维修任务，系统已限制可接取范围。请优先处理已接取任务。',
+        canAccept: true
+      };
+    }
+
+    return {
+      status: RepairerWorkloadStatus.Idle,
+      activeTaskCount: normalizedActiveTaskCount,
+      maxActiveTaskCount: MAX_ACTIVE_REPAIR_TASK_COUNT,
+      maxRadiusKm: IDLE_MAX_RADIUS_KM,
+      recommendedRadiusKm: DEFAULT_RADIUS_KM,
+      message: '当前无进行中的维修任务，可接取服务范围内的故障任务。',
+      canAccept: true
+    };
+  }
+
+  static getCurrentWorkloadSnapshot(): RepairerWorkloadSnapshot {
+    if (!ApiClient.isConfigured()) {
+      return RepairTaskService.createWorkloadSnapshot(LocalRepairTaskRepository.getActiveMyTaskCount());
+    }
+
+    return RepairTaskService.createWorkloadSnapshot(0);
+  }
+
+  static async getCurrentWorkloadSnapshotRemoteFirst(): Promise<ApiResponse<RepairerWorkloadSnapshot>> {
+    if (!ApiClient.isConfigured()) {
+      return {
+        success: true,
+        data: RepairTaskService.createWorkloadSnapshot(LocalRepairTaskRepository.getActiveMyTaskCount()),
+        requestId: 'local-repairer-workload',
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    const response = await RepairTaskService.queryMyRepairTasksRemoteFirst();
+    if (!response.success) {
+      return {
+        success: false,
+        error: response.error,
+        requestId: response.requestId,
+        timestamp: response.timestamp
+      };
+    }
+
+    const tasks = response.data === undefined ? [] : response.data.items;
+    return {
+      success: true,
+      data: RepairTaskService.createWorkloadSnapshot(RepairTaskService.countActiveRepairTasks(tasks)),
+      requestId: response.requestId,
+      timestamp: response.timestamp
+    };
+  }
+
+  static validateAvailableRepairTaskQuery(
+    query: AvailableRepairTaskQuery,
+    workloadSnapshot?: RepairerWorkloadSnapshot
+  ): RepairTaskValidationResult {
     const radiusKm = RepairTaskService.normalizeRadiusKm(query.radiusKm);
     if (radiusKm !== radiusKm || radiusKm < MIN_RADIUS_KM || radiusKm > MAX_RADIUS_KM) {
       return {
@@ -95,17 +188,16 @@ export class RepairTaskService {
       };
     }
 
-    if (!RepairTaskService.isKnownAvailability(query.availability)) {
-      return {
-        valid: false,
-        message: '维修状态无效'
-      };
+    const workload = workloadSnapshot === undefined ? RepairTaskService.getCurrentWorkloadSnapshot() : workloadSnapshot;
+    const workloadValidation = RepairTaskService.validateRepairerCanAccept(workload);
+    if (!workloadValidation.valid) {
+      return workloadValidation;
     }
 
-    if (query.availability !== RepairerAvailability.Idle) {
+    if (radiusKm > workload.maxRadiusKm) {
       return {
         valid: false,
-        message: '仅空闲状态可刷新附近故障'
+        message: `当前处于${RepairTaskService.formatWorkloadStatus(workload.status)}状态，查询范围不能超过${workload.maxRadiusKm}公里。`
       };
     }
 
@@ -116,8 +208,12 @@ export class RepairTaskService {
     };
   }
 
-  static queryAvailableRepairTasks(query: AvailableRepairTaskQuery): ApiResponse<AvailableRepairTaskListResult> {
-    const validation = RepairTaskService.validateAvailableRepairTaskQuery(query);
+  static queryAvailableRepairTasks(
+    query: AvailableRepairTaskQuery,
+    workloadSnapshot?: RepairerWorkloadSnapshot
+  ): ApiResponse<AvailableRepairTaskListResult> {
+    const workload = workloadSnapshot === undefined ? RepairTaskService.getCurrentWorkloadSnapshot() : workloadSnapshot;
+    const validation = RepairTaskService.validateAvailableRepairTaskQuery(query, workload);
     if (!validation.valid) {
       return {
         success: false,
@@ -130,16 +226,32 @@ export class RepairTaskService {
 
     if (!ApiClient.isConfigured()) {
       return RepairTaskService.createLocalAvailableTasksResponse(validation.normalizedRadiusKm ?
-        validation.normalizedRadiusKm : RepairTaskService.normalizeRadiusKm(query.radiusKm));
+        validation.normalizedRadiusKm : RepairTaskService.normalizeRadiusKm(query.radiusKm), workload);
     }
 
     return ApiClient.createServiceUnavailableResponse<AvailableRepairTaskListResult>();
   }
 
   static async queryAvailableRepairTasksRemoteFirst(
-    query: AvailableRepairTaskQuery
+    query: AvailableRepairTaskQuery,
+    workloadSnapshot?: RepairerWorkloadSnapshot
   ): Promise<ApiResponse<AvailableRepairTaskListResult>> {
-    const validation = RepairTaskService.validateAvailableRepairTaskQuery(query);
+    let workload = workloadSnapshot;
+    if (workload === undefined) {
+      const workloadResponse = await RepairTaskService.getCurrentWorkloadSnapshotRemoteFirst();
+      if (!workloadResponse.success || workloadResponse.data === undefined) {
+        return {
+          success: false,
+          error: workloadResponse.error,
+          requestId: workloadResponse.requestId,
+          timestamp: workloadResponse.timestamp
+        };
+      }
+
+      workload = workloadResponse.data;
+    }
+
+    const validation = RepairTaskService.validateAvailableRepairTaskQuery(query, workload);
     if (!validation.valid) {
       return {
         success: false,
@@ -153,7 +265,7 @@ export class RepairTaskService {
     const radiusKm = validation.normalizedRadiusKm ?
       validation.normalizedRadiusKm : RepairTaskService.normalizeRadiusKm(query.radiusKm);
     if (!ApiClient.isConfigured()) {
-      return RepairTaskService.createLocalAvailableTasksResponse(radiusKm);
+      return RepairTaskService.createLocalAvailableTasksResponse(radiusKm, workload);
     }
 
     const response = await ApiClient.request<ApiListResult<AvailableRepairTaskApiSummary>>(
@@ -178,7 +290,8 @@ export class RepairTaskService {
         items: response.data === undefined ? [] : response.data.items.map((item: AvailableRepairTaskApiSummary): AvailableRepairTaskSummary => {
           return RepairTaskService.mapAvailableTask(item);
         }),
-        total: response.data === undefined ? 0 : response.data.total
+        total: response.data === undefined ? 0 : response.data.total,
+        workload
       },
       requestId: response.requestId,
       timestamp: response.timestamp
@@ -216,8 +329,31 @@ export class RepairTaskService {
       };
     }
 
+    const workloadResponse = await RepairTaskService.getCurrentWorkloadSnapshotRemoteFirst();
+    if (!workloadResponse.success || workloadResponse.data === undefined) {
+      return {
+        success: false,
+        error: workloadResponse.error,
+        requestId: workloadResponse.requestId,
+        timestamp: workloadResponse.timestamp
+      };
+    }
+
+    const workloadValidation = RepairTaskService.validateRepairerCanAccept(workloadResponse.data);
+    if (!workloadValidation.valid) {
+      return {
+        success: false,
+        error: {
+          code: 'REPAIRER_WORKLOAD_BLOCKED',
+          message: workloadValidation.message
+        },
+        requestId: workloadResponse.requestId,
+        timestamp: workloadResponse.timestamp
+      };
+    }
+
     if (!ApiClient.isConfigured()) {
-      return RepairTaskService.createLocalAcceptTaskResponse(taskId);
+      return RepairTaskService.createLocalAcceptTaskResponse(taskId, workloadResponse.data);
     }
 
     const faultReportId = encodeURIComponent(taskId.trim());
@@ -468,16 +604,45 @@ export class RepairTaskService {
     };
   }
 
-  static formatAvailability(availability: RepairerAvailability): string {
-    switch (availability) {
-      case RepairerAvailability.Idle:
+  static validateRepairerCanAccept(workload: RepairerWorkloadSnapshot): RepairTaskValidationResult {
+    if (!workload.canAccept || workload.status === RepairerWorkloadStatus.Busy) {
+      return {
+        valid: false,
+        message: workload.message
+      };
+    }
+
+    return {
+      valid: true,
+      message: ''
+    };
+  }
+
+  static formatWorkloadStatus(status: RepairerWorkloadStatus): string {
+    switch (status) {
+      case RepairerWorkloadStatus.Idle:
         return '空闲';
-      case RepairerAvailability.Busy:
+      case RepairerWorkloadStatus.LowLoad:
+        return '低负载';
+      case RepairerWorkloadStatus.Busy:
         return '忙碌';
-      case RepairerAvailability.Offline:
+      case RepairerWorkloadStatus.Offline:
         return '离线';
       default:
         return '-';
+    }
+  }
+
+  static getWorkloadStatusTone(status: RepairerWorkloadStatus): string {
+    switch (status) {
+      case RepairerWorkloadStatus.Idle:
+        return '#087F5B';
+      case RepairerWorkloadStatus.LowLoad:
+        return '#2F6FED';
+      case RepairerWorkloadStatus.Busy:
+        return '#D9480F';
+      default:
+        return '#495057';
     }
   }
 
@@ -509,28 +674,61 @@ export class RepairTaskService {
     }
   }
 
-  private static isKnownAvailability(availability: RepairerAvailability): boolean {
-    return availability === RepairerAvailability.Idle ||
-      availability === RepairerAvailability.Busy ||
-      availability === RepairerAvailability.Offline;
-  }
-
   private static isKnownRepairReportResult(result: RepairReportResult): boolean {
     return result === RepairReportResult.Repaired ||
       result === RepairReportResult.TemporaryRestored ||
       result === RepairReportResult.Unresolved;
   }
 
-  private static createLocalAvailableTasksResponse(radiusKm: number): ApiResponse<AvailableRepairTaskListResult> {
+  private static createLocalAvailableTasksResponse(
+    radiusKm: number,
+    workload: RepairerWorkloadSnapshot
+  ): ApiResponse<AvailableRepairTaskListResult> {
     return {
       success: true,
-      data: LocalRepairTaskRepository.queryAvailableTasks(radiusKm),
+      data: RepairTaskService.withWorkload(LocalRepairTaskRepository.queryAvailableTasks(radiusKm), workload),
       requestId: 'local-available-repair-tasks',
       timestamp: new Date().toISOString()
     };
   }
 
-  private static createLocalAcceptTaskResponse(taskId: string): ApiResponse<RepairTaskAcceptResult> {
+  private static createLocalAcceptTaskResponse(
+    taskId: string,
+    workloadSnapshot?: RepairerWorkloadSnapshot
+  ): ApiResponse<RepairTaskAcceptResult> {
+    const workload = workloadSnapshot === undefined ? RepairTaskService.getCurrentWorkloadSnapshot() : workloadSnapshot;
+    const workloadValidation = RepairTaskService.validateRepairerCanAccept(workload);
+    if (!workloadValidation.valid) {
+      return {
+        success: false,
+        error: {
+          code: 'REPAIRER_WORKLOAD_BLOCKED',
+          message: workloadValidation.message
+        }
+      };
+    }
+
+    const taskDistanceKm = LocalRepairTaskRepository.getAvailableTaskDistanceKm(taskId);
+    if (taskDistanceKm === undefined) {
+      return {
+        success: false,
+        error: {
+          code: 'REPAIR_TASK_NOT_FOUND',
+          message: '维修任务不存在或已被接取'
+        }
+      };
+    }
+
+    if (taskDistanceKm > workload.maxRadiusKm) {
+      return {
+        success: false,
+        error: {
+          code: 'REPAIR_TASK_OUT_OF_WORKLOAD_RANGE',
+          message: `当前处于${RepairTaskService.formatWorkloadStatus(workload.status)}状态，仅可接取${workload.maxRadiusKm}公里内的维修任务。`
+        }
+      };
+    }
+
     const result = LocalRepairTaskRepository.acceptTask(taskId);
     if (result === undefined) {
       return {
@@ -550,6 +748,24 @@ export class RepairTaskService {
       requestId: 'local-repair-task-accept',
       timestamp: new Date().toISOString()
     };
+  }
+
+  private static withWorkload(
+    result: AvailableRepairTaskListResult,
+    workload: RepairerWorkloadSnapshot
+  ): AvailableRepairTaskListResult {
+    return {
+      radiusKm: result.radiusKm,
+      items: result.items,
+      total: result.total,
+      workload
+    };
+  }
+
+  private static countActiveRepairTasks(tasks: MyRepairTaskSummary[]): number {
+    return tasks.filter((task: MyRepairTaskSummary) => {
+      return task.status === RepairTaskStatus.Accepted || task.status === RepairTaskStatus.Processing;
+    }).length;
   }
 
   private static createLocalMyTasksResponse(): ApiResponse<MyRepairTaskListResult> {

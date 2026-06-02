@@ -614,10 +614,31 @@ GET /api/v1/repair-tasks/available
 | --- | --- |
 | `longitude` | 当前经度 |
 | `latitude` | 当前纬度 |
-| `radiusKm` | 查询半径，默认 10 |
+| `radiusKm` | 查询半径，默认 10，允许范围 1-20；低负载状态下不能超过系统限制范围 |
 | `severity` | 故障等级 |
 | `page` | 页码 |
 | `pageSize` | 每页数量 |
+
+响应数据应包含当前维修人员负载快照：
+
+```json
+{
+  "radiusKm": 10,
+  "workload": {
+    "status": "LOW_LOAD",
+    "activeTaskCount": 1,
+    "maxActiveTaskCount": 2,
+    "maxRadiusKm": 10,
+    "recommendedRadiusKm": 10,
+    "message": "当前已有进行中的维修任务，系统已限制可接取范围。请优先处理已接取任务。",
+    "canAccept": true
+  },
+  "items": [],
+  "total": 0
+}
+```
+
+后端必须根据当前用户进行中的维修任务数判定负载状态。忙碌状态返回 `REPAIRER_BUSY`，低负载状态下超出可接取范围返回 `REPAIR_TASK_RADIUS_EXCEEDS_WORKLOAD`。
 
 ### 11.2 接取故障任务
 
@@ -648,6 +669,8 @@ POST /api/v1/fault-reports/{faultReportId}/accept
 ```
 
 同一故障只能被一个有效维修任务接取。并发接取失败时返回 `FAULT_ALREADY_ACCEPTED`。
+
+接取接口必须重新校验维修人员负载状态，不得只依赖查询列表时的前端状态。忙碌状态返回 `REPAIRER_BUSY`；若提供接取位置且目标故障超出当前负载允许范围，返回 `REPAIR_TASK_OUT_OF_WORKLOAD_RANGE`。
 
 ### 11.3 查询我的维修任务
 

@@ -206,6 +206,68 @@ test('creates a fault report and prevents duplicate task acceptance', async () =
   });
 });
 
+test('derives maintainer workload before listing or accepting repair tasks', async () => {
+  await withClient(async (client) => {
+    const operatorToken = await client.login('fieldoperator');
+    const maintainerToken = await client.login('maintainer');
+
+    const first = await client.request('POST', '/api/v1/fault-reports', {
+      deviceCode: 'RDVP-DEVICE-0001',
+      faultType: 'ENERGY_FAULT',
+      severity: 'GENERAL',
+      occurredAt: '2026-05-29T04:20:00.000Z',
+      description: 'Power module requires repair.'
+    }, operatorToken);
+    const second = await client.request('POST', '/api/v1/fault-reports', {
+      deviceCode: 'RDVP-DEVICE-0002',
+      faultType: 'HARDWARE_DAMAGE',
+      severity: 'GENERAL',
+      occurredAt: '2026-05-29T04:30:00.000Z',
+      description: 'Camera bracket requires repair.'
+    }, operatorToken);
+    const third = await client.request('POST', '/api/v1/fault-reports', {
+      deviceCode: 'RDVP-DEVICE-0003',
+      faultType: 'COMMUNICATION_FAULT',
+      severity: 'GENERAL',
+      occurredAt: '2026-05-29T04:40:00.000Z',
+      description: 'Gateway signal requires repair.'
+    }, operatorToken);
+
+    assert.equal(first.status, 201);
+    assert.equal(second.status, 201);
+    assert.equal(third.status, 201);
+
+    const firstAccept = await client.request('POST', `/api/v1/fault-reports/${first.body.data.id}/accept`, {},
+      maintainerToken);
+    assert.equal(firstAccept.status, 200);
+
+    const excessiveRadius = await client.request('GET', '/api/v1/repair-tasks/available?radiusKm=20', undefined,
+      maintainerToken);
+    assert.equal(excessiveRadius.status, 422);
+    assert.equal(excessiveRadius.body.error.code, 'REPAIR_TASK_RADIUS_EXCEEDS_WORKLOAD');
+
+    const lowLoadList = await client.request('GET', '/api/v1/repair-tasks/available?radiusKm=10', undefined,
+      maintainerToken);
+    assert.equal(lowLoadList.status, 200);
+    assert.equal(lowLoadList.body.data.workload.status, 'LOW_LOAD');
+    assert.equal(lowLoadList.body.data.workload.maxRadiusKm, 10);
+
+    const secondAccept = await client.request('POST', `/api/v1/fault-reports/${second.body.data.id}/accept`, {},
+      maintainerToken);
+    assert.equal(secondAccept.status, 200);
+
+    const busyList = await client.request('GET', '/api/v1/repair-tasks/available?radiusKm=10', undefined,
+      maintainerToken);
+    assert.equal(busyList.status, 409);
+    assert.equal(busyList.body.error.code, 'REPAIRER_BUSY');
+
+    const thirdAccept = await client.request('POST', `/api/v1/fault-reports/${third.body.data.id}/accept`, {},
+      maintainerToken);
+    assert.equal(thirdAccept.status, 409);
+    assert.equal(thirdAccept.body.error.code, 'REPAIRER_BUSY');
+  });
+});
+
 test('routes severe repair through reinspection before restoring device status', async () => {
   await withClient(async (client) => {
     const operatorToken = await client.login('fieldoperator');
