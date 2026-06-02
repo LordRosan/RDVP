@@ -1,3 +1,4 @@
+import { AppColors } from '../styles/AppTheme';
 import { AuthService } from '../services/AuthService';
 import { ApiClient } from '../services/ApiClient';
 import { SessionStore } from '../stores/SessionStore';
@@ -9,7 +10,7 @@ struct Login {
   @State password: string = '';
   @State apiBaseUrl: string = ApiClient.getBaseUrl();
   @State message: string = '';
-  @State messageTone: string = '#D9480F';
+  @State messageTone: string = AppColors.Danger;
   @State submitting: boolean = false;
 
   aboutToAppear(): void {
@@ -46,7 +47,7 @@ struct Login {
     }
     .height('100%')
     .width('100%')
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   onBackPress(): boolean {
@@ -61,24 +62,24 @@ struct Login {
           Text('RD')
             .fontSize(18)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#FFFFFF')
+            .fontColor(AppColors.Surface)
             .maxLines(1)
         }
         .width(52)
         .height(52)
         .borderRadius(16)
-        .backgroundColor('#2F6FED')
+        .backgroundColor(AppColors.Primary)
 
         Column({ space: 4 }) {
           Text('RDVP')
             .fontSize(34)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#111827')
+            .fontColor(AppColors.TextPrimary)
             .maxLines(1)
 
           Text('远程设备核验与运维报告系统')
             .fontSize(14)
-            .fontColor('#5B6472')
+            .fontColor(AppColors.TextSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
@@ -99,12 +100,12 @@ struct Login {
         Text('登录')
           .fontSize(28)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#111827')
+          .fontColor(AppColors.TextPrimary)
           .maxLines(1)
 
         Text('验证身份后进入业务工作台')
           .fontSize(14)
-          .fontColor('#6B7280')
+          .fontColor(AppColors.TextSecondary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
@@ -124,7 +125,7 @@ struct Login {
       bottom: 22
     })
     .width('100%')
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(24)
     .alignItems(HorizontalAlign.Start)
   }
@@ -135,7 +136,7 @@ struct Login {
       Text(label)
         .fontSize(14)
         .fontWeight(FontWeight.Medium)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       TextInput({
@@ -145,7 +146,7 @@ struct Login {
         .type(secure ? InputType.Password : InputType.Normal)
         .height(54)
         .fontSize(16)
-        .backgroundColor('#F7F9FC')
+        .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
         .padding({
           left: 16,
@@ -153,7 +154,7 @@ struct Login {
         })
         .border({
           width: 1,
-          color: '#D6DAE1'
+          color: AppColors.Border
         })
         .onChange((value: string) => {
           if (secure) {
@@ -162,7 +163,7 @@ struct Login {
             this.username = value;
           }
           this.message = '';
-          this.messageTone = '#D9480F';
+          this.messageTone = AppColors.Danger;
         })
     }
     .width('100%')
@@ -176,7 +177,7 @@ struct Login {
         Text('后端服务')
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
-          .fontColor('#111827')
+          .fontColor(AppColors.TextPrimary)
           .layoutWeight(1)
           .maxLines(1)
 
@@ -195,7 +196,7 @@ struct Login {
       })
         .height(50)
         .fontSize(15)
-        .backgroundColor('#F7F9FC')
+        .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
         .padding({
           left: 16,
@@ -203,24 +204,24 @@ struct Login {
         })
         .border({
           width: 1,
-          color: '#D6DAE1'
+          color: AppColors.Border
         })
         .onChange((value: string) => {
           this.apiBaseUrl = value;
           this.message = '';
-          this.messageTone = '#D9480F';
+          this.messageTone = AppColors.Danger;
         })
 
       Row({ space: 10 }) {
         Column() {
-          this.ServiceButton('保存地址', $r('sys.symbol.checkmark_circle'), '#2F6FED', '#FFFFFF', () => {
+          this.ServiceButton('保存地址', $r('sys.symbol.checkmark_circle'), AppColors.Primary, AppColors.Surface, () => {
             this.saveApiBaseUrl();
           })
         }
         .layoutWeight(1)
 
         Column() {
-          this.ServiceButton('本地模式', $r('sys.symbol.xmark_circle'), '#FFFFFF', '#111827', () => {
+          this.ServiceButton('本地模式', $r('sys.symbol.xmark_circle'), AppColors.Surface, AppColors.TextPrimary, () => {
             this.clearApiBaseUrl();
           })
         }
@@ -269,7 +270,7 @@ struct Login {
     .backgroundColor(backgroundColor)
     .border({
       width: 1,
-      color: backgroundColor === '#FFFFFF' ? '#D6DAE1' : backgroundColor
+      color: backgroundColor === AppColors.Surface ? AppColors.Border : backgroundColor
     })
     .onClick(() => {
       action();
@@ -282,12 +283,12 @@ struct Login {
       Row({ space: 8 }) {
         SymbolGlyph($r('sys.symbol.person_badge_checkmark'))
           .fontSize(20)
-          .fontColor(['#FFFFFF'])
+          .fontColor([AppColors.Surface])
 
         Text(this.submitting ? '登录中' : '登录')
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
-          .fontColor('#FFFFFF')
+          .fontColor(AppColors.Surface)
           .maxLines(1)
       }
       .width('100%')
@@ -296,7 +297,7 @@ struct Login {
     }
     .height(54)
     .width('100%')
-    .backgroundColor('#2F6FED')
+    .backgroundColor(AppColors.Primary)
     .enabled(!this.submitting)
     .onClick(() => {
       this.submitLogin();
@@ -318,7 +319,7 @@ struct Login {
     if (!response.success) {
       const error = response.error;
       this.message = error ? error.message : '登录失败';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       return;
     }
 
@@ -334,21 +335,21 @@ struct Login {
     const validationMessage = ApiClient.validateBaseUrlInput(value);
     if (validationMessage.length > 0) {
       this.message = validationMessage;
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       return;
     }
 
     ApiClient.setBaseUrl(value);
     this.apiBaseUrl = ApiClient.getBaseUrl();
     this.message = ApiClient.isConfigured() ? '服务地址已保存' : '已切换为本地模式';
-    this.messageTone = ApiClient.isConfigured() ? '#087F5B' : '#2F6FED';
+    this.messageTone = ApiClient.isConfigured() ? AppColors.Success : AppColors.Primary;
   }
 
   clearApiBaseUrl(): void {
     ApiClient.setBaseUrl('');
     this.apiBaseUrl = '';
     this.message = '已切换为本地模式';
-    this.messageTone = '#2F6FED';
+    this.messageTone = AppColors.Primary;
   }
 
   openWorkbench(): void {

@@ -1,3 +1,4 @@
+import { AppColors } from '../styles/AppTheme';
 import { ActionTile } from '../components/ActionTile';
 import { MetricTile } from '../components/MetricTile';
 import { WorkbenchAction, WorkbenchActionId, WorkbenchMetric, WorkbenchStatusItem } from '../models/WorkbenchModels';
@@ -63,7 +64,7 @@ struct Workbench {
     }
     .height('100%')
     .width('100%')
-    .backgroundColor('#F6F8FB')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   @Builder
@@ -74,12 +75,12 @@ struct Workbench {
           Text('RDVP')
             .fontSize(30)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#111827')
+            .fontColor(AppColors.TextPrimary)
             .maxLines(1)
 
           Text('远程设备核验与运维报告系统')
             .fontSize(13)
-            .fontColor('#5B6472')
+            .fontColor(AppColors.TextSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
@@ -100,7 +101,7 @@ struct Workbench {
       Text('中心概览')
         .fontSize(18)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
 
       Grid() {
         ForEach(this.metrics, (item: WorkbenchMetric) => {
@@ -129,7 +130,7 @@ struct Workbench {
       Text('业务中心')
         .fontSize(18)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
 
       Grid() {
         ForEach(this.actions, (item: WorkbenchAction) => {
@@ -150,7 +151,7 @@ struct Workbench {
       if (this.actionMessage.length > 0) {
         Text(this.actionMessage)
           .fontSize(13)
-          .fontColor('#D9480F')
+          .fontColor(AppColors.Danger)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .width('100%')
@@ -166,14 +167,14 @@ struct Workbench {
       Text('系统状态')
         .fontSize(18)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
 
       Column() {
         ForEach(this.statusItems, (item: WorkbenchStatusItem) => {
           Row() {
             Text(item.name)
               .fontSize(14)
-              .fontColor('#374151')
+              .fontColor(AppColors.TextSecondary)
               .layoutWeight(1)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -194,11 +195,11 @@ struct Workbench {
         }, (item: WorkbenchStatusItem) => item.id)
       }
       .width('100%')
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .borderRadius(8)
       .border({
         width: 1,
-        color: '#E5E7EB'
+        color: AppColors.Divider
       })
 
     }
@@ -219,14 +220,14 @@ struct Workbench {
     Button({ type: ButtonType.Circle, stateEffect: true }) {
       SymbolGlyph($r('sys.symbol.person_crop_circle_fill'))
         .fontSize(31)
-        .fontColor(['#111827'])
+        .fontColor([AppColors.TextPrimary])
     }
     .width(58)
     .height(58)
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .border({
       width: 1,
-      color: '#E5E7EB'
+      color: AppColors.Divider
     })
     .onClick(() => {
       this.openPersonalCenter();

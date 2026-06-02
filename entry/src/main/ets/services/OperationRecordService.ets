@@ -1,3 +1,4 @@
+import { AppColors } from '../styles/AppTheme';
 import { ApiResponse } from '../models/ApiModels';
 import {
   OperationRecordListResult,
@@ -107,11 +108,11 @@ export class OperationRecordService {
   static getRecordStatusTone(status: OperationRecordStatus): string {
     switch (status) {
       case OperationRecordStatus.Success:
-        return '#087F5B';
+        return AppColors.Success;
       case OperationRecordStatus.Failed:
-        return '#D9480F';
+        return AppColors.Danger;
       default:
-        return '#374151';
+        return AppColors.TextSecondary;
     }
   }
 

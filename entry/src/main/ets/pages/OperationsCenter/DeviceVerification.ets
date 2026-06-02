@@ -1,3 +1,4 @@
+import { AppColors } from '../../styles/AppTheme';
 import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { PermissionCode } from '../../models/PermissionModels';
@@ -46,7 +47,7 @@ struct DeviceVerification {
   @State description: string = '';
   @State remark: string = '';
   @State message: string = '';
-  @State messageTone: string = '#D9480F';
+  @State messageTone: string = AppColors.Danger;
   @State normalizedDeviceCode: string = '-';
   @State submitting: boolean = false;
   @State canReportFault: boolean = false;
@@ -91,7 +92,7 @@ struct DeviceVerification {
     }
     .height('100%')
     .width('100%')
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   onBackPress(): boolean {
@@ -105,14 +106,14 @@ struct DeviceVerification {
       Button({ type: ButtonType.Circle, stateEffect: true }) {
         SymbolGlyph($r('sys.symbol.chevron_backward'))
           .fontSize(22)
-          .fontColor(['#111827'])
+          .fontColor([AppColors.TextPrimary])
       }
       .width(44)
       .height(44)
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .border({
         width: 1,
-        color: '#E5E7EB'
+        color: AppColors.Divider
       })
       .onClick(() => {
         this.backToWorkbench();
@@ -125,7 +126,7 @@ struct DeviceVerification {
       left: 24,
       right: 24
     })
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   @Builder
@@ -135,7 +136,7 @@ struct DeviceVerification {
         Text('状态核验')
           .fontSize(34)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#111827')
+          .fontColor(AppColors.TextPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
@@ -147,7 +148,7 @@ struct DeviceVerification {
 
       Text('记录设备现场状态')
         .fontSize(15)
-        .fontColor('#6B7280')
+        .fontColor(AppColors.TextSecondary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
@@ -184,7 +185,7 @@ struct DeviceVerification {
       bottom: 18
     })
     .width('100%')
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(24)
     .alignItems(HorizontalAlign.Start)
   }
@@ -200,7 +201,7 @@ struct DeviceVerification {
       })
         .height(56)
         .fontSize(16)
-        .backgroundColor('#F7F9FC')
+        .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
         .padding({
           left: 16,
@@ -208,12 +209,12 @@ struct DeviceVerification {
         })
         .border({
           width: 1,
-          color: '#D6DAE1'
+          color: AppColors.Border
         })
         .onChange((value: string) => {
           this.deviceCode = value;
           this.message = '';
-          this.messageTone = '#D9480F';
+          this.messageTone = AppColors.Danger;
           this.canReportFault = false;
           this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(value);
           if (this.normalizedDeviceCode.length === 0) {
@@ -248,12 +249,12 @@ struct DeviceVerification {
       Row({ space: 5 }) {
         SymbolGlyph(icon)
           .fontSize(17)
-          .fontColor([this.verificationResult === `${result}` ? '#FFFFFF' : '#111827'])
+          .fontColor([this.verificationResult === `${result}` ? AppColors.Surface : AppColors.TextPrimary])
 
         Text(DeviceVerificationService.formatVerificationResult(result))
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
-          .fontColor(this.verificationResult === `${result}` ? '#FFFFFF' : '#111827')
+          .fontColor(this.verificationResult === `${result}` ? AppColors.Surface : AppColors.TextPrimary)
           .maxLines(1)
       }
       .width('100%')
@@ -262,15 +263,15 @@ struct DeviceVerification {
     }
     .height(42)
     .layoutWeight(1)
-    .backgroundColor(this.verificationResult === `${result}` ? this.getResultTone(result) : '#F7F9FC')
+    .backgroundColor(this.verificationResult === `${result}` ? this.getResultTone(result) : AppColors.FieldBackground)
     .border({
       width: 1,
-      color: this.verificationResult === `${result}` ? this.getResultTone(result) : '#D6DAE1'
+      color: this.verificationResult === `${result}` ? this.getResultTone(result) : AppColors.Border
     })
     .onClick(() => {
       this.verificationResult = `${result}`;
       this.message = '';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       this.canReportFault = false;
     })
   }
@@ -289,7 +290,7 @@ struct DeviceVerification {
         .fontSize(15)
         .lineHeight(22)
         .maxLength(500)
-        .backgroundColor('#F7F9FC')
+        .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
         .padding({
           left: 14,
@@ -299,12 +300,12 @@ struct DeviceVerification {
         })
         .border({
           width: 1,
-          color: '#D6DAE1'
+          color: AppColors.Border
         })
         .onChange((value: string) => {
           this.description = value;
           this.message = '';
-          this.messageTone = '#D9480F';
+          this.messageTone = AppColors.Danger;
           this.canReportFault = false;
         })
     }
@@ -326,7 +327,7 @@ struct DeviceVerification {
         .fontSize(15)
         .lineHeight(22)
         .maxLength(300)
-        .backgroundColor('#F7F9FC')
+        .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
         .padding({
           left: 14,
@@ -336,12 +337,12 @@ struct DeviceVerification {
         })
         .border({
           width: 1,
-          color: '#D6DAE1'
+          color: AppColors.Border
         })
         .onChange((value: string) => {
           this.remark = value;
           this.message = '';
-          this.messageTone = '#D9480F';
+          this.messageTone = AppColors.Danger;
           this.canReportFault = false;
         })
     }
@@ -354,7 +355,7 @@ struct DeviceVerification {
     Text(title)
       .fontSize(17)
       .fontWeight(FontWeight.Bold)
-      .fontColor('#111827')
+      .fontColor(AppColors.TextPrimary)
       .maxLines(1)
   }
 
@@ -376,12 +377,12 @@ struct DeviceVerification {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
           .fontSize(20)
-          .fontColor(['#FFFFFF'])
+          .fontColor([AppColors.Surface])
 
         Text(label)
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
-          .fontColor('#FFFFFF')
+          .fontColor(AppColors.Surface)
           .maxLines(1)
       }
       .width('100%')
@@ -390,7 +391,7 @@ struct DeviceVerification {
     }
     .height(54)
     .width('100%')
-    .backgroundColor('#2F6FED')
+    .backgroundColor(AppColors.Primary)
     .enabled(enabled)
     .onClick(() => {
       action();
@@ -402,11 +403,11 @@ struct DeviceVerification {
     Button({ type: ButtonType.Circle, stateEffect: true }) {
       SymbolGlyph($r('sys.symbol.info_circle'))
         .fontSize(18)
-        .fontColor(['#111827'])
+        .fontColor([AppColors.TextPrimary])
     }
     .width(28)
     .height(28)
-    .backgroundColor('#00000000')
+    .backgroundColor(AppColors.Transparent)
     .onClick(() => {
       action();
     })
@@ -418,13 +419,13 @@ struct DeviceVerification {
       Text('提交状态')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Column() {
-        StatusInfoRow({ label: '标准编号', value: this.normalizedDeviceCode, tone: '#374151' })
+        StatusInfoRow({ label: '标准编号', value: this.normalizedDeviceCode, tone: AppColors.TextSecondary })
         this.CardDivider()
-        StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: '#374151' })
+        StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: AppColors.TextSecondary })
         this.CardDivider()
         StatusInfoRow({
           label: '核验结果',
@@ -439,7 +440,7 @@ struct DeviceVerification {
         })
       }
       .width('100%')
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .borderRadius(24)
     }
     .alignItems(HorizontalAlign.Start)
@@ -450,7 +451,7 @@ struct DeviceVerification {
   CardDivider() {
     Divider()
       .height(1)
-      .backgroundColor('#E5E7EB')
+      .backgroundColor(AppColors.Divider)
       .margin({
         left: 18,
         right: 18
@@ -479,13 +480,13 @@ struct DeviceVerification {
     if (!response.success) {
       const error = response.error;
       this.message = error ? error.message : '核验提交失败';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       return;
     }
 
     const recordId = response.data ? response.data.id : '';
     this.message = recordId.length > 0 ? `核验记录已提交：${recordId}` : '核验记录已提交';
-    this.messageTone = '#087F5B';
+    this.messageTone = AppColors.Success;
     this.canReportFault = this.shouldOfferFaultReport();
   }
 
@@ -495,19 +496,19 @@ struct DeviceVerification {
   }
 
   getSelectedResultTone(): string {
-    return this.verificationResult.length === 0 ? '#374151' : this.getResultTone(this.verificationResult as VerificationResult);
+    return this.verificationResult.length === 0 ? AppColors.TextSecondary : this.getResultTone(this.verificationResult as VerificationResult);
   }
 
   getResultTone(result: VerificationResult): string {
     switch (result) {
       case VerificationResult.Normal:
-        return '#087F5B';
+        return AppColors.Success;
       case VerificationResult.Abnormal:
-        return '#D9480F';
+        return AppColors.Danger;
       case VerificationResult.Unavailable:
-        return '#495057';
+        return AppColors.TextSecondary;
       default:
-        return '#374151';
+        return AppColors.TextSecondary;
     }
   }
 
@@ -534,7 +535,7 @@ struct DeviceVerification {
       this.getUIContext().getRouter().pushUrl({ url: 'pages/OperationsCenter/FaultReport' });
     } catch (err) {
       this.message = '故障报告不可用';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
     }
   }
 
@@ -549,7 +550,7 @@ struct DeviceVerification {
       router.replaceUrl({ url: 'pages/Workbench' });
     } catch (err) {
       this.message = '页面跳转失败';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
     }
   }
 }

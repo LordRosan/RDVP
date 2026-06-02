@@ -1,3 +1,4 @@
+import { AppColors } from '../../styles/AppTheme';
 import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { DeviceArchiveChangeRequestStatus } from '../../models/DeviceArchiveChangeModels';
@@ -49,7 +50,7 @@ struct DeviceArchiveDelete {
   @State hasDevice: boolean = false;
   @State reason: string = '';
   @State message: string = '';
-  @State messageTone: string = '#D9480F';
+  @State messageTone: string = AppColors.Danger;
   @State requestStatus: DeviceArchiveChangeRequestStatus = DeviceArchiveChangeRequestStatus.Draft;
   @State submitting: boolean = false;
   @State confirmVisible: boolean = false;
@@ -115,7 +116,7 @@ struct DeviceArchiveDelete {
     }
     .height('100%')
     .width('100%')
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   onBackPress(): boolean {
@@ -134,12 +135,12 @@ struct DeviceArchiveDelete {
       Button({ type: ButtonType.Circle, stateEffect: true }) {
         SymbolGlyph($r('sys.symbol.chevron_backward'))
           .fontSize(22)
-          .fontColor(['#111827'])
+          .fontColor([AppColors.TextPrimary])
       }
       .width(44)
       .height(44)
-      .backgroundColor('#FFFFFF')
-      .border({ width: 1, color: '#E5E7EB' })
+      .backgroundColor(AppColors.Surface)
+      .border({ width: 1, color: AppColors.Divider })
       .onClick(() => {
         this.backToDetail();
       })
@@ -148,7 +149,7 @@ struct DeviceArchiveDelete {
     .height(60)
     .alignItems(VerticalAlign.Center)
     .padding({ left: 24, right: 24 })
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   @Builder
@@ -158,7 +159,7 @@ struct DeviceArchiveDelete {
         Text('设备档案删除')
           .fontSize(34)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#111827')
+          .fontColor(AppColors.TextPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
@@ -170,7 +171,7 @@ struct DeviceArchiveDelete {
 
       Text('提交设备档案删除审核申请')
         .fontSize(15)
-        .fontColor('#6B7280')
+        .fontColor(AppColors.TextSecondary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
@@ -185,20 +186,20 @@ struct DeviceArchiveDelete {
       Text('目标档案')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Column() {
-        StatusInfoRow({ label: '设备编号', value: this.device.deviceCode, tone: '#374151', valueMaxLines: 2 })
+        StatusInfoRow({ label: '设备编号', value: this.device.deviceCode, tone: AppColors.TextSecondary, valueMaxLines: 2 })
         this.CardDivider()
-        StatusInfoRow({ label: '设备名称', value: this.device.name, tone: '#374151', valueMaxLines: 2 })
+        StatusInfoRow({ label: '设备名称', value: this.device.name, tone: AppColors.TextSecondary, valueMaxLines: 2 })
         this.CardDivider()
-        StatusInfoRow({ label: '设备型号', value: this.device.model, tone: '#374151', valueMaxLines: 2 })
+        StatusInfoRow({ label: '设备型号', value: this.device.model, tone: AppColors.TextSecondary, valueMaxLines: 2 })
         this.CardDivider()
-        StatusInfoRow({ label: '设备位置', value: this.device.location.address, tone: '#374151', valueMaxLines: 2 })
+        StatusInfoRow({ label: '设备位置', value: this.device.location.address, tone: AppColors.TextSecondary, valueMaxLines: 2 })
       }
       .width('100%')
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .borderRadius(24)
     }
     .alignItems(HorizontalAlign.Start)
@@ -221,7 +222,7 @@ struct DeviceArchiveDelete {
       bottom: 18
     })
     .width('100%')
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(24)
     .alignItems(HorizontalAlign.Start)
   }
@@ -240,7 +241,7 @@ struct DeviceArchiveDelete {
         .fontSize(15)
         .lineHeight(22)
         .maxLength(500)
-        .backgroundColor('#F7F9FC')
+        .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
         .padding({
           left: 14,
@@ -248,12 +249,12 @@ struct DeviceArchiveDelete {
           top: 12,
           bottom: 12
         })
-        .border({ width: 1, color: '#D6DAE1' })
+        .border({ width: 1, color: AppColors.Border })
         .enabled(!this.isSubmitted() && !this.submitting && !this.isDeleteLocked())
         .onChange((value: string) => {
           this.reason = value;
           this.message = '';
-          this.messageTone = '#D9480F';
+          this.messageTone = AppColors.Danger;
           if (!this.isSubmitted()) {
             this.requestStatus = DeviceArchiveChangeRequestStatus.Draft;
           }
@@ -269,11 +270,11 @@ struct DeviceArchiveDelete {
       Text('提交状态')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Column() {
-        StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: '#374151' })
+        StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: AppColors.TextSecondary })
         this.CardDivider()
         StatusInfoRow({
           label: '申请状态',
@@ -284,7 +285,7 @@ struct DeviceArchiveDelete {
         StatusInfoRow({
           label: '删除锁定',
           value: DeviceArchiveDeleteGuardService.getDeleteLockMessage(this.device.deviceCode),
-          tone: this.isDeleteLocked() ? '#D9480F' : '#087F5B',
+          tone: this.isDeleteLocked() ? AppColors.Danger : AppColors.Success,
           valueMaxLines: 2
         })
         this.CardDivider()
@@ -295,7 +296,7 @@ struct DeviceArchiveDelete {
         })
       }
       .width('100%')
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .borderRadius(24)
     }
     .alignItems(HorizontalAlign.Start)
@@ -314,7 +315,7 @@ struct DeviceArchiveDelete {
       bottom: 18
     })
     .width('100%')
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(24)
     .alignItems(HorizontalAlign.Start)
   }
@@ -327,18 +328,18 @@ struct DeviceArchiveDelete {
           Text('确认删除申请')
             .fontSize(22)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#111827')
+            .fontColor(AppColors.TextPrimary)
             .layoutWeight(1)
             .maxLines(1)
 
           Button({ type: ButtonType.Circle, stateEffect: true }) {
             SymbolGlyph($r('sys.symbol.xmark'))
               .fontSize(18)
-              .fontColor(['#111827'])
+              .fontColor([AppColors.TextPrimary])
           }
           .width(40)
           .height(40)
-          .backgroundColor('#F2F5F7')
+          .backgroundColor(AppColors.PageBackground)
           .onClick(() => {
             this.closeConfirmOverlay();
           })
@@ -348,7 +349,7 @@ struct DeviceArchiveDelete {
 
         Text('删除档案属于敏感操作，请完成身份复核后提交审核申请。')
           .fontSize(14)
-          .fontColor('#6B7280')
+          .fontColor(AppColors.TextSecondary)
           .lineHeight(20)
           .width('100%')
 
@@ -380,13 +381,13 @@ struct DeviceArchiveDelete {
         top: 22,
         bottom: 22
       })
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .borderRadius(28)
       .clip(true)
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#66000000')
+    .backgroundColor(AppColors.Scrim)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
   }
@@ -403,14 +404,14 @@ struct DeviceArchiveDelete {
         .type(InputType.Password)
         .height(54)
         .fontSize(16)
-        .backgroundColor('#F7F9FC')
+        .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
         .padding({ left: 16, right: 16 })
-        .border({ width: 1, color: '#D6DAE1' })
+        .border({ width: 1, color: AppColors.Border })
         .enabled(!this.submitting)
         .onChange((value: string) => {
           this.confirmPassword = value;
-          this.confirmMessage = '';
+          this.clearConfirmMessageWhenUserReenters(value);
         })
     }
     .width('100%')
@@ -429,15 +430,15 @@ struct DeviceArchiveDelete {
         })
           .height(54)
           .fontSize(16)
-          .backgroundColor('#F7F9FC')
+          .backgroundColor(AppColors.FieldBackground)
           .borderRadius(18)
           .padding({ left: 16, right: 16 })
-          .border({ width: 1, color: '#D6DAE1' })
+          .border({ width: 1, color: AppColors.Border })
           .layoutWeight(1)
           .enabled(!this.submitting)
           .onChange((value: string) => {
             this.confirmCaptcha = value;
-            this.confirmMessage = '';
+            this.clearConfirmMessageWhenUserReenters(value);
           })
 
         Button({ type: ButtonType.Capsule, stateEffect: true }) {
@@ -445,12 +446,12 @@ struct DeviceArchiveDelete {
             Text(this.confirmCaptchaCode)
               .fontSize(16)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#111827')
+              .fontColor(AppColors.TextPrimary)
               .maxLines(1)
 
             SymbolGlyph($r('sys.symbol.arrow_clockwise'))
               .fontSize(16)
-              .fontColor(['#111827'])
+              .fontColor([AppColors.TextPrimary])
           }
           .justifyContent(FlexAlign.Center)
           .alignItems(VerticalAlign.Center)
@@ -458,8 +459,8 @@ struct DeviceArchiveDelete {
         }
         .width(116)
         .height(54)
-        .backgroundColor('#F2F5F7')
-        .border({ width: 1, color: '#D6DAE1' })
+        .backgroundColor(AppColors.PageBackground)
+        .border({ width: 1, color: AppColors.Border })
         .enabled(!this.submitting)
         .onClick(() => {
           this.refreshCaptcha();
@@ -477,7 +478,7 @@ struct DeviceArchiveDelete {
     if (this.confirmMessage.length > 0) {
       Text(this.confirmMessage)
         .fontSize(13)
-        .fontColor('#D9480F')
+        .fontColor(AppColors.Danger)
         .lineHeight(18)
         .maxLines(3)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -490,7 +491,7 @@ struct DeviceArchiveDelete {
     Text(title)
       .fontSize(14)
       .fontWeight(FontWeight.Medium)
-      .fontColor('#111827')
+      .fontColor(AppColors.TextPrimary)
       .maxLines(1)
   }
 
@@ -499,7 +500,7 @@ struct DeviceArchiveDelete {
     Text(title)
       .fontSize(17)
       .fontWeight(FontWeight.Bold)
-      .fontColor('#111827')
+      .fontColor(AppColors.TextPrimary)
       .maxLines(1)
   }
 
@@ -522,12 +523,12 @@ struct DeviceArchiveDelete {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
           .fontSize(20)
-          .fontColor(['#FFFFFF'])
+          .fontColor([AppColors.Surface])
 
         Text(label)
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
-          .fontColor('#FFFFFF')
+          .fontColor(AppColors.Surface)
           .maxLines(1)
       }
       .width('100%')
@@ -536,7 +537,7 @@ struct DeviceArchiveDelete {
     }
     .height(54)
     .width('100%')
-    .backgroundColor(enabled ? '#D9480F' : '#AEB6C2')
+    .backgroundColor(enabled ? AppColors.Danger : AppColors.Disabled)
     .enabled(enabled)
     .onClick(() => {
       action();
@@ -549,12 +550,12 @@ struct DeviceArchiveDelete {
       Text(label)
         .fontSize(16)
         .fontWeight(FontWeight.Medium)
-        .fontColor('#FFFFFF')
+        .fontColor(AppColors.Surface)
         .maxLines(1)
     }
     .height(52)
     .width('100%')
-    .backgroundColor(this.submitting ? '#AEB6C2' : '#D9480F')
+    .backgroundColor(this.submitting ? AppColors.Disabled : AppColors.Danger)
     .enabled(!this.submitting)
     .onClick(() => {
       action();
@@ -567,13 +568,13 @@ struct DeviceArchiveDelete {
       Text(label)
         .fontSize(16)
         .fontWeight(FontWeight.Medium)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
     }
     .height(52)
     .width('100%')
-    .backgroundColor('#F7F9FC')
-    .border({ width: 1, color: '#D6DAE1' })
+    .backgroundColor(AppColors.FieldBackground)
+    .border({ width: 1, color: AppColors.Border })
     .enabled(!this.submitting)
     .onClick(() => {
       action();
@@ -585,11 +586,11 @@ struct DeviceArchiveDelete {
     Button({ type: ButtonType.Circle, stateEffect: true }) {
       SymbolGlyph($r('sys.symbol.info_circle'))
         .fontSize(18)
-        .fontColor(['#111827'])
+        .fontColor([AppColors.TextPrimary])
     }
     .width(28)
     .height(28)
-    .backgroundColor('#00000000')
+    .backgroundColor(AppColors.Transparent)
     .onClick(() => {
       action();
     })
@@ -599,7 +600,7 @@ struct DeviceArchiveDelete {
   CardDivider() {
     Divider()
       .height(1)
-      .backgroundColor('#E5E7EB')
+      .backgroundColor(AppColors.Divider)
       .margin({ left: 18, right: 18 })
   }
 
@@ -608,7 +609,7 @@ struct DeviceArchiveDelete {
     if (device === undefined) {
       this.hasDevice = false;
       this.message = '未获取设备档案，请返回后重新查询';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       return;
     }
 
@@ -616,7 +617,7 @@ struct DeviceArchiveDelete {
     this.hasDevice = true;
     if (DeviceArchiveDeleteGuardService.isDeleteLocked(device.deviceCode)) {
       this.message = DeviceArchiveDeleteGuardService.getDeleteLockMessage(device.deviceCode);
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
     }
   }
 
@@ -627,13 +628,13 @@ struct DeviceArchiveDelete {
     });
     if (!validation.valid) {
       this.message = validation.message;
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       return;
     }
 
     if (this.isDeleteLocked()) {
       this.message = DeviceArchiveDeleteGuardService.getDeleteLockMessage(this.device.deviceCode);
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       return;
     }
 
@@ -684,12 +685,18 @@ struct DeviceArchiveDelete {
     this.requestStatus = DeviceArchiveChangeRequestStatus.PendingReview;
     this.confirmVisible = false;
     this.message = '删除申请已提交，等待管理员审核';
-    this.messageTone = '#087F5B';
+    this.messageTone = AppColors.Success;
   }
 
   refreshCaptcha(): void {
     this.confirmCaptchaCode = DeviceArchiveDeleteGuardService.createCaptcha();
     this.confirmCaptcha = '';
+  }
+
+  clearConfirmMessageWhenUserReenters(value: string): void {
+    if (value.length > 0) {
+      this.confirmMessage = '';
+    }
   }
 
   closeConfirmOverlay(): void {
@@ -730,14 +737,14 @@ struct DeviceArchiveDelete {
   getStatusTone(status: DeviceArchiveChangeRequestStatus): string {
     switch (status) {
       case DeviceArchiveChangeRequestStatus.PendingReview:
-        return '#E67700';
+        return AppColors.Warning;
       case DeviceArchiveChangeRequestStatus.Approved:
-        return '#087F5B';
+        return AppColors.Success;
       case DeviceArchiveChangeRequestStatus.Rejected:
-        return '#D9480F';
+        return AppColors.Danger;
       case DeviceArchiveChangeRequestStatus.Draft:
       default:
-        return '#374151';
+        return AppColors.TextSecondary;
     }
   }
 
@@ -752,7 +759,7 @@ struct DeviceArchiveDelete {
       router.replaceUrl({ url: 'pages/ArchiveCenter/DeviceArchiveDetail' });
     } catch (err) {
       this.message = '页面跳转失败';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
     }
   }
 }

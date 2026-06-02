@@ -1,3 +1,4 @@
+import { AppColors } from '../../styles/AppTheme';
 import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import {
@@ -41,7 +42,7 @@ struct DeviceArchiveReview {
   @State reviewedAt: string = '';
   @State reviewComment: string = '';
   @State message: string = '';
-  @State messageTone: string = '#D9480F';
+  @State messageTone: string = AppColors.Danger;
   @State refreshStatus: string = '未刷新';
   @State refreshing: boolean = false;
   @State submitting: boolean = false;
@@ -97,7 +98,7 @@ struct DeviceArchiveReview {
     }
     .height('100%')
     .width('100%')
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   onBackPress(): boolean {
@@ -111,12 +112,12 @@ struct DeviceArchiveReview {
       Button({ type: ButtonType.Circle, stateEffect: true }) {
         SymbolGlyph($r('sys.symbol.chevron_backward'))
           .fontSize(22)
-          .fontColor(['#111827'])
+          .fontColor([AppColors.TextPrimary])
       }
       .width(44)
       .height(44)
-      .backgroundColor('#FFFFFF')
-      .border({ width: 1, color: '#E5E7EB' })
+      .backgroundColor(AppColors.Surface)
+      .border({ width: 1, color: AppColors.Divider })
       .onClick(() => {
         this.backToWorkbench();
       })
@@ -125,7 +126,7 @@ struct DeviceArchiveReview {
     .height(60)
     .alignItems(VerticalAlign.Center)
     .padding({ left: 24, right: 24 })
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   @Builder
@@ -135,7 +136,7 @@ struct DeviceArchiveReview {
         Text('变更审核')
           .fontSize(34)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#111827')
+          .fontColor(AppColors.TextPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
@@ -147,7 +148,7 @@ struct DeviceArchiveReview {
 
       Text('审核待处理设备档案申请')
         .fontSize(15)
-        .fontColor('#6B7280')
+        .fontColor(AppColors.TextSecondary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
@@ -163,18 +164,18 @@ struct DeviceArchiveReview {
         Text('待审核申请')
           .fontSize(22)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#111827')
+          .fontColor(AppColors.TextPrimary)
           .layoutWeight(1)
           .maxLines(1)
 
         Button({ type: ButtonType.Circle, stateEffect: true }) {
           SymbolGlyph($r('sys.symbol.arrow_clockwise'))
             .fontSize(22)
-            .fontColor(['#FFFFFF'])
+            .fontColor([AppColors.Surface])
         }
         .width(44)
         .height(44)
-        .backgroundColor('#2F6FED')
+        .backgroundColor(AppColors.Primary)
         .enabled(!this.refreshing && !this.submitting)
         .onClick(() => {
           this.refreshRequests();
@@ -205,7 +206,7 @@ struct DeviceArchiveReview {
         Stack() {
           SymbolGlyph(this.getRequestTypeIcon(item.type))
             .fontSize(23)
-            .fontColor(['#FFFFFF'])
+            .fontColor([AppColors.Surface])
         }
         .width(44)
         .height(44)
@@ -216,13 +217,13 @@ struct DeviceArchiveReview {
           Text(item.deviceCode)
             .fontSize(17)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#111827')
+            .fontColor(AppColors.TextPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
           Text(item.deviceName)
             .fontSize(13)
-            .fontColor('#6B7280')
+            .fontColor(AppColors.TextSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
@@ -248,7 +249,7 @@ struct DeviceArchiveReview {
 
         Text(item.submittedAt)
           .fontSize(12)
-          .fontColor('#6B7280')
+          .fontColor(AppColors.TextSecondary)
           .maxLines(1)
       }
       .width('100%')
@@ -256,14 +257,14 @@ struct DeviceArchiveReview {
       Row() {
         Text('审核记录编号')
           .fontSize(13)
-          .fontColor('#374151')
+          .fontColor(AppColors.TextSecondary)
           .fontWeight(FontWeight.Medium)
           .layoutWeight(1)
           .maxLines(1)
 
         Text(item.id)
           .fontSize(13)
-          .fontColor('#2F6FED')
+          .fontColor(AppColors.Primary)
           .fontWeight(FontWeight.Medium)
           .textAlign(TextAlign.End)
           .width('58%')
@@ -275,14 +276,14 @@ struct DeviceArchiveReview {
       Row() {
         Text('操作人')
           .fontSize(13)
-          .fontColor('#374151')
+          .fontColor(AppColors.TextSecondary)
           .fontWeight(FontWeight.Medium)
           .layoutWeight(1)
           .maxLines(1)
 
         Text(this.getApplicantName(item))
           .fontSize(13)
-          .fontColor('#374151')
+          .fontColor(AppColors.TextSecondary)
           .fontWeight(FontWeight.Medium)
           .textAlign(TextAlign.End)
           .width('58%')
@@ -293,7 +294,7 @@ struct DeviceArchiveReview {
 
       Text(item.reason)
         .fontSize(14)
-        .fontColor('#374151')
+        .fontColor(AppColors.TextSecondary)
         .lineHeight(20)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -309,11 +310,11 @@ struct DeviceArchiveReview {
     }
     .padding(16)
     .width('100%')
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(24)
     .border({
       width: this.selectedRequestId === item.id ? 2 : 0,
-      color: this.selectedRequestId === item.id ? '#2F6FED' : '#00000000'
+      color: this.selectedRequestId === item.id ? AppColors.Primary : AppColors.Transparent
     })
   }
 
@@ -323,12 +324,12 @@ struct DeviceArchiveReview {
       Text(change.label)
         .fontSize(13)
         .fontWeight(FontWeight.Medium)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Text(`${change.oldValue} -> ${change.newValue}`)
         .fontSize(13)
-        .fontColor('#6B7280')
+        .fontColor(AppColors.TextSecondary)
         .lineHeight(19)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -340,7 +341,7 @@ struct DeviceArchiveReview {
       top: 10,
       bottom: 10
     })
-    .backgroundColor('#F7F9FC')
+    .backgroundColor(AppColors.FieldBackground)
     .borderRadius(14)
   }
 
@@ -350,12 +351,12 @@ struct DeviceArchiveReview {
       Row({ space: 8 }) {
         SymbolGlyph(this.selectedRequestId === item.id ? $r('sys.symbol.checkmark_circle') : $r('sys.symbol.text_clipboard'))
           .fontSize(18)
-          .fontColor(['#FFFFFF'])
+          .fontColor([AppColors.Surface])
 
         Text(this.selectedRequestId === item.id ? '已选择' : '选择审核')
           .fontSize(15)
           .fontWeight(FontWeight.Medium)
-          .fontColor('#FFFFFF')
+          .fontColor(AppColors.Surface)
           .maxLines(1)
       }
       .width('100%')
@@ -364,7 +365,7 @@ struct DeviceArchiveReview {
     }
     .height(46)
     .width('100%')
-    .backgroundColor(this.selectedRequestId === item.id ? '#087F5B' : '#2F6FED')
+    .backgroundColor(this.selectedRequestId === item.id ? AppColors.Success : AppColors.Primary)
     .enabled(!this.submitting)
     .onClick(() => {
       this.selectRequest(item);
@@ -393,7 +394,7 @@ struct DeviceArchiveReview {
       bottom: 18
     })
     .width('100%')
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(24)
     .alignItems(HorizontalAlign.Start)
   }
@@ -409,11 +410,11 @@ struct DeviceArchiveReview {
       })
         .height(56)
         .fontSize(16)
-        .fontColor(this.selectedRequestId.length > 0 ? '#111827' : '#9CA3AF')
-        .backgroundColor('#F7F9FC')
+        .fontColor(this.selectedRequestId.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
+        .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
         .padding({ left: 16, right: 16 })
-        .border({ width: 1, color: '#D6DAE1' })
+        .border({ width: 1, color: AppColors.Border })
         .enabled(false)
     }
     .width('100%')
@@ -442,12 +443,12 @@ struct DeviceArchiveReview {
       Row({ space: 6 }) {
         SymbolGlyph(icon)
           .fontSize(18)
-          .fontColor([this.reviewDecision === `${decision}` ? '#FFFFFF' : '#111827'])
+          .fontColor([this.reviewDecision === `${decision}` ? AppColors.Surface : AppColors.TextPrimary])
 
         Text(DeviceArchiveReviewService.formatDecision(decision))
           .fontSize(15)
           .fontWeight(FontWeight.Medium)
-          .fontColor(this.reviewDecision === `${decision}` ? '#FFFFFF' : '#111827')
+          .fontColor(this.reviewDecision === `${decision}` ? AppColors.Surface : AppColors.TextPrimary)
           .maxLines(1)
       }
       .width('100%')
@@ -456,16 +457,16 @@ struct DeviceArchiveReview {
     }
     .height(46)
     .layoutWeight(1)
-    .backgroundColor(this.reviewDecision === `${decision}` ? this.getDecisionTone(decision) : '#F7F9FC')
+    .backgroundColor(this.reviewDecision === `${decision}` ? this.getDecisionTone(decision) : AppColors.FieldBackground)
     .border({
       width: 1,
-      color: this.reviewDecision === `${decision}` ? this.getDecisionTone(decision) : '#D6DAE1'
+      color: this.reviewDecision === `${decision}` ? this.getDecisionTone(decision) : AppColors.Border
     })
     .enabled(!this.submitting)
     .onClick(() => {
       this.reviewDecision = `${decision}`;
       this.message = '';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
     })
   }
 
@@ -477,29 +478,29 @@ struct DeviceArchiveReview {
       Row({ space: 10 }) {
         SymbolGlyph($r('sys.symbol.calendar'))
           .fontSize(20)
-          .fontColor(['#111827'])
+          .fontColor([AppColors.TextPrimary])
 
         Text(this.reviewedAt.length > 0 ? this.reviewedAt : '选择审核时间')
           .fontSize(16)
-          .fontColor(this.reviewedAt.length > 0 ? '#111827' : '#9CA3AF')
+          .fontColor(this.reviewedAt.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
           .layoutWeight(1)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
         SymbolGlyph($r('sys.symbol.chevron_forward'))
           .fontSize(18)
-          .fontColor(['#6B7280'])
+          .fontColor([AppColors.TextSecondary])
       }
       .height(56)
       .width('100%')
-      .backgroundColor('#F7F9FC')
+      .backgroundColor(AppColors.FieldBackground)
       .borderRadius(18)
       .padding({ left: 16, right: 16 })
-      .border({ width: 1, color: '#D6DAE1' })
+      .border({ width: 1, color: AppColors.Border })
       .onClick(() => {
         this.showReviewedAtPicker();
         this.message = '';
-        this.messageTone = '#D9480F';
+        this.messageTone = AppColors.Danger;
       })
     }
     .width('100%')
@@ -520,7 +521,7 @@ struct DeviceArchiveReview {
         .fontSize(15)
         .lineHeight(22)
         .maxLength(500)
-        .backgroundColor('#F7F9FC')
+        .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
         .padding({
           left: 14,
@@ -528,12 +529,12 @@ struct DeviceArchiveReview {
           top: 12,
           bottom: 12
         })
-        .border({ width: 1, color: '#D6DAE1' })
+        .border({ width: 1, color: AppColors.Border })
         .enabled(!this.submitting)
         .onChange((value: string) => {
           this.reviewComment = value;
           this.message = '';
-          this.messageTone = '#D9480F';
+          this.messageTone = AppColors.Danger;
         })
     }
     .width('100%')
@@ -546,17 +547,17 @@ struct DeviceArchiveReview {
       Stack() {
         SymbolGlyph($r('sys.symbol.checkmark_shield'))
           .fontSize(36)
-          .fontColor(['#2F6FED'])
+          .fontColor([AppColors.Primary])
       }
       .width(64)
       .height(64)
       .borderRadius(32)
-      .backgroundColor('#EEF4FF')
+      .backgroundColor(AppColors.PrimarySurface)
 
       Text('暂无待审核申请')
         .fontSize(18)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
     }
     .width('100%')
@@ -566,7 +567,7 @@ struct DeviceArchiveReview {
       top: 28,
       bottom: 28
     })
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(24)
     .alignItems(HorizontalAlign.Center)
   }
@@ -577,22 +578,22 @@ struct DeviceArchiveReview {
       Text('审核状态')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Column() {
-        StatusInfoRow({ label: '待审核数量', value: `${this.requests.length}项`, tone: '#374151' })
+        StatusInfoRow({ label: '待审核数量', value: `${this.requests.length}项`, tone: AppColors.TextSecondary })
         this.CardDivider()
         StatusInfoRow({
           label: '当前申请',
           value: this.selectedRequestId.length > 0 ? this.selectedRequestId : '-',
-          tone: this.selectedRequestId.length > 0 ? '#2F6FED' : '#374151'
+          tone: this.selectedRequestId.length > 0 ? AppColors.Primary : AppColors.TextSecondary
         })
         this.CardDivider()
         StatusInfoRow({
           label: '刷新状态',
           value: this.isFailureMessageVisible() ? '处理失败' : this.refreshStatus,
-          tone: this.isFailureMessageVisible() ? '#D9480F' : '#087F5B'
+          tone: this.isFailureMessageVisible() ? AppColors.Danger : AppColors.Success
         })
         this.CardDivider()
         StatusInfoRow({
@@ -602,7 +603,7 @@ struct DeviceArchiveReview {
         })
       }
       .width('100%')
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .borderRadius(24)
     }
     .alignItems(HorizontalAlign.Start)
@@ -614,7 +615,7 @@ struct DeviceArchiveReview {
     Text(title)
       .fontSize(17)
       .fontWeight(FontWeight.Bold)
-      .fontColor('#111827')
+      .fontColor(AppColors.TextPrimary)
       .maxLines(1)
   }
 
@@ -636,12 +637,12 @@ struct DeviceArchiveReview {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
           .fontSize(20)
-          .fontColor(['#FFFFFF'])
+          .fontColor([AppColors.Surface])
 
         Text(label)
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
-          .fontColor('#FFFFFF')
+          .fontColor(AppColors.Surface)
           .maxLines(1)
       }
       .width('100%')
@@ -650,7 +651,7 @@ struct DeviceArchiveReview {
     }
     .height(54)
     .width('100%')
-    .backgroundColor(enabled ? '#2F6FED' : '#AEB6C2')
+    .backgroundColor(enabled ? AppColors.Primary : AppColors.Disabled)
     .enabled(enabled)
     .onClick(() => {
       action();
@@ -662,11 +663,11 @@ struct DeviceArchiveReview {
     Button({ type: ButtonType.Circle, stateEffect: true }) {
       SymbolGlyph($r('sys.symbol.info_circle'))
         .fontSize(18)
-        .fontColor(['#111827'])
+        .fontColor([AppColors.TextPrimary])
     }
     .width(28)
     .height(28)
-    .backgroundColor('#00000000')
+    .backgroundColor(AppColors.Transparent)
     .onClick(() => {
       action();
     })
@@ -676,7 +677,7 @@ struct DeviceArchiveReview {
   CardDivider() {
     Divider()
       .height(1)
-      .backgroundColor('#E5E7EB')
+      .backgroundColor(AppColors.Divider)
       .margin({ left: 18, right: 18 })
   }
 
@@ -687,7 +688,7 @@ struct DeviceArchiveReview {
 
     if (!this.canReview()) {
       this.message = '当前账号无权审核设备档案变更';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       return;
     }
 
@@ -698,7 +699,7 @@ struct DeviceArchiveReview {
     if (!response.success) {
       const error = response.error;
       this.message = error ? error.message : '变更申请刷新失败';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       this.refreshStatus = '刷新失败';
       return;
     }
@@ -710,7 +711,7 @@ struct DeviceArchiveReview {
 
     if (clearMessage) {
       this.message = '';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
     }
     this.refreshStatus = '已刷新';
   }
@@ -721,7 +722,7 @@ struct DeviceArchiveReview {
     this.reviewComment = '';
     this.reviewedAt = '';
     this.message = '';
-    this.messageTone = '#D9480F';
+    this.messageTone = AppColors.Danger;
   }
 
   async submitReview(): Promise<void> {
@@ -743,12 +744,12 @@ struct DeviceArchiveReview {
     if (!response.success) {
       const error = response.error;
       this.message = error ? error.message : '变更审核失败';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       return;
     }
 
     this.message = `${DeviceArchiveReviewService.formatDecision(decision)}完成`;
-    this.messageTone = '#087F5B';
+    this.messageTone = AppColors.Success;
     this.refreshStatus = '已更新';
     this.clearReviewForm();
     await this.refreshRequests(false);
@@ -775,7 +776,7 @@ struct DeviceArchiveReview {
     } else {
       this.message = '当前不可提交审核结果';
     }
-    this.messageTone = '#D9480F';
+    this.messageTone = AppColors.Danger;
   }
 
   clearReviewForm(): void {
@@ -805,7 +806,7 @@ struct DeviceArchiveReview {
   }
 
   isFailureMessageVisible(): boolean {
-    return this.message.length > 0 && this.messageTone === '#D9480F';
+    return this.message.length > 0 && this.messageTone === AppColors.Danger;
   }
 
   getSubmitButtonLabel(): string {
@@ -813,7 +814,7 @@ struct DeviceArchiveReview {
   }
 
   getDecisionTone(decision: DeviceArchiveReviewDecision): string {
-    return decision === DeviceArchiveReviewDecision.Approved ? '#087F5B' : '#D9480F';
+    return decision === DeviceArchiveReviewDecision.Approved ? AppColors.Success : AppColors.Danger;
   }
 
   getRequestTypeIcon(type: DeviceArchiveReviewRequestType): Resource {
@@ -838,7 +839,7 @@ struct DeviceArchiveReview {
       onDateAccept: (value: Date) => {
         this.reviewedAt = this.formatDateTime(value);
         this.message = '';
-        this.messageTone = '#D9480F';
+        this.messageTone = AppColors.Danger;
       }
     });
   }
@@ -892,7 +893,7 @@ struct DeviceArchiveReview {
       router.replaceUrl({ url: 'pages/Workbench' });
     } catch (err) {
       this.message = '页面跳转失败';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
     }
   }
 }

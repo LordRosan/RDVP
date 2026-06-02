@@ -1,8 +1,9 @@
+import { AppColors } from '../styles/AppTheme';
 @Component
 export struct StatusInfoRow {
   @Prop label: string = '';
   @Prop value: string = '';
-  @Prop tone: string = '#374151';
+  @Prop tone: string = AppColors.TextSecondary;
   @Prop valueWidth: string = '58%';
   @Prop valueMaxLines: number = 1;
   @Prop rowMinHeight: number = 54;
@@ -12,7 +13,7 @@ export struct StatusInfoRow {
     Row() {
       Text(this.label)
         .fontSize(15)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .fontWeight(FontWeight.Medium)
         .layoutWeight(1)
         .maxLines(1)

@@ -1,9 +1,10 @@
+import { AppColors } from '../styles/AppTheme';
 @Component
 export struct MetricTile {
   @Prop label: string = '';
   @Prop value: string = '';
   @Prop status: string = '';
-  @Prop tone: string = '#2F6FED';
+  @Prop tone: string = AppColors.Primary;
 
   build() {
     Column({ space: 6 }) {
@@ -15,14 +16,14 @@ export struct MetricTile {
 
       Text(this.label)
         .fontSize(14)
-        .fontColor('#1F2933')
+        .fontColor(AppColors.TextPrimary)
         .fontWeight(FontWeight.Medium)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
       Text(this.status)
         .fontSize(12)
-        .fontColor('#6B7280')
+        .fontColor(AppColors.TextSecondary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
@@ -31,11 +32,11 @@ export struct MetricTile {
     .padding(14)
     .height(112)
     .width('100%')
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(8)
     .border({
       width: 1,
-      color: '#E5E7EB'
+      color: AppColors.Divider
     })
   }
 }

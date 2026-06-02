@@ -1,3 +1,4 @@
+import { AppColors } from '../../styles/AppTheme';
 import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { FaultSeverity, FaultType } from '../../models/FaultModels';
@@ -76,7 +77,7 @@ struct FaultReport {
   @State description: string = '';
   @State sceneCondition: string = '';
   @State message: string = '';
-  @State messageTone: string = '#D9480F';
+  @State messageTone: string = AppColors.Danger;
   @State normalizedDeviceCode: string = '-';
   @State submitting: boolean = false;
   private faultInfoDialogController: CustomDialogController = new CustomDialogController({
@@ -124,7 +125,7 @@ struct FaultReport {
     }
     .height('100%')
     .width('100%')
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   onBackPress(): boolean {
@@ -138,14 +139,14 @@ struct FaultReport {
       Button({ type: ButtonType.Circle, stateEffect: true }) {
         SymbolGlyph($r('sys.symbol.chevron_backward'))
           .fontSize(22)
-          .fontColor(['#111827'])
+          .fontColor([AppColors.TextPrimary])
       }
       .width(44)
       .height(44)
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .border({
         width: 1,
-        color: '#E5E7EB'
+        color: AppColors.Divider
       })
       .onClick(() => {
         this.backToWorkbench();
@@ -158,7 +159,7 @@ struct FaultReport {
       left: 24,
       right: 24
     })
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   @Builder
@@ -168,7 +169,7 @@ struct FaultReport {
         Text('故障报告')
           .fontSize(34)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#111827')
+          .fontColor(AppColors.TextPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
@@ -180,7 +181,7 @@ struct FaultReport {
 
       Text('登记设备故障信息')
         .fontSize(15)
-        .fontColor('#6B7280')
+        .fontColor(AppColors.TextSecondary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
@@ -213,7 +214,7 @@ struct FaultReport {
       bottom: 18
     })
     .width('100%')
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(24)
     .alignItems(HorizontalAlign.Start)
   }
@@ -229,7 +230,7 @@ struct FaultReport {
       })
         .height(56)
         .fontSize(16)
-        .backgroundColor('#F7F9FC')
+        .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
         .padding({
           left: 16,
@@ -237,12 +238,12 @@ struct FaultReport {
         })
         .border({
           width: 1,
-          color: '#D6DAE1'
+          color: AppColors.Border
         })
         .onChange((value: string) => {
           this.deviceCode = value;
           this.message = '';
-          this.messageTone = '#D9480F';
+          this.messageTone = AppColors.Danger;
           this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(value);
           if (this.normalizedDeviceCode.length === 0) {
             this.normalizedDeviceCode = '-';
@@ -328,12 +329,12 @@ struct FaultReport {
       Row({ space: 5 }) {
         SymbolGlyph(icon)
           .fontSize(17)
-          .fontColor([this.faultType === `${type}` ? '#FFFFFF' : '#111827'])
+          .fontColor([this.faultType === `${type}` ? AppColors.Surface : AppColors.TextPrimary])
 
         Text(FaultReportService.formatFaultType(type))
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
-          .fontColor(this.faultType === `${type}` ? '#FFFFFF' : '#111827')
+          .fontColor(this.faultType === `${type}` ? AppColors.Surface : AppColors.TextPrimary)
           .maxLines(1)
       }
       .width('100%')
@@ -342,15 +343,15 @@ struct FaultReport {
     }
     .height(42)
     .width('100%')
-    .backgroundColor(this.faultType === `${type}` ? '#2F6FED' : '#F7F9FC')
+    .backgroundColor(this.faultType === `${type}` ? AppColors.Primary : AppColors.FieldBackground)
     .border({
       width: 1,
-      color: this.faultType === `${type}` ? '#2F6FED' : '#D6DAE1'
+      color: this.faultType === `${type}` ? AppColors.Primary : AppColors.Border
     })
     .onClick(() => {
       this.faultType = `${type}`;
       this.message = '';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
     })
   }
 
@@ -386,12 +387,12 @@ struct FaultReport {
       Row({ space: 6 }) {
         SymbolGlyph(icon)
           .fontSize(17)
-          .fontColor([this.severity === `${severity}` ? '#FFFFFF' : '#111827'])
+          .fontColor([this.severity === `${severity}` ? AppColors.Surface : AppColors.TextPrimary])
 
         Text(FaultReportService.formatSeverity(severity))
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
-          .fontColor(this.severity === `${severity}` ? '#FFFFFF' : '#111827')
+          .fontColor(this.severity === `${severity}` ? AppColors.Surface : AppColors.TextPrimary)
           .maxLines(1)
       }
       .width('100%')
@@ -400,15 +401,15 @@ struct FaultReport {
     }
     .height(42)
     .layoutWeight(1)
-    .backgroundColor(this.severity === `${severity}` ? this.getSeverityTone(severity) : '#F7F9FC')
+    .backgroundColor(this.severity === `${severity}` ? this.getSeverityTone(severity) : AppColors.FieldBackground)
     .border({
       width: 1,
-      color: this.severity === `${severity}` ? this.getSeverityTone(severity) : '#D6DAE1'
+      color: this.severity === `${severity}` ? this.getSeverityTone(severity) : AppColors.Border
     })
     .onClick(() => {
       this.severity = `${severity}`;
       this.message = '';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
     })
   }
 
@@ -420,22 +421,22 @@ struct FaultReport {
       Row({ space: 10 }) {
         SymbolGlyph($r('sys.symbol.calendar'))
           .fontSize(20)
-          .fontColor(['#111827'])
+          .fontColor([AppColors.TextPrimary])
 
         Text(this.occurredAt.length > 0 ? this.occurredAt : '选择发生时间')
           .fontSize(16)
-          .fontColor(this.occurredAt.length > 0 ? '#111827' : '#9CA3AF')
+          .fontColor(this.occurredAt.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
           .layoutWeight(1)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
         SymbolGlyph($r('sys.symbol.chevron_forward'))
           .fontSize(18)
-          .fontColor(['#6B7280'])
+          .fontColor([AppColors.TextSecondary])
       }
       .height(56)
       .width('100%')
-      .backgroundColor('#F7F9FC')
+      .backgroundColor(AppColors.FieldBackground)
       .borderRadius(18)
       .padding({
         left: 16,
@@ -443,12 +444,12 @@ struct FaultReport {
       })
       .border({
         width: 1,
-        color: '#D6DAE1'
+        color: AppColors.Border
       })
       .onClick(() => {
         this.showOccurredAtPicker();
         this.message = '';
-        this.messageTone = '#D9480F';
+        this.messageTone = AppColors.Danger;
       })
     }
     .width('100%')
@@ -469,7 +470,7 @@ struct FaultReport {
         .fontSize(15)
         .lineHeight(22)
         .maxLength(800)
-        .backgroundColor('#F7F9FC')
+        .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
         .padding({
           left: 14,
@@ -479,12 +480,12 @@ struct FaultReport {
         })
         .border({
           width: 1,
-          color: '#D6DAE1'
+          color: AppColors.Border
         })
         .onChange((value: string) => {
           this.description = value;
           this.message = '';
-          this.messageTone = '#D9480F';
+          this.messageTone = AppColors.Danger;
         })
     }
     .width('100%')
@@ -505,7 +506,7 @@ struct FaultReport {
         .fontSize(15)
         .lineHeight(22)
         .maxLength(500)
-        .backgroundColor('#F7F9FC')
+        .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
         .padding({
           left: 14,
@@ -515,12 +516,12 @@ struct FaultReport {
         })
         .border({
           width: 1,
-          color: '#D6DAE1'
+          color: AppColors.Border
         })
         .onChange((value: string) => {
           this.sceneCondition = value;
           this.message = '';
-          this.messageTone = '#D9480F';
+          this.messageTone = AppColors.Danger;
         })
     }
     .width('100%')
@@ -532,7 +533,7 @@ struct FaultReport {
     Text(title)
       .fontSize(17)
       .fontWeight(FontWeight.Bold)
-      .fontColor('#111827')
+      .fontColor(AppColors.TextPrimary)
       .maxLines(1)
   }
 
@@ -554,12 +555,12 @@ struct FaultReport {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
           .fontSize(20)
-          .fontColor(['#FFFFFF'])
+          .fontColor([AppColors.Surface])
 
         Text(label)
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
-          .fontColor('#FFFFFF')
+          .fontColor(AppColors.Surface)
           .maxLines(1)
       }
       .width('100%')
@@ -568,7 +569,7 @@ struct FaultReport {
     }
     .height(54)
     .width('100%')
-    .backgroundColor('#2F6FED')
+    .backgroundColor(AppColors.Primary)
     .enabled(enabled)
     .onClick(() => {
       action();
@@ -580,11 +581,11 @@ struct FaultReport {
     Button({ type: ButtonType.Circle, stateEffect: true }) {
       SymbolGlyph($r('sys.symbol.info_circle'))
         .fontSize(18)
-        .fontColor(['#111827'])
+        .fontColor([AppColors.TextPrimary])
     }
     .width(28)
     .height(28)
-    .backgroundColor('#00000000')
+    .backgroundColor(AppColors.Transparent)
     .onClick(() => {
       action();
     })
@@ -596,18 +597,18 @@ struct FaultReport {
       Text('提交状态')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Column() {
-        StatusInfoRow({ label: '标准编号', value: this.normalizedDeviceCode, tone: '#374151' })
+        StatusInfoRow({ label: '标准编号', value: this.normalizedDeviceCode, tone: AppColors.TextSecondary })
         this.CardDivider()
-        StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: '#374151' })
+        StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: AppColors.TextSecondary })
         this.CardDivider()
         StatusInfoRow({
           label: '故障类型',
           value: this.getFaultTypeStatusText(),
-          tone: '#374151'
+          tone: AppColors.TextSecondary
         })
         this.CardDivider()
         StatusInfoRow({
@@ -623,7 +624,7 @@ struct FaultReport {
         })
       }
       .width('100%')
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .borderRadius(24)
     }
     .alignItems(HorizontalAlign.Start)
@@ -634,7 +635,7 @@ struct FaultReport {
   CardDivider() {
     Divider()
       .height(1)
-      .backgroundColor('#E5E7EB')
+      .backgroundColor(AppColors.Divider)
       .margin({
         left: 18,
         right: 18
@@ -665,13 +666,13 @@ struct FaultReport {
     if (!response.success) {
       const error = response.error;
       this.message = error ? error.message : '故障报告提交失败';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       return;
     }
 
     const reportNo = response.data ? response.data.reportNo : '';
     this.message = reportNo.length > 0 ? `故障报告已提交：${reportNo}` : '故障报告已提交';
-    this.messageTone = '#087F5B';
+    this.messageTone = AppColors.Success;
   }
 
   applyPrefill(): void {
@@ -698,21 +699,21 @@ struct FaultReport {
   }
 
   getSelectedSeverityTone(): string {
-    return this.severity.length === 0 ? '#374151' : this.getSeverityTone(this.severity as FaultSeverity);
+    return this.severity.length === 0 ? AppColors.TextSecondary : this.getSeverityTone(this.severity as FaultSeverity);
   }
 
   getSeverityTone(severity: FaultSeverity): string {
     switch (severity) {
       case FaultSeverity.Emergency:
-        return '#D9480F';
+        return AppColors.Danger;
       case FaultSeverity.Severe:
-        return '#E67700';
+        return AppColors.Warning;
       case FaultSeverity.General:
-        return '#2F6FED';
+        return AppColors.Primary;
       case FaultSeverity.Minor:
-        return '#087F5B';
+        return AppColors.Success;
       default:
-        return '#374151';
+        return AppColors.TextSecondary;
     }
   }
 
@@ -730,7 +731,7 @@ struct FaultReport {
       onDateAccept: (value: Date) => {
         this.occurredAt = this.formatDateTime(value);
         this.message = '';
-        this.messageTone = '#D9480F';
+        this.messageTone = AppColors.Danger;
       }
     });
   }

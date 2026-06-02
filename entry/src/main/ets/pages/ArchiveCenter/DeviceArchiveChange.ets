@@ -1,3 +1,4 @@
+import { AppColors } from '../../styles/AppTheme';
 import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import {
   DeviceArchiveChangeBaseline,
@@ -61,7 +62,7 @@ struct DeviceArchiveChange {
   @State locationAddress: string = '';
   @State reason: string = '';
   @State message: string = '';
-  @State messageTone: string = '#D9480F';
+  @State messageTone: string = AppColors.Danger;
   @State normalizedDeviceCode: string = '-';
   @State changeCount: number = 0;
   @State requestStatus: DeviceArchiveChangeRequestStatus = DeviceArchiveChangeRequestStatus.Draft;
@@ -114,7 +115,7 @@ struct DeviceArchiveChange {
     }
     .height('100%')
     .width('100%')
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   onBackPress(): boolean {
@@ -128,14 +129,14 @@ struct DeviceArchiveChange {
       Button({ type: ButtonType.Circle, stateEffect: true }) {
         SymbolGlyph($r('sys.symbol.chevron_backward'))
           .fontSize(22)
-          .fontColor(['#111827'])
+          .fontColor([AppColors.TextPrimary])
       }
       .width(44)
       .height(44)
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .border({
         width: 1,
-        color: '#E5E7EB'
+        color: AppColors.Divider
       })
       .onClick(() => {
         this.backToDetail();
@@ -148,7 +149,7 @@ struct DeviceArchiveChange {
       left: 24,
       right: 24
     })
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   @Builder
@@ -158,7 +159,7 @@ struct DeviceArchiveChange {
         Text('设备档案变更')
           .fontSize(34)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#111827')
+          .fontColor(AppColors.TextPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
@@ -170,7 +171,7 @@ struct DeviceArchiveChange {
 
       Text('提交设备档案修改申请')
         .fontSize(15)
-        .fontColor('#6B7280')
+        .fontColor(AppColors.TextSecondary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
@@ -204,7 +205,7 @@ struct DeviceArchiveChange {
       bottom: 18
     })
     .width('100%')
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(24)
     .alignItems(HorizontalAlign.Start)
   }
@@ -220,8 +221,8 @@ struct DeviceArchiveChange {
       })
         .height(56)
         .fontSize(16)
-        .backgroundColor('#F7F9FC')
-        .fontColor('#6B7280')
+        .backgroundColor(AppColors.FieldBackground)
+        .fontColor(AppColors.TextSecondary)
         .borderRadius(18)
         .padding({
           left: 16,
@@ -229,7 +230,7 @@ struct DeviceArchiveChange {
         })
         .border({
           width: 1,
-          color: '#D6DAE1'
+          color: AppColors.Border
         })
         .enabled(false)
     }
@@ -247,11 +248,11 @@ struct DeviceArchiveChange {
           .height(56)
           .width('100%')
           .fontSize(16)
-          .fontColor('#6B7280')
-          .backgroundColor('#F7F9FC')
+          .fontColor(AppColors.TextSecondary)
+          .backgroundColor(AppColors.FieldBackground)
           .borderRadius(18)
           .padding({ left: 16, right: 16 })
-          .border({ width: 1, color: '#D6DAE1' })
+          .border({ width: 1, color: AppColors.Border })
       } else {
         TextInput({
           placeholder: '填写新的设备名称',
@@ -259,10 +260,10 @@ struct DeviceArchiveChange {
         })
           .height(56)
           .fontSize(16)
-          .backgroundColor('#F7F9FC')
+          .backgroundColor(AppColors.FieldBackground)
           .borderRadius(18)
           .padding({ left: 16, right: 16 })
-          .border({ width: 1, color: '#D6DAE1' })
+          .border({ width: 1, color: AppColors.Border })
           .onChange((value: string) => {
             this.deviceName = value;
             this.message = '';
@@ -285,11 +286,11 @@ struct DeviceArchiveChange {
           .height(56)
           .width('100%')
           .fontSize(16)
-          .fontColor('#6B7280')
-          .backgroundColor('#F7F9FC')
+          .fontColor(AppColors.TextSecondary)
+          .backgroundColor(AppColors.FieldBackground)
           .borderRadius(18)
           .padding({ left: 16, right: 16 })
-          .border({ width: 1, color: '#D6DAE1' })
+          .border({ width: 1, color: AppColors.Border })
       } else {
         TextInput({
           placeholder: '填写新的设备型号',
@@ -297,10 +298,10 @@ struct DeviceArchiveChange {
         })
           .height(56)
           .fontSize(16)
-          .backgroundColor('#F7F9FC')
+          .backgroundColor(AppColors.FieldBackground)
           .borderRadius(18)
           .padding({ left: 16, right: 16 })
-          .border({ width: 1, color: '#D6DAE1' })
+          .border({ width: 1, color: AppColors.Border })
           .onChange((value: string) => {
             this.model = value;
             this.message = '';
@@ -323,11 +324,11 @@ struct DeviceArchiveChange {
           .height(56)
           .width('100%')
           .fontSize(16)
-          .fontColor('#6B7280')
-          .backgroundColor('#F7F9FC')
+          .fontColor(AppColors.TextSecondary)
+          .backgroundColor(AppColors.FieldBackground)
           .borderRadius(18)
           .padding({ left: 16, right: 16 })
-          .border({ width: 1, color: '#D6DAE1' })
+          .border({ width: 1, color: AppColors.Border })
       } else {
         TextInput({
           placeholder: '填写新的生产厂商',
@@ -335,10 +336,10 @@ struct DeviceArchiveChange {
         })
           .height(56)
           .fontSize(16)
-          .backgroundColor('#F7F9FC')
+          .backgroundColor(AppColors.FieldBackground)
           .borderRadius(18)
           .padding({ left: 16, right: 16 })
-          .border({ width: 1, color: '#D6DAE1' })
+          .border({ width: 1, color: AppColors.Border })
           .onChange((value: string) => {
             this.manufacturer = value;
             this.message = '';
@@ -361,11 +362,11 @@ struct DeviceArchiveChange {
           .height(56)
           .width('100%')
           .fontSize(16)
-          .fontColor('#6B7280')
-          .backgroundColor('#F7F9FC')
+          .fontColor(AppColors.TextSecondary)
+          .backgroundColor(AppColors.FieldBackground)
           .borderRadius(18)
           .padding({ left: 16, right: 16 })
-          .border({ width: 1, color: '#D6DAE1' })
+          .border({ width: 1, color: AppColors.Border })
       } else {
         TextInput({
           placeholder: '填写新的设备位置',
@@ -373,10 +374,10 @@ struct DeviceArchiveChange {
         })
           .height(56)
           .fontSize(16)
-          .backgroundColor('#F7F9FC')
+          .backgroundColor(AppColors.FieldBackground)
           .borderRadius(18)
           .padding({ left: 16, right: 16 })
-          .border({ width: 1, color: '#D6DAE1' })
+          .border({ width: 1, color: AppColors.Border })
           .onChange((value: string) => {
             this.locationAddress = value;
             this.message = '';
@@ -403,7 +404,7 @@ struct DeviceArchiveChange {
         .fontSize(15)
         .lineHeight(22)
         .maxLength(500)
-        .backgroundColor('#F7F9FC')
+        .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
         .padding({
           left: 14,
@@ -413,7 +414,7 @@ struct DeviceArchiveChange {
         })
         .border({
           width: 1,
-          color: '#D6DAE1'
+          color: AppColors.Border
         })
         .enabled(!this.isChangeSubmitted())
         .onChange((value: string) => {
@@ -431,7 +432,7 @@ struct DeviceArchiveChange {
     Text(title)
       .fontSize(17)
       .fontWeight(FontWeight.Bold)
-      .fontColor('#111827')
+      .fontColor(AppColors.TextPrimary)
       .maxLines(1)
   }
 
@@ -453,12 +454,12 @@ struct DeviceArchiveChange {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
           .fontSize(20)
-          .fontColor(['#FFFFFF'])
+          .fontColor([AppColors.Surface])
 
         Text(label)
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
-          .fontColor('#FFFFFF')
+          .fontColor(AppColors.Surface)
           .maxLines(1)
       }
       .width('100%')
@@ -467,7 +468,7 @@ struct DeviceArchiveChange {
     }
     .height(54)
     .width('100%')
-    .backgroundColor(enabled ? '#2F6FED' : '#AEB6C2')
+    .backgroundColor(enabled ? AppColors.Primary : AppColors.Disabled)
     .enabled(enabled)
     .onClick(() => {
       action();
@@ -479,11 +480,11 @@ struct DeviceArchiveChange {
     Button({ type: ButtonType.Circle, stateEffect: true }) {
       SymbolGlyph($r('sys.symbol.info_circle'))
         .fontSize(18)
-        .fontColor(['#111827'])
+        .fontColor([AppColors.TextPrimary])
     }
     .width(28)
     .height(28)
-    .backgroundColor('#00000000')
+    .backgroundColor(AppColors.Transparent)
     .onClick(() => {
       action();
     })
@@ -495,15 +496,15 @@ struct DeviceArchiveChange {
       Text('提交状态')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Column() {
-        StatusInfoRow({ label: '标准编号', value: this.normalizedDeviceCode, tone: '#374151' })
+        StatusInfoRow({ label: '标准编号', value: this.normalizedDeviceCode, tone: AppColors.TextSecondary })
         this.CardDivider()
-        StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: '#374151' })
+        StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: AppColors.TextSecondary })
         this.CardDivider()
-        StatusInfoRow({ label: '变更字段', value: `${this.changeCount}项`, tone: '#374151' })
+        StatusInfoRow({ label: '变更字段', value: `${this.changeCount}项`, tone: AppColors.TextSecondary })
         this.CardDivider()
         StatusInfoRow({
           label: '申请状态',
@@ -518,7 +519,7 @@ struct DeviceArchiveChange {
         })
       }
       .width('100%')
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .borderRadius(24)
     }
     .alignItems(HorizontalAlign.Start)
@@ -529,7 +530,7 @@ struct DeviceArchiveChange {
   CardDivider() {
     Divider()
       .height(1)
-      .backgroundColor('#E5E7EB')
+      .backgroundColor(AppColors.Divider)
       .margin({
         left: 18,
         right: 18
@@ -553,7 +554,7 @@ struct DeviceArchiveChange {
 
     if (!validation.valid) {
       this.message = validation.message;
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       return;
     }
 
@@ -564,7 +565,7 @@ struct DeviceArchiveChange {
     if (!response.success) {
       const error = response.error;
       this.message = error ? error.message : '变更申请提交失败';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       return;
     }
 
@@ -574,7 +575,7 @@ struct DeviceArchiveChange {
     this.applyDraft(submittedDraft);
     this.changeCount = DeviceArchiveChangeService.countChangedFields(this.buildForm());
     this.message = '变更申请已提交，等待管理员审核';
-    this.messageTone = '#087F5B';
+    this.messageTone = AppColors.Success;
   }
 
   buildForm(): DeviceArchiveChangeRequestForm {
@@ -600,14 +601,14 @@ struct DeviceArchiveChange {
   getStatusTone(status: DeviceArchiveChangeRequestStatus): string {
     switch (status) {
       case DeviceArchiveChangeRequestStatus.PendingReview:
-        return '#E67700';
+        return AppColors.Warning;
       case DeviceArchiveChangeRequestStatus.Approved:
-        return '#087F5B';
+        return AppColors.Success;
       case DeviceArchiveChangeRequestStatus.Rejected:
-        return '#D9480F';
+        return AppColors.Danger;
       case DeviceArchiveChangeRequestStatus.Draft:
       default:
-        return '#374151';
+        return AppColors.TextSecondary;
     }
   }
 
@@ -636,7 +637,7 @@ struct DeviceArchiveChange {
     if (device === undefined) {
       this.hasDevice = false;
       this.message = '未获取设备档案，请返回后重新查询';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       return;
     }
 
@@ -656,7 +657,7 @@ struct DeviceArchiveChange {
       this.changeCount = DeviceArchiveChangeService.countChangedFields(this.buildForm());
       this.requestStatus = DeviceArchiveChangeRequestStatus.PendingReview;
       this.message = '变更申请已提交，等待管理员审核';
-      this.messageTone = '#087F5B';
+      this.messageTone = AppColors.Success;
       return;
     }
 

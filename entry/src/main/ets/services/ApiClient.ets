@@ -1,3 +1,4 @@
+import { AppColors } from '../styles/AppTheme';
 import { http } from '@kit.NetworkKit';
 import { ApiErrorCode, ApiRequestOptions, ApiResponse } from '../models/ApiModels';
 import { SessionStore } from '../stores/SessionStore';
@@ -34,7 +35,7 @@ export class ApiClient {
   }
 
   static getRuntimeStatusTone(): string {
-    return ApiClient.isConfigured() ? '#087F5B' : '#2F6FED';
+    return ApiClient.isConfigured() ? AppColors.Success : AppColors.Primary;
   }
 
   static createServiceUnavailableResponse<T>(): ApiResponse<T> {
@@ -56,7 +57,13 @@ export class ApiClient {
     };
   }
 
-  static async request<T>(path: string, method: string, requiresAuth: boolean, body?: string): Promise<ApiResponse<T>> {
+  static async request<T>(
+    path: string,
+    method: string,
+    requiresAuth: boolean,
+    body?: string,
+    clearSessionOnUnauthorized: boolean = true
+  ): Promise<ApiResponse<T>> {
     if (!ApiClient.isConfigured()) {
       return ApiClient.createServiceUnavailableResponse<T>();
     }
@@ -72,7 +79,7 @@ export class ApiClient {
         connectTimeout: REQUEST_TIMEOUT_MS
       });
 
-      if (response.responseCode === 401) {
+      if (response.responseCode === 401 && clearSessionOnUnauthorized) {
         SessionStore.clearSession();
       }
 

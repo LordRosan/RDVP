@@ -1,3 +1,4 @@
+import { AppColors } from '../styles/AppTheme';
 import { ApiResponse } from '../models/ApiModels';
 import {
   WorkbenchAction,
@@ -32,7 +33,7 @@ export class WorkbenchService {
         label: '档案中心',
         value: WorkbenchService.canReviewDeviceChange() ? `${summary.pendingChangeRequests}` : '可用',
         status: WorkbenchService.canReviewDeviceChange() ? '待审核变更' : '档案查询',
-        tone: '#2F6FED'
+        tone: AppColors.Primary
       });
     }
 
@@ -46,7 +47,7 @@ export class WorkbenchService {
         label: '运维中心',
         value: visibleTaskCount > 0 ? `${visibleTaskCount}` : '可用',
         status: visibleTaskCount > 0 ? '待处理任务' : '授权功能',
-        tone: '#D9480F'
+        tone: AppColors.Primary
       });
     }
 
@@ -56,7 +57,7 @@ export class WorkbenchService {
         label: '管理中心',
         value: WorkbenchService.canReviewDeviceChange() ? `${summary.pendingChangeRequests}` : '可用',
         status: WorkbenchService.canReviewDeviceChange() ? '待审核事项' : '操作审计',
-        tone: '#845EF7'
+        tone: AppColors.Primary
       });
     }
 
@@ -65,7 +66,7 @@ export class WorkbenchService {
       label: '待同步草稿',
       value: `${summary.offlineDrafts}`,
       status: '离线数据',
-      tone: '#087F5B'
+      tone: AppColors.Primary
     });
 
     return metrics;
@@ -79,7 +80,7 @@ export class WorkbenchService {
         id: WorkbenchActionId.ArchiveCenter,
         title: '档案中心',
         summary: '查询档案与发起档案变更',
-        tone: '#2F6FED'
+        tone: AppColors.Primary
       });
     }
 
@@ -88,7 +89,7 @@ export class WorkbenchService {
         id: WorkbenchActionId.OperationsCenter,
         title: '运维中心',
         summary: '核验、报修、维修与复检',
-        tone: '#D9480F'
+        tone: AppColors.Primary
       });
     }
 
@@ -97,7 +98,7 @@ export class WorkbenchService {
         id: WorkbenchActionId.ManagementCenter,
         title: '管理中心',
         summary: '审核变更与查看操作记录',
-        tone: '#495057'
+        tone: AppColors.Primary
       });
     }
 
@@ -113,7 +114,7 @@ export class WorkbenchService {
       id: WorkbenchActionId.DeviceQuery,
       title: '查询设备档案',
       summary: '按编号或二维码定位档案',
-      tone: '#2F6FED'
+      tone: AppColors.Primary
     }];
 
     if (SessionStore.hasPermission(PermissionCode.ArchiveDeviceCreate)) {
@@ -121,7 +122,7 @@ export class WorkbenchService {
         id: WorkbenchActionId.DeviceArchiveCreate,
         title: '添加设备档案',
         summary: '提交新设备建档申请',
-        tone: '#087F5B'
+        tone: AppColors.Primary
       });
     }
 
@@ -133,27 +134,27 @@ export class WorkbenchService {
 
     if (SessionStore.hasPermission(PermissionCode.OpsDeviceVerify)) {
       actions.push(WorkbenchService.createAction(WorkbenchActionId.DeviceVerification, '状态核验',
-        '提交现场核验记录', '#0B7285'));
+        '提交现场核验记录', AppColors.Primary));
     }
 
     if (SessionStore.hasPermission(PermissionCode.OpsFaultReportCreate)) {
       actions.push(WorkbenchService.createAction(WorkbenchActionId.FaultReport, '故障报告',
-        '登记设备故障信息', '#D9480F'));
+        '登记设备故障信息', AppColors.Primary));
     }
 
     if (SessionStore.hasPermission(PermissionCode.OpsRepairTaskAccept)) {
       actions.push(WorkbenchService.createAction(WorkbenchActionId.AvailableRepairTask, '附近故障',
-        '查看可接取任务', '#5C7CFA'));
+        '查看可接取任务', AppColors.Primary));
     }
 
     if (SessionStore.hasPermission(PermissionCode.OpsRepairReportCreate)) {
       actions.push(WorkbenchService.createAction(WorkbenchActionId.MyRepairTask, '我的维修',
-        '处理已接取任务', '#E67700'));
+        '处理已接取任务', AppColors.Primary));
     }
 
     if (SessionStore.hasPermission(PermissionCode.OpsReinspectionCreate)) {
       actions.push(WorkbenchService.createAction(WorkbenchActionId.ReinspectionTask, '复检任务',
-        '确认高等级故障结果', '#845EF7'));
+        '确认高等级故障结果', AppColors.Primary));
     }
 
     return actions;
@@ -166,7 +167,7 @@ export class WorkbenchService {
         id: WorkbenchActionId.DeviceChangeReview,
         title: '变更审核',
         summary: '审核待处理档案变更',
-        tone: '#2B8A3E'
+        tone: AppColors.Primary
       });
     }
 
@@ -175,7 +176,7 @@ export class WorkbenchService {
         id: WorkbenchActionId.OperationRecord,
         title: '操作记录',
         summary: '查看业务流转记录',
-        tone: '#495057'
+        tone: AppColors.Primary
       });
     }
 
@@ -194,13 +195,13 @@ export class WorkbenchService {
         id: 'auth',
         name: '认证状态',
         value: SessionStore.isAuthenticated() ? '已登录' : '未登录',
-        tone: SessionStore.isAuthenticated() ? '#087F5B' : '#D9480F'
+        tone: SessionStore.isAuthenticated() ? AppColors.Success : AppColors.Danger
       },
       {
         id: 'sync',
         name: '同步状态',
         value: '无待同步',
-        tone: '#087F5B'
+        tone: AppColors.Success
       }
     ];
   }

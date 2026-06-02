@@ -1,3 +1,4 @@
+import { AppColors } from '../../styles/AppTheme';
 import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { DeviceStatus, DeviceSummary } from '../../models/DeviceModels';
@@ -44,7 +45,7 @@ struct DeviceArchiveDetail {
   };
   @State hasDevice: boolean = false;
   @State message: string = '';
-  @State messageTone: string = '#D9480F';
+  @State messageTone: string = AppColors.Danger;
   @State canChangeArchive: boolean = false;
   @State canDeleteArchive: boolean = false;
   private detailInfoDialogController: CustomDialogController = new CustomDialogController({
@@ -80,7 +81,7 @@ struct DeviceArchiveDetail {
       this.canChangeArchive = false;
       this.canDeleteArchive = false;
       this.message = '未获取设备档案，请重新查询';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       return;
     }
 
@@ -93,12 +94,12 @@ struct DeviceArchiveDetail {
       !DeviceArchiveDeleteGuardService.isDeleteLocked(device.deviceCode);
     if (DeviceArchiveDeleteGuardService.isDeleteLocked(device.deviceCode)) {
       this.message = DeviceArchiveDeleteGuardService.getDeleteLockMessage(device.deviceCode);
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       return;
     }
 
     this.message = '';
-    this.messageTone = '#D9480F';
+    this.messageTone = AppColors.Danger;
   }
 
   build() {
@@ -133,7 +134,7 @@ struct DeviceArchiveDetail {
     }
     .height('100%')
     .width('100%')
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   onBackPress(): boolean {
@@ -147,14 +148,14 @@ struct DeviceArchiveDetail {
       Button({ type: ButtonType.Circle, stateEffect: true }) {
         SymbolGlyph($r('sys.symbol.chevron_backward'))
           .fontSize(22)
-          .fontColor(['#111827'])
+          .fontColor([AppColors.TextPrimary])
       }
       .width(44)
       .height(44)
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .border({
         width: 1,
-        color: '#E5E7EB'
+        color: AppColors.Divider
       })
       .onClick(() => {
         this.returnToQuery();
@@ -167,7 +168,7 @@ struct DeviceArchiveDetail {
       left: 24,
       right: 24
     })
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   @Builder
@@ -177,7 +178,7 @@ struct DeviceArchiveDetail {
         Text('设备档案详情')
           .fontSize(34)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#111827')
+          .fontColor(AppColors.TextPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
@@ -189,7 +190,7 @@ struct DeviceArchiveDetail {
 
       Text('查看设备档案与状态信息')
         .fontSize(15)
-        .fontColor('#6B7280')
+        .fontColor(AppColors.TextSecondary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
@@ -207,14 +208,14 @@ struct DeviceArchiveDetail {
       Text('档案信息')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Column() {
         StatusInfoRow({
           label: '设备编号',
           value: this.device.deviceCode,
-          tone: '#374151',
+          tone: AppColors.TextSecondary,
           valueMaxLines: 2,
           verticalPadding: 12
         })
@@ -222,7 +223,7 @@ struct DeviceArchiveDetail {
         StatusInfoRow({
           label: '设备名称',
           value: this.device.name,
-          tone: '#374151',
+          tone: AppColors.TextSecondary,
           valueMaxLines: 2,
           verticalPadding: 12
         })
@@ -230,7 +231,7 @@ struct DeviceArchiveDetail {
         StatusInfoRow({
           label: '设备型号',
           value: this.device.model,
-          tone: '#374151',
+          tone: AppColors.TextSecondary,
           valueMaxLines: 2,
           verticalPadding: 12
         })
@@ -238,7 +239,7 @@ struct DeviceArchiveDetail {
         StatusInfoRow({
           label: '生产厂商',
           value: this.device.manufacturer,
-          tone: '#374151',
+          tone: AppColors.TextSecondary,
           valueMaxLines: 2,
           verticalPadding: 12
         })
@@ -246,7 +247,7 @@ struct DeviceArchiveDetail {
         StatusInfoRow({
           label: '设备位置',
           value: this.device.location.address,
-          tone: '#374151',
+          tone: AppColors.TextSecondary,
           valueMaxLines: 2,
           verticalPadding: 12
         })
@@ -254,13 +255,13 @@ struct DeviceArchiveDetail {
         StatusInfoRow({
           label: '最近核验',
           value: DeviceService.formatTimestampForDisplay(this.device.lastVerificationTime),
-          tone: '#374151',
+          tone: AppColors.TextSecondary,
           valueMaxLines: 2,
           verticalPadding: 12
         })
       }
       .width('100%')
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .borderRadius(24)
     }
     .alignItems(HorizontalAlign.Start)
@@ -273,7 +274,7 @@ struct DeviceArchiveDetail {
       Text('状态信息')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Column() {
@@ -288,13 +289,13 @@ struct DeviceArchiveDetail {
         StatusInfoRow({
           label: '变更状态',
           value: DeviceService.formatArchiveChangeLockReason(this.device),
-          tone: DeviceService.isArchiveChangeLocked(this.device) ? '#D9480F' : '#087F5B',
+          tone: DeviceService.isArchiveChangeLocked(this.device) ? AppColors.Danger : AppColors.Success,
           valueMaxLines: 2,
           verticalPadding: 12
         })
       }
       .width('100%')
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .borderRadius(24)
     }
     .alignItems(HorizontalAlign.Start)
@@ -315,7 +316,7 @@ struct DeviceArchiveDetail {
       bottom: 18
     })
     .width('100%')
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(24)
     .alignItems(HorizontalAlign.Start)
   }
@@ -332,7 +333,7 @@ struct DeviceArchiveDetail {
       bottom: 18
     })
     .width('100%')
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(24)
     .alignItems(HorizontalAlign.Start)
   }
@@ -342,11 +343,11 @@ struct DeviceArchiveDetail {
     Button({ type: ButtonType.Circle, stateEffect: true }) {
       SymbolGlyph($r('sys.symbol.info_circle'))
         .fontSize(18)
-        .fontColor(['#111827'])
+        .fontColor([AppColors.TextPrimary])
     }
     .width(28)
     .height(28)
-    .backgroundColor('#00000000')
+    .backgroundColor(AppColors.Transparent)
     .onClick(() => {
       action();
     })
@@ -370,12 +371,12 @@ struct DeviceArchiveDetail {
       Row({ space: 8 }) {
         SymbolGlyph($r('sys.symbol.text_clipboard'))
           .fontSize(20)
-          .fontColor(['#FFFFFF'])
+          .fontColor([AppColors.Surface])
 
         Text('修改设备档案')
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
-          .fontColor('#FFFFFF')
+          .fontColor(AppColors.Surface)
           .maxLines(1)
       }
       .width('100%')
@@ -384,7 +385,7 @@ struct DeviceArchiveDetail {
     }
     .height(54)
     .width('100%')
-    .backgroundColor(this.canChangeArchive ? '#2F6FED' : '#AEB6C2')
+    .backgroundColor(this.canChangeArchive ? AppColors.Primary : AppColors.Disabled)
     .enabled(this.canChangeArchive)
     .onClick(() => {
       this.openChangePage();
@@ -398,12 +399,12 @@ struct DeviceArchiveDetail {
         Row({ space: 8 }) {
           SymbolGlyph($r('sys.symbol.trash'))
             .fontSize(20)
-            .fontColor(['#FFFFFF'])
+            .fontColor([AppColors.Surface])
 
           Text('删除设备档案')
             .fontSize(17)
             .fontWeight(FontWeight.Medium)
-            .fontColor('#FFFFFF')
+            .fontColor(AppColors.Surface)
             .maxLines(1)
         }
         .width('100%')
@@ -412,7 +413,7 @@ struct DeviceArchiveDetail {
       }
       .height(54)
       .width('100%')
-      .backgroundColor(this.canDeleteArchive ? '#D9480F' : '#AEB6C2')
+      .backgroundColor(this.canDeleteArchive ? AppColors.Danger : AppColors.Disabled)
       .enabled(this.canDeleteArchive)
       .onClick(() => {
         this.openDeletePage();
@@ -424,7 +425,7 @@ struct DeviceArchiveDetail {
   CardDivider() {
     Divider()
       .height(1)
-      .backgroundColor('#E5E7EB')
+      .backgroundColor(AppColors.Divider)
       .margin({
         left: 18,
         right: 18
@@ -438,13 +439,13 @@ struct DeviceArchiveDetail {
   openChangePage(): void {
     if (!SessionStore.hasPermission(PermissionCode.ArchiveChangeRequestCreate)) {
       this.message = '当前账号无权申请设备档案变更';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       return;
     }
 
     if (DeviceService.isArchiveChangeLocked(this.device)) {
       this.message = DeviceService.formatArchiveChangeLockReason(this.device);
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       return;
     }
 
@@ -452,26 +453,26 @@ struct DeviceArchiveDetail {
       this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveChange' });
     } catch (err) {
       this.message = '设备档案变更不可用';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
     }
   }
 
   openDeletePage(): void {
     if (!SessionStore.hasPermission(PermissionCode.ArchiveDeviceDelete)) {
       this.message = '当前账号无权申请删除设备档案';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       return;
     }
 
     if (DeviceArchiveDeleteGuardService.isDeleteLocked(this.device.deviceCode)) {
       this.message = DeviceArchiveDeleteGuardService.getDeleteLockMessage(this.device.deviceCode);
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       return;
     }
 
     if (DeviceService.isArchiveChangeLocked(this.device)) {
       this.message = DeviceService.formatArchiveChangeLockReason(this.device);
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       return;
     }
 
@@ -479,7 +480,7 @@ struct DeviceArchiveDetail {
       this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveDelete' });
     } catch (err) {
       this.message = '设备档案删除不可用';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
     }
   }
 
@@ -495,7 +496,7 @@ struct DeviceArchiveDetail {
       router.replaceUrl({ url: 'pages/ArchiveCenter/DeviceArchiveQuery' });
     } catch (err) {
       this.message = '页面跳转失败';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
     }
   }
 }

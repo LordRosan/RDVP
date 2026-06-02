@@ -1,3 +1,4 @@
+import { AppColors } from '../styles/AppTheme';
 import { ApiClient } from './ApiClient';
 import { ApiErrorCode, ApiResponse } from '../models/ApiModels';
 import {
@@ -247,19 +248,19 @@ export class DeviceService {
     switch (status) {
       case DeviceStatus.Normal:
       case DeviceStatus.ChangePendingReview:
-        return '#087F5B';
+        return AppColors.Success;
       case DeviceStatus.PendingVerification:
       case DeviceStatus.PendingReinspection:
-        return '#E67700';
+        return AppColors.Warning;
       case DeviceStatus.Faulted:
       case DeviceStatus.Disabled:
-        return '#D9480F';
+        return AppColors.Danger;
       case DeviceStatus.UnderRepair:
-        return '#2F6FED';
+        return AppColors.Primary;
       case DeviceStatus.Retired:
-        return '#6B7280';
+        return AppColors.TextSecondary;
       default:
-        return '#374151';
+        return AppColors.TextSecondary;
     }
   }
 

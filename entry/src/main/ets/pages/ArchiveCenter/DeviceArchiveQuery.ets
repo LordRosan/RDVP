@@ -1,3 +1,4 @@
+import { AppColors } from '../../styles/AppTheme';
 import { abilityAccessCtrl } from '@kit.AbilityKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { detectBarcode, scanBarcode, scanCore } from '@kit.ScanKit';
@@ -80,7 +81,7 @@ struct DeviceArchiveQuery {
     }
     .height('100%')
     .width('100%')
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   onBackPress(): boolean {
@@ -94,14 +95,14 @@ struct DeviceArchiveQuery {
       Button({ type: ButtonType.Circle, stateEffect: true }) {
         SymbolGlyph($r('sys.symbol.chevron_backward'))
           .fontSize(22)
-          .fontColor(['#111827'])
+          .fontColor([AppColors.TextPrimary])
       }
       .width(44)
       .height(44)
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .border({
         width: 1,
-        color: '#E5E7EB'
+        color: AppColors.Divider
       })
       .onClick(() => {
         this.backToWorkbench();
@@ -114,7 +115,7 @@ struct DeviceArchiveQuery {
       left: 24,
       right: 24
     })
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   @Builder
@@ -125,7 +126,7 @@ struct DeviceArchiveQuery {
           Text('查询设备档案')
             .fontSize(34)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#111827')
+            .fontColor(AppColors.TextPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
@@ -137,7 +138,7 @@ struct DeviceArchiveQuery {
 
         Text(this.getModeSubtitle())
           .fontSize(15)
-          .fontColor('#6B7280')
+          .fontColor(AppColors.TextSecondary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
@@ -160,19 +161,19 @@ struct DeviceArchiveQuery {
       if (this.queryMode === DeviceQueryMode.Code) {
         SymbolGlyph($r('sys.symbol.circle_viewfinder'))
           .fontSize(31)
-          .fontColor(['#111827'])
+          .fontColor([AppColors.TextPrimary])
       } else {
         SymbolGlyph($r('sys.symbol.rename'))
           .fontSize(31)
-          .fontColor(['#111827'])
+          .fontColor([AppColors.TextPrimary])
       }
     }
     .width(58)
     .height(58)
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .border({
       width: 1,
-      color: '#E5E7EB'
+      color: AppColors.Divider
     })
     .onClick(() => {
       this.switchQueryMode();
@@ -194,7 +195,7 @@ struct DeviceArchiveQuery {
       Text('设备编号查询')
         .fontSize(17)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       TextInput({
@@ -203,7 +204,7 @@ struct DeviceArchiveQuery {
       })
         .height(56)
         .fontSize(16)
-        .backgroundColor('#FBFCFE')
+        .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
         .padding({
           left: 16,
@@ -211,7 +212,7 @@ struct DeviceArchiveQuery {
         })
         .border({
           width: 1,
-          color: '#D6DAE1'
+          color: AppColors.Border
         })
         .onChange((value: string) => {
           this.deviceCode = value;
@@ -234,7 +235,7 @@ struct DeviceArchiveQuery {
       bottom: 18
     })
     .width('100%')
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(24)
     .alignItems(HorizontalAlign.Start)
   }
@@ -245,7 +246,7 @@ struct DeviceArchiveQuery {
       Text('二维码查询')
         .fontSize(17)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Stack() {
@@ -253,12 +254,12 @@ struct DeviceArchiveQuery {
           Column({ space: 14 }) {
             SymbolGlyph($r('sys.symbol.qrcode'))
               .fontSize(52)
-              .fontColor(['#2F6FED'])
+              .fontColor([AppColors.Primary])
 
             Text('已识别二维码')
               .fontSize(17)
               .fontWeight(FontWeight.Medium)
-              .fontColor('#111827')
+              .fontColor(AppColors.TextPrimary)
               .maxLines(1)
 
             Column({ space: 8 }) {
@@ -279,11 +280,11 @@ struct DeviceArchiveQuery {
           Column({ space: 12 }) {
             SymbolGlyph($r('sys.symbol.qrcode'))
               .fontSize(56)
-              .fontColor(['#C4CAD3'])
+              .fontColor([AppColors.Disabled])
 
             Text('未获取二维码内容')
               .fontSize(15)
-              .fontColor('#9CA3AF')
+              .fontColor(AppColors.TextTertiary)
               .maxLines(1)
           }
           .justifyContent(FlexAlign.Center)
@@ -294,11 +295,11 @@ struct DeviceArchiveQuery {
       }
       .width('100%')
       .aspectRatio(1)
-      .backgroundColor('#F7F9FC')
+      .backgroundColor(AppColors.FieldBackground)
       .borderRadius(22)
       .border({
         width: 1,
-        color: '#D6DAE1'
+        color: AppColors.Border
       })
 
       this.MessageText()
@@ -332,7 +333,7 @@ struct DeviceArchiveQuery {
       bottom: 18
     })
     .width('100%')
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(24)
     .alignItems(HorizontalAlign.Start)
   }
@@ -342,7 +343,7 @@ struct DeviceArchiveQuery {
     if (this.message.length > 0) {
       Text(this.message)
         .fontSize(13)
-        .fontColor('#D9480F')
+        .fontColor(AppColors.Danger)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
@@ -354,12 +355,12 @@ struct DeviceArchiveQuery {
     Row({ space: 10 }) {
       Text(label)
         .fontSize(13)
-        .fontColor('#6B7280')
+        .fontColor(AppColors.TextSecondary)
         .maxLines(1)
 
       Text(value)
         .fontSize(14)
-        .fontColor('#374151')
+        .fontColor(AppColors.TextSecondary)
         .fontWeight(FontWeight.Medium)
         .textAlign(TextAlign.End)
         .layoutWeight(1)
@@ -377,12 +378,12 @@ struct DeviceArchiveQuery {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
           .fontSize(20)
-          .fontColor(['#FFFFFF'])
+          .fontColor([AppColors.Surface])
 
         Text(label)
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
-          .fontColor('#FFFFFF')
+          .fontColor(AppColors.Surface)
           .maxLines(1)
       }
       .width('100%')
@@ -391,7 +392,7 @@ struct DeviceArchiveQuery {
     }
     .height(54)
     .width('100%')
-    .backgroundColor('#2F6FED')
+    .backgroundColor(AppColors.Primary)
     .enabled(enabled)
     .onClick(() => {
       action();
@@ -403,11 +404,11 @@ struct DeviceArchiveQuery {
     Button({ type: ButtonType.Circle, stateEffect: true }) {
       SymbolGlyph($r('sys.symbol.info_circle'))
         .fontSize(18)
-        .fontColor(['#111827'])
+        .fontColor([AppColors.TextPrimary])
     }
     .width(28)
     .height(28)
-    .backgroundColor('#00000000')
+    .backgroundColor(AppColors.Transparent)
     .onClick(() => {
       action();
     })
@@ -419,7 +420,7 @@ struct DeviceArchiveQuery {
       Text('查询状态')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Column() {
@@ -434,7 +435,7 @@ struct DeviceArchiveQuery {
         })
       }
       .width('100%')
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .borderRadius(24)
     }
     .alignItems(HorizontalAlign.Start)
@@ -446,7 +447,7 @@ struct DeviceArchiveQuery {
     Row() {
       Text('查询方式')
         .fontSize(15)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .fontWeight(FontWeight.Medium)
         .layoutWeight(1)
         .maxLines(1)
@@ -454,7 +455,7 @@ struct DeviceArchiveQuery {
 
       Text(this.queryMode === DeviceQueryMode.Code ? '设备编号' : '二维码')
         .fontSize(15)
-        .fontColor('#374151')
+        .fontColor(AppColors.TextSecondary)
         .fontWeight(FontWeight.Medium)
         .textAlign(TextAlign.End)
         .width('58%')
@@ -474,7 +475,7 @@ struct DeviceArchiveQuery {
     Row() {
       Text(this.queryMode === DeviceQueryMode.Code ? '标准编号' : '二维码摘要')
         .fontSize(15)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .fontWeight(FontWeight.Medium)
         .layoutWeight(1)
         .maxLines(1)
@@ -482,7 +483,7 @@ struct DeviceArchiveQuery {
 
       Text(this.queryMode === DeviceQueryMode.Code ? this.normalizedDeviceCode : this.getQrPreview())
         .fontSize(15)
-        .fontColor('#374151')
+        .fontColor(AppColors.TextSecondary)
         .fontWeight(FontWeight.Medium)
         .textAlign(TextAlign.End)
         .width('58%')
@@ -501,7 +502,7 @@ struct DeviceArchiveQuery {
   CardDivider() {
     Divider()
       .height(1)
-      .backgroundColor('#E5E7EB')
+      .backgroundColor(AppColors.Divider)
       .margin({
         left: 18,
         right: 18

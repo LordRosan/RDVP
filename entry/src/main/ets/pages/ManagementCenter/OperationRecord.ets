@@ -1,3 +1,4 @@
+import { AppColors } from '../../styles/AppTheme';
 import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { OperationRecordSummary } from '../../models/OperationRecordModels';
@@ -80,7 +81,7 @@ struct OperationRecord {
     }
     .height('100%')
     .width('100%')
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   onBackPress(): boolean {
@@ -94,14 +95,14 @@ struct OperationRecord {
       Button({ type: ButtonType.Circle, stateEffect: true }) {
         SymbolGlyph($r('sys.symbol.chevron_backward'))
           .fontSize(22)
-          .fontColor(['#111827'])
+          .fontColor([AppColors.TextPrimary])
       }
       .width(44)
       .height(44)
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .border({
         width: 1,
-        color: '#E5E7EB'
+        color: AppColors.Divider
       })
       .onClick(() => {
         this.backToWorkbench();
@@ -114,7 +115,7 @@ struct OperationRecord {
       left: 24,
       right: 24
     })
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   @Builder
@@ -124,7 +125,7 @@ struct OperationRecord {
         Text('操作记录')
           .fontSize(34)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#111827')
+          .fontColor(AppColors.TextPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
@@ -136,7 +137,7 @@ struct OperationRecord {
 
       Text('查看关键业务流转记录')
         .fontSize(15)
-        .fontColor('#6B7280')
+        .fontColor(AppColors.TextSecondary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
@@ -155,18 +156,18 @@ struct OperationRecord {
         Text('最近记录')
           .fontSize(22)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#111827')
+          .fontColor(AppColors.TextPrimary)
           .layoutWeight(1)
           .maxLines(1)
 
         Button({ type: ButtonType.Circle, stateEffect: true }) {
           SymbolGlyph($r('sys.symbol.arrow_clockwise'))
             .fontSize(22)
-            .fontColor(['#FFFFFF'])
+            .fontColor([AppColors.Surface])
         }
         .width(44)
         .height(44)
-        .backgroundColor('#2F6FED')
+        .backgroundColor(AppColors.Primary)
         .enabled(!this.refreshing)
         .onClick(() => {
           this.refreshRecords();
@@ -198,17 +199,17 @@ struct OperationRecord {
       Stack() {
         SymbolGlyph($r('sys.symbol.text_clipboard'))
           .fontSize(36)
-          .fontColor(['#2F6FED'])
+          .fontColor([AppColors.Primary])
       }
       .width(64)
       .height(64)
       .borderRadius(32)
-      .backgroundColor('#EEF4FF')
+      .backgroundColor(AppColors.PrimarySurface)
 
       Text('暂无操作记录')
         .fontSize(18)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
     }
     .width('100%')
@@ -218,7 +219,7 @@ struct OperationRecord {
       top: 28,
       bottom: 28
     })
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(24)
     .alignItems(HorizontalAlign.Center)
   }
@@ -230,7 +231,7 @@ struct OperationRecord {
         Stack() {
           SymbolGlyph($r('sys.symbol.text_clipboard'))
             .fontSize(23)
-            .fontColor(['#FFFFFF'])
+            .fontColor([AppColors.Surface])
         }
         .width(44)
         .height(44)
@@ -241,13 +242,13 @@ struct OperationRecord {
           Text(item.title)
             .fontSize(17)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#111827')
+            .fontColor(AppColors.TextPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
           Text(item.targetNo)
             .fontSize(12)
-            .fontColor('#6B7280')
+            .fontColor(AppColors.TextSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
@@ -266,27 +267,27 @@ struct OperationRecord {
       Row() {
         Text(OperationRecordService.formatRecordType(item.type))
           .fontSize(13)
-          .fontColor('#374151')
+          .fontColor(AppColors.TextSecondary)
           .layoutWeight(1)
           .maxLines(1)
 
         Text(item.occurredAt)
           .fontSize(13)
-          .fontColor('#6B7280')
+          .fontColor(AppColors.TextSecondary)
           .maxLines(1)
       }
       .width('100%')
 
       Text(item.description)
         .fontSize(13)
-        .fontColor('#6B7280')
+        .fontColor(AppColors.TextSecondary)
         .lineHeight(19)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .padding(16)
     .width('100%')
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(24)
   }
 
@@ -296,16 +297,16 @@ struct OperationRecord {
       Text('查询状态')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Column() {
-        StatusInfoRow({ label: '记录数量', value: `${this.records.length}条`, tone: '#374151' })
+        StatusInfoRow({ label: '记录数量', value: `${this.records.length}条`, tone: AppColors.TextSecondary })
         this.CardDivider()
         StatusInfoRow({
           label: '刷新状态',
           value: this.message.length > 0 ? '刷新失败' : this.refreshStatus,
-          tone: this.message.length > 0 ? '#D9480F' : '#087F5B'
+          tone: this.message.length > 0 ? AppColors.Danger : AppColors.Success
         })
         this.CardDivider()
         StatusInfoRow({
@@ -315,7 +316,7 @@ struct OperationRecord {
         })
       }
       .width('100%')
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .borderRadius(24)
     }
     .alignItems(HorizontalAlign.Start)
@@ -327,11 +328,11 @@ struct OperationRecord {
     Button({ type: ButtonType.Circle, stateEffect: true }) {
       SymbolGlyph($r('sys.symbol.info_circle'))
         .fontSize(18)
-        .fontColor(['#111827'])
+        .fontColor([AppColors.TextPrimary])
     }
     .width(28)
     .height(28)
-    .backgroundColor('#00000000')
+    .backgroundColor(AppColors.Transparent)
     .onClick(() => {
       action();
     })
@@ -342,7 +343,7 @@ struct OperationRecord {
     if (this.message.length > 0) {
       Text(this.message)
         .fontSize(13)
-        .fontColor('#D9480F')
+        .fontColor(AppColors.Danger)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
@@ -353,7 +354,7 @@ struct OperationRecord {
   CardDivider() {
     Divider()
       .height(1)
-      .backgroundColor('#E5E7EB')
+      .backgroundColor(AppColors.Divider)
       .margin({
         left: 18,
         right: 18

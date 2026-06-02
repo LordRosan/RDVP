@@ -1,3 +1,4 @@
+import { AppColors } from '../../styles/AppTheme';
 import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { FaultSeverity } from '../../models/FaultModels';
@@ -54,7 +55,7 @@ struct MyRepairTask {
   @State partsUsed: string = '';
   @State taskMessage: string = '';
   @State reportMessage: string = '';
-  @State reportMessageTone: string = '#D9480F';
+  @State reportMessageTone: string = AppColors.Danger;
   @State refreshStatus: string = '未刷新';
   @State normalizedTaskId: string = '-';
   @State submittedRepairTaskId: string = '';
@@ -106,7 +107,7 @@ struct MyRepairTask {
     }
     .height('100%')
     .width('100%')
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   onBackPress(): boolean {
@@ -120,14 +121,14 @@ struct MyRepairTask {
       Button({ type: ButtonType.Circle, stateEffect: true }) {
         SymbolGlyph($r('sys.symbol.chevron_backward'))
           .fontSize(22)
-          .fontColor(['#111827'])
+          .fontColor([AppColors.TextPrimary])
       }
       .width(44)
       .height(44)
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .border({
         width: 1,
-        color: '#E5E7EB'
+        color: AppColors.Divider
       })
       .onClick(() => {
         this.backToWorkbench();
@@ -140,7 +141,7 @@ struct MyRepairTask {
       left: 24,
       right: 24
     })
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   @Builder
@@ -150,7 +151,7 @@ struct MyRepairTask {
         Text('我的维修')
           .fontSize(34)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#111827')
+          .fontColor(AppColors.TextPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
@@ -162,7 +163,7 @@ struct MyRepairTask {
 
       Text('处理已接取任务')
         .fontSize(15)
-        .fontColor('#6B7280')
+        .fontColor(AppColors.TextSecondary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
@@ -181,18 +182,18 @@ struct MyRepairTask {
         Text('已接取任务')
           .fontSize(22)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#111827')
+          .fontColor(AppColors.TextPrimary)
           .layoutWeight(1)
           .maxLines(1)
 
         Button({ type: ButtonType.Circle, stateEffect: true }) {
           SymbolGlyph($r('sys.symbol.arrow_clockwise'))
             .fontSize(22)
-            .fontColor(['#FFFFFF'])
+            .fontColor([AppColors.Surface])
         }
         .width(44)
         .height(44)
-        .backgroundColor('#2F6FED')
+        .backgroundColor(AppColors.Primary)
         .enabled(!this.refreshing && !this.submitting)
         .onClick(() => {
           this.refreshTasks();
@@ -224,22 +225,22 @@ struct MyRepairTask {
       Stack() {
         SymbolGlyph($r('sys.symbol.wrench_and_screwdriver'))
           .fontSize(36)
-          .fontColor(['#2F6FED'])
+          .fontColor([AppColors.Primary])
       }
       .width(64)
       .height(64)
       .borderRadius(32)
-      .backgroundColor('#EEF4FF')
+      .backgroundColor(AppColors.PrimarySurface)
 
       Text('暂无已接取任务')
         .fontSize(18)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Text('接取故障后可在此填写维修报告')
         .fontSize(13)
-        .fontColor('#6B7280')
+        .fontColor(AppColors.TextSecondary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
@@ -250,7 +251,7 @@ struct MyRepairTask {
       top: 28,
       bottom: 28
     })
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(24)
     .alignItems(HorizontalAlign.Center)
   }
@@ -262,7 +263,7 @@ struct MyRepairTask {
         Stack() {
           SymbolGlyph($r('sys.symbol.wrench_and_screwdriver'))
             .fontSize(23)
-            .fontColor(['#FFFFFF'])
+            .fontColor([AppColors.Surface])
         }
         .width(44)
         .height(44)
@@ -273,13 +274,13 @@ struct MyRepairTask {
           Text(item.deviceName)
             .fontSize(17)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#111827')
+            .fontColor(AppColors.TextPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
           Text(item.taskNo)
             .fontSize(12)
-            .fontColor('#6B7280')
+            .fontColor(AppColors.TextSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
@@ -292,7 +293,7 @@ struct MyRepairTask {
       Row() {
         Text(FaultReportService.formatFaultType(item.faultType))
           .fontSize(13)
-          .fontColor('#374151')
+          .fontColor(AppColors.TextSecondary)
           .layoutWeight(1)
           .maxLines(1)
 
@@ -308,12 +309,12 @@ struct MyRepairTask {
         Row({ space: 8 }) {
           SymbolGlyph(this.isTaskSelected(item) ? $r('sys.symbol.checkmark_circle') : $r('sys.symbol.text_clipboard'))
             .fontSize(18)
-            .fontColor(['#FFFFFF'])
+            .fontColor([AppColors.Surface])
 
           Text(this.isTaskSelected(item) ? '已选择' : '填写维修报告')
             .fontSize(15)
             .fontWeight(FontWeight.Medium)
-            .fontColor('#FFFFFF')
+            .fontColor(AppColors.Surface)
             .maxLines(1)
         }
         .justifyContent(FlexAlign.Center)
@@ -322,7 +323,7 @@ struct MyRepairTask {
       }
       .height(46)
       .width('100%')
-      .backgroundColor(this.isTaskSelected(item) ? '#087F5B' : '#2F6FED')
+      .backgroundColor(this.isTaskSelected(item) ? AppColors.Success : AppColors.Primary)
       .onClick(() => {
         this.taskId = item.taskNo;
         this.normalizedTaskId = item.taskNo;
@@ -330,16 +331,16 @@ struct MyRepairTask {
           this.submittedRepairTaskId = '';
         }
         this.reportMessage = '';
-        this.reportMessageTone = '#D9480F';
+        this.reportMessageTone = AppColors.Danger;
       })
     }
     .padding(16)
     .width('100%')
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(24)
     .border({
       width: this.isTaskSelected(item) ? 2 : 0,
-      color: this.isTaskSelected(item) ? '#2F6FED' : '#00000000'
+      color: this.isTaskSelected(item) ? AppColors.Primary : AppColors.Transparent
     })
   }
 
@@ -365,7 +366,7 @@ struct MyRepairTask {
       bottom: 18
     })
     .width('100%')
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(24)
     .alignItems(HorizontalAlign.Start)
   }
@@ -381,7 +382,7 @@ struct MyRepairTask {
       })
         .height(56)
         .fontSize(16)
-        .backgroundColor('#F7F9FC')
+        .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
         .padding({
           left: 16,
@@ -389,7 +390,7 @@ struct MyRepairTask {
         })
         .border({
           width: 1,
-          color: '#D6DAE1'
+          color: AppColors.Border
         })
         .onChange((value: string) => {
           this.taskId = value;
@@ -401,7 +402,7 @@ struct MyRepairTask {
             this.submittedRepairTaskId = '';
           }
           this.reportMessage = '';
-          this.reportMessageTone = '#D9480F';
+          this.reportMessageTone = AppColors.Danger;
         })
     }
     .width('100%')
@@ -431,12 +432,12 @@ struct MyRepairTask {
       Row({ space: 5 }) {
         SymbolGlyph(icon)
           .fontSize(17)
-          .fontColor([this.reportResult === `${result}` ? '#FFFFFF' : '#111827'])
+          .fontColor([this.reportResult === `${result}` ? AppColors.Surface : AppColors.TextPrimary])
 
         Text(RepairTaskService.formatRepairReportResult(result))
           .fontSize(13)
           .fontWeight(FontWeight.Medium)
-          .fontColor(this.reportResult === `${result}` ? '#FFFFFF' : '#111827')
+          .fontColor(this.reportResult === `${result}` ? AppColors.Surface : AppColors.TextPrimary)
           .maxLines(1)
       }
       .width('100%')
@@ -445,15 +446,15 @@ struct MyRepairTask {
     }
     .height(42)
     .layoutWeight(1)
-    .backgroundColor(this.reportResult === `${result}` ? this.getRepairResultTone(result) : '#F7F9FC')
+    .backgroundColor(this.reportResult === `${result}` ? this.getRepairResultTone(result) : AppColors.FieldBackground)
     .border({
       width: 1,
-      color: this.reportResult === `${result}` ? this.getRepairResultTone(result) : '#D6DAE1'
+      color: this.reportResult === `${result}` ? this.getRepairResultTone(result) : AppColors.Border
     })
     .onClick(() => {
       this.reportResult = `${result}`;
       this.reportMessage = '';
-      this.reportMessageTone = '#D9480F';
+      this.reportMessageTone = AppColors.Danger;
     })
   }
 
@@ -465,22 +466,22 @@ struct MyRepairTask {
       Row({ space: 10 }) {
         SymbolGlyph($r('sys.symbol.calendar'))
           .fontSize(20)
-          .fontColor(['#111827'])
+          .fontColor([AppColors.TextPrimary])
 
         Text(this.repairedAt.length > 0 ? this.repairedAt : '选择维修完成时间')
           .fontSize(16)
-          .fontColor(this.repairedAt.length > 0 ? '#111827' : '#9CA3AF')
+          .fontColor(this.repairedAt.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
           .layoutWeight(1)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
         SymbolGlyph($r('sys.symbol.chevron_forward'))
           .fontSize(18)
-          .fontColor(['#6B7280'])
+          .fontColor([AppColors.TextSecondary])
       }
       .height(56)
       .width('100%')
-      .backgroundColor('#F7F9FC')
+      .backgroundColor(AppColors.FieldBackground)
       .borderRadius(18)
       .padding({
         left: 16,
@@ -488,12 +489,12 @@ struct MyRepairTask {
       })
       .border({
         width: 1,
-        color: '#D6DAE1'
+        color: AppColors.Border
       })
       .onClick(() => {
         this.showRepairedAtPicker();
         this.reportMessage = '';
-        this.reportMessageTone = '#D9480F';
+        this.reportMessageTone = AppColors.Danger;
       })
     }
     .width('100%')
@@ -514,7 +515,7 @@ struct MyRepairTask {
         .fontSize(15)
         .lineHeight(22)
         .maxLength(1000)
-        .backgroundColor('#F7F9FC')
+        .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
         .padding({
           left: 14,
@@ -524,12 +525,12 @@ struct MyRepairTask {
         })
         .border({
           width: 1,
-          color: '#D6DAE1'
+          color: AppColors.Border
         })
         .onChange((value: string) => {
           this.processDescription = value;
           this.reportMessage = '';
-          this.reportMessageTone = '#D9480F';
+          this.reportMessageTone = AppColors.Danger;
         })
     }
     .width('100%')
@@ -550,7 +551,7 @@ struct MyRepairTask {
         .fontSize(15)
         .lineHeight(22)
         .maxLength(500)
-        .backgroundColor('#F7F9FC')
+        .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
         .padding({
           left: 14,
@@ -560,12 +561,12 @@ struct MyRepairTask {
         })
         .border({
           width: 1,
-          color: '#D6DAE1'
+          color: AppColors.Border
         })
         .onChange((value: string) => {
           this.partsUsed = value;
           this.reportMessage = '';
-          this.reportMessageTone = '#D9480F';
+          this.reportMessageTone = AppColors.Danger;
         })
     }
     .width('100%')
@@ -578,13 +579,13 @@ struct MyRepairTask {
       Text('提交状态')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Column() {
-        StatusInfoRow({ label: '标准任务号', value: this.normalizedTaskId, tone: '#374151' })
+        StatusInfoRow({ label: '标准任务号', value: this.normalizedTaskId, tone: AppColors.TextSecondary })
         this.CardDivider()
-        StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: '#374151' })
+        StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: AppColors.TextSecondary })
         this.CardDivider()
         StatusInfoRow({
           label: '维修结果',
@@ -595,7 +596,7 @@ struct MyRepairTask {
         StatusInfoRow({
           label: '刷新状态',
           value: this.taskMessage.length > 0 ? '刷新失败' : this.refreshStatus,
-          tone: this.taskMessage.length > 0 ? '#D9480F' : '#495057'
+          tone: this.taskMessage.length > 0 ? AppColors.Danger : AppColors.TextSecondary
         })
         this.CardDivider()
         StatusInfoRow({
@@ -605,7 +606,7 @@ struct MyRepairTask {
         })
       }
       .width('100%')
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .borderRadius(24)
     }
     .alignItems(HorizontalAlign.Start)
@@ -617,7 +618,7 @@ struct MyRepairTask {
     Text(title)
       .fontSize(17)
       .fontWeight(FontWeight.Bold)
-      .fontColor('#111827')
+      .fontColor(AppColors.TextPrimary)
       .maxLines(1)
   }
 
@@ -626,7 +627,7 @@ struct MyRepairTask {
     if (this.taskMessage.length > 0) {
       Text(this.taskMessage)
         .fontSize(13)
-        .fontColor('#D9480F')
+        .fontColor(AppColors.Danger)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
@@ -651,12 +652,12 @@ struct MyRepairTask {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
           .fontSize(20)
-          .fontColor(['#FFFFFF'])
+          .fontColor([AppColors.Surface])
 
         Text(label)
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
-          .fontColor('#FFFFFF')
+          .fontColor(AppColors.Surface)
           .maxLines(1)
       }
       .width('100%')
@@ -665,7 +666,7 @@ struct MyRepairTask {
     }
     .height(54)
     .width('100%')
-    .backgroundColor(enabled ? '#2F6FED' : '#AEB6C2')
+    .backgroundColor(enabled ? AppColors.Primary : AppColors.Disabled)
     .enabled(enabled)
     .onClick(() => {
       action();
@@ -677,11 +678,11 @@ struct MyRepairTask {
     Button({ type: ButtonType.Circle, stateEffect: true }) {
       SymbolGlyph($r('sys.symbol.info_circle'))
         .fontSize(18)
-        .fontColor(['#111827'])
+        .fontColor([AppColors.TextPrimary])
     }
     .width(28)
     .height(28)
-    .backgroundColor('#00000000')
+    .backgroundColor(AppColors.Transparent)
     .onClick(() => {
       action();
     })
@@ -691,7 +692,7 @@ struct MyRepairTask {
   CardDivider() {
     Divider()
       .height(1)
-      .backgroundColor('#E5E7EB')
+      .backgroundColor(AppColors.Divider)
       .margin({
         left: 18,
         right: 18
@@ -743,13 +744,13 @@ struct MyRepairTask {
     if (!response.success) {
       const error = response.error;
       this.reportMessage = error ? error.message : '维修报告提交失败';
-      this.reportMessageTone = '#D9480F';
+      this.reportMessageTone = AppColors.Danger;
       return;
     }
 
     const reportNo = response.data ? response.data.reportNo : '';
     this.reportMessage = reportNo.length > 0 ? `维修报告已提交：${reportNo}` : '维修报告已提交';
-    this.reportMessageTone = '#087F5B';
+    this.reportMessageTone = AppColors.Success;
     this.submittedRepairTaskId = this.normalizedTaskId;
     this.taskItems = this.taskItems.filter((item: MyRepairTaskSummary) => {
       return item.taskNo !== this.normalizedTaskId && item.id !== this.normalizedTaskId;
@@ -792,34 +793,34 @@ struct MyRepairTask {
   }
 
   getSelectedRepairResultTone(): string {
-    return this.reportResult.length === 0 ? '#374151' : this.getRepairResultTone(this.reportResult as RepairReportResult);
+    return this.reportResult.length === 0 ? AppColors.TextSecondary : this.getRepairResultTone(this.reportResult as RepairReportResult);
   }
 
   getRepairResultTone(result: RepairReportResult): string {
     switch (result) {
       case RepairReportResult.Repaired:
-        return '#087F5B';
+        return AppColors.Success;
       case RepairReportResult.TemporaryRestored:
-        return '#E67700';
+        return AppColors.Warning;
       case RepairReportResult.Unresolved:
-        return '#D9480F';
+        return AppColors.Danger;
       default:
-        return '#374151';
+        return AppColors.TextSecondary;
     }
   }
 
   getSeverityTone(severity: FaultSeverity): string {
     switch (severity) {
       case FaultSeverity.Emergency:
-        return '#D9480F';
+        return AppColors.Danger;
       case FaultSeverity.Severe:
-        return '#E67700';
+        return AppColors.Warning;
       case FaultSeverity.General:
-        return '#2F6FED';
+        return AppColors.Primary;
       case FaultSeverity.Minor:
-        return '#087F5B';
+        return AppColors.Success;
       default:
-        return '#374151';
+        return AppColors.TextSecondary;
     }
   }
 
@@ -837,7 +838,7 @@ struct MyRepairTask {
       onDateAccept: (value: Date) => {
         this.repairedAt = this.formatDateTime(value);
         this.reportMessage = '';
-        this.reportMessageTone = '#D9480F';
+        this.reportMessageTone = AppColors.Danger;
       }
     });
   }
@@ -891,7 +892,7 @@ struct MyRepairTask {
       router.replaceUrl({ url: 'pages/Workbench' });
     } catch (err) {
       this.reportMessage = '页面跳转失败';
-      this.reportMessageTone = '#D9480F';
+      this.reportMessageTone = AppColors.Danger;
     }
   }
 }

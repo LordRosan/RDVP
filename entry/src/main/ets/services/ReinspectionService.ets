@@ -1,3 +1,4 @@
+import { AppColors } from '../styles/AppTheme';
 import { ApiResponse } from '../models/ApiModels';
 import { FaultSeverity } from '../models/FaultModels';
 import { OperationRecordType } from '../models/OperationRecordModels';
@@ -252,26 +253,26 @@ export class ReinspectionService {
   static getResultTone(result: ReinspectionResult): string {
     switch (result) {
       case ReinspectionResult.Passed:
-        return '#087F5B';
+        return AppColors.Success;
       case ReinspectionResult.Failed:
-        return '#D9480F';
+        return AppColors.Danger;
       default:
-        return '#374151';
+        return AppColors.TextSecondary;
     }
   }
 
   static getSeverityTone(severity: FaultSeverity): string {
     switch (severity) {
       case FaultSeverity.Emergency:
-        return '#D9480F';
+        return AppColors.Danger;
       case FaultSeverity.Severe:
-        return '#E67700';
+        return AppColors.Warning;
       case FaultSeverity.General:
-        return '#2F6FED';
+        return AppColors.Primary;
       case FaultSeverity.Minor:
-        return '#087F5B';
+        return AppColors.Success;
       default:
-        return '#374151';
+        return AppColors.TextSecondary;
     }
   }
 

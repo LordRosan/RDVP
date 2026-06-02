@@ -1,3 +1,4 @@
+import { AppColors } from '../styles/AppTheme';
 export interface InfoDialogItem {
   label: string;
   description: string;
@@ -20,7 +21,7 @@ export struct InfoDialog {
         Text(this.title)
           .fontSize(22)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#111827')
+          .fontColor(AppColors.TextPrimary)
           .layoutWeight(1)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -28,11 +29,11 @@ export struct InfoDialog {
         Button({ type: ButtonType.Circle, stateEffect: true }) {
           SymbolGlyph($r('sys.symbol.xmark'))
             .fontSize(18)
-            .fontColor(['#111827'])
+            .fontColor([AppColors.TextPrimary])
         }
         .width(40)
         .height(40)
-        .backgroundColor('#F2F5F7')
+        .backgroundColor(AppColors.PageBackground)
         .onClick(() => {
           this.controller?.close();
         })
@@ -46,7 +47,7 @@ export struct InfoDialog {
             if (sectionIndex > 0) {
               Divider()
                 .height(1)
-                .backgroundColor('#E5E7EB')
+                .backgroundColor(AppColors.Divider)
                 .margin({ top: 2, bottom: 2 })
             }
 
@@ -71,7 +72,7 @@ export struct InfoDialog {
       top: 22,
       bottom: 20
     })
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(28)
     .clip(true)
   }
@@ -81,7 +82,7 @@ export struct InfoDialog {
     Text(title)
       .fontSize(17)
       .fontWeight(FontWeight.Bold)
-      .fontColor('#111827')
+      .fontColor(AppColors.TextPrimary)
       .maxLines(1)
   }
 
@@ -91,13 +92,13 @@ export struct InfoDialog {
       Text(`${label}：`)
         .fontSize(14)
         .fontWeight(FontWeight.Medium)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .width(86)
         .textAlign(TextAlign.End)
 
       Text(description)
         .fontSize(14)
-        .fontColor('#374151')
+        .fontColor(AppColors.TextSecondary)
         .lineHeight(20)
         .layoutWeight(1)
     }

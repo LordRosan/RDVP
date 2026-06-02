@@ -1,3 +1,4 @@
+import { AppColors } from '../../styles/AppTheme';
 import { CurrentUserSnapshot } from '../../models/SessionModels';
 import { ApiClient } from '../../services/ApiClient';
 import { SessionStore } from '../../stores/SessionStore';
@@ -9,7 +10,7 @@ struct PersonalCenter {
   @State currentUser: CurrentUserSnapshot = SessionStore.getCurrentUser();
   @State apiBaseUrl: string = ApiClient.getBaseUrl();
   @State message: string = '';
-  @State messageTone: string = '#D9480F';
+  @State messageTone: string = AppColors.Danger;
 
   aboutToAppear(): void {
     if (!SessionStore.isAuthenticated()) {
@@ -48,7 +49,7 @@ struct PersonalCenter {
     }
     .height('100%')
     .width('100%')
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   onBackPress(): boolean {
@@ -62,14 +63,14 @@ struct PersonalCenter {
       Button({ type: ButtonType.Circle, stateEffect: true }) {
         SymbolGlyph($r('sys.symbol.chevron_backward'))
           .fontSize(22)
-          .fontColor(['#111827'])
+          .fontColor([AppColors.TextPrimary])
       }
       .width(44)
       .height(44)
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .border({
         width: 1,
-        color: '#E5E7EB'
+        color: AppColors.Divider
       })
       .onClick(() => {
         this.backToWorkbench();
@@ -82,7 +83,7 @@ struct PersonalCenter {
       left: 24,
       right: 24
     })
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   @Builder
@@ -92,13 +93,13 @@ struct PersonalCenter {
         Text('个人中心')
           .fontSize(34)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#111827')
+          .fontColor(AppColors.TextPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
         Text('账号、权限和会话状态')
           .fontSize(15)
-          .fontColor('#6B7280')
+          .fontColor(AppColors.TextSecondary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
@@ -119,24 +120,24 @@ struct PersonalCenter {
         Stack() {
           SymbolGlyph($r('sys.symbol.person_fill'))
             .fontSize(38)
-            .fontColor(['#FFFFFF'])
+            .fontColor([AppColors.Surface])
         }
         .width(64)
         .height(64)
         .borderRadius(32)
-        .backgroundColor('#2F6FED')
+        .backgroundColor(AppColors.Primary)
 
         Column({ space: 5 }) {
           Text(this.currentUser.displayName)
             .fontSize(22)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#111827')
+            .fontColor(AppColors.TextPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
           Text(this.currentUser.username ?? '-')
             .fontSize(14)
-            .fontColor('#6B7280')
+            .fontColor(AppColors.TextSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
@@ -146,13 +147,13 @@ struct PersonalCenter {
       .width('100%')
       .alignItems(VerticalAlign.Center)
 
-      this.InfoRow('角色权限', this.currentUser.roleName, '#374151')
+      this.InfoRow('角色权限', this.currentUser.roleName, AppColors.TextSecondary)
       this.InfoRow('连接状态', formatConnectionStatus(this.currentUser.online),
-        this.currentUser.online ? '#087F5B' : '#D9480F')
+        this.currentUser.online ? AppColors.Success : AppColors.Danger)
     }
     .padding(18)
     .width('100%')
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(24)
     .alignItems(HorizontalAlign.Start)
   }
@@ -163,21 +164,21 @@ struct PersonalCenter {
       Text('会话')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Column() {
-        this.InfoRow('有效期至', this.formatSessionExpiresAt(), '#374151')
+        this.InfoRow('有效期至', this.formatSessionExpiresAt(), AppColors.TextSecondary)
         this.CardDivider()
         this.InfoRow('登录状态', SessionStore.isAuthenticated() ? '已登录' : '未登录',
-          SessionStore.isAuthenticated() ? '#087F5B' : '#D9480F')
+          SessionStore.isAuthenticated() ? AppColors.Success : AppColors.Danger)
       }
       .width('100%')
       .padding({
         left: 18,
         right: 18
       })
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .borderRadius(24)
     }
     .width('100%')
@@ -214,7 +215,7 @@ struct PersonalCenter {
       Text('服务')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Column({ space: 12 }) {
@@ -227,7 +228,7 @@ struct PersonalCenter {
         })
           .height(52)
           .fontSize(15)
-          .backgroundColor('#F7F9FC')
+          .backgroundColor(AppColors.FieldBackground)
           .borderRadius(18)
           .padding({
             left: 14,
@@ -235,24 +236,24 @@ struct PersonalCenter {
           })
           .border({
             width: 1,
-            color: '#D6DAE1'
+            color: AppColors.Border
           })
           .onChange((value: string) => {
             this.apiBaseUrl = value;
             this.message = '';
-            this.messageTone = '#D9480F';
+            this.messageTone = AppColors.Danger;
           })
 
         Row({ space: 10 }) {
           Column() {
-            this.ServiceButton('保存地址', $r('sys.symbol.checkmark_circle'), '#2F6FED', '#FFFFFF', () => {
+            this.ServiceButton('保存地址', $r('sys.symbol.checkmark_circle'), AppColors.Primary, AppColors.Surface, () => {
               this.saveApiBaseUrl();
             })
           }
           .layoutWeight(1)
 
           Column() {
-            this.ServiceButton('本地模式', $r('sys.symbol.xmark_circle'), '#FFFFFF', '#111827', () => {
+            this.ServiceButton('本地模式', $r('sys.symbol.xmark_circle'), AppColors.Surface, AppColors.TextPrimary, () => {
               this.clearApiBaseUrl();
             })
           }
@@ -268,7 +269,7 @@ struct PersonalCenter {
         bottom: 18
       })
       .width('100%')
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .borderRadius(24)
     }
     .width('100%')
@@ -280,7 +281,7 @@ struct PersonalCenter {
     Row() {
       Text(label)
         .fontSize(15)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .fontWeight(FontWeight.Medium)
         .layoutWeight(1)
         .maxLines(1)
@@ -307,7 +308,7 @@ struct PersonalCenter {
   CardDivider() {
     Divider()
       .height(1)
-      .backgroundColor('#E5E7EB')
+      .backgroundColor(AppColors.Divider)
   }
 
   @Builder
@@ -316,12 +317,12 @@ struct PersonalCenter {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
           .fontSize(20)
-          .fontColor(['#111827'])
+          .fontColor([AppColors.TextPrimary])
 
         Text(label)
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
-          .fontColor('#111827')
+          .fontColor(AppColors.TextPrimary)
           .maxLines(1)
       }
       .width('100%')
@@ -330,10 +331,10 @@ struct PersonalCenter {
     }
     .height(54)
     .width('100%')
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .border({
       width: 1,
-      color: '#D6DAE1'
+      color: AppColors.Border
     })
     .onClick(() => {
       action();
@@ -346,12 +347,12 @@ struct PersonalCenter {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
           .fontSize(20)
-          .fontColor(['#FFFFFF'])
+          .fontColor([AppColors.Surface])
 
         Text(label)
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
-          .fontColor('#FFFFFF')
+          .fontColor(AppColors.Surface)
           .maxLines(1)
       }
       .width('100%')
@@ -360,7 +361,7 @@ struct PersonalCenter {
     }
     .height(54)
     .width('100%')
-    .backgroundColor('#D9480F')
+    .backgroundColor(AppColors.Danger)
     .onClick(() => {
       action();
     })
@@ -389,7 +390,7 @@ struct PersonalCenter {
     .backgroundColor(backgroundColor)
     .border({
       width: 1,
-      color: backgroundColor === '#FFFFFF' ? '#D6DAE1' : backgroundColor
+      color: backgroundColor === AppColors.Surface ? AppColors.Border : backgroundColor
     })
     .onClick(() => {
       action();
@@ -401,21 +402,21 @@ struct PersonalCenter {
     const validationMessage = ApiClient.validateBaseUrlInput(value);
     if (validationMessage.length > 0) {
       this.message = validationMessage;
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       return;
     }
 
     ApiClient.setBaseUrl(value);
     this.apiBaseUrl = ApiClient.getBaseUrl();
     this.message = ApiClient.isConfigured() ? '服务地址已保存，建议重新登录后使用后端会话' : '已切换为本地模式';
-    this.messageTone = ApiClient.isConfigured() ? '#087F5B' : '#2F6FED';
+    this.messageTone = ApiClient.isConfigured() ? AppColors.Success : AppColors.Primary;
   }
 
   clearApiBaseUrl(): void {
     ApiClient.setBaseUrl('');
     this.apiBaseUrl = '';
     this.message = '已切换为本地模式';
-    this.messageTone = '#2F6FED';
+    this.messageTone = AppColors.Primary;
   }
 
   formatSessionExpiresAt(): string {

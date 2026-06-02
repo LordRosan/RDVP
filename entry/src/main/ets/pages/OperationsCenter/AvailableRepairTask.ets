@@ -1,3 +1,4 @@
+import { AppColors } from '../../styles/AppTheme';
 import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { FaultSeverity } from '../../models/FaultModels';
@@ -61,7 +62,7 @@ struct AvailableRepairTask {
   @State radiusKm: number = RepairTaskService.getDefaultRadiusKm();
   @State workloadSnapshot: RepairerWorkloadSnapshot = RepairTaskService.getCurrentWorkloadSnapshot();
   @State message: string = '';
-  @State messageTone: string = '#D9480F';
+  @State messageTone: string = AppColors.Danger;
   @State refreshStatus: string = '未刷新';
   @State taskItems: AvailableRepairTaskSummary[] = [];
   @State refreshing: boolean = false;
@@ -112,7 +113,7 @@ struct AvailableRepairTask {
     }
     .height('100%')
     .width('100%')
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   onBackPress(): boolean {
@@ -126,14 +127,14 @@ struct AvailableRepairTask {
       Button({ type: ButtonType.Circle, stateEffect: true }) {
         SymbolGlyph($r('sys.symbol.chevron_backward'))
           .fontSize(22)
-          .fontColor(['#111827'])
+          .fontColor([AppColors.TextPrimary])
       }
       .width(44)
       .height(44)
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .border({
         width: 1,
-        color: '#E5E7EB'
+        color: AppColors.Divider
       })
       .onClick(() => {
         this.backToWorkbench();
@@ -146,7 +147,7 @@ struct AvailableRepairTask {
       left: 24,
       right: 24
     })
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   @Builder
@@ -156,7 +157,7 @@ struct AvailableRepairTask {
         Text('附近故障')
           .fontSize(34)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#111827')
+          .fontColor(AppColors.TextPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
@@ -168,7 +169,7 @@ struct AvailableRepairTask {
 
       Text('查看可接取维修任务')
         .fontSize(15)
-        .fontColor('#6B7280')
+        .fontColor(AppColors.TextSecondary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
@@ -202,7 +203,7 @@ struct AvailableRepairTask {
       bottom: 18
     })
     .width('100%')
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(24)
     .alignItems(HorizontalAlign.Start)
   }
@@ -217,7 +218,7 @@ struct AvailableRepairTask {
         })
           .height(126)
           .width('100%')
-          .backgroundColor('#F7F9FC')
+          .backgroundColor(AppColors.FieldBackground)
           .borderRadius(18)
           .onChange((value: string | string[], index: number | number[]) => {
             this.applyRadiusPickerIndex(index);
@@ -226,25 +227,25 @@ struct AvailableRepairTask {
         Row({ space: 8 }) {
           SymbolGlyph($r('sys.symbol.exclamationmark_circle'))
             .fontSize(22)
-            .fontColor(['#D9480F'])
+            .fontColor([AppColors.Danger])
 
           Text('当前状态暂不可接取')
             .fontSize(17)
             .fontWeight(FontWeight.Medium)
-            .fontColor('#D9480F')
+            .fontColor(AppColors.Danger)
             .maxLines(1)
         }
         .height(88)
         .width('100%')
         .justifyContent(FlexAlign.Center)
         .alignItems(VerticalAlign.Center)
-        .backgroundColor('#FFF4E6')
+        .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
       }
 
       Text(`当前选择：${this.getCurrentRadiusText()}`)
         .fontSize(13)
-        .fontColor(this.workloadSnapshot.canAccept ? '#2F6FED' : '#D9480F')
+        .fontColor(this.workloadSnapshot.canAccept ? AppColors.Primary : AppColors.Danger)
         .fontWeight(FontWeight.Medium)
         .width('100%')
         .textAlign(TextAlign.Center)
@@ -257,11 +258,11 @@ struct AvailableRepairTask {
       top: 8,
       bottom: 10
     })
-    .backgroundColor('#F7F9FC')
+    .backgroundColor(AppColors.FieldBackground)
     .borderRadius(18)
     .border({
       width: 1,
-      color: '#D6DAE1'
+      color: AppColors.Border
     })
   }
 
@@ -284,7 +285,7 @@ struct AvailableRepairTask {
         Text(`${this.workloadSnapshot.activeTaskCount}/${this.workloadSnapshot.maxActiveTaskCount}`)
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
-          .fontColor('#374151')
+          .fontColor(AppColors.TextSecondary)
           .maxLines(1)
       }
       .width('100%')
@@ -292,7 +293,7 @@ struct AvailableRepairTask {
 
       Text(this.workloadSnapshot.message)
         .fontSize(13)
-        .fontColor('#6B7280')
+        .fontColor(AppColors.TextSecondary)
         .lineHeight(19)
         .maxLines(3)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -304,11 +305,11 @@ struct AvailableRepairTask {
       top: 12,
       bottom: 12
     })
-    .backgroundColor('#F7F9FC')
+    .backgroundColor(AppColors.FieldBackground)
     .borderRadius(18)
     .border({
       width: 1,
-      color: '#D6DAE1'
+      color: AppColors.Border
     })
   }
 
@@ -318,7 +319,7 @@ struct AvailableRepairTask {
       Text('可接取任务')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       if (this.taskItems.length === 0) {
@@ -342,22 +343,22 @@ struct AvailableRepairTask {
       Stack() {
         SymbolGlyph($r('sys.symbol.location_up'))
           .fontSize(38)
-          .fontColor(['#2F6FED'])
+          .fontColor([AppColors.Primary])
       }
       .width(64)
       .height(64)
       .borderRadius(32)
-      .backgroundColor('#EEF4FF')
+      .backgroundColor(AppColors.PrimarySurface)
 
       Text('暂无可接取任务')
         .fontSize(18)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Text('连接后端服务后可刷新附近故障')
         .fontSize(13)
-        .fontColor('#6B7280')
+        .fontColor(AppColors.TextSecondary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
@@ -368,7 +369,7 @@ struct AvailableRepairTask {
       top: 28,
       bottom: 28
     })
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(24)
     .alignItems(HorizontalAlign.Center)
   }
@@ -380,7 +381,7 @@ struct AvailableRepairTask {
         Stack() {
           SymbolGlyph($r('sys.symbol.exclamationmark_message'))
             .fontSize(24)
-            .fontColor(['#FFFFFF'])
+            .fontColor([AppColors.Surface])
         }
         .width(44)
         .height(44)
@@ -391,13 +392,13 @@ struct AvailableRepairTask {
           Text(item.deviceName)
             .fontSize(17)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#111827')
+            .fontColor(AppColors.TextPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
           Text(item.deviceCode)
             .fontSize(12)
-            .fontColor('#6B7280')
+            .fontColor(AppColors.TextSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
@@ -406,7 +407,7 @@ struct AvailableRepairTask {
 
         Text(`${item.distanceKm.toFixed(1)} km`)
           .fontSize(13)
-          .fontColor('#2F6FED')
+          .fontColor(AppColors.Primary)
           .fontWeight(FontWeight.Medium)
           .maxLines(1)
       }
@@ -416,7 +417,7 @@ struct AvailableRepairTask {
       Row() {
         Text(FaultReportService.formatFaultType(item.faultType))
           .fontSize(13)
-          .fontColor('#374151')
+          .fontColor(AppColors.TextSecondary)
           .layoutWeight(1)
           .maxLines(1)
 
@@ -430,7 +431,7 @@ struct AvailableRepairTask {
 
       Text(item.location)
         .fontSize(13)
-        .fontColor('#6B7280')
+        .fontColor(AppColors.TextSecondary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
@@ -441,7 +442,7 @@ struct AvailableRepairTask {
     }
     .padding(16)
     .width('100%')
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(24)
   }
 
@@ -451,17 +452,17 @@ struct AvailableRepairTask {
       Text('查询状态')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Column() {
         StatusInfoRow({
           label: '可接取范围',
           value: this.getAvailableRadiusText(),
-          tone: '#374151'
+          tone: AppColors.TextSecondary
         })
         this.CardDivider()
-        StatusInfoRow({ label: '当前范围', value: this.getCurrentRadiusText(), tone: '#2F6FED' })
+        StatusInfoRow({ label: '当前范围', value: this.getCurrentRadiusText(), tone: AppColors.Primary })
         this.CardDivider()
         StatusInfoRow({
           label: '负载状态',
@@ -472,7 +473,7 @@ struct AvailableRepairTask {
         StatusInfoRow({
           label: '进行中任务',
           value: `${this.workloadSnapshot.activeTaskCount}/${this.workloadSnapshot.maxActiveTaskCount}`,
-          tone: '#374151'
+          tone: AppColors.TextSecondary
         })
         this.CardDivider()
         this.RefreshStatusRow()
@@ -484,7 +485,7 @@ struct AvailableRepairTask {
         })
       }
       .width('100%')
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .borderRadius(24)
     }
     .alignItems(HorizontalAlign.Start)
@@ -496,7 +497,7 @@ struct AvailableRepairTask {
     Text(title)
       .fontSize(17)
       .fontWeight(FontWeight.Bold)
-      .fontColor('#111827')
+      .fontColor(AppColors.TextPrimary)
       .maxLines(1)
   }
 
@@ -518,12 +519,12 @@ struct AvailableRepairTask {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
           .fontSize(20)
-          .fontColor(['#FFFFFF'])
+          .fontColor([AppColors.Surface])
 
         Text(label)
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
-          .fontColor('#FFFFFF')
+          .fontColor(AppColors.Surface)
           .maxLines(1)
       }
       .width('100%')
@@ -532,7 +533,7 @@ struct AvailableRepairTask {
     }
     .height(54)
     .width('100%')
-    .backgroundColor('#2F6FED')
+    .backgroundColor(AppColors.Primary)
     .enabled(enabled)
     .onClick(() => {
       action();
@@ -544,11 +545,11 @@ struct AvailableRepairTask {
     Button({ type: ButtonType.Circle, stateEffect: true }) {
       SymbolGlyph($r('sys.symbol.info_circle'))
         .fontSize(18)
-        .fontColor(['#111827'])
+        .fontColor([AppColors.TextPrimary])
     }
     .width(28)
     .height(28)
-    .backgroundColor('#00000000')
+    .backgroundColor(AppColors.Transparent)
     .onClick(() => {
       action();
     })
@@ -558,7 +559,7 @@ struct AvailableRepairTask {
   CardDivider() {
     Divider()
       .height(1)
-      .backgroundColor('#E5E7EB')
+      .backgroundColor(AppColors.Divider)
       .margin({
         left: 18,
         right: 18
@@ -570,7 +571,7 @@ struct AvailableRepairTask {
     Row() {
       Text('刷新状态')
         .fontSize(15)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .fontWeight(FontWeight.Medium)
         .layoutWeight(1)
         .maxLines(1)
@@ -604,7 +605,7 @@ struct AvailableRepairTask {
       this.refreshing = false;
       const error = workloadResponse.error;
       this.message = error ? error.message : '维修负载状态刷新失败';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       this.refreshStatus = '刷新失败';
       return;
     }
@@ -614,7 +615,7 @@ struct AvailableRepairTask {
       this.refreshing = false;
       this.taskItems = [];
       this.message = this.workloadSnapshot.message;
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       this.refreshStatus = '不可接取';
       return;
     }
@@ -627,7 +628,7 @@ struct AvailableRepairTask {
     if (!response.success) {
       const error = response.error;
       this.message = error ? error.message : '附近故障刷新失败';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       this.refreshStatus = '刷新失败';
       return;
     }
@@ -640,10 +641,10 @@ struct AvailableRepairTask {
     this.refreshStatus = '已刷新';
     if (this.workloadSnapshot.status === RepairerWorkloadStatus.LowLoad) {
       this.message = this.workloadSnapshot.message;
-      this.messageTone = '#2F6FED';
+      this.messageTone = AppColors.Primary;
     } else {
       this.message = '';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
     }
   }
 
@@ -658,7 +659,7 @@ struct AvailableRepairTask {
       this.acceptingTaskId = '';
       const error = workloadResponse.error;
       this.message = error ? error.message : '维修负载状态刷新失败';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       return;
     }
 
@@ -670,7 +671,7 @@ struct AvailableRepairTask {
       this.message = this.workloadSnapshot.canAccept ?
         `当前处于${RepairTaskService.formatWorkloadStatus(this.workloadSnapshot.status)}状态，仅可接取${this.workloadSnapshot.maxRadiusKm}公里内的维修任务。` :
         this.workloadSnapshot.message;
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       return;
     }
 
@@ -680,7 +681,7 @@ struct AvailableRepairTask {
     if (!response.success) {
       const error = response.error;
       this.message = error ? error.message : '维修任务接取失败';
-      this.messageTone = '#D9480F';
+      this.messageTone = AppColors.Danger;
       return;
     }
 
@@ -689,7 +690,7 @@ struct AvailableRepairTask {
     });
     this.refreshStatus = '已接取';
     this.message = '维修任务已接取，可在我的维修中处理';
-    this.messageTone = '#087F5B';
+    this.messageTone = AppColors.Success;
     const nextWorkloadResponse = await RepairTaskService.getCurrentWorkloadSnapshotRemoteFirst();
     if (nextWorkloadResponse.success && nextWorkloadResponse.data !== undefined) {
       this.applyWorkloadSnapshot(nextWorkloadResponse.data);
@@ -699,32 +700,32 @@ struct AvailableRepairTask {
   getSeverityTone(severity: FaultSeverity): string {
     switch (severity) {
       case FaultSeverity.Emergency:
-        return '#D9480F';
+        return AppColors.Danger;
       case FaultSeverity.Severe:
-        return '#E67700';
+        return AppColors.Warning;
       case FaultSeverity.General:
-        return '#2F6FED';
+        return AppColors.Primary;
       case FaultSeverity.Minor:
-        return '#087F5B';
+        return AppColors.Success;
       default:
-        return '#374151';
+        return AppColors.TextSecondary;
     }
   }
 
   getRefreshStatusTone(): string {
     if (this.isFailureMessageVisible()) {
-      return '#D9480F';
+      return AppColors.Danger;
     }
 
     if (this.refreshStatus === '已刷新' || this.refreshStatus === '已接取') {
-      return '#087F5B';
+      return AppColors.Success;
     }
 
-    return '#495057';
+    return AppColors.TextSecondary;
   }
 
   isFailureMessageVisible(): boolean {
-    return this.message.length > 0 && this.messageTone === '#D9480F';
+    return this.message.length > 0 && this.messageTone === AppColors.Danger;
   }
 
   applyRadiusPickerIndex(index: number | number[]): void {
@@ -737,7 +738,7 @@ struct AvailableRepairTask {
 
     this.radiusKm = Math.min(selectedIndex + 1, this.workloadSnapshot.maxRadiusKm);
     this.message = '';
-    this.messageTone = '#D9480F';
+    this.messageTone = AppColors.Danger;
   }
 
   applyWorkloadSnapshot(workloadSnapshot: RepairerWorkloadSnapshot): void {

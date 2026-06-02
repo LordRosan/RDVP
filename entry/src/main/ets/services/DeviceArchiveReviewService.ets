@@ -1,3 +1,4 @@
+import { AppColors } from '../styles/AppTheme';
 import { ApiResponse } from '../models/ApiModels';
 import { DeviceArchiveChangeRequestStatus } from '../models/DeviceArchiveChangeModels';
 import {
@@ -161,13 +162,13 @@ export class DeviceArchiveReviewService {
   static getRequestTypeTone(type: DeviceArchiveReviewRequestType): string {
     switch (type) {
       case DeviceArchiveReviewRequestType.Create:
-        return '#087F5B';
+        return AppColors.Success;
       case DeviceArchiveReviewRequestType.Delete:
-        return '#D9480F';
+        return AppColors.Danger;
       case DeviceArchiveReviewRequestType.Update:
-        return '#2F6FED';
+        return AppColors.Primary;
       default:
-        return '#374151';
+        return AppColors.TextSecondary;
     }
   }
 
@@ -198,13 +199,13 @@ export class DeviceArchiveReviewService {
   static getStatusTone(status: DeviceArchiveChangeRequestStatus): string {
     switch (status) {
       case DeviceArchiveChangeRequestStatus.PendingReview:
-        return '#E67700';
+        return AppColors.Warning;
       case DeviceArchiveChangeRequestStatus.Approved:
-        return '#087F5B';
+        return AppColors.Success;
       case DeviceArchiveChangeRequestStatus.Rejected:
-        return '#D9480F';
+        return AppColors.Danger;
       default:
-        return '#374151';
+        return AppColors.TextSecondary;
     }
   }
 

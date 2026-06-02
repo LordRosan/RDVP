@@ -1,3 +1,4 @@
+import { AppColors } from '../styles/AppTheme';
 import { ApiResponse } from '../models/ApiModels';
 import { FaultSeverity, FaultType } from '../models/FaultModels';
 import {
@@ -636,13 +637,13 @@ export class RepairTaskService {
   static getWorkloadStatusTone(status: RepairerWorkloadStatus): string {
     switch (status) {
       case RepairerWorkloadStatus.Idle:
-        return '#087F5B';
+        return AppColors.Success;
       case RepairerWorkloadStatus.LowLoad:
-        return '#2F6FED';
+        return AppColors.Primary;
       case RepairerWorkloadStatus.Busy:
-        return '#D9480F';
+        return AppColors.Danger;
       default:
-        return '#495057';
+        return AppColors.TextSecondary;
     }
   }
 

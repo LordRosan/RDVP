@@ -1,3 +1,4 @@
+import { AppColors } from '../../styles/AppTheme';
 import { ActionTile } from '../../components/ActionTile';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { PermissionCode } from '../../models/PermissionModels';
@@ -55,7 +56,7 @@ struct ArchiveCenter {
     }
     .height('100%')
     .width('100%')
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   onBackPress(): boolean {
@@ -69,14 +70,14 @@ struct ArchiveCenter {
       Button({ type: ButtonType.Circle, stateEffect: true }) {
         SymbolGlyph($r('sys.symbol.chevron_backward'))
           .fontSize(22)
-          .fontColor(['#111827'])
+          .fontColor([AppColors.TextPrimary])
       }
       .width(44)
       .height(44)
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .border({
         width: 1,
-        color: '#E5E7EB'
+        color: AppColors.Divider
       })
       .onClick(() => {
         this.backToWorkbench();
@@ -89,7 +90,7 @@ struct ArchiveCenter {
       left: 24,
       right: 24
     })
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   @Builder
@@ -99,13 +100,13 @@ struct ArchiveCenter {
         Text('档案中心')
           .fontSize(34)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#111827')
+          .fontColor(AppColors.TextPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
     Text('查询设备档案并从详情发起变更')
           .fontSize(15)
-          .fontColor('#6B7280')
+          .fontColor(AppColors.TextSecondary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
@@ -115,15 +116,15 @@ struct ArchiveCenter {
       Stack() {
         SymbolGlyph($r('sys.symbol.text_clipboard'))
           .fontSize(31)
-          .fontColor(['#111827'])
+          .fontColor([AppColors.TextPrimary])
       }
       .width(58)
       .height(58)
       .borderRadius(29)
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .border({
         width: 1,
-        color: '#E5E7EB'
+        color: AppColors.Divider
       })
     }
     .width('100%')
@@ -137,7 +138,7 @@ struct ArchiveCenter {
       Text('中心概览')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Column() {
@@ -154,7 +155,7 @@ struct ArchiveCenter {
         })
       }
       .width('100%')
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .borderRadius(24)
     }
     .alignItems(HorizontalAlign.Start)
@@ -167,7 +168,7 @@ struct ArchiveCenter {
       Text('功能入口')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Column({ space: 10 }) {
@@ -191,7 +192,7 @@ struct ArchiveCenter {
     if (this.message.length > 0) {
       Text(this.message)
         .fontSize(13)
-        .fontColor('#D9480F')
+        .fontColor(AppColors.Danger)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
@@ -202,7 +203,7 @@ struct ArchiveCenter {
   CardDivider() {
     Divider()
       .height(1)
-      .backgroundColor('#E5E7EB')
+      .backgroundColor(AppColors.Divider)
       .margin({
         left: 18,
         right: 18
@@ -229,7 +230,7 @@ struct ArchiveCenter {
   getArchivePermissionTone(): string {
     return SessionStore.hasPermission(PermissionCode.ArchiveChangeRequestCreate) ||
       SessionStore.hasPermission(PermissionCode.ArchiveDeviceCreate) ||
-      SessionStore.hasPermission(PermissionCode.ArchiveDeviceDelete) ? '#2F6FED' : '#6B7280';
+      SessionStore.hasPermission(PermissionCode.ArchiveDeviceDelete) ? AppColors.Primary : AppColors.TextSecondary;
   }
 
   openFeature(action: WorkbenchAction): void {

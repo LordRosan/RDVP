@@ -1,5 +1,6 @@
 import { AuthService } from './AuthService';
 import { DeviceService } from './DeviceService';
+import { ApiResponse } from '../models/ApiModels';
 
 const DELETE_LOCK_STORAGE_KEY = 'rdvp_archive_delete_locks';
 const MAX_PASSWORD_FAILURES = 5;
@@ -88,7 +89,14 @@ export class DeviceArchiveDeleteGuardService {
     }
 
     const response = await AuthService.verifyCurrentUserPasswordRemoteFirst(form.password);
-    if (!response.success || response.data !== true) {
+    if (!DeviceArchiveDeleteGuardService.isPasswordIncorrectResponse(response)) {
+      return {
+        verified: false,
+        message: response.error ? response.error.message : '账号密码校验失败'
+      };
+    }
+
+    if (response.data !== true) {
       const record = DeviceArchiveDeleteGuardService.registerPasswordFailure(normalizedDeviceCode);
       if (DeviceArchiveDeleteGuardService.isLocked(record)) {
         return {
@@ -111,6 +119,19 @@ export class DeviceArchiveDeleteGuardService {
       verified: true,
       message: ''
     };
+  }
+
+  private static isPasswordIncorrectResponse(response: ApiResponse<boolean>): boolean {
+    if (response.success) {
+      return response.data !== true;
+    }
+
+    if (response.error === undefined) {
+      return false;
+    }
+
+    const errorCode = `${response.error.code}`;
+    return errorCode === 'INVALID_CREDENTIALS' || errorCode === 'LOGIN_FAILED';
   }
 
   private static registerPasswordFailure(deviceCode: string): DeviceArchiveDeleteLockRecord {

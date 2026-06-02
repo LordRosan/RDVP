@@ -84,6 +84,10 @@ export class AuthService {
     }));
 
     if (!response.success) {
+      if (response.error !== undefined && `${response.error.code}` === 'UNAUTHORIZED') {
+        SessionStore.clearSession();
+      }
+
       return {
         success: false,
         error: response.error,
@@ -169,9 +173,14 @@ export class AuthService {
       '/api/v1/auth/password-verification',
       'POST',
       true,
-      JSON.stringify({ password })
+      JSON.stringify({ password }),
+      false
     );
     if (!response.success) {
+      if (response.error !== undefined && `${response.error.code}` === 'UNAUTHORIZED') {
+        SessionStore.clearSession();
+      }
+
       return {
         success: false,
         error: response.error,

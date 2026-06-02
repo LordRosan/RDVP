@@ -1,3 +1,4 @@
+import { AppColors } from '../../styles/AppTheme';
 import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import {
@@ -35,7 +36,7 @@ struct ReinspectionTask {
   @State description: string = '';
   @State taskMessage: string = '';
   @State recordMessage: string = '';
-  @State recordMessageTone: string = '#D9480F';
+  @State recordMessageTone: string = AppColors.Danger;
   @State refreshStatus: string = '未刷新';
   @State normalizedTaskId: string = '-';
   @State submittedReinspectionTaskId: string = '';
@@ -87,7 +88,7 @@ struct ReinspectionTask {
     }
     .height('100%')
     .width('100%')
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   onBackPress(): boolean {
@@ -101,14 +102,14 @@ struct ReinspectionTask {
       Button({ type: ButtonType.Circle, stateEffect: true }) {
         SymbolGlyph($r('sys.symbol.chevron_backward'))
           .fontSize(22)
-          .fontColor(['#111827'])
+          .fontColor([AppColors.TextPrimary])
       }
       .width(44)
       .height(44)
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .border({
         width: 1,
-        color: '#E5E7EB'
+        color: AppColors.Divider
       })
       .onClick(() => {
         this.backToWorkbench();
@@ -121,7 +122,7 @@ struct ReinspectionTask {
       left: 24,
       right: 24
     })
-    .backgroundColor('#F2F5F7')
+    .backgroundColor(AppColors.PageBackground)
   }
 
   @Builder
@@ -131,7 +132,7 @@ struct ReinspectionTask {
         Text('复检任务')
           .fontSize(34)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#111827')
+          .fontColor(AppColors.TextPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
@@ -143,7 +144,7 @@ struct ReinspectionTask {
 
       Text('确认高等级故障维修结果')
         .fontSize(15)
-        .fontColor('#6B7280')
+        .fontColor(AppColors.TextSecondary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
@@ -162,18 +163,18 @@ struct ReinspectionTask {
         Text('待复检任务')
           .fontSize(22)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#111827')
+          .fontColor(AppColors.TextPrimary)
           .layoutWeight(1)
           .maxLines(1)
 
         Button({ type: ButtonType.Circle, stateEffect: true }) {
           SymbolGlyph($r('sys.symbol.arrow_clockwise'))
             .fontSize(22)
-            .fontColor(['#FFFFFF'])
+            .fontColor([AppColors.Surface])
         }
         .width(44)
         .height(44)
-        .backgroundColor('#2F6FED')
+        .backgroundColor(AppColors.Primary)
         .enabled(!this.refreshing && !this.submitting)
         .onClick(() => {
           this.refreshTasks();
@@ -205,17 +206,17 @@ struct ReinspectionTask {
       Stack() {
         SymbolGlyph($r('sys.symbol.doc_text_badge_checkmark'))
           .fontSize(36)
-          .fontColor(['#2F6FED'])
+          .fontColor([AppColors.Primary])
       }
       .width(64)
       .height(64)
       .borderRadius(32)
-      .backgroundColor('#EEF4FF')
+      .backgroundColor(AppColors.PrimarySurface)
 
       Text('暂无待复检任务')
         .fontSize(18)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
     }
     .width('100%')
@@ -225,7 +226,7 @@ struct ReinspectionTask {
       top: 28,
       bottom: 28
     })
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(24)
     .alignItems(HorizontalAlign.Center)
   }
@@ -237,7 +238,7 @@ struct ReinspectionTask {
         Stack() {
           SymbolGlyph($r('sys.symbol.doc_text_badge_checkmark'))
             .fontSize(23)
-            .fontColor(['#FFFFFF'])
+            .fontColor([AppColors.Surface])
         }
         .width(44)
         .height(44)
@@ -248,13 +249,13 @@ struct ReinspectionTask {
           Text(item.deviceName)
             .fontSize(17)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#111827')
+            .fontColor(AppColors.TextPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
           Text(item.taskNo)
             .fontSize(12)
-            .fontColor('#6B7280')
+            .fontColor(AppColors.TextSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
@@ -267,7 +268,7 @@ struct ReinspectionTask {
       Row() {
         Text(item.location)
           .fontSize(13)
-          .fontColor('#374151')
+          .fontColor(AppColors.TextSecondary)
           .layoutWeight(1)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -284,12 +285,12 @@ struct ReinspectionTask {
         Row({ space: 8 }) {
           SymbolGlyph($r('sys.symbol.text_clipboard'))
             .fontSize(18)
-            .fontColor(['#FFFFFF'])
+            .fontColor([AppColors.Surface])
 
           Text('填写复检记录')
             .fontSize(15)
             .fontWeight(FontWeight.Medium)
-            .fontColor('#FFFFFF')
+            .fontColor(AppColors.Surface)
             .maxLines(1)
         }
         .justifyContent(FlexAlign.Center)
@@ -298,7 +299,7 @@ struct ReinspectionTask {
       }
       .height(46)
       .width('100%')
-      .backgroundColor('#2F6FED')
+      .backgroundColor(AppColors.Primary)
       .onClick(() => {
         this.taskId = item.taskNo;
         this.normalizedTaskId = item.taskNo;
@@ -306,12 +307,12 @@ struct ReinspectionTask {
           this.submittedReinspectionTaskId = '';
         }
         this.recordMessage = '';
-        this.recordMessageTone = '#D9480F';
+        this.recordMessageTone = AppColors.Danger;
       })
     }
     .padding(16)
     .width('100%')
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(24)
   }
 
@@ -336,7 +337,7 @@ struct ReinspectionTask {
       bottom: 18
     })
     .width('100%')
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppColors.Surface)
     .borderRadius(24)
     .alignItems(HorizontalAlign.Start)
   }
@@ -352,7 +353,7 @@ struct ReinspectionTask {
       })
         .height(56)
         .fontSize(16)
-        .backgroundColor('#F7F9FC')
+        .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
         .padding({
           left: 16,
@@ -360,7 +361,7 @@ struct ReinspectionTask {
         })
         .border({
           width: 1,
-          color: '#D6DAE1'
+          color: AppColors.Border
         })
         .onChange((value: string) => {
           this.taskId = value;
@@ -372,7 +373,7 @@ struct ReinspectionTask {
             this.submittedReinspectionTaskId = '';
           }
           this.recordMessage = '';
-          this.recordMessageTone = '#D9480F';
+          this.recordMessageTone = AppColors.Danger;
         })
     }
     .width('100%')
@@ -401,12 +402,12 @@ struct ReinspectionTask {
       Row({ space: 6 }) {
         SymbolGlyph(icon)
           .fontSize(17)
-          .fontColor([this.result === `${result}` ? '#FFFFFF' : '#111827'])
+          .fontColor([this.result === `${result}` ? AppColors.Surface : AppColors.TextPrimary])
 
         Text(ReinspectionService.formatResult(result))
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
-          .fontColor(this.result === `${result}` ? '#FFFFFF' : '#111827')
+          .fontColor(this.result === `${result}` ? AppColors.Surface : AppColors.TextPrimary)
           .maxLines(1)
       }
       .width('100%')
@@ -415,15 +416,15 @@ struct ReinspectionTask {
     }
     .height(42)
     .layoutWeight(1)
-    .backgroundColor(this.result === `${result}` ? ReinspectionService.getResultTone(result) : '#F7F9FC')
+    .backgroundColor(this.result === `${result}` ? ReinspectionService.getResultTone(result) : AppColors.FieldBackground)
     .border({
       width: 1,
-      color: this.result === `${result}` ? ReinspectionService.getResultTone(result) : '#D6DAE1'
+      color: this.result === `${result}` ? ReinspectionService.getResultTone(result) : AppColors.Border
     })
     .onClick(() => {
       this.result = `${result}`;
       this.recordMessage = '';
-      this.recordMessageTone = '#D9480F';
+      this.recordMessageTone = AppColors.Danger;
     })
   }
 
@@ -435,22 +436,22 @@ struct ReinspectionTask {
       Row({ space: 10 }) {
         SymbolGlyph($r('sys.symbol.calendar'))
           .fontSize(20)
-          .fontColor(['#111827'])
+          .fontColor([AppColors.TextPrimary])
 
         Text(this.reinspectedAt.length > 0 ? this.reinspectedAt : '选择复检时间')
           .fontSize(16)
-          .fontColor(this.reinspectedAt.length > 0 ? '#111827' : '#9CA3AF')
+          .fontColor(this.reinspectedAt.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
           .layoutWeight(1)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
         SymbolGlyph($r('sys.symbol.chevron_forward'))
           .fontSize(18)
-          .fontColor(['#6B7280'])
+          .fontColor([AppColors.TextSecondary])
       }
       .height(56)
       .width('100%')
-      .backgroundColor('#F7F9FC')
+      .backgroundColor(AppColors.FieldBackground)
       .borderRadius(18)
       .padding({
         left: 16,
@@ -458,12 +459,12 @@ struct ReinspectionTask {
       })
       .border({
         width: 1,
-        color: '#D6DAE1'
+        color: AppColors.Border
       })
       .onClick(() => {
         this.showReinspectedAtPicker();
         this.recordMessage = '';
-        this.recordMessageTone = '#D9480F';
+        this.recordMessageTone = AppColors.Danger;
       })
     }
     .width('100%')
@@ -484,7 +485,7 @@ struct ReinspectionTask {
         .fontSize(15)
         .lineHeight(22)
         .maxLength(800)
-        .backgroundColor('#F7F9FC')
+        .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
         .padding({
           left: 14,
@@ -494,12 +495,12 @@ struct ReinspectionTask {
         })
         .border({
           width: 1,
-          color: '#D6DAE1'
+          color: AppColors.Border
         })
         .onChange((value: string) => {
           this.description = value;
           this.recordMessage = '';
-          this.recordMessageTone = '#D9480F';
+          this.recordMessageTone = AppColors.Danger;
         })
     }
     .width('100%')
@@ -512,13 +513,13 @@ struct ReinspectionTask {
       Text('提交状态')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#111827')
+        .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Column() {
-        StatusInfoRow({ label: '标准任务号', value: this.normalizedTaskId, tone: '#374151' })
+        StatusInfoRow({ label: '标准任务号', value: this.normalizedTaskId, tone: AppColors.TextSecondary })
         this.CardDivider()
-        StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: '#374151' })
+        StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: AppColors.TextSecondary })
         this.CardDivider()
         StatusInfoRow({
           label: '复检结论',
@@ -529,7 +530,7 @@ struct ReinspectionTask {
         StatusInfoRow({
           label: '刷新状态',
           value: this.taskMessage.length > 0 ? '刷新失败' : this.refreshStatus,
-          tone: this.taskMessage.length > 0 ? '#D9480F' : '#495057'
+          tone: this.taskMessage.length > 0 ? AppColors.Danger : AppColors.TextSecondary
         })
         this.CardDivider()
         StatusInfoRow({
@@ -539,7 +540,7 @@ struct ReinspectionTask {
         })
       }
       .width('100%')
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppColors.Surface)
       .borderRadius(24)
     }
     .alignItems(HorizontalAlign.Start)
@@ -551,7 +552,7 @@ struct ReinspectionTask {
     Text(title)
       .fontSize(17)
       .fontWeight(FontWeight.Bold)
-      .fontColor('#111827')
+      .fontColor(AppColors.TextPrimary)
       .maxLines(1)
   }
 
@@ -560,7 +561,7 @@ struct ReinspectionTask {
     if (this.taskMessage.length > 0) {
       Text(this.taskMessage)
         .fontSize(13)
-        .fontColor('#D9480F')
+        .fontColor(AppColors.Danger)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
@@ -585,12 +586,12 @@ struct ReinspectionTask {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
           .fontSize(20)
-          .fontColor(['#FFFFFF'])
+          .fontColor([AppColors.Surface])
 
         Text(label)
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
-          .fontColor('#FFFFFF')
+          .fontColor(AppColors.Surface)
           .maxLines(1)
       }
       .width('100%')
@@ -599,7 +600,7 @@ struct ReinspectionTask {
     }
     .height(54)
     .width('100%')
-    .backgroundColor(enabled ? '#2F6FED' : '#AEB6C2')
+    .backgroundColor(enabled ? AppColors.Primary : AppColors.Disabled)
     .enabled(enabled)
     .onClick(() => {
       action();
@@ -611,11 +612,11 @@ struct ReinspectionTask {
     Button({ type: ButtonType.Circle, stateEffect: true }) {
       SymbolGlyph($r('sys.symbol.info_circle'))
         .fontSize(18)
-        .fontColor(['#111827'])
+        .fontColor([AppColors.TextPrimary])
     }
     .width(28)
     .height(28)
-    .backgroundColor('#00000000')
+    .backgroundColor(AppColors.Transparent)
     .onClick(() => {
       action();
     })
@@ -625,7 +626,7 @@ struct ReinspectionTask {
   CardDivider() {
     Divider()
       .height(1)
-      .backgroundColor('#E5E7EB')
+      .backgroundColor(AppColors.Divider)
       .margin({
         left: 18,
         right: 18
@@ -676,13 +677,13 @@ struct ReinspectionTask {
     if (!response.success) {
       const error = response.error;
       this.recordMessage = error ? error.message : '复检记录提交失败';
-      this.recordMessageTone = '#D9480F';
+      this.recordMessageTone = AppColors.Danger;
       return;
     }
 
     const recordNo = response.data ? response.data.recordNo : '';
     this.recordMessage = recordNo.length > 0 ? `复检记录已提交：${recordNo}` : '复检记录已提交';
-    this.recordMessageTone = '#087F5B';
+    this.recordMessageTone = AppColors.Success;
     this.submittedReinspectionTaskId = this.normalizedTaskId;
     this.taskItems = this.taskItems.filter((item: ReinspectionTaskSummary) => {
       return item.taskNo !== this.normalizedTaskId && item.id !== this.normalizedTaskId;
@@ -715,7 +716,7 @@ struct ReinspectionTask {
   }
 
   getSelectedResultTone(): string {
-    return this.result.length === 0 ? '#374151' : ReinspectionService.getResultTone(this.result as ReinspectionResult);
+    return this.result.length === 0 ? AppColors.TextSecondary : ReinspectionService.getResultTone(this.result as ReinspectionResult);
   }
 
   showReinspectedAtPicker(): void {
@@ -728,7 +729,7 @@ struct ReinspectionTask {
       onDateAccept: (value: Date) => {
         this.reinspectedAt = this.formatDateTime(value);
         this.recordMessage = '';
-        this.recordMessageTone = '#D9480F';
+        this.recordMessageTone = AppColors.Danger;
       }
     });
   }
@@ -782,7 +783,7 @@ struct ReinspectionTask {
       router.replaceUrl({ url: 'pages/Workbench' });
     } catch (err) {
       this.recordMessage = '页面跳转失败';
-      this.recordMessageTone = '#D9480F';
+      this.recordMessageTone = AppColors.Danger;
     }
   }
 }
