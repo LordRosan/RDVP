@@ -16,7 +16,11 @@ interface QrVerifyApiResult {
 }
 
 const DEVICE_CODE_PATTERN = /^RDVP-DEVICE-\d{4}$/;
+const QR_VERSION_PATTERN = /^\d{1,3}$/;
+const QR_NONCE_PATTERN = /^[A-Za-z0-9._-]{1,128}$/;
+const QR_SIGNATURE_PATTERN = /^[0-9a-fA-F]{64}$/;
 const QR_CONTENT_MAX_LENGTH = 512;
+const QR_MAX_VERSION = 999;
 
 export class DeviceService {
   static normalizeDeviceCode(deviceCode: string): string {
@@ -67,7 +71,7 @@ export class DeviceService {
       };
     }
 
-    if (!qrContent.startsWith('RDVP:')) {
+    if (!DeviceService.isValidQrContentStructure(qrContent)) {
       return {
         valid: false,
         message: '二维码内容无效'
@@ -191,6 +195,29 @@ export class DeviceService {
       requestId: response.requestId,
       timestamp: response.timestamp
     };
+  }
+
+  private static isValidQrContentStructure(qrContent: string): boolean {
+    const segments = qrContent.split(':');
+    if (segments.length !== 5 || segments[0] !== 'RDVP') {
+      return false;
+    }
+
+    const versionText = segments[1].trim();
+    if (!QR_VERSION_PATTERN.test(versionText)) {
+      return false;
+    }
+
+    const version = Number.parseInt(versionText, 10);
+    const deviceCode = DeviceService.normalizeDeviceCode(segments[2]);
+    const nonce = segments[3].trim();
+    const signature = segments[4].trim();
+
+    return version > 0
+      && version <= QR_MAX_VERSION
+      && DEVICE_CODE_PATTERN.test(deviceCode)
+      && QR_NONCE_PATTERN.test(nonce)
+      && QR_SIGNATURE_PATTERN.test(signature);
   }
 
   static formatDeviceStatus(status: DeviceStatus): string {

@@ -36,7 +36,7 @@ export default function abilityTest() {
 
     it('validatesQrQuery', 0, () => {
       const result = DeviceService.validateQrQuery({
-        qrContent: 'RDVP:1:RDVP-DEVICE-0001:nonce:signature'
+        qrContent: 'RDVP:1:RDVP-DEVICE-0001:nonce-rdvp-device-0001:f36d5f8b2a520071a5955968704a6dd4017a01e6457f573527867e47813c2807'
       });
 
       expect(result.valid).assertEqual(true);

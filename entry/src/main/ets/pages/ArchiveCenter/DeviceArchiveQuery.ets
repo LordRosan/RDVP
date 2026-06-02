@@ -250,16 +250,31 @@ struct DeviceArchiveQuery {
 
       Stack() {
         if (this.qrContent.length > 0) {
-          Text(this.qrContent)
-            .fontSize(14)
-            .fontColor('#111827')
-            .lineHeight(21)
-            .maxLines(10)
-            .wordBreak(WordBreak.BREAK_ALL)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .padding(18)
+          Column({ space: 14 }) {
+            SymbolGlyph($r('sys.symbol.qrcode'))
+              .fontSize(52)
+              .fontColor(['#2F6FED'])
+
+            Text('已识别二维码')
+              .fontSize(17)
+              .fontWeight(FontWeight.Medium)
+              .fontColor('#111827')
+              .maxLines(1)
+
+            Column({ space: 8 }) {
+              this.QrSummaryLine('设备编号', this.getQrDeviceCodeDisplay())
+              this.QrSummaryLine('签名指纹', this.getQrSignatureFingerprint())
+            }
             .width('100%')
-            .height('100%')
+            .padding({
+              left: 18,
+              right: 18
+            })
+          }
+          .justifyContent(FlexAlign.Center)
+          .alignItems(HorizontalAlign.Center)
+          .width('100%')
+          .height('100%')
         } else {
           Column({ space: 12 }) {
             SymbolGlyph($r('sys.symbol.qrcode'))
@@ -332,6 +347,28 @@ struct DeviceArchiveQuery {
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
     }
+  }
+
+  @Builder
+  QrSummaryLine(label: string, value: string) {
+    Row({ space: 10 }) {
+      Text(label)
+        .fontSize(13)
+        .fontColor('#6B7280')
+        .maxLines(1)
+
+      Text(value)
+        .fontSize(14)
+        .fontColor('#374151')
+        .fontWeight(FontWeight.Medium)
+        .textAlign(TextAlign.End)
+        .layoutWeight(1)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .width('100%')
+    .height(24)
+    .alignItems(VerticalAlign.Center)
   }
 
   @Builder
@@ -435,7 +472,7 @@ struct DeviceArchiveQuery {
   @Builder
   QueryValueStatusRow() {
     Row() {
-      Text(this.queryMode === DeviceQueryMode.Code ? '标准编号' : '二维码内容')
+      Text(this.queryMode === DeviceQueryMode.Code ? '标准编号' : '二维码摘要')
         .fontSize(15)
         .fontColor('#111827')
         .fontWeight(FontWeight.Medium)
@@ -577,6 +614,7 @@ struct DeviceArchiveQuery {
       });
 
       if (results.length === 0) {
+        this.qrContent = '';
         this.message = '未识别到二维码，请重新上传';
         return;
       }
@@ -601,7 +639,12 @@ struct DeviceArchiveQuery {
 
     if (!response.success) {
       const error = response.error;
-      this.message = error ? error.message : '二维码查询失败';
+      if (error !== undefined && this.isQrValidationErrorCode(`${error.code}`)) {
+        this.message = this.formatQrValidationErrorMessage(`${error.code}`);
+        this.qrContent = '';
+      } else {
+        this.message = error ? error.message : '二维码查询失败';
+      }
       return;
     }
 
@@ -613,7 +656,17 @@ struct DeviceArchiveQuery {
   applyQrContent(content: string): void {
     const qrContent = DeviceService.normalizeQrContent(content);
     if (qrContent.length === 0) {
+      this.qrContent = '';
       this.message = '二维码内容为空';
+      return;
+    }
+
+    const validation = DeviceService.validateQrQuery({
+      qrContent: qrContent
+    });
+    if (!validation.valid) {
+      this.qrContent = '';
+      this.message = validation.message;
       return;
     }
 
@@ -621,16 +674,51 @@ struct DeviceArchiveQuery {
     this.message = '';
   }
 
+  isQrValidationErrorCode(errorCode: string): boolean {
+    return errorCode.startsWith('QR_');
+  }
+
+  formatQrValidationErrorMessage(errorCode: string): string {
+    if (errorCode === 'QR_CODE_EXPIRED') {
+      return '二维码已过期，请重新获取有效二维码';
+    }
+
+    if (errorCode === 'QR_DEVICE_NOT_FOUND') {
+      return '二维码未关联设备档案';
+    }
+
+    return '二维码内容无效';
+  }
+
   getQrPreview(): string {
     if (this.qrContent.length === 0) {
       return '-';
     }
 
-    if (this.qrContent.length > 24) {
-      return `${this.qrContent.substring(0, 24)}...`;
+    return this.getQrDeviceCodeDisplay();
+  }
+
+  getQrDeviceCodeDisplay(): string {
+    const segments = this.qrContent.split(':');
+    if (segments.length >= 3 && segments[0] === 'RDVP') {
+      return DeviceService.normalizeDeviceCode(segments[2]);
     }
 
-    return this.qrContent;
+    return '待校验';
+  }
+
+  getQrSignatureFingerprint(): string {
+    const segments = this.qrContent.split(':');
+    if (segments.length < 5) {
+      return '待校验';
+    }
+
+    const signature = segments[4].trim();
+    if (signature.length <= 8) {
+      return '****';
+    }
+
+    return `****${signature.substring(signature.length - 8)}`;
   }
 
   showQueryInfoDialog(): void {

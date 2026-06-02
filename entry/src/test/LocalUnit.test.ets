@@ -198,10 +198,19 @@ export default function localUnitTest() {
 
     it('acceptsValidQrContent', 0, () => {
       const result = DeviceService.validateQrQuery({
-        qrContent: 'RDVP:1:RDVP-DEVICE-0001:nonce:signature'
+        qrContent: 'RDVP:1:RDVP-DEVICE-0001:nonce-rdvp-device-0001:f36d5f8b2a520071a5955968704a6dd4017a01e6457f573527867e47813c2807'
       });
 
       expect(result.valid).assertEqual(true);
+    });
+
+    it('rejectsMalformedQrContentWithValidPrefix', 0, () => {
+      const result = DeviceService.validateQrQuery({
+        qrContent: 'RDVP:invalid'
+      });
+
+      expect(result.valid).assertEqual(false);
+      expect(result.message).assertEqual('二维码内容无效');
     });
 
     it('returnsLocalDeviceArchiveByCodeWhenBackendUnconfigured', 0, () => {
@@ -216,7 +225,7 @@ export default function localUnitTest() {
 
     it('returnsLocalDeviceArchiveByQrWhenBackendUnconfigured', 0, () => {
       const response = DeviceService.queryByQrContent({
-        qrContent: 'RDVP:1:RDVP-DEVICE-0002:nonce:signature'
+        qrContent: 'RDVP:1:RDVP-DEVICE-0002:nonce-rdvp-device-0002:c5fb24d08793ff6e3b4a7422874c765e2455d4f6dee7aca680b246b4222f8a37'
       });
 
       expect(response.success).assertEqual(true);
