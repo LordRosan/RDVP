@@ -3,14 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "description": "RDVP workspace",
-  "workspaces": [
-    "backend-service"
-  ],
   "scripts": {
     "spring-backend:test": "cd rdvp-backend && mvnw.cmd test",
-    "spring-backend:start": "cd rdvp-backend && mvnw.cmd spring-boot:run",
-    "prototype-backend:build": "npm --workspace @rdvp/backend-service run build",
-    "prototype-backend:test": "npm --workspace @rdvp/backend-service test",
-    "prototype-backend:start": "npm --workspace @rdvp/backend-service start"
+    "spring-backend:start": "cd rdvp-backend && mvnw.cmd spring-boot:run"
   }
 }
