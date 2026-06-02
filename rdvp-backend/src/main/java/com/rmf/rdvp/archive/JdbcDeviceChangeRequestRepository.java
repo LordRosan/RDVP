@@ -69,6 +69,19 @@ public class JdbcDeviceChangeRequestRepository implements DeviceChangeRequestRep
     }
 
     @Override
+    public long countPendingReview() {
+        Long count = jdbcTemplate.queryForObject(
+                """
+                        SELECT count(*)
+                        FROM device_change_requests
+                        WHERE status = 'PENDING_REVIEW'
+                        """,
+                Map.of(),
+                Long.class);
+        return count == null ? 0 : count;
+    }
+
+    @Override
     public boolean hasPendingByDeviceId(String deviceId) {
         Integer count = jdbcTemplate.queryForObject(
                 """

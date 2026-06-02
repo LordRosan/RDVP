@@ -1,4 +1,11 @@
-import { WorkbenchAction, WorkbenchActionId, WorkbenchMetric, WorkbenchStatusItem } from '../models/WorkbenchModels';
+import { ApiResponse } from '../models/ApiModels';
+import {
+  WorkbenchAction,
+  WorkbenchActionId,
+  WorkbenchMetric,
+  WorkbenchStatusItem,
+  WorkbenchSummary
+} from '../models/WorkbenchModels';
 import {
   ArchiveCenterPermissions,
   ManagementCenterPermissions,
@@ -10,19 +17,20 @@ import { LocalDeviceChangeRequestRepository } from './LocalDeviceChangeRequestRe
 import { LocalRepairTaskRepository } from './LocalRepairTaskRepository';
 import { LocalReinspectionRepository } from './LocalReinspectionRepository';
 import { SessionStore } from '../stores/SessionStore';
+import { WorkbenchRefreshStore } from '../stores/WorkbenchRefreshStore';
 
 export class WorkbenchService {
+  private static cachedSummary?: WorkbenchSummary = undefined;
+
   static getMetrics(): WorkbenchMetric[] {
-    const pendingChangeCount = WorkbenchService.getPendingChangeCount();
-    const pendingFaultCount = WorkbenchService.getPendingFaultCount();
-    const pendingReinspectionCount = WorkbenchService.getPendingReinspectionCount();
+    const summary = WorkbenchService.getSummary();
     const metrics: WorkbenchMetric[] = [];
 
     if (WorkbenchService.canAccessArchiveCenter()) {
       metrics.push({
         id: 'archiveCenter',
         label: '档案中心',
-        value: WorkbenchService.canReviewDeviceChange() ? `${pendingChangeCount}` : '可用',
+        value: WorkbenchService.canReviewDeviceChange() ? `${summary.pendingChangeRequests}` : '可用',
         status: WorkbenchService.canReviewDeviceChange() ? '待审核变更' : '档案查询',
         tone: '#2F6FED'
       });
@@ -30,8 +38,9 @@ export class WorkbenchService {
 
     if (WorkbenchService.canAccessOperationsCenter()) {
       const visibleTaskCount =
-        (SessionStore.hasPermission(PermissionCode.OpsRepairTaskAccept) ? pendingFaultCount : 0) +
-        (SessionStore.hasPermission(PermissionCode.OpsReinspectionCreate) ? pendingReinspectionCount : 0);
+        (SessionStore.hasPermission(PermissionCode.OpsRepairTaskAccept) ? summary.availableRepairTasks : 0) +
+        (SessionStore.hasPermission(PermissionCode.OpsRepairReportCreate) ? summary.activeRepairTasks : 0) +
+        (SessionStore.hasPermission(PermissionCode.OpsReinspectionCreate) ? summary.pendingReinspections : 0);
       metrics.push({
         id: 'operationsCenter',
         label: '运维中心',
@@ -45,7 +54,7 @@ export class WorkbenchService {
       metrics.push({
         id: 'managementCenter',
         label: '管理中心',
-        value: WorkbenchService.canReviewDeviceChange() ? `${pendingChangeCount}` : '可用',
+        value: WorkbenchService.canReviewDeviceChange() ? `${summary.pendingChangeRequests}` : '可用',
         status: WorkbenchService.canReviewDeviceChange() ? '待审核事项' : '操作审计',
         tone: '#845EF7'
       });
@@ -54,7 +63,7 @@ export class WorkbenchService {
     metrics.push({
       id: 'offlineDrafts',
       label: '待同步草稿',
-      value: '0',
+      value: `${summary.offlineDrafts}`,
       status: '离线数据',
       tone: '#087F5B'
     });
@@ -197,15 +206,39 @@ export class WorkbenchService {
   }
 
   static getPendingChangeCount(): number {
-    return ApiClient.isConfigured() ? 0 : LocalDeviceChangeRequestRepository.getPendingCount();
+    return WorkbenchService.getSummary().pendingChangeRequests;
   }
 
   static getPendingFaultCount(): number {
-    return ApiClient.isConfigured() ? 0 : LocalRepairTaskRepository.getPendingAvailableTaskCount();
+    return WorkbenchService.getSummary().availableRepairTasks;
+  }
+
+  static getActiveRepairTaskCount(): number {
+    return WorkbenchService.getSummary().activeRepairTasks;
   }
 
   static getPendingReinspectionCount(): number {
-    return ApiClient.isConfigured() ? 0 : LocalReinspectionRepository.getPendingTaskCount();
+    return WorkbenchService.getSummary().pendingReinspections;
+  }
+
+  static async refreshSummaryRemoteFirst(): Promise<ApiResponse<WorkbenchSummary>> {
+    if (!ApiClient.isConfigured()) {
+      const localSummary = WorkbenchService.createLocalSummary();
+      WorkbenchService.updateCachedSummary(localSummary);
+      return {
+        success: true,
+        data: localSummary,
+        requestId: 'local-workbench-summary',
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    const response = await ApiClient.request<WorkbenchSummary>('/api/v1/workbench/summary', 'GET', true);
+    if (response.success && response.data !== undefined) {
+      WorkbenchService.updateCachedSummary(WorkbenchService.normalizeSummary(response.data));
+    }
+
+    return response;
   }
 
   static canAccessArchiveCenter(): boolean {
@@ -231,5 +264,57 @@ export class WorkbenchService {
       summary,
       tone
     };
+  }
+
+  private static getSummary(): WorkbenchSummary {
+    if (ApiClient.isConfigured()) {
+      return WorkbenchService.cachedSummary === undefined ?
+        WorkbenchService.createEmptySummary() : WorkbenchService.cachedSummary;
+    }
+
+    return WorkbenchService.createLocalSummary();
+  }
+
+  private static createLocalSummary(): WorkbenchSummary {
+    return {
+      pendingChangeRequests: LocalDeviceChangeRequestRepository.getPendingCount(),
+      availableRepairTasks: LocalRepairTaskRepository.getPendingAvailableTaskCount(),
+      activeRepairTasks: LocalRepairTaskRepository.getActiveMyTaskCount(),
+      pendingReinspections: LocalReinspectionRepository.getPendingTaskCount(),
+      offlineDrafts: 0
+    };
+  }
+
+  private static createEmptySummary(): WorkbenchSummary {
+    return {
+      pendingChangeRequests: 0,
+      availableRepairTasks: 0,
+      activeRepairTasks: 0,
+      pendingReinspections: 0,
+      offlineDrafts: 0
+    };
+  }
+
+  private static normalizeSummary(summary: WorkbenchSummary): WorkbenchSummary {
+    return {
+      pendingChangeRequests: WorkbenchService.normalizeCount(summary.pendingChangeRequests),
+      availableRepairTasks: WorkbenchService.normalizeCount(summary.availableRepairTasks),
+      activeRepairTasks: WorkbenchService.normalizeCount(summary.activeRepairTasks),
+      pendingReinspections: WorkbenchService.normalizeCount(summary.pendingReinspections),
+      offlineDrafts: WorkbenchService.normalizeCount(summary.offlineDrafts)
+    };
+  }
+
+  private static normalizeCount(value: number): number {
+    if (value !== value || value < 0) {
+      return 0;
+    }
+
+    return Math.floor(value);
+  }
+
+  private static updateCachedSummary(summary: WorkbenchSummary): void {
+    WorkbenchService.cachedSummary = summary;
+    WorkbenchRefreshStore.notifyChanged();
   }
 }

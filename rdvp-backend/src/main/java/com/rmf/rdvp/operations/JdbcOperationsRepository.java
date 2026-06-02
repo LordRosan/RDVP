@@ -140,6 +140,21 @@ public class JdbcOperationsRepository implements OperationsRepository {
     }
 
     @Override
+    public long countPendingAcceptanceFaults() {
+        Long count = jdbcTemplate.queryForObject(
+                """
+                        SELECT count(*)
+                        FROM fault_reports f
+                        JOIN devices d ON d.id = f.device_id
+                        WHERE f.status = 'PENDING_ACCEPTANCE'
+                          AND d.deleted_at IS NULL
+                        """,
+                Map.of(),
+                Long.class);
+        return count == null ? 0 : count;
+    }
+
+    @Override
     public boolean hasActiveRepairTaskForFault(String faultReportId) {
         Integer count = jdbcTemplate.queryForObject(
                 """
@@ -308,6 +323,21 @@ public class JdbcOperationsRepository implements OperationsRepository {
                         """,
                 Map.of("limit", limit),
                 this::mapReinspectionTask);
+    }
+
+    @Override
+    public long countPendingReinspections() {
+        Long count = jdbcTemplate.queryForObject(
+                """
+                        SELECT count(*)
+                        FROM fault_reports f
+                        JOIN devices d ON d.id = f.device_id
+                        WHERE f.status = 'PENDING_REINSPECTION'
+                          AND d.deleted_at IS NULL
+                        """,
+                Map.of(),
+                Long.class);
+        return count == null ? 0 : count;
     }
 
     @Override

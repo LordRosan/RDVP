@@ -12,6 +12,8 @@ public interface OperationsRepository {
 
     List<AvailableRepairTaskSummary> listAvailableRepairTasks(FaultSeverity severity, int limit);
 
+    long countPendingAcceptanceFaults();
+
     boolean hasActiveRepairTaskForFault(String faultReportId);
 
     int countActiveRepairTasksByMaintainer(String maintainerId);
@@ -25,6 +27,8 @@ public interface OperationsRepository {
     Optional<RepairTaskRecord> findRepairTaskByIdOrNo(String idOrNo);
 
     List<ReinspectionTaskSummary> listPendingReinspections(int limit);
+
+    long countPendingReinspections();
 
     void createRepairReport(RepairReportCreate create);
 

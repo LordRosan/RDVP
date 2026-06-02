@@ -34,3 +34,11 @@ export interface WorkbenchStatusItem {
   value: string;
   tone: string;
 }
+
+export interface WorkbenchSummary {
+  pendingChangeRequests: number;
+  availableRepairTasks: number;
+  activeRepairTasks: number;
+  pendingReinspections: number;
+  offlineDrafts: number;
+}

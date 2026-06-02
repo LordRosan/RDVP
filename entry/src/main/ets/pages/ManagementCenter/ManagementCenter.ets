@@ -217,6 +217,9 @@ struct ManagementCenter {
 
   refreshCenterState(): void {
     this.actions = WorkbenchService.getManagementCenterActions();
+    WorkbenchService.refreshSummaryRemoteFirst().then(() => {
+      this.actions = WorkbenchService.getManagementCenterActions();
+    });
   }
 
   getPendingReviewText(): string {

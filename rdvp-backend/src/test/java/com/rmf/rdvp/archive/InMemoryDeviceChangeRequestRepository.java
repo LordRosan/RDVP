@@ -66,6 +66,14 @@ public class InMemoryDeviceChangeRequestRepository implements DeviceChangeReques
     }
 
     @Override
+    public long countPendingReview() {
+        return requestsById.values()
+                .stream()
+                .filter(item -> item.status() == DeviceChangeRequestStatus.PENDING_REVIEW)
+                .count();
+    }
+
+    @Override
     public boolean hasPendingByDeviceId(String deviceId) {
         return requestsById.values()
                 .stream()

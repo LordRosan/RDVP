@@ -69,6 +69,14 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     }
 
     @Override
+    public long countPendingAcceptanceFaults() {
+        return faultReportsById.values()
+                .stream()
+                .filter(item -> item.status() == FaultStatus.PENDING_ACCEPTANCE)
+                .count();
+    }
+
+    @Override
     public boolean hasActiveRepairTaskForFault(String faultReportId) {
         return repairTasksById.values()
                 .stream()
@@ -157,6 +165,14 @@ public class InMemoryOperationsRepository implements OperationsRepository {
                 .limit(limit)
                 .map(this::toReinspectionTask)
                 .toList();
+    }
+
+    @Override
+    public long countPendingReinspections() {
+        return faultReportsById.values()
+                .stream()
+                .filter(item -> item.status() == FaultStatus.PENDING_REINSPECTION)
+                .count();
     }
 
     @Override

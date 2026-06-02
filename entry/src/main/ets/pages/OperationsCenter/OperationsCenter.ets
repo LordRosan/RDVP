@@ -148,6 +148,12 @@ struct OperationsCenter {
         })
         this.CardDivider()
         StatusInfoRow({
+          label: '已接取维修',
+          value: this.getActiveRepairTaskText(),
+          tone: SessionStore.hasPermission(PermissionCode.OpsRepairReportCreate) ? '#E67700' : '#6B7280'
+        })
+        this.CardDivider()
+        StatusInfoRow({
           label: '待复检任务',
           value: this.getPendingReinspectionText(),
           tone: SessionStore.hasPermission(PermissionCode.OpsReinspectionCreate) ? '#845EF7' : '#6B7280'
@@ -217,6 +223,9 @@ struct OperationsCenter {
 
   refreshCenterState(): void {
     this.actions = WorkbenchService.getOperationsCenterActions();
+    WorkbenchService.refreshSummaryRemoteFirst().then(() => {
+      this.actions = WorkbenchService.getOperationsCenterActions();
+    });
   }
 
   getPendingFaultCount(): number {
@@ -233,6 +242,14 @@ struct OperationsCenter {
     }
 
     return `${this.getPendingFaultCount()}项`;
+  }
+
+  getActiveRepairTaskText(): string {
+    if (!SessionStore.hasPermission(PermissionCode.OpsRepairReportCreate)) {
+      return '无维修报告权限';
+    }
+
+    return `${WorkbenchService.getActiveRepairTaskCount()}项`;
   }
 
   getPendingReinspectionCount(): number {

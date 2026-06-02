@@ -232,6 +232,38 @@ POST /api/v1/auth/logout
 }
 ```
 
+## 5.5 工作台概览接口
+
+```text
+GET /api/v1/workbench/summary
+```
+
+权限要求：登录用户。
+
+该接口为移动端工作台、档案中心、运维中心和管理中心提供概览计数。后端返回原始计数，客户端根据当前用户权限决定展示哪些指标。
+
+响应数据：
+
+```json
+{
+  "pendingChangeRequests": 1,
+  "availableRepairTasks": 2,
+  "activeRepairTasks": 0,
+  "pendingReinspections": 0,
+  "offlineDrafts": 0
+}
+```
+
+字段说明：
+
+| 字段 | 说明 |
+| --- | --- |
+| `pendingChangeRequests` | 待审核的设备档案变更、建档或删除申请数量 |
+| `availableRepairTasks` | 当前处于待接取状态的故障数量 |
+| `activeRepairTasks` | 当前登录维修人员已接取且未提交维修报告的任务数量 |
+| `pendingReinspections` | 当前处于待复检状态的故障数量 |
+| `offlineDrafts` | 当前登录用户待同步的离线草稿数量 |
+
 ## 6. 设备接口
 
 ### 6.1 通过设备编号查询设备

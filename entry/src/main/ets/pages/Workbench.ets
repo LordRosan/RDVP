@@ -31,6 +31,13 @@ struct Workbench {
   }
 
   refreshWorkbenchState(): void {
+    this.applyWorkbenchState();
+    WorkbenchService.refreshSummaryRemoteFirst().then(() => {
+      this.applyWorkbenchState();
+    });
+  }
+
+  applyWorkbenchState(): void {
     this.metrics = WorkbenchService.getMetrics();
     this.actions = WorkbenchService.getActions();
     this.statusItems = WorkbenchService.getStatusItems();
@@ -96,7 +103,7 @@ struct Workbench {
         .fontColor('#111827')
 
       Grid() {
-        ForEach(WorkbenchService.getMetrics(), (item: WorkbenchMetric) => {
+        ForEach(this.metrics, (item: WorkbenchMetric) => {
           GridItem() {
             MetricTile({
               label: item.label,
@@ -162,7 +169,7 @@ struct Workbench {
         .fontColor('#111827')
 
       Column() {
-        ForEach(WorkbenchService.getStatusItems(), (item: WorkbenchStatusItem) => {
+        ForEach(this.statusItems, (item: WorkbenchStatusItem) => {
           Row() {
             Text(item.name)
               .fontSize(14)

@@ -9,6 +9,8 @@ public interface DeviceChangeRequestRepository {
 
     DeviceChangeRequestPage list(DeviceChangeRequestQuery query);
 
+    long countPendingReview();
+
     boolean hasPendingByDeviceId(String deviceId);
 
     boolean hasPendingByTargetDeviceCode(String deviceCode);
