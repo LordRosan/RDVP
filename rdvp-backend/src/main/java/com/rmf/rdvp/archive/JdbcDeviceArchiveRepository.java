@@ -158,6 +158,23 @@ public class JdbcDeviceArchiveRepository implements DeviceArchiveRepository {
     }
 
     @Override
+    public void updateStatus(String id, String status, String updatedBy) {
+        jdbcTemplate.update(
+                """
+                        UPDATE devices
+                        SET status = :status,
+                            updated_at = now(),
+                            updated_by = :updatedBy
+                        WHERE id = :id
+                          AND deleted_at IS NULL
+                        """,
+                new MapSqlParameterSource()
+                        .addValue("id", id)
+                        .addValue("status", status)
+                        .addValue("updatedBy", updatedBy));
+    }
+
+    @Override
     public boolean softDelete(String id, String deletedBy, String deleteReason) {
         int updated = jdbcTemplate.update(
                 """

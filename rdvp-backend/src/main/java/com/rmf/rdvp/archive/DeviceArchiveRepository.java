@@ -12,5 +12,7 @@ public interface DeviceArchiveRepository {
 
     void create(DeviceArchiveCreate create);
 
+    void updateStatus(String id, String status, String updatedBy);
+
     boolean softDelete(String id, String deletedBy, String deleteReason);
 }

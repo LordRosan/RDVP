@@ -32,6 +32,33 @@ public enum ErrorCode {
             "CHANGE_REQUEST_ALREADY_REVIEWED",
             HttpStatus.CONFLICT,
             "Device change request has already been reviewed."),
+    FAULT_REPORT_INVALID("FAULT_REPORT_INVALID", HttpStatus.UNPROCESSABLE_CONTENT, "Fault report is invalid."),
+    FAULT_REPORT_NOT_FOUND("FAULT_REPORT_NOT_FOUND", HttpStatus.NOT_FOUND, "Fault report not found."),
+    FAULT_ALREADY_ACCEPTED("FAULT_ALREADY_ACCEPTED", HttpStatus.CONFLICT, "Fault has already been accepted."),
+    REPAIR_REPORT_INVALID("REPAIR_REPORT_INVALID", HttpStatus.UNPROCESSABLE_CONTENT, "Repair report is invalid."),
+    REPAIR_REPORT_NOT_FOUND("REPAIR_REPORT_NOT_FOUND", HttpStatus.NOT_FOUND, "Repair report not found."),
+    REPAIR_TASK_NOT_FOUND("REPAIR_TASK_NOT_FOUND", HttpStatus.NOT_FOUND, "Repair task not found."),
+    REPAIR_TASK_STATUS_INVALID(
+            "REPAIR_TASK_STATUS_INVALID",
+            HttpStatus.UNPROCESSABLE_CONTENT,
+            "Repair task status does not allow this operation."),
+    REPAIR_TASK_RADIUS_INVALID(
+            "REPAIR_TASK_RADIUS_INVALID",
+            HttpStatus.UNPROCESSABLE_CONTENT,
+            "Repair task radius is invalid."),
+    REPAIR_TASK_RADIUS_EXCEEDS_WORKLOAD(
+            "REPAIR_TASK_RADIUS_EXCEEDS_WORKLOAD",
+            HttpStatus.UNPROCESSABLE_CONTENT,
+            "Repair task radius exceeds current workload policy."),
+    REPAIRER_BUSY("REPAIRER_BUSY", HttpStatus.CONFLICT, "Repairer is too busy to accept more tasks."),
+    REINSPECTION_RECORD_INVALID(
+            "REINSPECTION_RECORD_INVALID",
+            HttpStatus.UNPROCESSABLE_CONTENT,
+            "Reinspection record is invalid."),
+    REINSPECTION_REQUIRED(
+            "REINSPECTION_REQUIRED",
+            HttpStatus.UNPROCESSABLE_CONTENT,
+            "Current fault is not pending reinspection."),
     INTERNAL_ERROR("INTERNAL_ERROR", HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error.");
 
     private final String code;

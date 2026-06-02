@@ -1,0 +1,18 @@
+package com.rmf.rdvp.api.operations;
+
+import com.rmf.rdvp.operations.FaultReportRecord;
+
+public record FaultReportResponse(
+        String id,
+        String faultReportNo,
+        String status,
+        String createdAt) {
+
+    public static FaultReportResponse from(FaultReportRecord record) {
+        return new FaultReportResponse(
+                record.id(),
+                record.faultReportNo(),
+                record.status().name(),
+                record.createdAt().toString());
+    }
+}

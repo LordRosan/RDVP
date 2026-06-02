@@ -729,7 +729,30 @@ POST /api/v1/repair-tasks/{repairTaskId}/repair-reports
 GET /api/v1/reinspections/pending
 ```
 
-支持分页参数。
+响应数据：
+
+```json
+{
+  "items": [
+    {
+      "id": "fault-report-id",
+      "faultReportId": "fault-report-id",
+      "faultReportNo": "RDF-202605270001",
+      "deviceCode": "RDVP-DEVICE-0001",
+      "deviceName": "Cooling Pump A-01",
+      "severity": "SEVERE",
+      "location": {
+        "address": "Plant 1 Power Area",
+        "longitude": 114.1694,
+        "latitude": 22.3193
+      },
+      "repairedAt": "2026-05-27T07:00:00Z",
+      "status": "PENDING_REINSPECTION"
+    }
+  ],
+  "total": 1
+}
+```
 
 ### 13.2 提交复检记录
 
@@ -743,8 +766,7 @@ POST /api/v1/fault-reports/{faultReportId}/reinspection-records
 {
   "result": "PASSED",
   "description": "Repair result verified.",
-  "reinspectedAt": "2026-05-27T07:30:00Z",
-  "attachmentIds": ["attachment-id"]
+  "reinspectedAt": "2026-05-27T07:30:00Z"
 }
 ```
 
@@ -753,6 +775,7 @@ POST /api/v1/fault-reports/{faultReportId}/reinspection-records
 ```json
 {
   "id": "reinspection-record-id",
+  "reinspectionRecordNo": "RDI-202605270001",
   "faultReportId": "fault-report-id",
   "result": "PASSED",
   "nextFaultStatus": "CLOSED",
@@ -1032,9 +1055,15 @@ REINSPECTION_RECORD
 | `CHANGE_REQUEST_ALREADY_REVIEWED` | 设备信息变更申请已审核 |
 | `FAULT_REPORT_NOT_FOUND` | 故障报告不存在 |
 | `FAULT_ALREADY_ACCEPTED` | 故障已被其他维修人员接取 |
+| `REPAIR_REPORT_INVALID` | 维修报告内容无效 |
+| `REPAIR_REPORT_NOT_FOUND` | 维修报告不存在 |
 | `REPAIR_TASK_NOT_FOUND` | 维修任务不存在 |
 | `REPAIR_TASK_STATUS_INVALID` | 维修任务状态不允许当前操作 |
-| `REINSPECTION_REQUIRED` | 当前故障必须复检 |
+| `REPAIR_TASK_RADIUS_INVALID` | 维修任务查询范围无效 |
+| `REPAIR_TASK_RADIUS_EXCEEDS_WORKLOAD` | 查询范围超过当前负载允许范围 |
+| `REPAIRER_BUSY` | 维修人员当前忙碌，不能接取更多任务 |
+| `REINSPECTION_RECORD_INVALID` | 复检记录内容无效 |
+| `REINSPECTION_REQUIRED` | 当前故障不处于待复检状态 |
 | `ATTACHMENT_NOT_FOUND` | 附件不存在 |
 | `ATTACHMENT_TYPE_NOT_ALLOWED` | 附件类型不允许 |
 | `OFFLINE_RECORD_CONFLICT` | 离线记录与服务端当前状态冲突 |

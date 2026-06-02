@@ -151,6 +151,7 @@ rdvp-backend/
     main/java/com/rmf/rdvp/
       api/       HTTP 接口入口和请求响应模型
       archive/   设备档案与二维码核验用例
+      operations/ 故障报告、维修接取、维修报告和复检用例
       identity/  身份认证、角色和权限模型
       security/  安全过滤器和统一鉴权响应
       config/    运行配置
@@ -159,7 +160,7 @@ rdvp-backend/
       Flyway 数据库迁移
 ```
 
-当前 `backend-service` 是早期 TypeScript 原型，用于保留业务流转验证样例；正式后端实现以 `rdvp-backend` 为准。后续新增故障、维修、复检、审计和附件能力时，应继续保持接口层、业务用例层、领域规则和基础设施适配的职责边界清晰。
+当前 `backend-service` 是早期 TypeScript 原型，用于保留业务流转验证样例；正式后端实现以 `rdvp-backend` 为准。后续新增审计、附件和通知能力时，应继续保持接口层、业务用例层、领域规则和基础设施适配的职责边界清晰。
 
 分层规则：
 
@@ -355,7 +356,7 @@ Web Admin Console
 
 以下技术选型后续需要单独确认：
 
-- 故障、维修、复检和审计 API 的 Spring Boot 实现顺序。
+- 审计、附件和通知 API 的 Spring Boot 实现顺序。
 - 文件存储方式。
 - 推送服务实现方式。
 - 二维码密钥轮换和密钥管理方式。

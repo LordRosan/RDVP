@@ -105,6 +105,27 @@ public class InMemoryDeviceArchiveRepository implements DeviceArchiveRepository 
     }
 
     @Override
+    public void updateStatus(String id, String status, String updatedBy) {
+        DeviceArchive device = devicesById.get(id);
+        if (device == null) {
+            return;
+        }
+
+        devicesById.put(id, new DeviceArchive(
+                device.id(),
+                device.deviceCode(),
+                device.name(),
+                device.model(),
+                device.manufacturer(),
+                status,
+                device.address(),
+                device.longitude(),
+                device.latitude(),
+                device.lastVerificationTime(),
+                device.changeState()));
+    }
+
+    @Override
     public boolean softDelete(String id, String deletedBy, String deleteReason) {
         DeviceArchive removed = devicesById.remove(id);
         if (removed == null) {

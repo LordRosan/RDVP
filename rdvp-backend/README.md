@@ -135,6 +135,18 @@ POST http://localhost:8080/api/v1/device-change-requests/{requestId}/review
 }
 ```
 
+故障、维修和复检流程：
+
+```text
+POST http://localhost:8080/api/v1/fault-reports
+GET http://localhost:8080/api/v1/repair-tasks/available?radiusKm=10
+POST http://localhost:8080/api/v1/fault-reports/{faultReportId}/accept
+GET http://localhost:8080/api/v1/repair-tasks/my
+POST http://localhost:8080/api/v1/repair-tasks/{repairTaskId}/repair-reports
+GET http://localhost:8080/api/v1/reinspections/pending
+POST http://localhost:8080/api/v1/fault-reports/{faultReportId}/reinspection-records
+```
+
 ## 本地引导账号
 
 | 用户名 | 密码 | 角色 |
