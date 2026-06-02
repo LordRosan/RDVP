@@ -269,10 +269,25 @@ export class DeviceService {
     }
 
     if (DeviceService.isArchiveChangeLocked(device) && changeState.freezeUntil !== undefined) {
-      return `变更冻结中，${changeState.freezeUntil} 后可再次修改`;
+      return `变更冻结中，${DeviceService.formatTimestampForDisplay(changeState.freezeUntil)} 后可再次修改`;
     }
 
     return '可申请变更';
+  }
+
+  static formatTimestampForDisplay(value?: string): string {
+    if (value === undefined || value.trim().length === 0) {
+      return '-';
+    }
+
+    const timestamp = Date.parse(value);
+    if (timestamp !== timestamp) {
+      return value;
+    }
+
+    const date = new Date(timestamp);
+    return `${date.getFullYear()}-${DeviceService.pad2(date.getMonth() + 1)}-${DeviceService.pad2(
+      date.getDate())} ${DeviceService.pad2(date.getHours())}:${DeviceService.pad2(date.getMinutes())}`;
   }
 
   private static queryLocalArchiveByCode(deviceCode: string): ApiResponse<DeviceSummary> {
@@ -312,5 +327,9 @@ export class DeviceService {
       requestId: 'local-device-archive',
       timestamp: new Date().toISOString()
     };
+  }
+
+  private static pad2(value: number): string {
+    return value < 10 ? `0${value}` : `${value}`;
   }
 }

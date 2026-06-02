@@ -42,7 +42,7 @@ class DeviceArchiveControllerTests {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.id").value("device-local-0001"))
                 .andExpect(jsonPath("$.data.deviceCode").value("RDVP-DEVICE-0001"))
-                .andExpect(jsonPath("$.data.name").value("Cooling Pump A-01"))
+                .andExpect(jsonPath("$.data.name").value("冷却泵A-01"))
                 .andExpect(jsonPath("$.data.status").value("NORMAL"))
                 .andExpect(jsonPath("$.data.changeState.locked").value(false));
     }

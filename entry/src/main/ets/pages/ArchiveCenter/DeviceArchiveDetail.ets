@@ -253,7 +253,7 @@ struct DeviceArchiveDetail {
         this.CardDivider()
         StatusInfoRow({
           label: '最近核验',
-          value: this.device.lastVerificationTime ? this.device.lastVerificationTime : '-',
+          value: DeviceService.formatTimestampForDisplay(this.device.lastVerificationTime),
           tone: '#374151',
           valueMaxLines: 2,
           verticalPadding: 12

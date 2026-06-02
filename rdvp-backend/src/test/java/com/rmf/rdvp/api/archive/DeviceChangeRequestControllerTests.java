@@ -36,7 +36,7 @@ class DeviceChangeRequestControllerTests {
     void createsChangeRequestAndLocksArchiveEntry() throws Exception {
         String token = login("fieldoperator", "password");
 
-        String requestId = createNameChange(token, "Cooling Pump A-02");
+        String requestId = createNameChange(token, "冷却泵A-02");
 
         mockMvc.perform(get("/api/v1/devices/device-local-0001")
                         .header("Authorization", "Bearer " + token))
@@ -57,14 +57,14 @@ class DeviceChangeRequestControllerTests {
                 .andExpect(jsonPath("$.data.items[0].id").value("DCR-LOCAL-0002"))
                 .andExpect(jsonPath("$.data.items[0].applicantName").value("现场运维人员"))
                 .andExpect(jsonPath("$.data.items[0].changes['location.address'].newValue")
-                        .value("Plant 2 Packaging Area Section A"));
+                        .value("二号厂房包装区A段"));
     }
 
     @Test
     void approvesChangeRequestAndAppliesArchiveUpdate() throws Exception {
         String applicantToken = login("fieldoperator", "password");
         String reviewerToken = login("deviceadmin", "password");
-        String requestId = createNameChange(applicantToken, "Cooling Pump A-02");
+        String requestId = createNameChange(applicantToken, "冷却泵A-02");
 
         mockMvc.perform(post("/api/v1/device-change-requests/{requestId}/review", requestId)
                         .header("Authorization", "Bearer " + reviewerToken)
@@ -85,7 +85,7 @@ class DeviceChangeRequestControllerTests {
         mockMvc.perform(get("/api/v1/devices/device-local-0001")
                         .header("Authorization", "Bearer " + reviewerToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.name").value("Cooling Pump A-02"))
+                .andExpect(jsonPath("$.data.name").value("冷却泵A-02"))
                 .andExpect(jsonPath("$.data.changeState.locked").value(true))
                 .andExpect(jsonPath("$.data.changeState.pendingRequestId").doesNotExist())
                 .andExpect(jsonPath("$.data.changeState.freezeUntil").isString());
@@ -95,7 +95,7 @@ class DeviceChangeRequestControllerTests {
     void rejectsRepeatedChangeRequestReview() throws Exception {
         String applicantToken = login("fieldoperator", "password");
         String reviewerToken = login("deviceadmin", "password");
-        String requestId = createNameChange(applicantToken, "Cooling Pump A-02");
+        String requestId = createNameChange(applicantToken, "冷却泵A-02");
 
         mockMvc.perform(post("/api/v1/device-change-requests/{requestId}/review", requestId)
                         .header("Authorization", "Bearer " + reviewerToken)
@@ -140,7 +140,7 @@ class DeviceChangeRequestControllerTests {
                                 {
                                   "decision": "APPROVED",
                                   "reviewedAt": "2026-06-01T09:00:00Z",
-                                  "reviewComment": "New device accepted."
+                                  "reviewComment": "新增设备审核通过。"
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -151,7 +151,7 @@ class DeviceChangeRequestControllerTests {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.deviceCode").value("RDVP-DEVICE-0099"))
-                .andExpect(jsonPath("$.data.name").value("Inspection Gateway G-99"))
+                .andExpect(jsonPath("$.data.name").value("巡检网关G-99"))
                 .andExpect(jsonPath("$.data.status").value("PENDING_VERIFICATION"));
     }
 
@@ -173,7 +173,7 @@ class DeviceChangeRequestControllerTests {
                                 {
                                   "decision": "APPROVED",
                                   "reviewedAt": "2026-06-01T10:00:00Z",
-                                  "reviewComment": "Device retired."
+                                  "reviewComment": "设备退役。"
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -195,11 +195,11 @@ class DeviceChangeRequestControllerTests {
                         .content("""
                                 {
                                   "deviceId": "device-local-0002",
-                                  "reason": "Location correction.",
+                                  "reason": "位置修正。",
                                   "changes": {
                                     "location.address": {
-                                      "oldValue": "Plant 2 Packaging Area",
-                                      "newValue": "Plant 2 Packaging Area Section B"
+                                      "oldValue": "二号厂房包装区",
+                                      "newValue": "二号厂房包装区B段"
                                     }
                                   }
                                 }
@@ -218,11 +218,11 @@ class DeviceChangeRequestControllerTests {
                         .content("""
                                 {
                                   "deviceId": "device-local-0003",
-                                  "reason": "Name correction.",
+                                  "reason": "名称修正。",
                                   "changes": {
                                     "name": {
-                                      "oldValue": "Energy Cabinet C-03",
-                                      "newValue": "Energy Cabinet C-04"
+                                      "oldValue": "储能柜C-03",
+                                      "newValue": "储能柜C-04"
                                     }
                                   }
                                 }
@@ -241,11 +241,11 @@ class DeviceChangeRequestControllerTests {
                         .content("""
                                 {
                                   "deviceId": "device-local-0001",
-                                  "reason": "Name correction.",
+                                  "reason": "名称修正。",
                                   "changes": {
                                     "name": {
                                       "oldValue": "Wrong Name",
-                                      "newValue": "Cooling Pump A-02"
+                                      "newValue": "冷却泵A-02"
                                     }
                                   }
                                 }
@@ -271,10 +271,10 @@ class DeviceChangeRequestControllerTests {
                         .content("""
                                 {
                                   "deviceId": "device-local-0001",
-                                  "reason": "Name correction.",
+                                  "reason": "名称修正。",
                                   "changes": {
                                     "name": {
-                                      "oldValue": "Cooling Pump A-01",
+                                      "oldValue": "冷却泵A-01",
                                       "newValue": "%s"
                                     }
                                   }
@@ -301,19 +301,19 @@ class DeviceChangeRequestControllerTests {
                                 {
                                   "type": "CREATE",
                                   "deviceCode": "%s",
-                                  "reason": "New device installation.",
+                                  "reason": "新增设备安装。",
                                   "changes": {
                                     "name": {
-                                      "newValue": "Inspection Gateway G-99"
+                                      "newValue": "巡检网关G-99"
                                     },
                                     "model": {
                                       "newValue": "IG-900"
                                     },
                                     "manufacturer": {
-                                      "newValue": "North Equipment"
+                                      "newValue": "北方设备"
                                     },
                                     "location.address": {
-                                      "newValue": "Plant 9 Inspection Area"
+                                      "newValue": "九号厂房巡检区"
                                     }
                                   }
                                 }
@@ -339,7 +339,7 @@ class DeviceChangeRequestControllerTests {
                                 {
                                   "type": "DELETE",
                                   "deviceId": "%s",
-                                  "reason": "Device retired."
+                                  "reason": "设备退役。"
                                 }
                                 """.formatted(deviceId)))
                 .andExpect(status().isOk())
