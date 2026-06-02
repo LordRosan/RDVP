@@ -105,9 +105,10 @@ public class JdbcOperationsRepository implements OperationsRepository {
     }
 
     @Override
-    public List<AvailableRepairTaskSummary> listAvailableRepairTasks(FaultSeverity severity) {
+    public List<AvailableRepairTaskSummary> listAvailableRepairTasks(FaultSeverity severity, int limit) {
         List<String> conditions = new ArrayList<>();
-        MapSqlParameterSource parameters = new MapSqlParameterSource();
+        MapSqlParameterSource parameters = new MapSqlParameterSource()
+                .addValue("limit", limit);
         conditions.add("f.status = 'PENDING_ACCEPTANCE'");
         conditions.add("d.deleted_at IS NULL");
         if (severity != null) {
@@ -132,6 +133,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                         JOIN devices d ON d.id = f.device_id
                         WHERE %s
                         ORDER BY f.created_at DESC
+                        LIMIT :limit
                         """.formatted(String.join(" AND ", conditions)),
                 parameters,
                 this::mapAvailableRepairTask);
@@ -204,23 +206,26 @@ public class JdbcOperationsRepository implements OperationsRepository {
     }
 
     @Override
-    public void markFaultAccepted(String faultReportId, String repairTaskId, OffsetDateTime updatedAt) {
-        jdbcTemplate.update(
+    public boolean markFaultAccepted(String faultReportId, String repairTaskId, OffsetDateTime updatedAt) {
+        int updated = jdbcTemplate.update(
                 """
                         UPDATE fault_reports
                         SET status = 'ACCEPTED',
                             accepted_task_id = :repairTaskId,
                             updated_at = :updatedAt
                         WHERE id = :faultReportId
+                          AND status = 'PENDING_ACCEPTANCE'
+                          AND accepted_task_id IS NULL
                         """,
                 new MapSqlParameterSource()
                         .addValue("faultReportId", faultReportId)
                         .addValue("repairTaskId", repairTaskId)
                         .addValue("updatedAt", updatedAt));
+        return updated > 0;
     }
 
     @Override
-    public List<MyRepairTaskSummary> listMyRepairTasks(String maintainerId) {
+    public List<MyRepairTaskSummary> listMyRepairTasks(String maintainerId, int limit) {
         return jdbcTemplate.query(
                 """
                         SELECT
@@ -240,8 +245,9 @@ public class JdbcOperationsRepository implements OperationsRepository {
                           AND rt.status <> 'REPORT_SUBMITTED'
                           AND d.deleted_at IS NULL
                         ORDER BY rt.accepted_at DESC
+                        LIMIT :limit
                         """,
-                Map.of("maintainerId", maintainerId),
+                Map.of("maintainerId", maintainerId, "limit", limit),
                 this::mapMyRepairTask);
     }
 
@@ -272,7 +278,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
     }
 
     @Override
-    public List<ReinspectionTaskSummary> listPendingReinspections() {
+    public List<ReinspectionTaskSummary> listPendingReinspections(int limit) {
         return jdbcTemplate.query(
                 """
                         SELECT
@@ -298,8 +304,9 @@ public class JdbcOperationsRepository implements OperationsRepository {
                         WHERE f.status = 'PENDING_REINSPECTION'
                           AND d.deleted_at IS NULL
                         ORDER BY f.updated_at DESC
+                        LIMIT :limit
                         """,
-                Map.of(),
+                Map.of("limit", limit),
                 this::mapReinspectionTask);
     }
 
@@ -374,23 +381,29 @@ public class JdbcOperationsRepository implements OperationsRepository {
     }
 
     @Override
-    public void markRepairTaskReported(String repairTaskId, OffsetDateTime completedAt) {
-        jdbcTemplate.update(
+    public boolean markRepairTaskReported(String repairTaskId, OffsetDateTime completedAt) {
+        int updated = jdbcTemplate.update(
                 """
                         UPDATE repair_tasks
                         SET status = 'REPORT_SUBMITTED',
                             completed_at = :completedAt,
                             updated_at = :completedAt
                         WHERE id = :repairTaskId
+                          AND status IN ('ACCEPTED', 'PROCESSING')
                         """,
                 new MapSqlParameterSource()
                         .addValue("repairTaskId", repairTaskId)
                         .addValue("completedAt", completedAt));
+        return updated > 0;
     }
 
     @Override
-    public void updateFaultStatus(String faultReportId, FaultStatus status, OffsetDateTime updatedAt) {
-        jdbcTemplate.update(
+    public boolean updateFaultStatusIfCurrent(
+            String faultReportId,
+            FaultStatus expectedStatus,
+            FaultStatus status,
+            OffsetDateTime updatedAt) {
+        int updated = jdbcTemplate.update(
                 """
                         UPDATE fault_reports
                         SET status = :status,
@@ -398,11 +411,14 @@ public class JdbcOperationsRepository implements OperationsRepository {
                             accepted_task_id = CASE WHEN :status = 'PENDING_ACCEPTANCE' THEN NULL ELSE accepted_task_id END,
                             updated_at = :updatedAt
                         WHERE id = :faultReportId
+                          AND status = :expectedStatus
                         """,
                 new MapSqlParameterSource()
                         .addValue("faultReportId", faultReportId)
+                        .addValue("expectedStatus", expectedStatus.name())
                         .addValue("status", status.name())
                         .addValue("updatedAt", updatedAt));
+        return updated > 0;
     }
 
     @Override

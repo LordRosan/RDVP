@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -85,6 +86,23 @@ public class GlobalExceptionHandler {
                 ErrorCode.FORBIDDEN.status(),
                 ErrorCode.FORBIDDEN.code(),
                 ErrorCode.FORBIDDEN.defaultMessage(),
+                request,
+                null);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(
+            DataIntegrityViolationException exception,
+            HttpServletRequest request) {
+        LOGGER.warn(
+                "Database state conflict. requestId={}, method={}, path={}",
+                RequestIds.resolve(request),
+                request.getMethod(),
+                request.getRequestURI());
+        return build(
+                ErrorCode.CONFLICT.status(),
+                ErrorCode.CONFLICT.code(),
+                ErrorCode.CONFLICT.defaultMessage(),
                 request,
                 null);
     }

@@ -92,6 +92,38 @@ class DeviceChangeRequestControllerTests {
     }
 
     @Test
+    void rejectsRepeatedChangeRequestReview() throws Exception {
+        String applicantToken = login("fieldoperator", "password");
+        String reviewerToken = login("deviceadmin", "password");
+        String requestId = createNameChange(applicantToken, "Cooling Pump A-02");
+
+        mockMvc.perform(post("/api/v1/device-change-requests/{requestId}/review", requestId)
+                        .header("Authorization", "Bearer " + reviewerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "decision": "APPROVED",
+                                  "reviewedAt": "2026-06-01T08:00:00Z",
+                                  "reviewComment": "Approved."
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/device-change-requests/{requestId}/review", requestId)
+                        .header("Authorization", "Bearer " + reviewerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "decision": "REJECTED",
+                                  "reviewedAt": "2026-06-01T08:05:00Z",
+                                  "reviewComment": "Repeated review must be rejected."
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("CHANGE_REQUEST_ALREADY_REVIEWED"));
+    }
+
+    @Test
     void createsDeviceArchiveOnlyAfterCreateRequestApproval() throws Exception {
         String token = login("deviceadmin", "password");
         String requestId = createArchiveCreateRequest(token, "RDVP-DEVICE-0099");

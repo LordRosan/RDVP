@@ -122,7 +122,7 @@ public class InMemoryDeviceChangeRequestRepository implements DeviceChangeReques
     }
 
     @Override
-    public void applyApprovedReview(
+    public boolean applyApprovedReview(
             String requestId,
             String reviewerId,
             String reviewComment,
@@ -130,6 +130,10 @@ public class InMemoryDeviceChangeRequestRepository implements DeviceChangeReques
             OffsetDateTime freezeUntil,
             DeviceArchiveUpdate archiveUpdate) {
         DeviceChangeRequest request = requestsById.get(requestId);
+        if (request == null || request.status() != DeviceChangeRequestStatus.PENDING_REVIEW) {
+            return false;
+        }
+
         requestsById.put(requestId, new DeviceChangeRequest(
                 request.id(),
                 request.type(),
@@ -147,16 +151,21 @@ public class InMemoryDeviceChangeRequestRepository implements DeviceChangeReques
                 reviewedAt,
                 freezeUntil));
         archiveRepository.applyUpdate(archiveUpdate, freezeUntil);
+        return true;
     }
 
     @Override
-    public void markApprovedReview(
+    public boolean markApprovedReview(
             String requestId,
             String reviewerId,
             String reviewComment,
             OffsetDateTime reviewedAt,
             OffsetDateTime freezeUntil) {
         DeviceChangeRequest request = requestsById.get(requestId);
+        if (request == null || request.status() != DeviceChangeRequestStatus.PENDING_REVIEW) {
+            return false;
+        }
+
         requestsById.put(requestId, new DeviceChangeRequest(
                 request.id(),
                 request.type(),
@@ -176,15 +185,20 @@ public class InMemoryDeviceChangeRequestRepository implements DeviceChangeReques
         if (request.deviceId() != null) {
             archiveRepository.clearPending(request.deviceId());
         }
+        return true;
     }
 
     @Override
-    public void applyRejectedReview(
+    public boolean applyRejectedReview(
             String requestId,
             String reviewerId,
             String reviewComment,
             OffsetDateTime reviewedAt) {
         DeviceChangeRequest request = requestsById.get(requestId);
+        if (request == null || request.status() != DeviceChangeRequestStatus.PENDING_REVIEW) {
+            return false;
+        }
+
         requestsById.put(requestId, new DeviceChangeRequest(
                 request.id(),
                 request.type(),
@@ -204,6 +218,7 @@ public class InMemoryDeviceChangeRequestRepository implements DeviceChangeReques
         if (request.deviceId() != null) {
             archiveRepository.clearPending(request.deviceId());
         }
+        return true;
     }
 
     private String resolveDeviceName(DeviceArchive device, Map<String, DeviceChangeValue> changes) {

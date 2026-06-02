@@ -224,6 +224,36 @@ class OperationsControllerTests {
     }
 
     @Test
+    void rejectsRepeatedRepairReportSubmission() throws Exception {
+        String operatorToken = login("fieldoperator", "password");
+        String maintainerToken = login("maintainer", "password");
+
+        String faultId = createFaultReport(
+                operatorToken,
+                "RDVP-DEVICE-0001",
+                "ENERGY_FAULT",
+                "GENERAL",
+                "Power supply fluctuates under load.");
+        String repairTaskId = acceptFaultReport(maintainerToken, faultId);
+
+        submitRepairReport(maintainerToken, repairTaskId);
+
+        mockMvc.perform(post("/api/v1/repair-tasks/{repairTaskId}/repair-reports", repairTaskId)
+                        .header("Authorization", "Bearer " + maintainerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "result": "REPAIRED",
+                                  "repairedAt": "2026-05-29T06:05:00Z",
+                                  "processDescription": "Duplicate report submission.",
+                                  "partsUsed": ""
+                                }
+                                """))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.error.code").value("REPAIR_TASK_STATUS_INVALID"));
+    }
+
+    @Test
     void reopensFaultWhenReinspectionFails() throws Exception {
         String operatorToken = login("fieldoperator", "password");
         String maintainerToken = login("maintainer", "password");
@@ -274,6 +304,47 @@ class OperationsControllerTests {
     }
 
     @Test
+    void rejectsRepeatedReinspectionRecordSubmission() throws Exception {
+        String operatorToken = login("fieldoperator", "password");
+        String maintainerToken = login("maintainer", "password");
+        String reinspectorToken = login("reinspector", "password");
+
+        String faultId = createFaultReport(
+                operatorToken,
+                "RDVP-DEVICE-0001",
+                "HARDWARE_DAMAGE",
+                "SEVERE",
+                "Primary bearing assembly is unstable.");
+        String repairTaskId = acceptFaultReport(maintainerToken, faultId);
+        submitRepairReport(maintainerToken, repairTaskId);
+
+        mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-records", faultId)
+                        .header("Authorization", "Bearer " + reinspectorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "result": "PASSED",
+                                  "reinspectedAt": "2026-05-29T07:00:00Z",
+                                  "description": "Reinspection confirms stable operation."
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-records", faultId)
+                        .header("Authorization", "Bearer " + reinspectorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "result": "FAILED",
+                                  "reinspectedAt": "2026-05-29T07:05:00Z",
+                                  "description": "Repeated reinspection must be rejected."
+                                }
+                                """))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.error.code").value("REINSPECTION_REQUIRED"));
+    }
+
+    @Test
     void protectsOperationsEndpointsByPermission() throws Exception {
         String readonlyToken = login("readonly", "password");
 
@@ -319,6 +390,21 @@ class OperationsControllerTests {
                 .getContentAsString(StandardCharsets.UTF_8);
 
         return objectMapper.readTree(response).path("data").path("id").asText();
+    }
+
+    private void submitRepairReport(String token, String repairTaskId) throws Exception {
+        mockMvc.perform(post("/api/v1/repair-tasks/{repairTaskId}/repair-reports", repairTaskId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "result": "REPAIRED",
+                                  "repairedAt": "2026-05-29T06:00:00Z",
+                                  "processDescription": "Replaced unstable connector and completed load verification.",
+                                  "partsUsed": "Connector x1"
+                                }
+                                """))
+                .andExpect(status().isOk());
     }
 
     private String acceptFaultReport(String token, String faultId) throws Exception {

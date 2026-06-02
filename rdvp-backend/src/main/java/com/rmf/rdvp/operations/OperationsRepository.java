@@ -10,7 +10,7 @@ public interface OperationsRepository {
 
     Optional<FaultReportRecord> findFaultReportByIdOrNo(String idOrNo);
 
-    List<AvailableRepairTaskSummary> listAvailableRepairTasks(FaultSeverity severity);
+    List<AvailableRepairTaskSummary> listAvailableRepairTasks(FaultSeverity severity, int limit);
 
     boolean hasActiveRepairTaskForFault(String faultReportId);
 
@@ -18,21 +18,25 @@ public interface OperationsRepository {
 
     void createRepairTask(RepairTaskCreate create);
 
-    void markFaultAccepted(String faultReportId, String repairTaskId, OffsetDateTime updatedAt);
+    boolean markFaultAccepted(String faultReportId, String repairTaskId, OffsetDateTime updatedAt);
 
-    List<MyRepairTaskSummary> listMyRepairTasks(String maintainerId);
+    List<MyRepairTaskSummary> listMyRepairTasks(String maintainerId, int limit);
 
     Optional<RepairTaskRecord> findRepairTaskByIdOrNo(String idOrNo);
 
-    List<ReinspectionTaskSummary> listPendingReinspections();
+    List<ReinspectionTaskSummary> listPendingReinspections(int limit);
 
     void createRepairReport(RepairReportCreate create);
 
     Optional<RepairReportRecord> findLatestRepairReportByFaultReportId(String faultReportId);
 
-    void markRepairTaskReported(String repairTaskId, OffsetDateTime completedAt);
+    boolean markRepairTaskReported(String repairTaskId, OffsetDateTime completedAt);
 
-    void updateFaultStatus(String faultReportId, FaultStatus status, OffsetDateTime updatedAt);
+    boolean updateFaultStatusIfCurrent(
+            String faultReportId,
+            FaultStatus expectedStatus,
+            FaultStatus status,
+            OffsetDateTime updatedAt);
 
     void createReinspectionRecord(ReinspectionRecordCreate create);
 }

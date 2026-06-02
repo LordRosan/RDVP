@@ -57,12 +57,13 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     }
 
     @Override
-    public List<AvailableRepairTaskSummary> listAvailableRepairTasks(FaultSeverity severity) {
+    public List<AvailableRepairTaskSummary> listAvailableRepairTasks(FaultSeverity severity, int limit) {
         return faultReportsById.values()
                 .stream()
                 .filter(item -> item.status() == FaultStatus.PENDING_ACCEPTANCE)
                 .filter(item -> severity == null || item.severity() == severity)
                 .sorted(Comparator.comparing(FaultReportRecord::createdAt).reversed())
+                .limit(limit)
                 .map(this::toAvailableTask)
                 .toList();
     }
@@ -102,8 +103,12 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     }
 
     @Override
-    public void markFaultAccepted(String faultReportId, String repairTaskId, OffsetDateTime updatedAt) {
+    public boolean markFaultAccepted(String faultReportId, String repairTaskId, OffsetDateTime updatedAt) {
         FaultReportRecord fault = faultReportsById.get(faultReportId);
+        if (fault == null || fault.status() != FaultStatus.PENDING_ACCEPTANCE || fault.acceptedTaskId() != null) {
+            return false;
+        }
+
         faultReportsById.put(faultReportId, new FaultReportRecord(
                 fault.id(),
                 fault.faultReportNo(),
@@ -120,15 +125,17 @@ public class InMemoryOperationsRepository implements OperationsRepository {
                 repairTaskId,
                 fault.createdAt(),
                 updatedAt));
+        return true;
     }
 
     @Override
-    public List<MyRepairTaskSummary> listMyRepairTasks(String maintainerId) {
+    public List<MyRepairTaskSummary> listMyRepairTasks(String maintainerId, int limit) {
         return repairTasksById.values()
                 .stream()
                 .filter(item -> item.maintainerId().equals(maintainerId))
                 .filter(item -> item.status() != RepairTaskStatus.REPORT_SUBMITTED)
                 .sorted(Comparator.comparing(RepairTaskRecord::acceptedAt).reversed())
+                .limit(limit)
                 .map(this::toMyTask)
                 .toList();
     }
@@ -142,11 +149,12 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     }
 
     @Override
-    public List<ReinspectionTaskSummary> listPendingReinspections() {
+    public List<ReinspectionTaskSummary> listPendingReinspections(int limit) {
         return faultReportsById.values()
                 .stream()
                 .filter(item -> item.status() == FaultStatus.PENDING_REINSPECTION)
                 .sorted(Comparator.comparing(FaultReportRecord::updatedAt).reversed())
+                .limit(limit)
                 .map(this::toReinspectionTask)
                 .toList();
     }
@@ -176,8 +184,12 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     }
 
     @Override
-    public void markRepairTaskReported(String repairTaskId, OffsetDateTime completedAt) {
+    public boolean markRepairTaskReported(String repairTaskId, OffsetDateTime completedAt) {
         RepairTaskRecord task = repairTasksById.get(repairTaskId);
+        if (task == null || (task.status() != RepairTaskStatus.ACCEPTED && task.status() != RepairTaskStatus.PROCESSING)) {
+            return false;
+        }
+
         repairTasksById.put(repairTaskId, new RepairTaskRecord(
                 task.id(),
                 task.repairTaskNo(),
@@ -190,11 +202,20 @@ public class InMemoryOperationsRepository implements OperationsRepository {
                 task.acceptedLatitude(),
                 task.acceptedAt(),
                 completedAt));
+        return true;
     }
 
     @Override
-    public void updateFaultStatus(String faultReportId, FaultStatus status, OffsetDateTime updatedAt) {
+    public boolean updateFaultStatusIfCurrent(
+            String faultReportId,
+            FaultStatus expectedStatus,
+            FaultStatus status,
+            OffsetDateTime updatedAt) {
         FaultReportRecord fault = faultReportsById.get(faultReportId);
+        if (fault == null || fault.status() != expectedStatus) {
+            return false;
+        }
+
         faultReportsById.put(faultReportId, new FaultReportRecord(
                 fault.id(),
                 fault.faultReportNo(),
@@ -211,6 +232,7 @@ public class InMemoryOperationsRepository implements OperationsRepository {
                 status == FaultStatus.PENDING_ACCEPTANCE ? null : fault.acceptedTaskId(),
                 fault.createdAt(),
                 updatedAt));
+        return true;
     }
 
     @Override

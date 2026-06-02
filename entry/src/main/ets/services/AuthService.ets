@@ -12,6 +12,10 @@ interface LoginApiResult {
   user: AuthenticatedUser;
 }
 
+interface PasswordVerificationApiResult {
+  verified: boolean;
+}
+
 export class AuthService {
   static validateLoginForm(form: LoginForm): LoginValidationResult {
     const username = form.username.trim();
@@ -160,10 +164,12 @@ export class AuthService {
       };
     }
 
-    const response = await ApiClient.request<LoginApiResult>('/api/v1/auth/login', 'POST', false, JSON.stringify({
-      username: currentUser.username,
-      password
-    }));
+    const response = await ApiClient.request<PasswordVerificationApiResult>(
+      '/api/v1/auth/password-verification',
+      'POST',
+      true,
+      JSON.stringify({ password })
+    );
     if (!response.success) {
       return {
         success: false,
@@ -175,7 +181,7 @@ export class AuthService {
 
     return {
       success: true,
-      data: true,
+      data: response.data !== undefined && response.data.verified,
       requestId: response.requestId,
       timestamp: response.timestamp
     };

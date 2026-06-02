@@ -220,6 +220,8 @@ export class ApiClient {
         return ApiErrorCode.NotFound;
       case 409:
         return ApiErrorCode.Conflict;
+      case 422:
+        return ApiErrorCode.ValidationFailed;
       case 429:
         return ApiErrorCode.RateLimited;
       default:
@@ -239,6 +241,8 @@ export class ApiClient {
         return '未找到请求资源';
       case 409:
         return '当前状态不允许执行该操作';
+      case 422:
+        return '提交内容未通过校验，请检查后重试';
       case 429:
         return '请求过于频繁，请稍后再试';
       default:

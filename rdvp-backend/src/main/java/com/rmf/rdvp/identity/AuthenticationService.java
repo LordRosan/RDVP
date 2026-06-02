@@ -52,6 +52,17 @@ public class AuthenticationService {
                 .map(BootstrapUser::toAuthenticatedUser);
     }
 
+    public boolean verifyPassword(AuthenticatedUser authenticatedUser, String password) {
+        if (authenticatedUser == null || password == null || password.isBlank()) {
+            return false;
+        }
+
+        return userStore.findById(authenticatedUser.id())
+                .filter(user -> user.status() == UserStatus.ACTIVE)
+                .filter(user -> passwordEncoder.matches(password, user.passwordHash()))
+                .isPresent();
+    }
+
     public void logout(String token) {
         tokenSessionStore.remove(token);
     }

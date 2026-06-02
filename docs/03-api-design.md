@@ -190,7 +190,35 @@ GET /api/v1/auth/me
 }
 ```
 
-### 5.3 退出登录
+### 5.3 当前用户密码校验
+
+```text
+POST /api/v1/auth/password-verification
+```
+
+权限要求：登录用户。
+
+该接口用于删除档案等敏感操作前的二次校验。校验当前登录用户的密码，不创建新的登录会话。
+
+请求体：
+
+```json
+{
+  "password": "password"
+}
+```
+
+响应数据：
+
+```json
+{
+  "verified": true
+}
+```
+
+校验失败时返回 `INVALID_CREDENTIALS`。
+
+### 5.4 退出登录
 
 ```text
 POST /api/v1/auth/logout

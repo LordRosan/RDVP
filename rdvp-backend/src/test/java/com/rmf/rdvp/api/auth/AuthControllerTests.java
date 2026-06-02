@@ -94,6 +94,39 @@ class AuthControllerTests {
     }
 
     @Test
+    void verifiesCurrentUserPasswordWithoutCreatingSession() throws Exception {
+        String token = login("deviceadmin", "password");
+
+        mockMvc.perform(post("/api/v1/auth/password-verification")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "password": "password"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.verified").value(true));
+
+        mockMvc.perform(post("/api/v1/auth/password-verification")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "password": "wrong"
+                                }
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
+
+        mockMvc.perform(get("/api/v1/auth/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.username").value("deviceadmin"));
+    }
+
+    @Test
     void validatesLoginRequest() throws Exception {
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

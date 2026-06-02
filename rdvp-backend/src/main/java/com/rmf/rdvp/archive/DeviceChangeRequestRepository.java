@@ -17,7 +17,7 @@ public interface DeviceChangeRequestRepository {
 
     void create(DeviceChangeRequestCreate request);
 
-    void applyApprovedReview(
+    boolean applyApprovedReview(
             String requestId,
             String reviewerId,
             String reviewComment,
@@ -25,14 +25,14 @@ public interface DeviceChangeRequestRepository {
             OffsetDateTime freezeUntil,
             DeviceArchiveUpdate archiveUpdate);
 
-    void markApprovedReview(
+    boolean markApprovedReview(
             String requestId,
             String reviewerId,
             String reviewComment,
             OffsetDateTime reviewedAt,
             OffsetDateTime freezeUntil);
 
-    void applyRejectedReview(
+    boolean applyRejectedReview(
             String requestId,
             String reviewerId,
             String reviewComment,

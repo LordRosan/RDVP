@@ -160,7 +160,7 @@ public class JdbcDeviceChangeRequestRepository implements DeviceChangeRequestRep
     }
 
     @Override
-    public void applyApprovedReview(
+    public boolean applyApprovedReview(
             String requestId,
             String reviewerId,
             String reviewComment,
@@ -187,7 +187,7 @@ public class JdbcDeviceChangeRequestRepository implements DeviceChangeRequestRep
                         .addValue("address", archiveUpdate.address())
                         .addValue("updatedAt", archiveUpdate.updatedAt())
                         .addValue("updatedBy", archiveUpdate.updatedBy()));
-        jdbcTemplate.update(
+        int updatedRequest = jdbcTemplate.update(
                 """
                         UPDATE device_change_requests
                         SET status = 'APPROVED',
@@ -198,6 +198,7 @@ public class JdbcDeviceChangeRequestRepository implements DeviceChangeRequestRep
                             updated_at = :reviewedAt,
                             updated_by = :reviewerId
                         WHERE id = :requestId
+                          AND status = 'PENDING_REVIEW'
                         """,
                 new MapSqlParameterSource()
                         .addValue("requestId", requestId)
@@ -205,16 +206,17 @@ public class JdbcDeviceChangeRequestRepository implements DeviceChangeRequestRep
                         .addValue("reviewComment", reviewComment)
                         .addValue("reviewedAt", reviewedAt)
                         .addValue("freezeUntil", freezeUntil));
+        return updatedRequest > 0;
     }
 
     @Override
-    public void markApprovedReview(
+    public boolean markApprovedReview(
             String requestId,
             String reviewerId,
             String reviewComment,
             OffsetDateTime reviewedAt,
             OffsetDateTime freezeUntil) {
-        jdbcTemplate.update(
+        int updated = jdbcTemplate.update(
                 """
                         UPDATE device_change_requests
                         SET status = 'APPROVED',
@@ -225,6 +227,7 @@ public class JdbcDeviceChangeRequestRepository implements DeviceChangeRequestRep
                             updated_at = :reviewedAt,
                             updated_by = :reviewerId
                         WHERE id = :requestId
+                          AND status = 'PENDING_REVIEW'
                         """,
                 new MapSqlParameterSource()
                         .addValue("requestId", requestId)
@@ -232,15 +235,16 @@ public class JdbcDeviceChangeRequestRepository implements DeviceChangeRequestRep
                         .addValue("reviewComment", reviewComment)
                         .addValue("reviewedAt", reviewedAt)
                         .addValue("freezeUntil", freezeUntil));
+        return updated > 0;
     }
 
     @Override
-    public void applyRejectedReview(
+    public boolean applyRejectedReview(
             String requestId,
             String reviewerId,
             String reviewComment,
             OffsetDateTime reviewedAt) {
-        jdbcTemplate.update(
+        int updated = jdbcTemplate.update(
                 """
                         UPDATE device_change_requests
                         SET status = 'REJECTED',
@@ -250,12 +254,14 @@ public class JdbcDeviceChangeRequestRepository implements DeviceChangeRequestRep
                             updated_at = :reviewedAt,
                             updated_by = :reviewerId
                         WHERE id = :requestId
+                          AND status = 'PENDING_REVIEW'
                         """,
                 new MapSqlParameterSource()
                         .addValue("requestId", requestId)
                         .addValue("reviewerId", reviewerId)
                         .addValue("reviewComment", reviewComment)
                         .addValue("reviewedAt", reviewedAt));
+        return updated > 0;
     }
 
     private String baseSelect() {

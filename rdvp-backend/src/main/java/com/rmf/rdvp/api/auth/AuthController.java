@@ -43,6 +43,20 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(UserResponse.from(user), RequestIds.resolve(request)));
     }
 
+    @PostMapping("/password-verification")
+    public ResponseEntity<ApiResponse<PasswordVerificationResponse>> verifyPassword(
+            @Valid @RequestBody PasswordVerificationRequest requestBody,
+            Authentication authentication,
+            HttpServletRequest request) {
+        AuthenticatedUser user = requireUser(authentication);
+        boolean verified = authenticationService.verifyPassword(user, requestBody.password());
+        if (!verified) {
+            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
+        }
+
+        return ResponseEntity.ok(ApiResponse.success(new PasswordVerificationResponse(true), RequestIds.resolve(request)));
+    }
+
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<LogoutResponse>> logout(HttpServletRequest request) {
         String token = BearerTokens.resolve(request)

@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -104,7 +105,14 @@ public class DeviceChangeRequestService {
         if (decision == DeviceChangeReviewDecision.APPROVED) {
             applyApprovedRequest(request, normalizedComment, reviewer, reviewedAt);
         } else {
-            changeRequestRepository.applyRejectedReview(request.id(), reviewer.id(), normalizedComment, reviewedAt);
+            boolean reviewed = changeRequestRepository.applyRejectedReview(
+                    request.id(),
+                    reviewer.id(),
+                    normalizedComment,
+                    reviewedAt);
+            if (!reviewed) {
+                throw new BusinessException(ErrorCode.CHANGE_REQUEST_ALREADY_REVIEWED);
+            }
         }
 
         return enrichApplicantName(changeRequestRepository.findById(request.id())
@@ -198,7 +206,12 @@ public class DeviceChangeRequestService {
     }
 
     private DeviceChangeRequest createRequest(DeviceChangeRequestCreate request) {
-        changeRequestRepository.create(request);
+        try {
+            changeRequestRepository.create(request);
+        } catch (DataIntegrityViolationException exception) {
+            throw createConstraintConflict(request);
+        }
+
         return enrichApplicantName(changeRequestRepository.findById(request.id())
                 .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR)));
     }
@@ -214,21 +227,37 @@ public class DeviceChangeRequestService {
                         .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
                 DeviceArchiveUpdate archiveUpdate = buildArchiveUpdate(currentDevice, request.changes(), reviewer.id(), reviewedAt);
                 OffsetDateTime freezeUntil = reviewedAt.plus(CHANGE_FREEZE_DURATION);
-                changeRequestRepository.applyApprovedReview(
+                boolean reviewed = changeRequestRepository.applyApprovedReview(
                         request.id(),
                         reviewer.id(),
                         reviewComment,
                         reviewedAt,
                         freezeUntil,
                         archiveUpdate);
+                if (!reviewed) {
+                    throw new BusinessException(ErrorCode.CHANGE_REQUEST_ALREADY_REVIEWED);
+                }
             }
             case CREATE -> {
                 if (archiveRepository.existsByCode(request.deviceCode())) {
                     throw new BusinessException(ErrorCode.DEVICE_CODE_DUPLICATED);
                 }
 
-                archiveRepository.create(buildArchiveCreate(request, reviewer.id(), reviewedAt));
-                changeRequestRepository.markApprovedReview(request.id(), reviewer.id(), reviewComment, reviewedAt, null);
+                try {
+                    archiveRepository.create(buildArchiveCreate(request, reviewer.id(), reviewedAt));
+                } catch (DataIntegrityViolationException exception) {
+                    throw new BusinessException(ErrorCode.DEVICE_CODE_DUPLICATED);
+                }
+
+                boolean reviewed = changeRequestRepository.markApprovedReview(
+                        request.id(),
+                        reviewer.id(),
+                        reviewComment,
+                        reviewedAt,
+                        null);
+                if (!reviewed) {
+                    throw new BusinessException(ErrorCode.CHANGE_REQUEST_ALREADY_REVIEWED);
+                }
             }
             case DELETE -> {
                 DeviceArchive currentDevice = archiveRepository.findById(request.deviceId())
@@ -243,9 +272,25 @@ public class DeviceChangeRequestService {
                     throw new BusinessException(ErrorCode.DEVICE_NOT_FOUND);
                 }
 
-                changeRequestRepository.markApprovedReview(request.id(), reviewer.id(), reviewComment, reviewedAt, null);
+                boolean reviewed = changeRequestRepository.markApprovedReview(
+                        request.id(),
+                        reviewer.id(),
+                        reviewComment,
+                        reviewedAt,
+                        null);
+                if (!reviewed) {
+                    throw new BusinessException(ErrorCode.CHANGE_REQUEST_ALREADY_REVIEWED);
+                }
             }
         }
+    }
+
+    private BusinessException createConstraintConflict(DeviceChangeRequestCreate request) {
+        if (request.type() == DeviceChangeRequestType.CREATE) {
+            return new BusinessException(ErrorCode.DEVICE_CODE_DUPLICATED);
+        }
+
+        return new BusinessException(ErrorCode.DEVICE_CHANGE_LOCKED);
     }
 
     private Map<String, DeviceChangeValue> normalizeAndValidateUpdateChanges(

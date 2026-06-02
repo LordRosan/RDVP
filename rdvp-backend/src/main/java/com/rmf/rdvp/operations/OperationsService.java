@@ -9,6 +9,7 @@ import java.time.format.DateTimeParseException;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,8 @@ public class OperationsService {
     private static final int IDLE_MAX_RADIUS_KM = 20;
     private static final int LOW_LOAD_MAX_RADIUS_KM = 10;
     private static final int MAX_ACTIVE_REPAIR_TASK_COUNT = 2;
+    private static final int MAX_OPERATION_LIST_ITEMS = 100;
+    private static final int MAX_AVAILABLE_REPAIR_TASK_CANDIDATES = 500;
     private static final Pattern DEVICE_CODE_PATTERN = Pattern.compile("^RDVP-DEVICE-\\d{4}$");
     private static final Pattern BUSINESS_ID_PATTERN = Pattern.compile("^[A-Za-z0-9_-]{1,64}$");
     private static final DateTimeFormatter LOCAL_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -81,9 +84,10 @@ public class OperationsService {
         RepairerWorkloadSnapshot workload = currentWorkload(maintainer.id());
         validateWorkloadForRefresh(workload, normalizedRadiusKm);
 
-        var items = operationsRepository.listAvailableRepairTasks(severity)
+        var items = operationsRepository.listAvailableRepairTasks(severity, MAX_AVAILABLE_REPAIR_TASK_CANDIDATES)
                 .stream()
                 .filter(item -> item.distanceKm() == null || item.distanceKm().compareTo(BigDecimal.valueOf(normalizedRadiusKm)) <= 0)
+                .limit(MAX_OPERATION_LIST_ITEMS)
                 .toList();
         return new AvailableRepairTaskList(normalizedRadiusKm, workload, items, items.size());
     }
@@ -110,14 +114,22 @@ public class OperationsService {
                 null,
                 null,
                 now);
-        operationsRepository.createRepairTask(create);
-        operationsRepository.markFaultAccepted(faultReport.id(), create.id(), now);
+        try {
+            operationsRepository.createRepairTask(create);
+        } catch (DataIntegrityViolationException exception) {
+            throw new BusinessException(ErrorCode.FAULT_ALREADY_ACCEPTED);
+        }
+
+        if (!operationsRepository.markFaultAccepted(faultReport.id(), create.id(), now)) {
+            throw new BusinessException(ErrorCode.FAULT_ALREADY_ACCEPTED);
+        }
+
         archiveRepository.updateStatus(faultReport.deviceId(), "UNDER_REPAIR", maintainer.id());
         return new RepairTaskAcceptResult(create.id(), faultReport.id(), RepairTaskStatus.ACCEPTED, create.acceptedAt());
     }
 
     public MyRepairTaskList listMyRepairTasks(AuthenticatedUser maintainer) {
-        var items = operationsRepository.listMyRepairTasks(maintainer.id());
+        var items = operationsRepository.listMyRepairTasks(maintainer.id(), MAX_OPERATION_LIST_ITEMS);
         return new MyRepairTaskList(items, items.size());
     }
 
@@ -155,16 +167,30 @@ public class OperationsService {
                 requiresReinspection,
                 now);
 
-        operationsRepository.createRepairReport(create);
-        operationsRepository.markRepairTaskReported(task.id(), now);
+        try {
+            operationsRepository.createRepairReport(create);
+        } catch (DataIntegrityViolationException exception) {
+            throw new BusinessException(ErrorCode.REPAIR_TASK_STATUS_INVALID);
+        }
+
+        if (!operationsRepository.markRepairTaskReported(task.id(), now)) {
+            throw new BusinessException(ErrorCode.REPAIR_TASK_STATUS_INVALID);
+        }
+
         FaultStatus nextFaultStatus = nextFaultStatus(task.severity(), normalizedResult);
-        operationsRepository.updateFaultStatus(task.faultReportId(), nextFaultStatus, now);
+        FaultStatus expectedFaultStatus = task.status() == RepairTaskStatus.PROCESSING
+                ? FaultStatus.UNDER_REPAIR
+                : FaultStatus.ACCEPTED;
+        if (!operationsRepository.updateFaultStatusIfCurrent(task.faultReportId(), expectedFaultStatus, nextFaultStatus, now)) {
+            throw new BusinessException(ErrorCode.REPAIR_TASK_STATUS_INVALID);
+        }
+
         archiveRepository.updateStatus(task.deviceId(), nextDeviceStatus(nextFaultStatus, normalizedResult), maintainer.id());
         return toRecord(create);
     }
 
     public ReinspectionTaskList listPendingReinspections() {
-        var items = operationsRepository.listPendingReinspections();
+        var items = operationsRepository.listPendingReinspections(MAX_OPERATION_LIST_ITEMS);
         return new ReinspectionTaskList(items, items.size());
     }
 
@@ -200,8 +226,20 @@ public class OperationsService {
                 : FaultStatus.PENDING_ACCEPTANCE;
         String nextDeviceStatus = normalizedResult == ReinspectionResult.PASSED ? "NORMAL" : "FAULTED";
 
-        operationsRepository.createReinspectionRecord(create);
-        operationsRepository.updateFaultStatus(faultReport.id(), nextFaultStatus, now);
+        try {
+            operationsRepository.createReinspectionRecord(create);
+        } catch (DataIntegrityViolationException exception) {
+            throw new BusinessException(ErrorCode.REINSPECTION_REQUIRED);
+        }
+
+        if (!operationsRepository.updateFaultStatusIfCurrent(
+                faultReport.id(),
+                FaultStatus.PENDING_REINSPECTION,
+                nextFaultStatus,
+                now)) {
+            throw new BusinessException(ErrorCode.REINSPECTION_REQUIRED);
+        }
+
         archiveRepository.updateStatus(faultReport.deviceId(), nextDeviceStatus, reinspector.id());
         return new ReinspectionRecord(
                 create.id(),
