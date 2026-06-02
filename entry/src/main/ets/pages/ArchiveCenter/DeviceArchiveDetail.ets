@@ -112,7 +112,9 @@ struct DeviceArchiveDetail {
           if (this.hasDevice) {
             this.ArchivePanel()
             this.StatusPanel()
-            this.ActionPanel()
+            if (this.shouldShowActionPanel()) {
+              this.ActionPanel()
+            }
           } else {
             this.EmptyPanel()
           }
@@ -306,8 +308,12 @@ struct DeviceArchiveDetail {
   ActionPanel() {
     Column({ space: 12 }) {
       this.MessageText()
-      this.ChangeArchiveButton()
-      this.DeleteArchiveButton()
+      if (this.canViewChangeArchiveAction()) {
+        this.ChangeArchiveButton()
+      }
+      if (this.canViewDeleteArchiveAction()) {
+        this.DeleteArchiveButton()
+      }
     }
     .padding({
       left: 18,
@@ -367,34 +373,36 @@ struct DeviceArchiveDetail {
 
   @Builder
   ChangeArchiveButton() {
-    Button({ type: ButtonType.Capsule, stateEffect: this.canChangeArchive }) {
-      Row({ space: 8 }) {
-        SymbolGlyph($r('sys.symbol.text_clipboard'))
-          .fontSize(20)
-          .fontColor([AppColors.Surface])
+    if (this.canViewChangeArchiveAction()) {
+      Button({ type: ButtonType.Capsule, stateEffect: this.canChangeArchive }) {
+        Row({ space: 8 }) {
+          SymbolGlyph($r('sys.symbol.text_clipboard'))
+            .fontSize(20)
+            .fontColor([AppColors.Surface])
 
-        Text('修改设备档案')
-          .fontSize(17)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(AppColors.Surface)
-          .maxLines(1)
+          Text('修改设备档案')
+            .fontSize(17)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(AppColors.Surface)
+            .maxLines(1)
+        }
+        .width('100%')
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
       }
+      .height(54)
       .width('100%')
-      .justifyContent(FlexAlign.Center)
-      .alignItems(VerticalAlign.Center)
+      .backgroundColor(this.canChangeArchive ? AppColors.Primary : AppColors.Disabled)
+      .enabled(this.canChangeArchive)
+      .onClick(() => {
+        this.openChangePage();
+      })
     }
-    .height(54)
-    .width('100%')
-    .backgroundColor(this.canChangeArchive ? AppColors.Primary : AppColors.Disabled)
-    .enabled(this.canChangeArchive)
-    .onClick(() => {
-      this.openChangePage();
-    })
   }
 
   @Builder
   DeleteArchiveButton() {
-    if (SessionStore.hasPermission(PermissionCode.ArchiveDeviceDelete)) {
+    if (this.canViewDeleteArchiveAction()) {
       Button({ type: ButtonType.Capsule, stateEffect: this.canDeleteArchive }) {
         Row({ space: 8 }) {
           SymbolGlyph($r('sys.symbol.trash'))
@@ -434,6 +442,18 @@ struct DeviceArchiveDetail {
 
   showDetailInfoDialog(): void {
     this.detailInfoDialogController.open();
+  }
+
+  shouldShowActionPanel(): boolean {
+    return this.message.length > 0 || this.canViewChangeArchiveAction() || this.canViewDeleteArchiveAction();
+  }
+
+  canViewChangeArchiveAction(): boolean {
+    return SessionStore.hasPermission(PermissionCode.ArchiveChangeRequestCreate);
+  }
+
+  canViewDeleteArchiveAction(): boolean {
+    return SessionStore.hasPermission(PermissionCode.ArchiveDeviceDelete);
   }
 
   openChangePage(): void {
