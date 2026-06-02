@@ -159,7 +159,7 @@ struct ManagementCenter {
           this.CardDivider()
         }
         StatusInfoRow({
-          label: '服务状态',
+          label: '服务模式',
           value: ApiClient.getRuntimeStatusLabel(),
           tone: ApiClient.getRuntimeStatusTone()
         })

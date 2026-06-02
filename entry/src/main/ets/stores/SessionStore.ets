@@ -1,5 +1,6 @@
 import { AuthSession, RoleCode } from '../models/AuthModels';
 import { AllPermissionCodes } from '../models/PermissionModels';
+import { ServiceMode } from '../models/ServiceModeModels';
 import { CurrentUserSnapshot, SessionState } from '../models/SessionModels';
 import { WorkbenchRefreshStore } from './WorkbenchRefreshStore';
 
@@ -179,6 +180,10 @@ export class SessionStore {
       const session = JSON.parse(sessionText) as AuthSession;
       if (session.accessToken.length === 0 || session.expiresAt.length === 0) {
         return undefined;
+      }
+
+      if (session.serviceMode !== ServiceMode.Online && session.serviceMode !== ServiceMode.Offline) {
+        session.serviceMode = ServiceMode.Offline;
       }
 
       return SessionStore.hasSupportedPermissionSet(session) ? session : undefined;

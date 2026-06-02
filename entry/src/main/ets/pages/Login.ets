@@ -1,6 +1,7 @@
 import { AppColors } from '../styles/AppTheme';
 import { AuthService } from '../services/AuthService';
 import { ApiClient } from '../services/ApiClient';
+import { ServiceMode } from '../models/ServiceModeModels';
 import { SessionStore } from '../stores/SessionStore';
 
 @Entry
@@ -8,6 +9,7 @@ import { SessionStore } from '../stores/SessionStore';
 struct Login {
   @State username: string = '';
   @State password: string = '';
+  @State serviceMode: ServiceMode = ApiClient.getServiceMode();
   @State apiBaseUrl: string = ApiClient.getBaseUrl();
   @State message: string = '';
   @State messageTone: string = AppColors.Danger;
@@ -20,6 +22,7 @@ struct Login {
     }
 
     this.apiBaseUrl = ApiClient.getBaseUrl();
+    this.serviceMode = ApiClient.getServiceMode();
   }
 
   build() {
@@ -174,7 +177,7 @@ struct Login {
   ServiceConfigPanel() {
     Column({ space: 10 }) {
       Row() {
-        Text('后端服务')
+        Text('服务模式')
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
           .fontColor(AppColors.TextPrimary)
@@ -190,45 +193,47 @@ struct Login {
       .width('100%')
       .alignItems(VerticalAlign.Center)
 
-      TextInput({
-        placeholder: 'http://192.168.x.x:8080',
-        text: this.apiBaseUrl
-      })
-        .height(50)
-        .fontSize(15)
-        .backgroundColor(AppColors.FieldBackground)
-        .borderRadius(18)
-        .padding({
-          left: 16,
-          right: 16
-        })
-        .border({
-          width: 1,
-          color: AppColors.Border
-        })
-        .onChange((value: string) => {
-          this.apiBaseUrl = value;
-          this.message = '';
-          this.messageTone = AppColors.Danger;
-        })
-
       Row({ space: 10 }) {
         Column() {
-          this.ServiceButton('保存地址', $r('sys.symbol.checkmark_circle'), AppColors.Primary, AppColors.Surface, () => {
-            this.saveApiBaseUrl();
-          })
+          this.ServiceModeButton('在线模式', $r('sys.symbol.checkmark_circle'), ServiceMode.Online)
         }
         .layoutWeight(1)
 
         Column() {
-          this.ServiceButton('本地模式', $r('sys.symbol.xmark_circle'), AppColors.Surface, AppColors.TextPrimary, () => {
-            this.clearApiBaseUrl();
-          })
+          this.ServiceModeButton('离线模式', $r('sys.symbol.xmark_circle'), ServiceMode.Offline)
         }
         .layoutWeight(1)
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
+
+      if (this.serviceMode === ServiceMode.Online) {
+        TextInput({
+          placeholder: 'http://192.168.x.x:8080',
+          text: this.apiBaseUrl
+        })
+          .height(50)
+          .fontSize(15)
+          .backgroundColor(AppColors.FieldBackground)
+          .borderRadius(18)
+          .padding({
+            left: 16,
+            right: 16
+          })
+          .border({
+            width: 1,
+            color: AppColors.Border
+          })
+          .onChange((value: string) => {
+            this.apiBaseUrl = value;
+            this.message = '';
+            this.messageTone = AppColors.Danger;
+          })
+
+        this.ServiceButton('保存地址', $r('sys.symbol.checkmark_circle'), AppColors.Primary, AppColors.Surface, () => {
+          this.saveApiBaseUrl();
+        })
+      }
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -278,6 +283,16 @@ struct Login {
   }
 
   @Builder
+  ServiceModeButton(label: string, icon: Resource, mode: ServiceMode) {
+    this.ServiceButton(label, icon,
+      this.serviceMode === mode ? (mode === ServiceMode.Online ? AppColors.Primary : AppColors.Warning) : AppColors.Surface,
+      this.serviceMode === mode ? AppColors.Surface : AppColors.TextPrimary,
+      () => {
+        this.selectServiceMode(mode);
+      })
+  }
+
+  @Builder
   LoginButton() {
     Button({ type: ButtonType.Capsule, stateEffect: true }) {
       Row({ space: 8 }) {
@@ -310,6 +325,19 @@ struct Login {
     }
 
     this.submitting = true;
+    if (this.serviceMode === ServiceMode.Online) {
+      const validationMessage = ApiClient.validateRequiredBaseUrlInput(this.apiBaseUrl);
+      if (validationMessage.length > 0) {
+        this.message = validationMessage;
+        this.messageTone = AppColors.Danger;
+        this.submitting = false;
+        return;
+      }
+
+      ApiClient.setBaseUrl(this.apiBaseUrl);
+      this.apiBaseUrl = ApiClient.getBaseUrl();
+    }
+
     const response = await AuthService.loginRemoteFirst({
       username: this.username,
       password: this.password
@@ -332,7 +360,7 @@ struct Login {
 
   saveApiBaseUrl(): void {
     const value = this.apiBaseUrl.trim();
-    const validationMessage = ApiClient.validateBaseUrlInput(value);
+    const validationMessage = ApiClient.validateRequiredBaseUrlInput(value);
     if (validationMessage.length > 0) {
       this.message = validationMessage;
       this.messageTone = AppColors.Danger;
@@ -341,15 +369,22 @@ struct Login {
 
     ApiClient.setBaseUrl(value);
     this.apiBaseUrl = ApiClient.getBaseUrl();
-    this.message = ApiClient.isConfigured() ? '服务地址已保存' : '已切换为本地模式';
-    this.messageTone = ApiClient.isConfigured() ? AppColors.Success : AppColors.Primary;
+    this.message = '服务地址已保存';
+    this.messageTone = AppColors.Success;
   }
 
-  clearApiBaseUrl(): void {
-    ApiClient.setBaseUrl('');
-    this.apiBaseUrl = '';
-    this.message = '已切换为本地模式';
-    this.messageTone = AppColors.Primary;
+  selectServiceMode(mode: ServiceMode): void {
+    ApiClient.setServiceMode(mode);
+    this.serviceMode = ApiClient.getServiceMode();
+    this.apiBaseUrl = ApiClient.getBaseUrl();
+    if (this.serviceMode === ServiceMode.Online) {
+      this.message = this.apiBaseUrl.length > 0 ? '已选择在线模式' : '已选择在线模式，请配置后端服务地址';
+      this.messageTone = this.apiBaseUrl.length > 0 ? AppColors.Primary : AppColors.Danger;
+      return;
+    }
+
+    this.message = '已选择离线模式';
+    this.messageTone = AppColors.Warning;
   }
 
   openWorkbench(): void {

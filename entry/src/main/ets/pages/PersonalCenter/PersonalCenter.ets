@@ -1,6 +1,8 @@
 import { AppColors } from '../../styles/AppTheme';
 import { CurrentUserSnapshot } from '../../models/SessionModels';
+import { ServiceMode } from '../../models/ServiceModeModels';
 import { ApiClient } from '../../services/ApiClient';
+import { OfflineSyncService } from '../../services/OfflineSyncService';
 import { SessionStore } from '../../stores/SessionStore';
 import { formatConnectionStatus } from '../../utils/SessionFormat';
 
@@ -8,6 +10,7 @@ import { formatConnectionStatus } from '../../utils/SessionFormat';
 @Component
 struct PersonalCenter {
   @State currentUser: CurrentUserSnapshot = SessionStore.getCurrentUser();
+  @State serviceMode: ServiceMode = ApiClient.getServiceMode();
   @State apiBaseUrl: string = ApiClient.getBaseUrl();
   @State message: string = '';
   @State messageTone: string = AppColors.Danger;
@@ -19,6 +22,7 @@ struct PersonalCenter {
     }
 
     this.currentUser = SessionStore.getCurrentUser();
+    this.serviceMode = ApiClient.getServiceMode();
     this.apiBaseUrl = ApiClient.getBaseUrl();
   }
 
@@ -195,15 +199,6 @@ struct PersonalCenter {
       this.DangerButton('退出登录', $r('sys.symbol.person_badge_nosign'), () => {
         this.logout();
       })
-
-      if (this.message.length > 0) {
-        Text(this.message)
-          .fontSize(13)
-          .fontColor(this.messageTone)
-          .maxLines(2)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .width('100%')
-      }
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -219,48 +214,61 @@ struct PersonalCenter {
         .maxLines(1)
 
       Column({ space: 12 }) {
-        this.InfoRow('服务状态', ApiClient.getRuntimeStatusLabel(), ApiClient.getRuntimeStatusTone())
+        this.InfoRow('服务模式', ApiClient.getRuntimeStatusLabel(), ApiClient.getRuntimeStatusTone())
         this.CardDivider()
-
-        TextInput({
-          placeholder: '输入后端服务地址',
-          text: this.apiBaseUrl
-        })
-          .height(52)
-          .fontSize(15)
-          .backgroundColor(AppColors.FieldBackground)
-          .borderRadius(18)
-          .padding({
-            left: 14,
-            right: 14
-          })
-          .border({
-            width: 1,
-            color: AppColors.Border
-          })
-          .onChange((value: string) => {
-            this.apiBaseUrl = value;
-            this.message = '';
-            this.messageTone = AppColors.Danger;
-          })
+        this.InfoRow('同步队列', OfflineSyncService.getStatusLabel(), OfflineSyncService.getStatusTone())
+        this.CardDivider()
 
         Row({ space: 10 }) {
           Column() {
-            this.ServiceButton('保存地址', $r('sys.symbol.checkmark_circle'), AppColors.Primary, AppColors.Surface, () => {
-              this.saveApiBaseUrl();
-            })
+            this.ServiceModeButton('在线模式', $r('sys.symbol.checkmark_circle'), ServiceMode.Online)
           }
           .layoutWeight(1)
 
           Column() {
-            this.ServiceButton('本地模式', $r('sys.symbol.xmark_circle'), AppColors.Surface, AppColors.TextPrimary, () => {
-              this.clearApiBaseUrl();
-            })
+            this.ServiceModeButton('离线模式', $r('sys.symbol.xmark_circle'), ServiceMode.Offline)
           }
           .layoutWeight(1)
         }
         .width('100%')
         .alignItems(VerticalAlign.Center)
+
+        if (this.serviceMode === ServiceMode.Online) {
+          TextInput({
+            placeholder: '输入后端服务地址',
+            text: this.apiBaseUrl
+          })
+            .height(52)
+            .fontSize(15)
+            .backgroundColor(AppColors.FieldBackground)
+            .borderRadius(18)
+            .padding({
+              left: 14,
+              right: 14
+            })
+            .border({
+              width: 1,
+              color: AppColors.Border
+            })
+            .onChange((value: string) => {
+              this.apiBaseUrl = value;
+              this.message = '';
+              this.messageTone = AppColors.Danger;
+            })
+
+          this.ServiceButton('保存地址', $r('sys.symbol.checkmark_circle'), AppColors.Primary, AppColors.Surface, () => {
+            this.saveApiBaseUrl();
+          })
+        }
+
+        if (this.message.length > 0) {
+          Text(this.message)
+            .fontSize(13)
+            .fontColor(this.messageTone)
+            .maxLines(2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .width('100%')
+        }
       }
       .padding({
         left: 18,
@@ -397,9 +405,19 @@ struct PersonalCenter {
     })
   }
 
+  @Builder
+  ServiceModeButton(label: string, icon: Resource, mode: ServiceMode) {
+    this.ServiceButton(label, icon,
+      this.serviceMode === mode ? (mode === ServiceMode.Online ? AppColors.Primary : AppColors.Warning) : AppColors.Surface,
+      this.serviceMode === mode ? AppColors.Surface : AppColors.TextPrimary,
+      () => {
+        this.selectServiceMode(mode);
+      })
+  }
+
   saveApiBaseUrl(): void {
     const value = this.apiBaseUrl.trim();
-    const validationMessage = ApiClient.validateBaseUrlInput(value);
+    const validationMessage = ApiClient.validateRequiredBaseUrlInput(value);
     if (validationMessage.length > 0) {
       this.message = validationMessage;
       this.messageTone = AppColors.Danger;
@@ -408,15 +426,21 @@ struct PersonalCenter {
 
     ApiClient.setBaseUrl(value);
     this.apiBaseUrl = ApiClient.getBaseUrl();
-    this.message = ApiClient.isConfigured() ? '服务地址已保存，建议重新登录后使用后端会话' : '已切换为本地模式';
-    this.messageTone = ApiClient.isConfigured() ? AppColors.Success : AppColors.Primary;
+    this.message = '服务地址已保存';
+    this.messageTone = AppColors.Success;
   }
 
-  clearApiBaseUrl(): void {
-    ApiClient.setBaseUrl('');
-    this.apiBaseUrl = '';
-    this.message = '已切换为本地模式';
-    this.messageTone = AppColors.Primary;
+  selectServiceMode(mode: ServiceMode): void {
+    if (this.serviceMode === mode) {
+      this.message = mode === ServiceMode.Online ? '当前已是在线模式' : '当前已是离线模式';
+      this.messageTone = mode === ServiceMode.Online ? AppColors.Primary : AppColors.Warning;
+      return;
+    }
+
+    ApiClient.setServiceMode(mode);
+    this.serviceMode = ApiClient.getServiceMode();
+    this.apiBaseUrl = ApiClient.getBaseUrl();
+    this.openLoginPage();
   }
 
   formatSessionExpiresAt(): string {

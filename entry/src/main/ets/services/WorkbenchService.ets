@@ -15,6 +15,7 @@ import {
 } from '../models/PermissionModels';
 import { ApiClient } from './ApiClient';
 import { LocalDeviceChangeRequestRepository } from './LocalDeviceChangeRequestRepository';
+import { OfflineSyncService } from './OfflineSyncService';
 import { LocalRepairTaskRepository } from './LocalRepairTaskRepository';
 import { LocalReinspectionRepository } from './LocalReinspectionRepository';
 import { SessionStore } from '../stores/SessionStore';
@@ -65,8 +66,8 @@ export class WorkbenchService {
       id: 'offlineDrafts',
       label: '待同步草稿',
       value: `${summary.offlineDrafts}`,
-      status: '离线数据',
-      tone: AppColors.Primary
+      status: '离线同步',
+      tone: summary.offlineDrafts > 0 ? AppColors.Warning : AppColors.Primary
     });
 
     return metrics;
@@ -187,7 +188,7 @@ export class WorkbenchService {
     return [
       {
         id: 'network',
-        name: '网络状态',
+        name: '服务模式',
         value: ApiClient.getRuntimeStatusLabel(),
         tone: ApiClient.getRuntimeStatusTone()
       },
@@ -200,8 +201,8 @@ export class WorkbenchService {
       {
         id: 'sync',
         name: '同步状态',
-        value: '无待同步',
-        tone: AppColors.Success
+        value: OfflineSyncService.getStatusLabel(),
+        tone: OfflineSyncService.getStatusTone()
       }
     ];
   }
@@ -282,7 +283,7 @@ export class WorkbenchService {
       availableRepairTasks: LocalRepairTaskRepository.getPendingAvailableTaskCount(),
       activeRepairTasks: LocalRepairTaskRepository.getActiveMyTaskCount(),
       pendingReinspections: LocalReinspectionRepository.getPendingTaskCount(),
-      offlineDrafts: 0
+      offlineDrafts: OfflineSyncService.getPendingCount()
     };
   }
 

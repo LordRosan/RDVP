@@ -1,3 +1,5 @@
+import { ServiceMode } from './ServiceModeModels';
+
 export enum RoleCode {
   SystemAdmin = 'SYSTEM_ADMIN',
   DeviceAdmin = 'DEVICE_ADMIN',
@@ -29,5 +31,6 @@ export interface AuthenticatedUser {
 export interface AuthSession {
   accessToken: string;
   expiresAt: string;
+  serviceMode: ServiceMode;
   user?: AuthenticatedUser;
 }

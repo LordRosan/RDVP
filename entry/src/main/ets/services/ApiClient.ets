@@ -1,11 +1,14 @@
 import { AppColors } from '../styles/AppTheme';
 import { http } from '@kit.NetworkKit';
 import { ApiErrorCode, ApiRequestOptions, ApiResponse } from '../models/ApiModels';
+import { ServiceMode, ServiceModeState } from '../models/ServiceModeModels';
 import { SessionStore } from '../stores/SessionStore';
 import { WorkbenchRefreshStore } from '../stores/WorkbenchRefreshStore';
 
 const DEFAULT_API_BASE_URL = '';
 const API_BASE_URL_STORAGE_KEY = 'rdvp_api_base_url';
+const SERVICE_MODE_STORAGE_KEY = 'rdvp_service_mode';
+const DEFAULT_SERVICE_MODE = ServiceMode.Offline;
 const CLIENT_VERSION = 'rdvp-harmony-0.1.0';
 const REQUEST_TIMEOUT_MS = 15000;
 
@@ -19,6 +22,7 @@ interface ApiHttpHeaders {
 
 export class ApiClient {
   private static baseUrl: string = DEFAULT_API_BASE_URL;
+  private static serviceMode: ServiceMode = DEFAULT_SERVICE_MODE;
   private static initialized: boolean = false;
 
   static getBaseUrl(): string {
@@ -27,15 +31,42 @@ export class ApiClient {
   }
 
   static isConfigured(): boolean {
-    return ApiClient.getBaseUrl().length > 0;
+    return ApiClient.isOnlineMode() && ApiClient.getBaseUrl().length > 0;
+  }
+
+  static getServiceMode(): ServiceMode {
+    ApiClient.ensureInitialized();
+    return ApiClient.serviceMode;
+  }
+
+  static getServiceModeState(): ServiceModeState {
+    ApiClient.ensureInitialized();
+    return {
+      mode: ApiClient.serviceMode,
+      apiBaseUrl: ApiClient.baseUrl
+    };
+  }
+
+  static isOnlineMode(): boolean {
+    ApiClient.ensureInitialized();
+    return ApiClient.serviceMode === ServiceMode.Online;
+  }
+
+  static isOfflineMode(): boolean {
+    ApiClient.ensureInitialized();
+    return ApiClient.serviceMode === ServiceMode.Offline;
   }
 
   static getRuntimeStatusLabel(): string {
-    return ApiClient.isConfigured() ? '已配置' : '本地模式';
+    if (ApiClient.isOnlineMode()) {
+      return ApiClient.getBaseUrl().length > 0 ? '在线模式' : '在线模式未配置';
+    }
+
+    return '离线模式';
   }
 
   static getRuntimeStatusTone(): string {
-    return ApiClient.isConfigured() ? AppColors.Success : AppColors.Primary;
+    return ApiClient.isOnlineMode() ? AppColors.Primary : AppColors.Warning;
   }
 
   static createServiceUnavailableResponse<T>(): ApiResponse<T> {
@@ -43,7 +74,7 @@ export class ApiClient {
       success: false,
       error: {
         code: ApiErrorCode.ServiceUnavailable,
-        message: '后端服务未配置，暂不能访问'
+        message: ApiClient.isOnlineMode() ? '在线模式下请先配置后端服务地址' : '当前为离线模式，暂不访问后端服务'
       }
     };
   }
@@ -105,6 +136,18 @@ export class ApiClient {
     WorkbenchRefreshStore.notifyChanged();
   }
 
+  static setServiceMode(mode: ServiceMode): void {
+    ApiClient.ensureInitialized();
+    if (ApiClient.serviceMode === mode) {
+      return;
+    }
+
+    ApiClient.serviceMode = mode;
+    ApiClient.persistServiceMode(mode);
+    SessionStore.clearSession();
+    WorkbenchRefreshStore.notifyChanged();
+  }
+
   static validateBaseUrlInput(baseUrl: string): string {
     const normalized = baseUrl.trim();
     if (normalized.length === 0) {
@@ -118,6 +161,15 @@ export class ApiClient {
     return '';
   }
 
+  static validateRequiredBaseUrlInput(baseUrl: string): string {
+    const normalized = baseUrl.trim();
+    if (normalized.length === 0) {
+      return '在线模式下请输入后端服务地址';
+    }
+
+    return ApiClient.validateBaseUrlInput(normalized);
+  }
+
   private static ensureInitialized(): void {
     if (ApiClient.initialized) {
       return;
@@ -126,10 +178,14 @@ export class ApiClient {
     ApiClient.initialized = true;
     try {
       PersistentStorage.persistProp<string>(API_BASE_URL_STORAGE_KEY, DEFAULT_API_BASE_URL);
+      PersistentStorage.persistProp<string>(SERVICE_MODE_STORAGE_KEY, DEFAULT_SERVICE_MODE);
       const storedBaseUrl = AppStorage.get<string>(API_BASE_URL_STORAGE_KEY);
+      const storedServiceMode = AppStorage.get<string>(SERVICE_MODE_STORAGE_KEY);
       ApiClient.baseUrl = ApiClient.normalizeBaseUrl(storedBaseUrl === undefined ? DEFAULT_API_BASE_URL : storedBaseUrl);
+      ApiClient.serviceMode = ApiClient.parseServiceMode(storedServiceMode);
     } catch (err) {
       ApiClient.baseUrl = ApiClient.normalizeBaseUrl(DEFAULT_API_BASE_URL);
+      ApiClient.serviceMode = DEFAULT_SERVICE_MODE;
     }
   }
 
@@ -138,6 +194,21 @@ export class ApiClient {
       AppStorage.setOrCreate<string>(API_BASE_URL_STORAGE_KEY, baseUrl);
     } catch (err) {
     }
+  }
+
+  private static persistServiceMode(mode: ServiceMode): void {
+    try {
+      AppStorage.setOrCreate<string>(SERVICE_MODE_STORAGE_KEY, mode);
+    } catch (err) {
+    }
+  }
+
+  private static parseServiceMode(mode: string | undefined): ServiceMode {
+    if (mode === ServiceMode.Online) {
+      return ServiceMode.Online;
+    }
+
+    return ServiceMode.Offline;
   }
 
   private static normalizeBaseUrl(baseUrl: string): string {

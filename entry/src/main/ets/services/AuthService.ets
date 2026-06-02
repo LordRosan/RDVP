@@ -3,6 +3,7 @@ import { ApiResponse } from '../models/ApiModels';
 import { AuthenticatedUser, AuthSession, LoginForm, LoginValidationResult, RoleCode } from '../models/AuthModels';
 import { OperationRecordType } from '../models/OperationRecordModels';
 import { PermissionCode } from '../models/PermissionModels';
+import { ServiceMode } from '../models/ServiceModeModels';
 import { SessionStore } from '../stores/SessionStore';
 import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
 
@@ -53,8 +54,12 @@ export class AuthService {
       };
     }
 
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return AuthService.createLocalSession(form);
+    }
+
+    if (!ApiClient.isConfigured()) {
+      return ApiClient.createServiceUnavailableResponse<AuthSession>();
     }
 
     return ApiClient.createServiceUnavailableResponse<AuthSession>();
@@ -73,8 +78,12 @@ export class AuthService {
       };
     }
 
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return AuthService.createLocalSession(form);
+    }
+
+    if (!ApiClient.isConfigured()) {
+      return ApiClient.createServiceUnavailableResponse<AuthSession>();
     }
 
     const response = await ApiClient.request<LoginApiResult>('/api/v1/auth/login', 'POST', false, JSON.stringify({
@@ -148,7 +157,7 @@ export class AuthService {
       };
     }
 
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       if (password === 'password') {
         return {
           success: true,
@@ -216,6 +225,7 @@ export class AuthService {
     const session: AuthSession = {
       accessToken: `local-session-${Date.now()}`,
       expiresAt,
+      serviceMode: ServiceMode.Offline,
       user
     };
 
@@ -321,6 +331,7 @@ export class AuthService {
     return {
       accessToken: result.accessToken,
       expiresAt: new Date(Date.now() + expiresIn * 1000).toISOString(),
+      serviceMode: ServiceMode.Online,
       user: result.user
     };
   }

@@ -358,7 +358,7 @@ struct AvailableRepairTask {
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
-      Text('连接后端服务后可刷新附近故障')
+      Text('在线模式连接后可刷新附近故障')
         .fontSize(13)
         .fontColor(AppColors.TextSecondary)
         .maxLines(1)
@@ -481,7 +481,7 @@ struct AvailableRepairTask {
         this.RefreshStatusRow()
         this.CardDivider()
         StatusInfoRow({
-          label: '服务状态',
+          label: '服务模式',
           value: ApiClient.getRuntimeStatusLabel(),
           tone: ApiClient.getRuntimeStatusTone()
         })
