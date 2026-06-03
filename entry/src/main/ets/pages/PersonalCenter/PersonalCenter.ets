@@ -3,6 +3,7 @@ import { CurrentUserSnapshot } from '../../models/SessionModels';
 import { ServiceMode } from '../../models/ServiceModeModels';
 import { ApiClient } from '../../services/ApiClient';
 import { OfflineSyncService } from '../../services/OfflineSyncService';
+import { ServiceModeTransitionService } from '../../services/ServiceModeTransitionService';
 import { SessionStore } from '../../stores/SessionStore';
 import { formatConnectionStatus } from '../../utils/SessionFormat';
 
@@ -442,21 +443,22 @@ struct PersonalCenter {
   }
 
   applyServiceSettings(): void {
-    if (this.serviceMode === ServiceMode.Online) {
-      const validationMessage = ApiClient.validateRequiredBaseUrlInput(this.apiBaseUrl);
-      if (validationMessage.length > 0) {
-        this.message = validationMessage;
-        this.messageTone = AppColors.Danger;
-        return;
-      }
+    const result = ServiceModeTransitionService.applyTransition({
+      targetMode: this.serviceMode,
+      apiBaseUrl: this.apiBaseUrl,
+      reason: 'personal-center-service-mode'
+    });
 
-      ApiClient.setBaseUrl(this.apiBaseUrl);
-      this.apiBaseUrl = ApiClient.getBaseUrl();
+    if (!result.success || !result.changed) {
+      this.message = result.message;
+      this.messageTone = result.success ?
+        (this.serviceMode === ServiceMode.Online ? AppColors.Primary : AppColors.Warning) : AppColors.Danger;
+      return;
     }
 
-    ApiClient.setServiceMode(this.serviceMode);
-    this.message = this.serviceMode === ServiceMode.Online ? '在线模式已保存，请重新登录以使用后端会话' : '离线模式已保存，请重新登录以使用本地会话';
-    this.messageTone = this.serviceMode === ServiceMode.Online ? AppColors.Primary : AppColors.Warning;
+    if (result.requiresRelogin) {
+      this.openLoginPage();
+    }
   }
 
   getSelectedRuntimeStatusLabel(): string {

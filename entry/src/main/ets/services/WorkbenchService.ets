@@ -243,6 +243,11 @@ export class WorkbenchService {
     return response;
   }
 
+  static clearCachedSummary(): void {
+    WorkbenchService.cachedSummary = undefined;
+    WorkbenchRefreshStore.notifyChanged();
+  }
+
   static canAccessArchiveCenter(): boolean {
     return SessionStore.hasAnyPermission(ArchiveCenterPermissions);
   }

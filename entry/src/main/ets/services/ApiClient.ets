@@ -136,6 +136,10 @@ export class ApiClient {
     WorkbenchRefreshStore.notifyChanged();
   }
 
+  static normalizeBaseUrlInput(baseUrl: string): string {
+    return ApiClient.normalizeBaseUrl(baseUrl);
+  }
+
   static setServiceMode(mode: ServiceMode): void {
     ApiClient.ensureInitialized();
     if (ApiClient.serviceMode === mode) {

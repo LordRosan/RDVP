@@ -1,14 +1,27 @@
-import { OfflineSyncItem, OfflineSyncItemStatus, OfflineSyncSummary } from '../models/OfflineSyncModels';
+import {
+  OfflineSyncItem,
+  OfflineSyncItemStatus,
+  OfflineSyncRuntimeState,
+  OfflineSyncSummary,
+  OfflineSyncTransitionPreparation
+} from '../models/OfflineSyncModels';
 import { AppColors } from '../styles/AppTheme';
 import { SessionStore } from '../stores/SessionStore';
 import { WorkbenchRefreshStore } from '../stores/WorkbenchRefreshStore';
 
 const OFFLINE_SYNC_QUEUE_STORAGE_KEY = 'rdvp_offline_sync_queue';
+const OFFLINE_SYNC_RUNTIME_STORAGE_KEY = 'rdvp_offline_sync_runtime';
 const DEFAULT_QUEUE_TEXT = '';
+const DEFAULT_RUNTIME_TEXT = '';
+const ONLINE_STABILITY_DELAY_MS = 1500;
+const TRANSITION_DEBOUNCE_MS = 1000;
+const MAX_SYNC_RETRY_COUNT = 3;
+const BASE_RETRY_DELAY_MS = 2000;
 
 export class OfflineSyncService {
   private static initialized: boolean = false;
   private static items: OfflineSyncItem[] = [];
+  private static runtimeState: OfflineSyncRuntimeState = OfflineSyncService.createDefaultRuntimeState();
 
   static enqueue(operationType: string, payloadSummary: string, payloadJson: string): OfflineSyncItem {
     OfflineSyncService.ensureInitialized();
@@ -22,7 +35,8 @@ export class OfflineSyncService {
       operatorName: SessionStore.getCurrentOperatorName(),
       status: OfflineSyncItemStatus.Pending,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      retryCount: 0
     };
 
     OfflineSyncService.items.unshift(item);
@@ -36,7 +50,38 @@ export class OfflineSyncService {
   }
 
   static markFailed(id: string, error: string): void {
-    OfflineSyncService.updateItemStatus(id, OfflineSyncItemStatus.Failed, error.trim());
+    OfflineSyncService.ensureInitialized();
+
+    const now = new Date();
+    const nextItems: OfflineSyncItem[] = [];
+    OfflineSyncService.items.forEach((item: OfflineSyncItem) => {
+      if (item.id !== id) {
+        nextItems.push(item);
+        return;
+      }
+
+      const nextRetryCount = item.retryCount + 1;
+      const retryExhausted = nextRetryCount >= MAX_SYNC_RETRY_COUNT;
+      nextItems.push({
+        id: item.id,
+        operationType: item.operationType,
+        payloadSummary: item.payloadSummary,
+        payloadJson: item.payloadJson,
+        operatorName: item.operatorName,
+        status: retryExhausted ? OfflineSyncItemStatus.Failed : OfflineSyncItemStatus.Pending,
+        createdAt: item.createdAt,
+        updatedAt: now.toISOString(),
+        retryCount: nextRetryCount,
+        nextRetryAt: retryExhausted ? undefined : new Date(now.getTime() + OfflineSyncService.getRetryDelayMs(nextRetryCount)).toISOString(),
+        conflictKey: item.conflictKey,
+        serverVersion: item.serverVersion,
+        lastError: error.trim().length === 0 ? undefined : error.trim()
+      });
+    });
+
+    OfflineSyncService.items = nextItems;
+    OfflineSyncService.persistItems();
+    WorkbenchRefreshStore.notifyChanged();
   }
 
   static getPendingCount(): number {
@@ -47,12 +92,23 @@ export class OfflineSyncService {
     OfflineSyncService.ensureInitialized();
 
     let pendingCount = 0;
+    let syncingCount = 0;
     let failedCount = 0;
+    let readyToSyncCount = 0;
     let latestUpdatedAt = '';
+    const now = Date.now();
 
     OfflineSyncService.items.forEach((item: OfflineSyncItem) => {
       if (item.status === OfflineSyncItemStatus.Pending || item.status === OfflineSyncItemStatus.Syncing) {
         pendingCount += 1;
+      }
+
+      if (item.status === OfflineSyncItemStatus.Syncing) {
+        syncingCount += 1;
+      }
+
+      if (item.status === OfflineSyncItemStatus.Pending && OfflineSyncService.isRetryReady(item, now)) {
+        readyToSyncCount += 1;
       }
 
       if (item.status === OfflineSyncItemStatus.Failed) {
@@ -66,13 +122,31 @@ export class OfflineSyncService {
 
     return {
       pendingCount,
+      syncingCount,
       failedCount,
+      readyToSyncCount,
+      waitingForNetworkStability: OfflineSyncService.isWaitingForNetworkStability(),
+      networkPaused: OfflineSyncService.runtimeState.networkPaused,
+      logThrottleEnabled: OfflineSyncService.runtimeState.logThrottleEnabled,
+      recoveryReadyAt: OfflineSyncService.runtimeState.onlineRecoveryReadyAt,
       latestUpdatedAt: latestUpdatedAt.length === 0 ? undefined : latestUpdatedAt
     };
   }
 
   static getStatusLabel(): string {
     const summary = OfflineSyncService.getSummary();
+    if (summary.waitingForNetworkStability) {
+      return '等待网络稳定';
+    }
+
+    if (summary.networkPaused) {
+      return '离线队列保留中';
+    }
+
+    if (summary.syncingCount > 0) {
+      return `${summary.syncingCount}项同步中`;
+    }
+
     if (summary.failedCount > 0) {
       return `${summary.failedCount}项同步失败`;
     }
@@ -86,6 +160,10 @@ export class OfflineSyncService {
 
   static getStatusTone(): string {
     const summary = OfflineSyncService.getSummary();
+    if (summary.waitingForNetworkStability) {
+      return AppColors.Primary;
+    }
+
     if (summary.failedCount > 0) {
       return AppColors.Danger;
     }
@@ -95,6 +173,87 @@ export class OfflineSyncService {
     }
 
     return AppColors.Success;
+  }
+
+  static prepareForOfflineTransition(reason: string): OfflineSyncTransitionPreparation {
+    OfflineSyncService.ensureInitialized();
+    if (OfflineSyncService.isTransitionDebounced()) {
+      return {
+        success: false,
+        message: '服务模式切换过于频繁，请稍后再试',
+        waitingForNetworkStability: false
+      };
+    }
+
+    OfflineSyncService.items = OfflineSyncService.items.map((item: OfflineSyncItem): OfflineSyncItem => {
+      if (item.status !== OfflineSyncItemStatus.Syncing) {
+        return item;
+      }
+
+      return OfflineSyncService.copyItemWithStatus(item, OfflineSyncItemStatus.Pending, '网络已切换至离线，等待恢复后继续同步');
+    });
+
+    OfflineSyncService.runtimeState = {
+      networkPaused: true,
+      logThrottleEnabled: true,
+      lastTransitionAt: new Date().toISOString(),
+      lastTransitionReason: reason
+    };
+    OfflineSyncService.persistItems();
+    OfflineSyncService.persistRuntimeState();
+    WorkbenchRefreshStore.notifyChanged();
+
+    return {
+      success: true,
+      message: '已进入离线模式，待提交内容将保留在本地队列',
+      waitingForNetworkStability: false
+    };
+  }
+
+  static prepareForOnlineRecovery(reason: string): OfflineSyncTransitionPreparation {
+    OfflineSyncService.ensureInitialized();
+    if (OfflineSyncService.isTransitionDebounced()) {
+      return {
+        success: false,
+        message: '服务模式切换过于频繁，请稍后再试',
+        waitingForNetworkStability: false
+      };
+    }
+
+    const readyAt = new Date(Date.now() + ONLINE_STABILITY_DELAY_MS).toISOString();
+    OfflineSyncService.runtimeState = {
+      networkPaused: false,
+      logThrottleEnabled: false,
+      onlineRecoveryReadyAt: readyAt,
+      lastTransitionAt: new Date().toISOString(),
+      lastTransitionReason: reason
+    };
+    OfflineSyncService.persistRuntimeState();
+    WorkbenchRefreshStore.notifyChanged();
+
+    return {
+      success: true,
+      message: '已进入在线恢复准备，系统将等待网络稳定后处理同步队列',
+      waitingForNetworkStability: true
+    };
+  }
+
+  static getReadyPendingItems(limit: number): OfflineSyncItem[] {
+    OfflineSyncService.ensureInitialized();
+
+    const now = Date.now();
+    const items: OfflineSyncItem[] = [];
+    OfflineSyncService.items.forEach((item: OfflineSyncItem) => {
+      if (items.length >= limit) {
+        return;
+      }
+
+      if (item.status === OfflineSyncItemStatus.Pending && OfflineSyncService.isRetryReady(item, now)) {
+        items.push(item);
+      }
+    });
+
+    return items;
   }
 
   private static updateItemStatus(id: string, status: OfflineSyncItemStatus, error: string): void {
@@ -117,6 +276,10 @@ export class OfflineSyncService {
         status,
         createdAt: item.createdAt,
         updatedAt: now,
+        retryCount: status === OfflineSyncItemStatus.Synced ? 0 : item.retryCount,
+        nextRetryAt: undefined,
+        conflictKey: item.conflictKey,
+        serverVersion: item.serverVersion,
         lastError: error.length === 0 ? undefined : error
       });
     });
@@ -134,16 +297,27 @@ export class OfflineSyncService {
     OfflineSyncService.initialized = true;
     try {
       PersistentStorage.persistProp<string>(OFFLINE_SYNC_QUEUE_STORAGE_KEY, DEFAULT_QUEUE_TEXT);
+      PersistentStorage.persistProp<string>(OFFLINE_SYNC_RUNTIME_STORAGE_KEY, DEFAULT_RUNTIME_TEXT);
       const queueText = AppStorage.get<string>(OFFLINE_SYNC_QUEUE_STORAGE_KEY);
+      const runtimeText = AppStorage.get<string>(OFFLINE_SYNC_RUNTIME_STORAGE_KEY);
       OfflineSyncService.items = OfflineSyncService.parseItems(queueText);
+      OfflineSyncService.runtimeState = OfflineSyncService.parseRuntimeState(runtimeText);
     } catch (err) {
       OfflineSyncService.items = [];
+      OfflineSyncService.runtimeState = OfflineSyncService.createDefaultRuntimeState();
     }
   }
 
   private static persistItems(): void {
     try {
       AppStorage.setOrCreate<string>(OFFLINE_SYNC_QUEUE_STORAGE_KEY, JSON.stringify(OfflineSyncService.items));
+    } catch (err) {
+    }
+  }
+
+  private static persistRuntimeState(): void {
+    try {
+      AppStorage.setOrCreate<string>(OFFLINE_SYNC_RUNTIME_STORAGE_KEY, JSON.stringify(OfflineSyncService.runtimeState));
     } catch (err) {
     }
   }
@@ -158,7 +332,7 @@ export class OfflineSyncService {
       const items: OfflineSyncItem[] = [];
       parsedItems.forEach((item: OfflineSyncItem) => {
         if (OfflineSyncService.isValidItem(item)) {
-          items.push(item);
+          items.push(OfflineSyncService.normalizeItem(item));
         }
       });
 
@@ -176,6 +350,50 @@ export class OfflineSyncService {
       OfflineSyncService.isKnownStatus(item.status);
   }
 
+  private static normalizeItem(item: OfflineSyncItem): OfflineSyncItem {
+    return {
+      id: item.id,
+      operationType: item.operationType,
+      payloadSummary: item.payloadSummary,
+      payloadJson: item.payloadJson,
+      operatorName: item.operatorName,
+      status: item.status,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+      retryCount: item.retryCount === undefined || item.retryCount !== item.retryCount || item.retryCount < 0 ? 0 : Math.floor(item.retryCount),
+      nextRetryAt: item.nextRetryAt,
+      conflictKey: item.conflictKey,
+      serverVersion: item.serverVersion,
+      lastError: item.lastError
+    };
+  }
+
+  private static parseRuntimeState(runtimeText: string | undefined): OfflineSyncRuntimeState {
+    if (runtimeText === undefined || runtimeText.trim().length === 0) {
+      return OfflineSyncService.createDefaultRuntimeState();
+    }
+
+    try {
+      const runtimeState = JSON.parse(runtimeText) as OfflineSyncRuntimeState;
+      return {
+        networkPaused: runtimeState.networkPaused === true,
+        logThrottleEnabled: runtimeState.logThrottleEnabled === true,
+        onlineRecoveryReadyAt: runtimeState.onlineRecoveryReadyAt,
+        lastTransitionAt: runtimeState.lastTransitionAt,
+        lastTransitionReason: runtimeState.lastTransitionReason
+      };
+    } catch (err) {
+      return OfflineSyncService.createDefaultRuntimeState();
+    }
+  }
+
+  private static createDefaultRuntimeState(): OfflineSyncRuntimeState {
+    return {
+      networkPaused: false,
+      logThrottleEnabled: false
+    };
+  }
+
   private static isKnownStatus(status: OfflineSyncItemStatus): boolean {
     return status === OfflineSyncItemStatus.Pending ||
       status === OfflineSyncItemStatus.Syncing ||
@@ -183,8 +401,63 @@ export class OfflineSyncService {
       status === OfflineSyncItemStatus.Failed;
   }
 
+  private static isTransitionDebounced(): boolean {
+    const lastTransitionAt = OfflineSyncService.runtimeState.lastTransitionAt;
+    if (lastTransitionAt === undefined || lastTransitionAt.length === 0) {
+      return false;
+    }
+
+    const timestamp = Date.parse(lastTransitionAt);
+    return timestamp === timestamp && Date.now() - timestamp < TRANSITION_DEBOUNCE_MS;
+  }
+
+  private static isWaitingForNetworkStability(): boolean {
+    const readyAt = OfflineSyncService.runtimeState.onlineRecoveryReadyAt;
+    if (readyAt === undefined || readyAt.length === 0) {
+      return false;
+    }
+
+    const timestamp = Date.parse(readyAt);
+    return timestamp === timestamp && timestamp > Date.now();
+  }
+
+  private static isRetryReady(item: OfflineSyncItem, now: number): boolean {
+    if (OfflineSyncService.isWaitingForNetworkStability()) {
+      return false;
+    }
+
+    if (item.nextRetryAt === undefined || item.nextRetryAt.length === 0) {
+      return true;
+    }
+
+    const timestamp = Date.parse(item.nextRetryAt);
+    return timestamp !== timestamp || timestamp <= now;
+  }
+
+  private static getRetryDelayMs(retryCount: number): number {
+    const normalizedRetryCount = Math.max(1, retryCount);
+    return BASE_RETRY_DELAY_MS * Math.pow(2, normalizedRetryCount - 1);
+  }
+
+  private static copyItemWithStatus(item: OfflineSyncItem, status: OfflineSyncItemStatus, error: string): OfflineSyncItem {
+    return {
+      id: item.id,
+      operationType: item.operationType,
+      payloadSummary: item.payloadSummary,
+      payloadJson: item.payloadJson,
+      operatorName: item.operatorName,
+      status,
+      createdAt: item.createdAt,
+      updatedAt: new Date().toISOString(),
+      retryCount: item.retryCount,
+      nextRetryAt: item.nextRetryAt,
+      conflictKey: item.conflictKey,
+      serverVersion: item.serverVersion,
+      lastError: error.length === 0 ? item.lastError : error
+    };
+  }
+
   private static createItemId(): string {
     return `offline-sync-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
   }
 }
-

@@ -20,4 +20,8 @@ export class OperationsFlowStore {
     OperationsFlowStore.faultReportPrefill = undefined;
     return prefill;
   }
+
+  static clearFlow(): void {
+    OperationsFlowStore.faultReportPrefill = undefined;
+  }
 }
