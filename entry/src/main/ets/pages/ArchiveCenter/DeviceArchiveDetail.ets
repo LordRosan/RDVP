@@ -44,8 +44,12 @@ struct DeviceArchiveDetail {
     status: DeviceStatus.PendingVerification
   };
   @State hasDevice: boolean = false;
-  @State message: string = '';
-  @State messageTone: string = AppColors.Danger;
+  @State detailMessage: string = '';
+  @State detailMessageTone: string = AppColors.Danger;
+  @State changeActionMessage: string = '';
+  @State changeActionMessageTone: string = AppColors.Danger;
+  @State deleteActionMessage: string = '';
+  @State deleteActionMessageTone: string = AppColors.Danger;
   @State canChangeArchive: boolean = false;
   @State canDeleteArchive: boolean = false;
   private detailInfoDialogController: CustomDialogController = new CustomDialogController({
@@ -80,8 +84,10 @@ struct DeviceArchiveDetail {
       this.hasDevice = false;
       this.canChangeArchive = false;
       this.canDeleteArchive = false;
-      this.message = '未获取设备档案，请重新查询';
-      this.messageTone = AppColors.Danger;
+      this.detailMessage = '未获取设备档案，请重新查询';
+      this.detailMessageTone = AppColors.Danger;
+      this.changeActionMessage = '';
+      this.deleteActionMessage = '';
       return;
     }
 
@@ -92,14 +98,18 @@ struct DeviceArchiveDetail {
     this.canDeleteArchive = SessionStore.hasPermission(PermissionCode.ArchiveDeviceDelete) &&
       !DeviceService.isArchiveChangeLocked(device) &&
       !DeviceArchiveDeleteGuardService.isDeleteLocked(device.deviceCode);
+    this.detailMessage = '';
+    this.detailMessageTone = AppColors.Danger;
+    this.changeActionMessage = '';
+    this.changeActionMessageTone = AppColors.Danger;
     if (DeviceArchiveDeleteGuardService.isDeleteLocked(device.deviceCode)) {
-      this.message = DeviceArchiveDeleteGuardService.getDeleteLockMessage(device.deviceCode);
-      this.messageTone = AppColors.Danger;
+      this.deleteActionMessage = DeviceArchiveDeleteGuardService.getDeleteLockMessage(device.deviceCode);
+      this.deleteActionMessageTone = AppColors.Danger;
       return;
     }
 
-    this.message = '';
-    this.messageTone = AppColors.Danger;
+    this.deleteActionMessage = '';
+    this.deleteActionMessageTone = AppColors.Danger;
   }
 
   build() {
@@ -307,11 +317,13 @@ struct DeviceArchiveDetail {
   @Builder
   ActionPanel() {
     Column({ space: 12 }) {
-      this.MessageText()
+      this.DetailMessageText()
       if (this.canViewChangeArchiveAction()) {
+        this.ChangeActionMessageText()
         this.ChangeArchiveButton()
       }
       if (this.canViewDeleteArchiveAction()) {
+        this.DeleteActionMessageText()
         this.DeleteArchiveButton()
       }
     }
@@ -330,7 +342,7 @@ struct DeviceArchiveDetail {
   @Builder
   EmptyPanel() {
     Column({ space: 12 }) {
-      this.MessageText()
+      this.DetailMessageText()
     }
     .padding({
       left: 18,
@@ -360,11 +372,35 @@ struct DeviceArchiveDetail {
   }
 
   @Builder
-  MessageText() {
-    if (this.message.length > 0) {
-      Text(this.message)
+  DetailMessageText() {
+    if (this.detailMessage.length > 0) {
+      Text(this.detailMessage)
         .fontSize(13)
-        .fontColor(this.messageTone)
+        .fontColor(this.detailMessageTone)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
+    }
+  }
+
+  @Builder
+  ChangeActionMessageText() {
+    if (this.changeActionMessage.length > 0) {
+      Text(this.changeActionMessage)
+        .fontSize(13)
+        .fontColor(this.changeActionMessageTone)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
+    }
+  }
+
+  @Builder
+  DeleteActionMessageText() {
+    if (this.deleteActionMessage.length > 0) {
+      Text(this.deleteActionMessage)
+        .fontSize(13)
+        .fontColor(this.deleteActionMessageTone)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
@@ -445,7 +481,8 @@ struct DeviceArchiveDetail {
   }
 
   shouldShowActionPanel(): boolean {
-    return this.message.length > 0 || this.canViewChangeArchiveAction() || this.canViewDeleteArchiveAction();
+    return this.detailMessage.length > 0 || this.changeActionMessage.length > 0 ||
+      this.deleteActionMessage.length > 0 || this.canViewChangeArchiveAction() || this.canViewDeleteArchiveAction();
   }
 
   canViewChangeArchiveAction(): boolean {
@@ -458,49 +495,49 @@ struct DeviceArchiveDetail {
 
   openChangePage(): void {
     if (!SessionStore.hasPermission(PermissionCode.ArchiveChangeRequestCreate)) {
-      this.message = '当前账号无权申请设备档案变更';
-      this.messageTone = AppColors.Danger;
+      this.changeActionMessage = '当前账号无权申请设备档案变更';
+      this.changeActionMessageTone = AppColors.Danger;
       return;
     }
 
     if (DeviceService.isArchiveChangeLocked(this.device)) {
-      this.message = DeviceService.formatArchiveChangeLockReason(this.device);
-      this.messageTone = AppColors.Danger;
+      this.changeActionMessage = DeviceService.formatArchiveChangeLockReason(this.device);
+      this.changeActionMessageTone = AppColors.Danger;
       return;
     }
 
     try {
       this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveChange' });
     } catch (err) {
-      this.message = '设备档案变更不可用';
-      this.messageTone = AppColors.Danger;
+      this.changeActionMessage = '设备档案变更不可用';
+      this.changeActionMessageTone = AppColors.Danger;
     }
   }
 
   openDeletePage(): void {
     if (!SessionStore.hasPermission(PermissionCode.ArchiveDeviceDelete)) {
-      this.message = '当前账号无权申请删除设备档案';
-      this.messageTone = AppColors.Danger;
+      this.deleteActionMessage = '当前账号无权申请删除设备档案';
+      this.deleteActionMessageTone = AppColors.Danger;
       return;
     }
 
     if (DeviceArchiveDeleteGuardService.isDeleteLocked(this.device.deviceCode)) {
-      this.message = DeviceArchiveDeleteGuardService.getDeleteLockMessage(this.device.deviceCode);
-      this.messageTone = AppColors.Danger;
+      this.deleteActionMessage = DeviceArchiveDeleteGuardService.getDeleteLockMessage(this.device.deviceCode);
+      this.deleteActionMessageTone = AppColors.Danger;
       return;
     }
 
     if (DeviceService.isArchiveChangeLocked(this.device)) {
-      this.message = DeviceService.formatArchiveChangeLockReason(this.device);
-      this.messageTone = AppColors.Danger;
+      this.deleteActionMessage = DeviceService.formatArchiveChangeLockReason(this.device);
+      this.deleteActionMessageTone = AppColors.Danger;
       return;
     }
 
     try {
       this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveDelete' });
     } catch (err) {
-      this.message = '设备档案删除不可用';
-      this.messageTone = AppColors.Danger;
+      this.deleteActionMessage = '设备档案删除不可用';
+      this.deleteActionMessageTone = AppColors.Danger;
     }
   }
 
@@ -515,8 +552,10 @@ struct DeviceArchiveDetail {
 
       router.replaceUrl({ url: 'pages/ArchiveCenter/DeviceArchiveQuery' });
     } catch (err) {
-      this.message = '页面跳转失败';
-      this.messageTone = AppColors.Danger;
+      try {
+        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+      } catch (toastErr) {
+      }
     }
   }
 }

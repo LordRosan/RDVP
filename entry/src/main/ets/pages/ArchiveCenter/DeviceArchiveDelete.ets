@@ -355,7 +355,6 @@ struct DeviceArchiveDelete {
 
         this.ConfirmPasswordField()
         this.ConfirmCaptchaField()
-        this.ConfirmMessageText()
 
         Row({ space: 10 }) {
           Column() {
@@ -365,7 +364,8 @@ struct DeviceArchiveDelete {
           }
           .layoutWeight(1)
 
-          Column() {
+          Column({ space: 8 }) {
+            this.ConfirmMessageText()
             this.ConfirmPrimaryButton(this.submitting ? '提交中' : '确认提交', () => {
               this.confirmAndSubmitDeleteRequest();
             })
@@ -758,8 +758,10 @@ struct DeviceArchiveDelete {
 
       router.replaceUrl({ url: 'pages/ArchiveCenter/DeviceArchiveDetail' });
     } catch (err) {
-      this.message = '页面跳转失败';
-      this.messageTone = AppColors.Danger;
+      try {
+        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+      } catch (toastErr) {
+      }
     }
   }
 }

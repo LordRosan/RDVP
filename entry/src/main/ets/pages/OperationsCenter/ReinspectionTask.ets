@@ -159,6 +159,8 @@ struct ReinspectionTask {
   @Builder
   TaskListPanel() {
     Column({ space: 10 }) {
+      this.TaskMessageText()
+
       Row() {
         Text('待复检任务')
           .fontSize(22)
@@ -193,8 +195,6 @@ struct ReinspectionTask {
         }
         .width('100%')
       }
-
-      this.TaskMessageText()
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
@@ -782,8 +782,10 @@ struct ReinspectionTask {
 
       router.replaceUrl({ url: 'pages/Workbench' });
     } catch (err) {
-      this.recordMessage = '页面跳转失败';
-      this.recordMessageTone = AppColors.Danger;
+      try {
+        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+      } catch (toastErr) {
+      }
     }
   }
 }

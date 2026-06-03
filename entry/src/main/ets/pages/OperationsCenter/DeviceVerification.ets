@@ -48,6 +48,8 @@ struct DeviceVerification {
   @State remark: string = '';
   @State message: string = '';
   @State messageTone: string = AppColors.Danger;
+  @State reportActionMessage: string = '';
+  @State reportActionMessageTone: string = AppColors.Danger;
   @State normalizedDeviceCode: string = '-';
   @State submitting: boolean = false;
   @State canReportFault: boolean = false;
@@ -173,6 +175,7 @@ struct DeviceVerification {
           this.submitVerification();
         })
       if (this.canReportFault) {
+        this.ReportActionMessageText()
         this.ActionButton('上报故障', $r('sys.symbol.exclamationmark_message'), true, () => {
           this.openFaultReport();
         })
@@ -215,6 +218,8 @@ struct DeviceVerification {
           this.deviceCode = value;
           this.message = '';
           this.messageTone = AppColors.Danger;
+          this.reportActionMessage = '';
+          this.reportActionMessageTone = AppColors.Danger;
           this.canReportFault = false;
           this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(value);
           if (this.normalizedDeviceCode.length === 0) {
@@ -272,6 +277,8 @@ struct DeviceVerification {
       this.verificationResult = `${result}`;
       this.message = '';
       this.messageTone = AppColors.Danger;
+      this.reportActionMessage = '';
+      this.reportActionMessageTone = AppColors.Danger;
       this.canReportFault = false;
     })
   }
@@ -306,6 +313,8 @@ struct DeviceVerification {
           this.description = value;
           this.message = '';
           this.messageTone = AppColors.Danger;
+          this.reportActionMessage = '';
+          this.reportActionMessageTone = AppColors.Danger;
           this.canReportFault = false;
         })
     }
@@ -343,6 +352,8 @@ struct DeviceVerification {
           this.remark = value;
           this.message = '';
           this.messageTone = AppColors.Danger;
+          this.reportActionMessage = '';
+          this.reportActionMessageTone = AppColors.Danger;
           this.canReportFault = false;
         })
     }
@@ -365,6 +376,18 @@ struct DeviceVerification {
       Text(this.message)
         .fontSize(13)
         .fontColor(this.messageTone)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
+    }
+  }
+
+  @Builder
+  ReportActionMessageText() {
+    if (this.reportActionMessage.length > 0) {
+      Text(this.reportActionMessage)
+        .fontSize(13)
+        .fontColor(this.reportActionMessageTone)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
@@ -491,6 +514,8 @@ struct DeviceVerification {
       this.message = recordId.length > 0 ? `核验记录已提交：${recordId}` : '核验记录已提交';
     }
     this.messageTone = AppColors.Success;
+    this.reportActionMessage = '';
+    this.reportActionMessageTone = AppColors.Danger;
     this.canReportFault = this.shouldOfferFaultReport();
   }
 
@@ -538,8 +563,8 @@ struct DeviceVerification {
     try {
       this.getUIContext().getRouter().pushUrl({ url: 'pages/OperationsCenter/FaultReport' });
     } catch (err) {
-      this.message = '故障报告不可用';
-      this.messageTone = AppColors.Danger;
+      this.reportActionMessage = '故障报告不可用';
+      this.reportActionMessageTone = AppColors.Danger;
     }
   }
 
@@ -553,8 +578,10 @@ struct DeviceVerification {
 
       router.replaceUrl({ url: 'pages/Workbench' });
     } catch (err) {
-      this.message = '页面跳转失败';
-      this.messageTone = AppColors.Danger;
+      try {
+        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+      } catch (toastErr) {
+      }
     }
   }
 }

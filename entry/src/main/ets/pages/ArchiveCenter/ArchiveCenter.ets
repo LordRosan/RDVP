@@ -13,6 +13,7 @@ import { AuthGuard } from '../../utils/AuthGuard';
 struct ArchiveCenter {
   @State actions: WorkbenchAction[] = WorkbenchService.getArchiveCenterActions();
   @State message: string = '';
+  @State messageTargetId: string = '';
   @StorageLink('rdvp_workbench_refresh_revision') workbenchRefreshRevision: number = 0;
 
   aboutToAppear(): void {
@@ -173,15 +174,20 @@ struct ArchiveCenter {
 
       Column({ space: 10 }) {
         ForEach(this.actions, (item: WorkbenchAction) => {
-          ActionTile({ action: item })
-            .onClick(() => {
-              this.openFeature(item);
-            })
+          Column({ space: 8 }) {
+            if (this.messageTargetId === `${item.id}` && this.message.length > 0) {
+              this.MessageText()
+            }
+
+            ActionTile({ action: item })
+              .onClick(() => {
+                this.openFeature(item);
+              })
+          }
+          .width('100%')
         }, (item: WorkbenchAction) => item.id)
       }
       .width('100%')
-
-      this.MessageText()
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
@@ -235,11 +241,13 @@ struct ArchiveCenter {
 
   openFeature(action: WorkbenchAction): void {
     this.message = '';
+    this.messageTargetId = '';
     if (action.id === WorkbenchActionId.DeviceQuery) {
       try {
         this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveQuery' });
       } catch (err) {
         this.message = '查询设备档案不可用';
+        this.messageTargetId = `${action.id}`;
       }
       return;
     }
@@ -249,11 +257,13 @@ struct ArchiveCenter {
         this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveCreate' });
       } catch (err) {
         this.message = '添加设备档案不可用';
+        this.messageTargetId = `${action.id}`;
       }
       return;
     }
 
     this.message = '功能暂不可用';
+    this.messageTargetId = `${action.id}`;
   }
 
   backToWorkbench(): void {
@@ -266,7 +276,10 @@ struct ArchiveCenter {
 
       router.replaceUrl({ url: 'pages/Workbench' });
     } catch (err) {
-      this.message = '页面跳转失败';
+      try {
+        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+      } catch (toastErr) {
+      }
     }
   }
 }

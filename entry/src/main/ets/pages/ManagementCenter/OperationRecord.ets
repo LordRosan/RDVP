@@ -152,6 +152,8 @@ struct OperationRecord {
   @Builder
   RecordListPanel() {
     Column({ space: 10 }) {
+      this.MessageText()
+
       Row() {
         Text('最近记录')
           .fontSize(22)
@@ -186,8 +188,6 @@ struct OperationRecord {
         }
         .width('100%')
       }
-
-      this.MessageText()
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -393,7 +393,10 @@ struct OperationRecord {
 
       router.replaceUrl({ url: 'pages/Workbench' });
     } catch (err) {
-      this.message = '页面跳转失败';
+      try {
+        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+      } catch (toastErr) {
+      }
     }
   }
 }

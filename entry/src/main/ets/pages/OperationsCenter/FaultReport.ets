@@ -797,7 +797,10 @@ struct FaultReport {
 
       router.replaceUrl({ url: 'pages/Workbench' });
     } catch (err) {
-      this.message = '页面跳转失败';
+      try {
+        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+      } catch (toastErr) {
+      }
     }
   }
 }

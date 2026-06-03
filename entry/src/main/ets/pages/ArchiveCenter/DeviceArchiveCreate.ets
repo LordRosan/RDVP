@@ -472,8 +472,10 @@ struct DeviceArchiveCreate {
 
       router.replaceUrl({ url: 'pages/ArchiveCenter/ArchiveCenter' });
     } catch (err) {
-      this.message = '页面跳转失败';
-      this.messageTone = AppColors.Danger;
+      try {
+        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+      } catch (toastErr) {
+      }
     }
   }
 }

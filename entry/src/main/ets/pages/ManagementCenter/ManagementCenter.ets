@@ -13,6 +13,7 @@ import { AuthGuard } from '../../utils/AuthGuard';
 struct ManagementCenter {
   @State actions: WorkbenchAction[] = WorkbenchService.getManagementCenterActions();
   @State message: string = '';
+  @State messageTargetId: string = '';
   @StorageLink('rdvp_workbench_refresh_revision') workbenchRefreshRevision: number = 0;
 
   aboutToAppear(): void {
@@ -183,15 +184,20 @@ struct ManagementCenter {
 
       Column({ space: 10 }) {
         ForEach(this.actions, (item: WorkbenchAction) => {
-          ActionTile({ action: item })
-            .onClick(() => {
-              this.openFeature(item);
-            })
+          Column({ space: 8 }) {
+            if (this.messageTargetId === `${item.id}` && this.message.length > 0) {
+              this.MessageText()
+            }
+
+            ActionTile({ action: item })
+              .onClick(() => {
+                this.openFeature(item);
+              })
+          }
+          .width('100%')
         }, (item: WorkbenchAction) => item.id)
       }
       .width('100%')
-
-      this.MessageText()
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
@@ -241,6 +247,7 @@ struct ManagementCenter {
 
   openFeature(action: WorkbenchAction): void {
     this.message = '';
+    this.messageTargetId = '';
     if (action.id === WorkbenchActionId.DeviceChangeReview) {
       this.openPage('pages/ManagementCenter/DeviceArchiveReview', '变更审核不可用');
       return;
@@ -252,6 +259,7 @@ struct ManagementCenter {
     }
 
     this.message = '功能暂不可用';
+    this.messageTargetId = `${action.id}`;
   }
 
   openPage(url: string, errorMessage: string): void {
@@ -259,7 +267,20 @@ struct ManagementCenter {
       this.getUIContext().getRouter().pushUrl({ url });
     } catch (err) {
       this.message = errorMessage;
+      this.messageTargetId = this.resolveActionIdByUrl(url);
     }
+  }
+
+  resolveActionIdByUrl(url: string): string {
+    if (url === 'pages/ManagementCenter/DeviceArchiveReview') {
+      return `${WorkbenchActionId.DeviceChangeReview}`;
+    }
+
+    if (url === 'pages/ManagementCenter/OperationRecord') {
+      return `${WorkbenchActionId.OperationRecord}`;
+    }
+
+    return '';
   }
 
   backToWorkbench(): void {
@@ -272,7 +293,10 @@ struct ManagementCenter {
 
       router.replaceUrl({ url: 'pages/Workbench' });
     } catch (err) {
-      this.message = '页面跳转失败';
+      try {
+        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+      } catch (toastErr) {
+      }
     }
   }
 }

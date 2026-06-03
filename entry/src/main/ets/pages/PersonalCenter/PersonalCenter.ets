@@ -13,8 +13,12 @@ struct PersonalCenter {
   @State currentUser: CurrentUserSnapshot = SessionStore.getCurrentUser();
   @State selectedServiceMode: string = ApiClient.getServiceMode();
   @State apiBaseUrl: string = ApiClient.getBaseUrl();
-  @State message: string = '';
-  @State messageTone: string = AppColors.Danger;
+  @State logoutActionMessage: string = '';
+  @State logoutActionMessageTone: string = AppColors.Danger;
+  @State serviceModeMessage: string = '';
+  @State serviceModeMessageTone: string = AppColors.Success;
+  @State serviceSettingsMessage: string = '';
+  @State serviceSettingsMessageTone: string = AppColors.Success;
 
   aboutToAppear(): void {
     if (!SessionStore.isAuthenticated()) {
@@ -197,6 +201,7 @@ struct PersonalCenter {
         this.backToWorkbench();
       })
 
+      this.LogoutActionMessageText()
       this.DangerButton('退出登录', $r('sys.symbol.person_badge_nosign'), () => {
         this.logout();
       })
@@ -220,6 +225,8 @@ struct PersonalCenter {
         this.InfoRow('同步队列', OfflineSyncService.getStatusLabel(), OfflineSyncService.getStatusTone())
         this.CardDivider()
 
+        this.ServiceModeMessageText()
+
         Row({ space: 10 }) {
           Column() {
             this.OnlineServiceModeButton()
@@ -233,8 +240,6 @@ struct PersonalCenter {
         }
         .width('100%')
         .alignItems(VerticalAlign.Center)
-
-        this.ServiceModeMessageText()
 
         if (this.isOnlineSelected()) {
           TextInput({
@@ -255,11 +260,13 @@ struct PersonalCenter {
             })
             .onChange((value: string) => {
               this.apiBaseUrl = value;
-              this.message = '';
-              this.messageTone = AppColors.Danger;
+              this.serviceSettingsMessage = '';
+              this.serviceSettingsMessageTone = AppColors.Danger;
             })
 
         }
+
+        this.ServiceSettingsMessageText()
 
         this.ServiceButton('保存设置', $r('sys.symbol.checkmark_circle'),
           AppColors.Primary,
@@ -268,14 +275,6 @@ struct PersonalCenter {
             this.applyServiceSettings();
           })
 
-        if (this.message.length > 0 && !this.isServiceModeMessage()) {
-          Text(this.message)
-            .fontSize(13)
-            .fontColor(this.messageTone)
-            .maxLines(2)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .width('100%')
-        }
       }
       .padding({
         left: 18,
@@ -293,10 +292,34 @@ struct PersonalCenter {
 
   @Builder
   ServiceModeMessageText() {
-    if (this.message.length > 0 && this.isServiceModeMessage()) {
-      Text(this.message)
+    if (this.serviceModeMessage.length > 0) {
+      Text(this.serviceModeMessage)
         .fontSize(13)
-        .fontColor(this.messageTone)
+        .fontColor(this.serviceModeMessageTone)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
+    }
+  }
+
+  @Builder
+  ServiceSettingsMessageText() {
+    if (this.serviceSettingsMessage.length > 0) {
+      Text(this.serviceSettingsMessage)
+        .fontSize(13)
+        .fontColor(this.serviceSettingsMessageTone)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
+    }
+  }
+
+  @Builder
+  LogoutActionMessageText() {
+    if (this.logoutActionMessage.length > 0) {
+      Text(this.logoutActionMessage)
+        .fontSize(13)
+        .fontColor(this.logoutActionMessageTone)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
@@ -544,14 +567,15 @@ struct PersonalCenter {
 
   selectServiceMode(mode: ServiceMode): void {
     if (this.selectedServiceMode === mode) {
-      this.message = mode === ServiceMode.Online ? '当前已是在线模式' : '当前已是离线模式';
-      this.messageTone = mode === ServiceMode.Online ? AppColors.Success : AppColors.Warning;
+      this.serviceModeMessage = mode === ServiceMode.Online ? '当前已是在线模式' : '当前已是离线模式';
+      this.serviceModeMessageTone = mode === ServiceMode.Online ? AppColors.Success : AppColors.Warning;
       return;
     }
 
     this.selectedServiceMode = mode;
-    this.message = mode === ServiceMode.Online ? '已选择在线模式，保存设置后需要重新登录' : '已选择离线模式，保存设置后需要重新登录';
-    this.messageTone = mode === ServiceMode.Online ? AppColors.Success : AppColors.Warning;
+    this.serviceModeMessage = mode === ServiceMode.Online ? '已选择在线模式，保存设置后需要重新登录' : '已选择离线模式，保存设置后需要重新登录';
+    this.serviceModeMessageTone = mode === ServiceMode.Online ? AppColors.Success : AppColors.Warning;
+    this.serviceSettingsMessage = '';
   }
 
   applyServiceSettings(): void {
@@ -562,14 +586,14 @@ struct PersonalCenter {
     });
 
     if (!result.success || !result.changed) {
-      this.message = result.message;
-      this.messageTone = result.success ?
+      this.serviceSettingsMessage = result.message;
+      this.serviceSettingsMessageTone = result.success ?
         (this.isOnlineSelected() ? AppColors.Success : AppColors.Warning) : AppColors.Danger;
       return;
     }
 
     if (result.requiresRelogin) {
-      this.openLoginPage();
+      this.openLoginPage('service');
     }
   }
 
@@ -595,13 +619,6 @@ struct PersonalCenter {
 
   isOfflineSelected(): boolean {
     return this.selectedServiceMode === ServiceMode.Offline;
-  }
-
-  isServiceModeMessage(): boolean {
-    return this.message === '已选择在线模式，保存设置后需要重新登录' ||
-      this.message === '已选择离线模式，保存设置后需要重新登录' ||
-      this.message === '当前已是在线模式' ||
-      this.message === '当前已是离线模式';
   }
 
   formatSessionExpiresAt(): string {
@@ -630,21 +647,39 @@ struct PersonalCenter {
       try {
         this.getUIContext().getRouter().replaceUrl({ url: 'pages/Workbench' });
       } catch (innerErr) {
-        this.message = '页面跳转失败';
+        try {
+          this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+        } catch (toastErr) {
+        }
       }
     }
   }
 
   logout(): void {
     SessionStore.clearSession();
-    this.openLoginPage();
+    this.openLoginPage('logout');
   }
 
-  openLoginPage(): void {
+  openLoginPage(source: string = ''): void {
     try {
       this.getUIContext().getRouter().replaceUrl({ url: 'pages/Login' });
     } catch (err) {
-      this.message = '页面跳转失败';
+      if (source === 'service') {
+        this.serviceSettingsMessage = '页面跳转失败';
+        this.serviceSettingsMessageTone = AppColors.Danger;
+        return;
+      }
+
+      if (source === 'logout') {
+        this.logoutActionMessage = '页面跳转失败';
+        this.logoutActionMessageTone = AppColors.Danger;
+        return;
+      }
+
+      try {
+        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+      } catch (toastErr) {
+      }
     }
   }
 }

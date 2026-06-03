@@ -37,7 +37,9 @@ struct DeviceArchiveQuery {
   @State queryMode: DeviceQueryMode = DeviceQueryMode.Code;
   @State deviceCode: string = '';
   @State qrContent: string = '';
-  @State message: string = '';
+  @State codeQueryMessage: string = '';
+  @State qrActionMessage: string = '';
+  @State qrQueryMessage: string = '';
   @State normalizedDeviceCode: string = '-';
   @State querying: boolean = false;
   private queryInfoDialogController: CustomDialogController = new CustomDialogController({
@@ -216,14 +218,14 @@ struct DeviceArchiveQuery {
         })
         .onChange((value: string) => {
           this.deviceCode = value;
-          this.message = '';
+          this.codeQueryMessage = '';
           this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(value);
           if (this.normalizedDeviceCode.length === 0) {
             this.normalizedDeviceCode = '-';
           }
         })
 
-      this.MessageText()
+      this.CodeQueryMessageText()
       this.ActionButton(this.querying ? '查询中' : '查询', $r('sys.symbol.magnifyingglass'), () => {
         this.submitDeviceCodeQuery();
       }, !this.querying)
@@ -302,7 +304,7 @@ struct DeviceArchiveQuery {
         color: AppColors.Border
       })
 
-      this.MessageText()
+      this.QrActionMessageText()
 
       Row({ space: 10 }) {
         Column() {
@@ -322,6 +324,7 @@ struct DeviceArchiveQuery {
       .width('100%')
       .alignItems(VerticalAlign.Center)
 
+      this.QrQueryMessageText()
       this.ActionButton(this.querying ? '查询中' : '查询', $r('sys.symbol.magnifyingglass'), () => {
         this.submitQrQuery();
       }, !this.querying)
@@ -339,9 +342,33 @@ struct DeviceArchiveQuery {
   }
 
   @Builder
-  MessageText() {
-    if (this.message.length > 0) {
-      Text(this.message)
+  CodeQueryMessageText() {
+    if (this.codeQueryMessage.length > 0) {
+      Text(this.codeQueryMessage)
+        .fontSize(13)
+        .fontColor(AppColors.Danger)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
+    }
+  }
+
+  @Builder
+  QrActionMessageText() {
+    if (this.qrActionMessage.length > 0) {
+      Text(this.qrActionMessage)
+        .fontSize(13)
+        .fontColor(AppColors.Danger)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
+    }
+  }
+
+  @Builder
+  QrQueryMessageText() {
+    if (this.qrQueryMessage.length > 0) {
+      Text(this.qrQueryMessage)
         .fontSize(13)
         .fontColor(AppColors.Danger)
         .maxLines(2)
@@ -510,7 +537,9 @@ struct DeviceArchiveQuery {
   }
 
   switchQueryMode(): void {
-    this.message = '';
+    this.codeQueryMessage = '';
+    this.qrActionMessage = '';
+    this.qrQueryMessage = '';
     this.queryMode = this.queryMode === DeviceQueryMode.Code ? DeviceQueryMode.Qr : DeviceQueryMode.Code;
   }
 
@@ -540,7 +569,7 @@ struct DeviceArchiveQuery {
 
     if (!response.success) {
       const error = response.error;
-      this.message = error ? error.message : '查询设备档案失败';
+      this.codeQueryMessage = error ? error.message : '查询设备档案失败';
       return;
     }
 
@@ -550,17 +579,18 @@ struct DeviceArchiveQuery {
   }
 
   async scanQrCode(): Promise<void> {
-    this.message = '';
+    this.qrActionMessage = '';
+    this.qrQueryMessage = '';
     const context = this.getUIContext().getHostContext();
     if (context === undefined) {
-      this.message = '无法获取页面上下文';
+      this.qrActionMessage = '无法获取页面上下文';
       return;
     }
 
     try {
       const cameraGranted = await this.ensureCameraPermission();
       if (!cameraGranted) {
-        this.message = '请授权相机权限后再扫描二维码';
+        this.qrActionMessage = '请授权相机权限后再扫描二维码';
         return;
       }
 
@@ -570,7 +600,7 @@ struct DeviceArchiveQuery {
       });
       this.applyQrContent(result.originalValue);
     } catch (err) {
-      this.message = '扫码取消或失败';
+      this.qrActionMessage = '扫码取消或失败';
     }
   }
 
@@ -594,7 +624,8 @@ struct DeviceArchiveQuery {
   }
 
   async uploadQrImage(): Promise<void> {
-    this.message = '';
+    this.qrActionMessage = '';
+    this.qrQueryMessage = '';
 
     try {
       const picker = new photoAccessHelper.PhotoViewPicker();
@@ -604,7 +635,7 @@ struct DeviceArchiveQuery {
       });
 
       if (selection.photoUris.length === 0) {
-        this.message = '未选择图片';
+        this.qrActionMessage = '未选择图片';
         return;
       }
 
@@ -616,13 +647,13 @@ struct DeviceArchiveQuery {
 
       if (results.length === 0) {
         this.qrContent = '';
-        this.message = '未识别到二维码，请重新上传';
+        this.qrActionMessage = '未识别到二维码，请重新上传';
         return;
       }
 
       this.applyQrContent(results[0].originalValue);
     } catch (err) {
-      this.message = '本地图片二维码识别失败';
+      this.qrActionMessage = '本地图片二维码识别失败';
     }
   }
 
@@ -631,6 +662,7 @@ struct DeviceArchiveQuery {
       return;
     }
 
+    this.qrQueryMessage = '';
     this.qrContent = DeviceService.normalizeQrContent(this.qrContent);
     this.querying = true;
     const response = await DeviceService.queryByQrContentRemoteFirst({
@@ -641,10 +673,10 @@ struct DeviceArchiveQuery {
     if (!response.success) {
       const error = response.error;
       if (error !== undefined && this.isQrValidationErrorCode(`${error.code}`)) {
-        this.message = this.formatQrValidationErrorMessage(`${error.code}`);
+        this.qrQueryMessage = this.formatQrValidationErrorMessage(`${error.code}`);
         this.qrContent = '';
       } else {
-        this.message = error ? error.message : '二维码查询失败';
+        this.qrQueryMessage = error ? error.message : '二维码查询失败';
       }
       return;
     }
@@ -658,7 +690,7 @@ struct DeviceArchiveQuery {
     const qrContent = DeviceService.normalizeQrContent(content);
     if (qrContent.length === 0) {
       this.qrContent = '';
-      this.message = '二维码内容为空';
+      this.qrActionMessage = '二维码内容为空';
       return;
     }
 
@@ -667,12 +699,13 @@ struct DeviceArchiveQuery {
     });
     if (!validation.valid) {
       this.qrContent = '';
-      this.message = validation.message;
+      this.qrActionMessage = validation.message;
       return;
     }
 
     this.qrContent = qrContent;
-    this.message = '';
+    this.qrActionMessage = '';
+    this.qrQueryMessage = '';
   }
 
   isQrValidationErrorCode(errorCode: string): boolean {
@@ -732,7 +765,11 @@ struct DeviceArchiveQuery {
     try {
       this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveDetail' });
     } catch (err) {
-      this.message = '设备档案详情不可用';
+      if (this.queryMode === DeviceQueryMode.Code) {
+        this.codeQueryMessage = '设备档案详情不可用';
+      } else {
+        this.qrQueryMessage = '设备档案详情不可用';
+      }
     }
   }
 
@@ -747,7 +784,10 @@ struct DeviceArchiveQuery {
 
       router.replaceUrl({ url: 'pages/Workbench' });
     } catch (err) {
-      this.message = '页面跳转失败';
+      try {
+        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+      } catch (toastErr) {
+      }
     }
   }
 }

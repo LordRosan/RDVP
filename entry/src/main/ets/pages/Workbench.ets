@@ -15,6 +15,8 @@ struct Workbench {
   @State statusItems: WorkbenchStatusItem[] = WorkbenchService.getStatusItems();
   @State currentUser: CurrentUserSnapshot = SessionStore.getCurrentUser();
   @State actionMessage: string = '';
+  @State actionMessageTargetId: string = '';
+  @State personalCenterMessage: string = '';
   @StorageLink('rdvp_workbench_refresh_revision') workbenchRefreshRevision: number = 0;
 
   aboutToAppear(): void {
@@ -94,7 +96,11 @@ struct Workbench {
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
 
-        this.PersonalCenterButton()
+        Column({ space: 6 }) {
+          this.PersonalCenterMessageText()
+          this.PersonalCenterButton()
+        }
+        .alignItems(HorizontalAlign.End)
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
@@ -142,30 +148,46 @@ struct Workbench {
       Grid() {
         ForEach(this.actions, (item: WorkbenchAction) => {
           GridItem() {
-            ActionTile({
-              action: item
-            })
-              .onClick(() => {
-                this.openCenter(item);
+            Column({ space: 8 }) {
+              if (this.actionMessageTargetId === `${item.id}` && this.actionMessage.length > 0) {
+                Text(this.actionMessage)
+                  .fontSize(13)
+                  .fontColor(AppColors.Danger)
+                  .maxLines(2)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  .width('100%')
+              }
+
+              ActionTile({
+                action: item
               })
+                .onClick(() => {
+                  this.openCenter(item);
+                })
+            }
+            .width('100%')
           }
         }, (item: WorkbenchAction) => item.id)
       }
       .columnsTemplate('1fr')
       .rowsGap(10)
       .width('100%')
-
-      if (this.actionMessage.length > 0) {
-        Text(this.actionMessage)
-          .fontSize(13)
-          .fontColor(AppColors.Danger)
-          .maxLines(2)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .width('100%')
-      }
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
+  }
+
+  @Builder
+  PersonalCenterMessageText() {
+    if (this.personalCenterMessage.length > 0) {
+      Text(this.personalCenterMessage)
+        .fontSize(12)
+        .fontColor(AppColors.Danger)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width(92)
+        .textAlign(TextAlign.End)
+    }
   }
 
   @Builder
@@ -219,6 +241,7 @@ struct Workbench {
       this.getUIContext().getRouter().replaceUrl({ url: 'pages/Login' });
     } catch (err) {
       this.actionMessage = '登录页不可用';
+      this.actionMessageTargetId = `${WorkbenchActionId.ArchiveCenter}`;
     }
   }
 
@@ -242,15 +265,20 @@ struct Workbench {
   }
 
   openPersonalCenter(): void {
+    this.personalCenterMessage = '';
+    this.actionMessage = '';
+    this.actionMessageTargetId = '';
     try {
       this.getUIContext().getRouter().pushUrl({ url: 'pages/PersonalCenter/PersonalCenter' });
     } catch (err) {
-      this.actionMessage = '个人中心不可用';
+      this.personalCenterMessage = '个人中心不可用';
     }
   }
 
   openCenter(action: WorkbenchAction): void {
     this.actionMessage = '';
+    this.actionMessageTargetId = '';
+    this.personalCenterMessage = '';
 
     if (!SessionStore.isAuthenticated()) {
       this.openLoginPage();
@@ -262,6 +290,7 @@ struct Workbench {
         this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/ArchiveCenter' });
       } catch (err) {
         this.actionMessage = '档案中心不可用';
+        this.actionMessageTargetId = `${action.id}`;
       }
       return;
     }
@@ -271,6 +300,7 @@ struct Workbench {
         this.getUIContext().getRouter().pushUrl({ url: 'pages/OperationsCenter/OperationsCenter' });
       } catch (err) {
         this.actionMessage = '运维中心不可用';
+        this.actionMessageTargetId = `${action.id}`;
       }
       return;
     }
@@ -280,10 +310,12 @@ struct Workbench {
         this.getUIContext().getRouter().pushUrl({ url: 'pages/ManagementCenter/ManagementCenter' });
       } catch (err) {
         this.actionMessage = '管理中心不可用';
+        this.actionMessageTargetId = `${action.id}`;
       }
       return;
     }
 
     this.actionMessage = '中心入口暂不可用';
+    this.actionMessageTargetId = `${action.id}`;
   }
 }

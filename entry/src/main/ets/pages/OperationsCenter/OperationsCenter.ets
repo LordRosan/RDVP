@@ -13,6 +13,7 @@ import { AuthGuard } from '../../utils/AuthGuard';
 struct OperationsCenter {
   @State actions: WorkbenchAction[] = WorkbenchService.getOperationsCenterActions();
   @State message: string = '';
+  @State messageTargetId: string = '';
   @StorageLink('rdvp_workbench_refresh_revision') workbenchRefreshRevision: number = 0;
 
   aboutToAppear(): void {
@@ -191,15 +192,20 @@ struct OperationsCenter {
 
       Column({ space: 10 }) {
         ForEach(this.actions, (item: WorkbenchAction) => {
-          ActionTile({ action: item })
-            .onClick(() => {
-              this.openFeature(item);
-            })
+          Column({ space: 8 }) {
+            if (this.messageTargetId === `${item.id}` && this.message.length > 0) {
+              this.MessageText()
+            }
+
+            ActionTile({ action: item })
+              .onClick(() => {
+                this.openFeature(item);
+              })
+          }
+          .width('100%')
         }, (item: WorkbenchAction) => item.id)
       }
       .width('100%')
-
-      this.MessageText()
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
@@ -265,6 +271,7 @@ struct OperationsCenter {
 
   openFeature(action: WorkbenchAction): void {
     this.message = '';
+    this.messageTargetId = '';
     if (action.id === WorkbenchActionId.DeviceVerification) {
       this.openPage('pages/OperationsCenter/DeviceVerification', '状态核验不可用');
       return;
@@ -291,6 +298,7 @@ struct OperationsCenter {
     }
 
     this.message = '功能暂不可用';
+    this.messageTargetId = `${action.id}`;
   }
 
   openPage(url: string, errorMessage: string): void {
@@ -298,7 +306,32 @@ struct OperationsCenter {
       this.getUIContext().getRouter().pushUrl({ url });
     } catch (err) {
       this.message = errorMessage;
+      this.messageTargetId = this.resolveActionIdByUrl(url);
     }
+  }
+
+  resolveActionIdByUrl(url: string): string {
+    if (url === 'pages/OperationsCenter/DeviceVerification') {
+      return `${WorkbenchActionId.DeviceVerification}`;
+    }
+
+    if (url === 'pages/OperationsCenter/FaultReport') {
+      return `${WorkbenchActionId.FaultReport}`;
+    }
+
+    if (url === 'pages/OperationsCenter/AvailableRepairTask') {
+      return `${WorkbenchActionId.AvailableRepairTask}`;
+    }
+
+    if (url === 'pages/OperationsCenter/MyRepairTask') {
+      return `${WorkbenchActionId.MyRepairTask}`;
+    }
+
+    if (url === 'pages/OperationsCenter/ReinspectionTask') {
+      return `${WorkbenchActionId.ReinspectionTask}`;
+    }
+
+    return '';
   }
 
   backToWorkbench(): void {
@@ -311,7 +344,10 @@ struct OperationsCenter {
 
       router.replaceUrl({ url: 'pages/Workbench' });
     } catch (err) {
-      this.message = '页面跳转失败';
+      try {
+        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+      } catch (toastErr) {
+      }
     }
   }
 }

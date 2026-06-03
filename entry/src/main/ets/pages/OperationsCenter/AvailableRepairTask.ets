@@ -65,6 +65,11 @@ struct AvailableRepairTask {
   @State workloadSnapshot: RepairerWorkloadSnapshot = RepairTaskService.getCurrentWorkloadSnapshot();
   @State message: string = '';
   @State messageTone: string = AppColors.Danger;
+  @State taskListMessage: string = '';
+  @State taskListMessageTone: string = AppColors.Success;
+  @State acceptActionMessage: string = '';
+  @State acceptActionMessageTone: string = AppColors.Danger;
+  @State acceptActionTaskId: string = '';
   @State refreshStatus: string = '未刷新';
   @State taskItems: AvailableRepairTaskSummary[] = [];
   @State refreshing: boolean = false;
@@ -318,6 +323,8 @@ struct AvailableRepairTask {
   @Builder
   TaskListPanel() {
     Column({ space: 10 }) {
+      this.TaskListMessageText()
+
       Text('可接取任务')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
@@ -437,6 +444,9 @@ struct AvailableRepairTask {
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
+      if (this.acceptActionTaskId === item.id) {
+        this.AcceptActionMessageText()
+      }
       this.ActionButton(this.acceptingTaskId === item.id ? '接取中' : '接取任务', $r('sys.symbol.checkmark_circle'),
         this.isTaskAcceptEnabled(item), () => {
           this.acceptTask(item.id);
@@ -509,6 +519,30 @@ struct AvailableRepairTask {
       Text(this.message)
         .fontSize(13)
         .fontColor(this.messageTone)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
+    }
+  }
+
+  @Builder
+  TaskListMessageText() {
+    if (this.taskListMessage.length > 0) {
+      Text(this.taskListMessage)
+        .fontSize(13)
+        .fontColor(this.taskListMessageTone)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
+    }
+  }
+
+  @Builder
+  AcceptActionMessageText() {
+    if (this.acceptActionMessage.length > 0) {
+      Text(this.acceptActionMessage)
+        .fontSize(13)
+        .fontColor(this.acceptActionMessageTone)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
@@ -605,6 +639,9 @@ struct AvailableRepairTask {
     this.refreshStatus = '刷新中';
     this.message = '';
     this.messageTone = AppColors.Danger;
+    this.taskListMessage = '';
+    this.acceptActionMessage = '';
+    this.acceptActionTaskId = '';
     try {
       const workloadResponse = await this.withRefreshTimeout<RepairerWorkloadSnapshot>(
         RepairTaskService.getCurrentWorkloadSnapshotRemoteFirst(),
@@ -670,12 +707,16 @@ struct AvailableRepairTask {
     }
 
     this.acceptingTaskId = taskId;
+    this.acceptActionTaskId = taskId;
+    this.acceptActionMessage = '';
+    this.acceptActionMessageTone = AppColors.Danger;
+    this.taskListMessage = '';
     try {
       const workloadResponse = await RepairTaskService.getCurrentWorkloadSnapshotRemoteFirst();
       if (!workloadResponse.success || workloadResponse.data === undefined) {
         const error = workloadResponse.error;
-        this.message = error ? error.message : '维修负载状态刷新失败';
-        this.messageTone = AppColors.Danger;
+        this.acceptActionMessage = error ? error.message : '维修负载状态刷新失败';
+        this.acceptActionMessageTone = AppColors.Danger;
         return;
       }
 
@@ -683,10 +724,10 @@ struct AvailableRepairTask {
       const selectedTask = this.findTaskItem(taskId);
       if (!this.workloadSnapshot.canAccept ||
         (selectedTask !== undefined && selectedTask.distanceKm > this.workloadSnapshot.maxRadiusKm)) {
-        this.message = this.workloadSnapshot.canAccept ?
+        this.acceptActionMessage = this.workloadSnapshot.canAccept ?
           `当前处于${RepairTaskService.formatWorkloadStatus(this.workloadSnapshot.status)}状态，仅可接取${this.workloadSnapshot.maxRadiusKm}公里内的维修任务。` :
           this.workloadSnapshot.message;
-        this.messageTone = AppColors.Danger;
+        this.acceptActionMessageTone = AppColors.Danger;
         return;
       }
 
@@ -694,8 +735,8 @@ struct AvailableRepairTask {
 
       if (!response.success) {
         const error = response.error;
-        this.message = error ? error.message : '维修任务接取失败';
-        this.messageTone = AppColors.Danger;
+        this.acceptActionMessage = error ? error.message : '维修任务接取失败';
+        this.acceptActionMessageTone = AppColors.Danger;
         return;
       }
 
@@ -703,15 +744,17 @@ struct AvailableRepairTask {
         return item.id !== taskId;
       });
       this.refreshStatus = '已接取';
-      this.message = '维修任务已接取，可在我的维修中处理';
-      this.messageTone = AppColors.Success;
+      this.acceptActionMessage = '';
+      this.acceptActionTaskId = '';
+      this.taskListMessage = '维修任务已接取，可在我的维修中处理';
+      this.taskListMessageTone = AppColors.Success;
       const nextWorkloadResponse = await RepairTaskService.getCurrentWorkloadSnapshotRemoteFirst();
       if (nextWorkloadResponse.success && nextWorkloadResponse.data !== undefined) {
         this.applyWorkloadSnapshot(nextWorkloadResponse.data);
       }
     } catch (err) {
-      this.message = '维修任务接取失败，请稍后重试';
-      this.messageTone = AppColors.Danger;
+      this.acceptActionMessage = '维修任务接取失败，请稍后重试';
+      this.acceptActionMessageTone = AppColors.Danger;
     } finally {
       this.acceptingTaskId = '';
     }
@@ -759,6 +802,7 @@ struct AvailableRepairTask {
     this.radiusKm = Math.min(selectedIndex + 1, this.workloadSnapshot.maxRadiusKm);
     this.message = '';
     this.messageTone = AppColors.Danger;
+    this.taskListMessage = '';
   }
 
   applyWorkloadSnapshot(workloadSnapshot: RepairerWorkloadSnapshot): void {
@@ -881,7 +925,10 @@ struct AvailableRepairTask {
 
       router.replaceUrl({ url: 'pages/Workbench' });
     } catch (err) {
-      this.message = '页面跳转失败';
+      try {
+        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+      } catch (toastErr) {
+      }
     }
   }
 }

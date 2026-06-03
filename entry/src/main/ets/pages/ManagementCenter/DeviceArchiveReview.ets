@@ -43,6 +43,8 @@ struct DeviceArchiveReview {
   @State reviewComment: string = '';
   @State message: string = '';
   @State messageTone: string = AppColors.Danger;
+  @State refreshMessage: string = '';
+  @State refreshMessageTone: string = AppColors.Danger;
   @State refreshStatus: string = '未刷新';
   @State refreshing: boolean = false;
   @State submitting: boolean = false;
@@ -160,6 +162,8 @@ struct DeviceArchiveReview {
   @Builder
   RequestListPanel() {
     Column({ space: 10 }) {
+      this.RefreshMessageText()
+
       Row() {
         Text('待审核申请')
           .fontSize(22)
@@ -620,6 +624,18 @@ struct DeviceArchiveReview {
   }
 
   @Builder
+  RefreshMessageText() {
+    if (this.refreshMessage.length > 0) {
+      Text(this.refreshMessage)
+        .fontSize(13)
+        .fontColor(this.refreshMessageTone)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
+    }
+  }
+
+  @Builder
   MessageText() {
     if (this.message.length > 0) {
       Text(this.message)
@@ -687,8 +703,8 @@ struct DeviceArchiveReview {
     }
 
     if (!this.canReview()) {
-      this.message = '当前账号无权审核设备档案变更';
-      this.messageTone = AppColors.Danger;
+      this.refreshMessage = '当前账号无权审核设备档案变更';
+      this.refreshMessageTone = AppColors.Danger;
       return;
     }
 
@@ -698,8 +714,8 @@ struct DeviceArchiveReview {
 
     if (!response.success) {
       const error = response.error;
-      this.message = error ? error.message : '变更申请刷新失败';
-      this.messageTone = AppColors.Danger;
+      this.refreshMessage = error ? error.message : '变更申请刷新失败';
+      this.refreshMessageTone = AppColors.Danger;
       this.refreshStatus = '刷新失败';
       return;
     }
@@ -709,6 +725,8 @@ struct DeviceArchiveReview {
       this.clearReviewForm();
     }
 
+    this.refreshMessage = '';
+    this.refreshMessageTone = AppColors.Danger;
     if (clearMessage) {
       this.message = '';
       this.messageTone = AppColors.Danger;
@@ -806,7 +824,7 @@ struct DeviceArchiveReview {
   }
 
   isFailureMessageVisible(): boolean {
-    return this.message.length > 0 && this.messageTone === AppColors.Danger;
+    return this.refreshMessage.length > 0 && this.refreshMessageTone === AppColors.Danger;
   }
 
   getSubmitButtonLabel(): string {
@@ -892,8 +910,10 @@ struct DeviceArchiveReview {
 
       router.replaceUrl({ url: 'pages/Workbench' });
     } catch (err) {
-      this.message = '页面跳转失败';
-      this.messageTone = AppColors.Danger;
+      try {
+        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+      } catch (toastErr) {
+      }
     }
   }
 }

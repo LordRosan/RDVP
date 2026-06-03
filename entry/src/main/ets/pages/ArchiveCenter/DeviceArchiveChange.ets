@@ -715,7 +715,10 @@ struct DeviceArchiveChange {
 
       router.replaceUrl({ url: 'pages/ArchiveCenter/DeviceArchiveDetail' });
     } catch (err) {
-      this.message = '页面跳转失败';
+      try {
+        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+      } catch (toastErr) {
+      }
     }
   }
 }

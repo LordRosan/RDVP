@@ -13,6 +13,10 @@ struct Login {
   @State apiBaseUrl: string = ApiClient.getBaseUrl();
   @State message: string = '';
   @State messageTone: string = AppColors.Danger;
+  @State serviceModeMessage: string = '';
+  @State serviceModeMessageTone: string = AppColors.Success;
+  @State serviceAddressMessage: string = '';
+  @State serviceAddressMessageTone: string = AppColors.Success;
   @State submitting: boolean = false;
 
   aboutToAppear(): void {
@@ -193,6 +197,8 @@ struct Login {
       .width('100%')
       .alignItems(VerticalAlign.Center)
 
+      this.ServiceModeMessageText()
+
       Row({ space: 10 }) {
         Column() {
           this.OnlineServiceModeButton()
@@ -206,8 +212,6 @@ struct Login {
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
-
-      this.ServiceModeMessageText()
 
       if (this.isOnlineSelected()) {
         TextInput({
@@ -230,7 +234,10 @@ struct Login {
             this.apiBaseUrl = value;
             this.message = '';
             this.messageTone = AppColors.Danger;
+            this.serviceAddressMessage = '';
           })
+
+        this.ServiceAddressMessageText()
 
         this.ServiceButton('保存地址', $r('sys.symbol.checkmark_circle'), AppColors.Primary, AppColors.Surface, () => {
           this.saveApiBaseUrl();
@@ -243,10 +250,23 @@ struct Login {
 
   @Builder
   ServiceModeMessageText() {
-    if (this.message.length > 0 && this.isServiceModeMessage()) {
-      Text(this.message)
+    if (this.serviceModeMessage.length > 0) {
+      Text(this.serviceModeMessage)
         .fontSize(13)
-        .fontColor(this.messageTone)
+        .fontColor(this.serviceModeMessageTone)
+        .lineHeight(18)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
+    }
+  }
+
+  @Builder
+  ServiceAddressMessageText() {
+    if (this.serviceAddressMessage.length > 0) {
+      Text(this.serviceAddressMessage)
+        .fontSize(13)
+        .fontColor(this.serviceAddressMessageTone)
         .lineHeight(18)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -256,7 +276,7 @@ struct Login {
 
   @Builder
   MessageText() {
-    if (this.message.length > 0 && !this.isServiceModeMessage()) {
+    if (this.message.length > 0) {
       Text(this.message)
         .fontSize(13)
         .fontColor(this.messageTone)
@@ -486,27 +506,29 @@ struct Login {
     const value = this.apiBaseUrl.trim();
     const validationMessage = ApiClient.validateRequiredBaseUrlInput(value);
     if (validationMessage.length > 0) {
-      this.message = validationMessage;
-      this.messageTone = AppColors.Danger;
+      this.serviceAddressMessage = validationMessage;
+      this.serviceAddressMessageTone = AppColors.Danger;
       return;
     }
 
     ApiClient.setBaseUrl(value);
     this.apiBaseUrl = ApiClient.getBaseUrl();
-    this.message = '服务地址已保存';
-    this.messageTone = AppColors.Success;
+    this.message = '';
+    this.serviceAddressMessage = '服务地址已保存';
+    this.serviceAddressMessageTone = AppColors.Success;
+    this.serviceModeMessage = '';
   }
 
   selectServiceMode(mode: ServiceMode): void {
     this.selectedServiceMode = mode;
-    if (this.isOnlineSelected()) {
-      this.message = '已选择在线模式';
-      this.messageTone = AppColors.Success;
+    if (mode === ServiceMode.Online) {
+      this.serviceModeMessage = '已选择在线模式';
+      this.serviceModeMessageTone = AppColors.Success;
       return;
     }
 
-    this.message = '已选择离线模式';
-    this.messageTone = AppColors.Warning;
+    this.serviceModeMessage = '已选择离线模式';
+    this.serviceModeMessageTone = AppColors.Warning;
   }
 
   getSelectedRuntimeStatusLabel(): string {
@@ -531,10 +553,6 @@ struct Login {
 
   getSelectedServiceMode(): ServiceMode {
     return this.selectedServiceMode === ServiceMode.Online ? ServiceMode.Online : ServiceMode.Offline;
-  }
-
-  isServiceModeMessage(): boolean {
-    return this.message === '已选择在线模式' || this.message === '已选择离线模式';
   }
 
   openWorkbench(): void {
