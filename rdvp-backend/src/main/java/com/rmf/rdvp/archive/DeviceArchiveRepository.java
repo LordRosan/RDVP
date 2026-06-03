@@ -14,5 +14,7 @@ public interface DeviceArchiveRepository {
 
     void updateStatus(String id, String status, String updatedBy);
 
+    void updateLastVerificationTime(String id, java.time.OffsetDateTime verifiedAt, String updatedBy);
+
     boolean softDelete(String id, String deletedBy, String deleteReason);
 }

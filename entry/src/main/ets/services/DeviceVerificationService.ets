@@ -1,4 +1,8 @@
-import { ApiResponse } from '../models/ApiModels';
+import { ApiErrorCode, ApiResponse } from '../models/ApiModels';
+import {
+  DeviceVerificationOfflineSyncPayload,
+  OfflineSyncOperationType
+} from '../models/OfflineSyncModels';
 import { OperationRecordType } from '../models/OperationRecordModels';
 import {
   DeviceVerificationForm,
@@ -10,10 +14,12 @@ import { ApiClient } from './ApiClient';
 import { DeviceService } from './DeviceService';
 import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
 import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
+import { OfflineSyncService } from './OfflineSyncService';
 import { SessionStore } from '../stores/SessionStore';
 
 const MAX_DESCRIPTION_LENGTH = 500;
 const MAX_REMARK_LENGTH = 300;
+const OFFLINE_SYNC_DEVICE_VERIFICATION_REQUEST_ID = 'offline-sync-device-verification';
 
 interface DeviceVerificationApiResult {
   id: string;
@@ -90,7 +96,7 @@ export class DeviceVerificationService {
     }
 
     if (!ApiClient.isConfigured()) {
-      return DeviceVerificationService.createLocalVerificationResponse(form);
+      return DeviceVerificationService.createLocalQueuedVerificationResponse(form);
     }
 
     return ApiClient.createServiceUnavailableResponse<DeviceVerificationRecord>();
@@ -109,9 +115,49 @@ export class DeviceVerificationService {
     }
 
     if (!ApiClient.isConfigured()) {
-      return DeviceVerificationService.createLocalVerificationResponse(form);
+      return DeviceVerificationService.createLocalQueuedVerificationResponse(form);
     }
 
+    const verifiedAt = new Date().toISOString();
+    const response = await DeviceVerificationService.submitVerificationToBackend(form, verifiedAt);
+    if (!response.success &&
+      response.error !== undefined &&
+      response.error.code === ApiErrorCode.ServiceUnavailable) {
+      return DeviceVerificationService.createLocalQueuedVerificationResponse(form, verifiedAt);
+    }
+
+    return response;
+  }
+
+  static async submitQueuedVerification(payloadJson: string): Promise<ApiResponse<DeviceVerificationRecord>> {
+    const payload = DeviceVerificationService.parseOfflineSyncPayload(payloadJson);
+    if (payload === undefined) {
+      return {
+        success: false,
+        error: {
+          code: 'OFFLINE_SYNC_PAYLOAD_INVALID',
+          message: '状态核验待同步数据无效'
+        },
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    return DeviceVerificationService.submitVerificationToBackend({
+      deviceCode: payload.deviceCode,
+      result: payload.result as VerificationResult,
+      description: payload.description,
+      remark: payload.remark
+    }, payload.verifiedAt);
+  }
+
+  static isOfflineSyncQueuedResponse(response: ApiResponse<DeviceVerificationRecord>): boolean {
+    return response.requestId === OFFLINE_SYNC_DEVICE_VERIFICATION_REQUEST_ID;
+  }
+
+  private static async submitVerificationToBackend(
+    form: DeviceVerificationForm,
+    verifiedAt: string
+  ): Promise<ApiResponse<DeviceVerificationRecord>> {
     const deviceResponse = await DeviceService.queryByCodeRemoteFirst({
       deviceCode: form.deviceCode
     });
@@ -132,7 +178,7 @@ export class DeviceVerificationService {
         result: form.result,
         description: DeviceVerificationService.normalizeText(form.description),
         remark: DeviceVerificationService.normalizeText(form.remark),
-        verifiedAt: new Date().toISOString()
+        verifiedAt
       })
     );
 
@@ -191,27 +237,98 @@ export class DeviceVerificationService {
       result === VerificationResult.Unavailable;
   }
 
-  private static createLocalVerificationResponse(form: DeviceVerificationForm): ApiResponse<DeviceVerificationRecord> {
-    const submittedAt = new Date().toISOString();
+  private static createLocalVerificationResponse(
+    form: DeviceVerificationForm,
+    submittedAt?: string
+  ): ApiResponse<DeviceVerificationRecord> {
+    const normalizedSubmittedAt = submittedAt === undefined || submittedAt.length === 0 ? new Date().toISOString() : submittedAt;
     const deviceCode = DeviceService.normalizeDeviceCode(form.deviceCode);
     const record: DeviceVerificationRecord = {
-      id: `DVR-LOCAL-${submittedAt.replace(/[-:.TZ]/g, '').substring(0, 14)}`,
+      id: `DVR-LOCAL-${normalizedSubmittedAt.replace(/[-:.TZ]/g, '').substring(0, 14)}-${Math.floor(Math.random() * 1000000)}`,
       deviceCode,
       result: form.result,
       description: form.description.trim(),
       remark: form.remark.trim(),
-      submittedAt
+      submittedAt: normalizedSubmittedAt
     };
 
     LocalOperationRecordRepository.append(OperationRecordType.DeviceVerification, '提交状态核验', deviceCode,
       `核验结果：${DeviceVerificationService.formatVerificationResult(form.result)}`,
       SessionStore.getCurrentOperatorName());
-    LocalDeviceArchiveRepository.updateLastVerificationTime(deviceCode, submittedAt);
+    LocalDeviceArchiveRepository.updateLastVerificationTime(deviceCode, normalizedSubmittedAt);
     return {
       success: true,
       data: record,
       requestId: 'local-device-verification',
-      timestamp: submittedAt
+      timestamp: normalizedSubmittedAt
     };
+  }
+
+  private static createLocalQueuedVerificationResponse(
+    form: DeviceVerificationForm,
+    verifiedAt?: string
+  ): ApiResponse<DeviceVerificationRecord> {
+    const normalizedVerifiedAt = verifiedAt === undefined || verifiedAt.length === 0 ? new Date().toISOString() : verifiedAt;
+    const localResponse = DeviceVerificationService.createLocalVerificationResponse(form, normalizedVerifiedAt);
+    if (!localResponse.success || localResponse.data === undefined) {
+      return localResponse;
+    }
+
+    const payload = DeviceVerificationService.createOfflineSyncPayload(
+      form,
+      localResponse.data.id,
+      normalizedVerifiedAt);
+    OfflineSyncService.enqueue(
+      OfflineSyncOperationType.DeviceVerificationCreate,
+      `状态核验 ${DeviceService.normalizeDeviceCode(form.deviceCode)}`,
+      JSON.stringify(payload)
+    );
+
+    return {
+      success: true,
+      data: localResponse.data,
+      requestId: OFFLINE_SYNC_DEVICE_VERIFICATION_REQUEST_ID,
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  private static createOfflineSyncPayload(
+    form: DeviceVerificationForm,
+    localRecordId: string,
+    verifiedAt: string
+  ): DeviceVerificationOfflineSyncPayload {
+    return {
+      deviceCode: DeviceService.normalizeDeviceCode(form.deviceCode),
+      result: form.result,
+      description: DeviceVerificationService.normalizeText(form.description),
+      remark: DeviceVerificationService.normalizeText(form.remark),
+      verifiedAt,
+      localRecordId,
+      queuedAt: new Date().toISOString()
+    };
+  }
+
+  private static parseOfflineSyncPayload(payloadJson: string): DeviceVerificationOfflineSyncPayload | undefined {
+    try {
+      const payload = JSON.parse(payloadJson) as DeviceVerificationOfflineSyncPayload;
+      if (payload.deviceCode.length === 0 ||
+        payload.result.length === 0 ||
+        payload.description.length === 0 ||
+        payload.verifiedAt.length === 0) {
+        return undefined;
+      }
+
+      return {
+        deviceCode: payload.deviceCode,
+        result: payload.result,
+        description: payload.description,
+        remark: payload.remark === undefined ? '' : payload.remark,
+        verifiedAt: payload.verifiedAt,
+        localRecordId: payload.localRecordId === undefined ? '' : payload.localRecordId,
+        queuedAt: payload.queuedAt === undefined ? '' : payload.queuedAt
+      };
+    } catch (err) {
+      return undefined;
+    }
   }
 }

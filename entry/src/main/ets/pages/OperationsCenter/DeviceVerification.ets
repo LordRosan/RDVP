@@ -485,7 +485,11 @@ struct DeviceVerification {
     }
 
     const recordId = response.data ? response.data.id : '';
-    this.message = recordId.length > 0 ? `核验记录已提交：${recordId}` : '核验记录已提交';
+    if (DeviceVerificationService.isOfflineSyncQueuedResponse(response)) {
+      this.message = recordId.length > 0 ? `核验记录已在本地提交，待在线同步：${recordId}` : '核验记录已在本地提交，待在线同步';
+    } else {
+      this.message = recordId.length > 0 ? `核验记录已提交：${recordId}` : '核验记录已提交';
+    }
     this.messageTone = AppColors.Success;
     this.canReportFault = this.shouldOfferFaultReport();
   }

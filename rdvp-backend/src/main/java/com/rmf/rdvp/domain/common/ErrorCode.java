@@ -32,6 +32,10 @@ public enum ErrorCode {
             "CHANGE_REQUEST_ALREADY_REVIEWED",
             HttpStatus.CONFLICT,
             "Device change request has already been reviewed."),
+    DEVICE_VERIFICATION_INVALID(
+            "DEVICE_VERIFICATION_INVALID",
+            HttpStatus.UNPROCESSABLE_CONTENT,
+            "Device verification record is invalid."),
     FAULT_REPORT_INVALID("FAULT_REPORT_INVALID", HttpStatus.UNPROCESSABLE_CONTENT, "Fault report is invalid."),
     FAULT_REPORT_NOT_FOUND("FAULT_REPORT_NOT_FOUND", HttpStatus.NOT_FOUND, "Fault report not found."),
     DEVICE_ACTIVE_FAULT_EXISTS(

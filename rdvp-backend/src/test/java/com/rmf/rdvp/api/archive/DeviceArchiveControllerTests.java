@@ -164,6 +164,53 @@ class DeviceArchiveControllerTests {
     }
 
     @Test
+    void createsDeviceVerificationRecordAndUpdatesArchiveTimestamp() throws Exception {
+        String token = login("fieldoperator", "password");
+
+        mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records", "device-local-0001")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "result": "ABNORMAL",
+                                  "description": "现场观察到运行噪声升高，需要持续跟踪。",
+                                  "remark": "建议后续上报故障。",
+                                  "verifiedAt": "2026-06-03T08:30:00Z"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.deviceId").value("device-local-0001"))
+                .andExpect(jsonPath("$.data.result").value("ABNORMAL"))
+                .andExpect(jsonPath("$.data.description").value("现场观察到运行噪声升高，需要持续跟踪。"))
+                .andExpect(jsonPath("$.data.verifiedAt").value("2026-06-03T08:30:00Z"));
+
+        mockMvc.perform(get("/api/v1/devices/by-code/RDVP-DEVICE-0001")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.lastVerificationTime").value("2026-06-03T08:30:00Z"));
+    }
+
+    @Test
+    void protectsDeviceVerificationRecordCreationByPermission() throws Exception {
+        String readonlyToken = login("readonly", "password");
+
+        mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records", "device-local-0001")
+                        .header("Authorization", "Bearer " + readonlyToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "result": "NORMAL",
+                                  "description": "Readonly user must not submit verification records.",
+                                  "verifiedAt": "2026-06-03T08:30:00Z"
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("FORBIDDEN"));
+    }
+
+    @Test
     void protectsArchiveEndpoints() throws Exception {
         mockMvc.perform(get("/api/v1/devices/by-code/RDVP-DEVICE-0001"))
                 .andExpect(status().isUnauthorized())

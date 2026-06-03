@@ -5,6 +5,7 @@ import {
   OfflineSyncOperationType
 } from '../models/OfflineSyncModels';
 import { ApiClient } from './ApiClient';
+import { DeviceVerificationService } from './DeviceVerificationService';
 import { FaultReportService } from './FaultReportService';
 import { OfflineSyncService } from './OfflineSyncService';
 
@@ -86,6 +87,25 @@ export class OfflineSyncProcessorService {
   private static async executeItem(item: OfflineSyncItem): Promise<ApiResponse<string>> {
     if (item.operationType === OfflineSyncOperationType.FaultReportCreate) {
       const response = await FaultReportService.submitQueuedFaultReport(item.payloadJson);
+      if (response.success) {
+        return {
+          success: true,
+          data: item.id,
+          requestId: response.requestId,
+          timestamp: response.timestamp
+        };
+      }
+
+      return {
+        success: false,
+        error: response.error,
+        requestId: response.requestId,
+        timestamp: response.timestamp
+      };
+    }
+
+    if (item.operationType === OfflineSyncOperationType.DeviceVerificationCreate) {
+      const response = await DeviceVerificationService.submitQueuedVerification(item.payloadJson);
       if (response.success) {
         return {
           success: true,

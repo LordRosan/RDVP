@@ -6,7 +6,8 @@ export enum OfflineSyncItemStatus {
 }
 
 export enum OfflineSyncOperationType {
-  FaultReportCreate = 'FAULT_REPORT_CREATE'
+  FaultReportCreate = 'FAULT_REPORT_CREATE',
+  DeviceVerificationCreate = 'DEVICE_VERIFICATION_CREATE'
 }
 
 export interface OfflineSyncItem {
@@ -59,6 +60,16 @@ export interface FaultReportOfflineSyncPayload {
   description: string;
   sceneCondition: string;
   localReportNo: string;
+  queuedAt: string;
+}
+
+export interface DeviceVerificationOfflineSyncPayload {
+  deviceCode: string;
+  result: string;
+  description: string;
+  remark: string;
+  verifiedAt: string;
+  localRecordId: string;
   queuedAt: string;
 }
 

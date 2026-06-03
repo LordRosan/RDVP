@@ -175,6 +175,23 @@ public class JdbcDeviceArchiveRepository implements DeviceArchiveRepository {
     }
 
     @Override
+    public void updateLastVerificationTime(String id, OffsetDateTime verifiedAt, String updatedBy) {
+        jdbcTemplate.update(
+                """
+                        UPDATE devices
+                        SET last_verification_time = :verifiedAt,
+                            updated_at = now(),
+                            updated_by = :updatedBy
+                        WHERE id = :id
+                          AND deleted_at IS NULL
+                        """,
+                new MapSqlParameterSource()
+                        .addValue("id", id)
+                        .addValue("verifiedAt", verifiedAt)
+                        .addValue("updatedBy", updatedBy));
+    }
+
+    @Override
     public boolean softDelete(String id, String deletedBy, String deleteReason) {
         int updated = jdbcTemplate.update(
                 """

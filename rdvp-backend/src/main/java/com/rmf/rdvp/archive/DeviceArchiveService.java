@@ -2,19 +2,26 @@ package com.rmf.rdvp.archive;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.HexFormat;
 import java.util.Locale;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.rmf.rdvp.config.RdvpRuntimeProperties;
 import com.rmf.rdvp.domain.common.BusinessException;
 import com.rmf.rdvp.domain.common.ErrorCode;
+import com.rmf.rdvp.identity.AuthenticatedUser;
 
 @Service
 public class DeviceArchiveService {
@@ -26,17 +33,23 @@ public class DeviceArchiveService {
     private static final String QR_PREFIX = "RDVP";
     private static final String QR_HMAC_ALGORITHM = "HmacSHA256";
     private static final int MAX_QR_VERSION = 999;
+    private static final int MAX_VERIFICATION_DESCRIPTION_LENGTH = 500;
+    private static final int MAX_VERIFICATION_REMARK_LENGTH = 300;
+    private static final DateTimeFormatter LOCAL_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private final DeviceArchiveRepository archiveRepository;
     private final DeviceQrCodeRepository qrCodeRepository;
+    private final DeviceVerificationRepository verificationRepository;
     private final RdvpRuntimeProperties runtimeProperties;
 
     public DeviceArchiveService(
             DeviceArchiveRepository archiveRepository,
             DeviceQrCodeRepository qrCodeRepository,
+            DeviceVerificationRepository verificationRepository,
             RdvpRuntimeProperties runtimeProperties) {
         this.archiveRepository = archiveRepository;
         this.qrCodeRepository = qrCodeRepository;
+        this.verificationRepository = verificationRepository;
         this.runtimeProperties = runtimeProperties;
     }
 
@@ -79,6 +92,40 @@ public class DeviceArchiveService {
         }
 
         return new QrVerificationResult(true, device);
+    }
+
+    @Transactional
+    public DeviceVerificationRecord createVerificationRecord(
+            String deviceId,
+            DeviceVerificationResult result,
+            String description,
+            String remark,
+            String verifiedAt,
+            AuthenticatedUser operator) {
+        DeviceArchive device = findById(deviceId);
+        OffsetDateTime normalizedVerifiedAt = parseDateTime(verifiedAt, "verifiedAt");
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        DeviceVerificationRecordCreate create = new DeviceVerificationRecordCreate(
+                "verification-" + UUID.randomUUID(),
+                device.id(),
+                operator.id(),
+                requireVerificationResult(result),
+                normalizeRequiredText(
+                        description,
+                        "description",
+                        MAX_VERIFICATION_DESCRIPTION_LENGTH,
+                        ErrorCode.DEVICE_VERIFICATION_INVALID),
+                normalizeOptionalText(
+                        remark,
+                        MAX_VERIFICATION_REMARK_LENGTH,
+                        ErrorCode.DEVICE_VERIFICATION_INVALID),
+                normalizedVerifiedAt,
+                now);
+
+        verificationRepository.create(create);
+        archiveRepository.updateLastVerificationTime(device.id(), normalizedVerifiedAt, operator.id());
+        return verificationRepository.findById(create.id())
+                .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR));
     }
 
     private String normalizeDeviceCode(String deviceCode) {
@@ -135,6 +182,46 @@ public class DeviceArchiveService {
         } catch (Exception exception) {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR);
         }
+    }
+
+    private OffsetDateTime parseDateTime(String value, String field) {
+        String normalized = normalizeRequiredText(value, field, 64, ErrorCode.BAD_REQUEST);
+        try {
+            return OffsetDateTime.parse(normalized);
+        } catch (DateTimeParseException ignored) {
+        }
+
+        try {
+            return LocalDateTime.parse(normalized, LOCAL_DATE_TIME_FORMATTER).atOffset(ZoneOffset.UTC);
+        } catch (DateTimeParseException exception) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, field + " is invalid.");
+        }
+    }
+
+    private DeviceVerificationResult requireVerificationResult(DeviceVerificationResult result) {
+        if (result == null) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "result is invalid.");
+        }
+
+        return result;
+    }
+
+    private String normalizeRequiredText(String value, String field, int maxLength, ErrorCode errorCode) {
+        String normalized = normalizeOptionalText(value, maxLength, errorCode);
+        if (normalized.isBlank()) {
+            throw new BusinessException(errorCode, field + " is required.");
+        }
+
+        return normalized;
+    }
+
+    private String normalizeOptionalText(String value, int maxLength, ErrorCode errorCode) {
+        String normalized = value == null ? "" : value.trim();
+        if (normalized.length() > maxLength) {
+            throw new BusinessException(errorCode, "Text field must not exceed " + maxLength + " characters.");
+        }
+
+        return normalized;
     }
 
     private boolean constantTimeEquals(String left, String right) {
