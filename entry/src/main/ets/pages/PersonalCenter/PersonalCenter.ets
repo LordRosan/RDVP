@@ -11,7 +11,7 @@ import { formatConnectionStatus } from '../../utils/SessionFormat';
 @Component
 struct PersonalCenter {
   @State currentUser: CurrentUserSnapshot = SessionStore.getCurrentUser();
-  @State serviceMode: ServiceMode = ApiClient.getServiceMode();
+  @State selectedServiceMode: string = ApiClient.getServiceMode();
   @State apiBaseUrl: string = ApiClient.getBaseUrl();
   @State message: string = '';
   @State messageTone: string = AppColors.Danger;
@@ -23,7 +23,7 @@ struct PersonalCenter {
     }
 
     this.currentUser = SessionStore.getCurrentUser();
-    this.serviceMode = ApiClient.getServiceMode();
+    this.selectedServiceMode = ApiClient.getServiceMode();
     this.apiBaseUrl = ApiClient.getBaseUrl();
   }
 
@@ -234,7 +234,7 @@ struct PersonalCenter {
         .width('100%')
         .alignItems(VerticalAlign.Center)
 
-        if (this.serviceMode === ServiceMode.Online) {
+        if (this.isOnlineSelected()) {
           TextInput({
             placeholder: '输入后端服务地址',
             text: this.apiBaseUrl
@@ -260,7 +260,7 @@ struct PersonalCenter {
         }
 
         this.ServiceButton('保存设置', $r('sys.symbol.checkmark_circle'),
-          this.serviceMode === ServiceMode.Online ? AppColors.Primary : AppColors.Warning,
+          AppColors.Primary,
           AppColors.Surface,
           () => {
             this.applyServiceSettings();
@@ -413,8 +413,8 @@ struct PersonalCenter {
   @Builder
   OnlineServiceModeButton() {
     this.ServiceButton('在线模式', $r('sys.symbol.checkmark_circle'),
-      this.serviceMode === ServiceMode.Online ? AppColors.Primary : AppColors.Surface,
-      this.serviceMode === ServiceMode.Online ? AppColors.Surface : AppColors.TextPrimary,
+      this.isOnlineSelected() ? AppColors.Success : AppColors.Surface,
+      this.isOnlineSelected() ? AppColors.Surface : AppColors.TextPrimary,
       () => {
         this.selectServiceMode(ServiceMode.Online);
       })
@@ -423,28 +423,28 @@ struct PersonalCenter {
   @Builder
   OfflineServiceModeButton() {
     this.ServiceButton('离线模式', $r('sys.symbol.xmark_circle'),
-      this.serviceMode === ServiceMode.Offline ? AppColors.Warning : AppColors.Surface,
-      this.serviceMode === ServiceMode.Offline ? AppColors.Surface : AppColors.TextPrimary,
+      this.isOfflineSelected() ? AppColors.Warning : AppColors.Surface,
+      this.isOfflineSelected() ? AppColors.Surface : AppColors.TextPrimary,
       () => {
         this.selectServiceMode(ServiceMode.Offline);
       })
   }
 
   selectServiceMode(mode: ServiceMode): void {
-    if (this.serviceMode === mode) {
+    if (this.selectedServiceMode === mode) {
       this.message = mode === ServiceMode.Online ? '当前已是在线模式' : '当前已是离线模式';
-      this.messageTone = mode === ServiceMode.Online ? AppColors.Primary : AppColors.Warning;
+      this.messageTone = mode === ServiceMode.Online ? AppColors.Success : AppColors.Warning;
       return;
     }
 
-    this.serviceMode = mode;
+    this.selectedServiceMode = mode;
     this.message = mode === ServiceMode.Online ? '已选择在线模式，保存设置后需要重新登录' : '已选择离线模式，保存设置后需要重新登录';
-    this.messageTone = mode === ServiceMode.Online ? AppColors.Primary : AppColors.Warning;
+    this.messageTone = mode === ServiceMode.Online ? AppColors.Success : AppColors.Warning;
   }
 
   applyServiceSettings(): void {
     const result = ServiceModeTransitionService.applyTransition({
-      targetMode: this.serviceMode,
+      targetMode: this.getSelectedServiceMode(),
       apiBaseUrl: this.apiBaseUrl,
       reason: 'personal-center-service-mode'
     });
@@ -452,7 +452,7 @@ struct PersonalCenter {
     if (!result.success || !result.changed) {
       this.message = result.message;
       this.messageTone = result.success ?
-        (this.serviceMode === ServiceMode.Online ? AppColors.Primary : AppColors.Warning) : AppColors.Danger;
+        (this.isOnlineSelected() ? AppColors.Success : AppColors.Warning) : AppColors.Danger;
       return;
     }
 
@@ -462,7 +462,7 @@ struct PersonalCenter {
   }
 
   getSelectedRuntimeStatusLabel(): string {
-    if (this.serviceMode === ServiceMode.Online) {
+    if (this.isOnlineSelected()) {
       return this.apiBaseUrl.trim().length > 0 ? '在线模式' : '在线模式未配置';
     }
 
@@ -470,7 +470,19 @@ struct PersonalCenter {
   }
 
   getSelectedRuntimeStatusTone(): string {
-    return this.serviceMode === ServiceMode.Online ? AppColors.Primary : AppColors.Warning;
+    return this.isOnlineSelected() ? AppColors.Success : AppColors.Warning;
+  }
+
+  getSelectedServiceMode(): ServiceMode {
+    return this.selectedServiceMode === ServiceMode.Online ? ServiceMode.Online : ServiceMode.Offline;
+  }
+
+  isOnlineSelected(): boolean {
+    return this.selectedServiceMode === ServiceMode.Online;
+  }
+
+  isOfflineSelected(): boolean {
+    return this.selectedServiceMode === ServiceMode.Offline;
   }
 
   formatSessionExpiresAt(): string {

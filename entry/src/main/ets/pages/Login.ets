@@ -9,7 +9,7 @@ import { SessionStore } from '../stores/SessionStore';
 struct Login {
   @State username: string = '';
   @State password: string = '';
-  @State serviceMode: ServiceMode = ApiClient.getServiceMode();
+  @State selectedServiceMode: string = ApiClient.getServiceMode();
   @State apiBaseUrl: string = ApiClient.getBaseUrl();
   @State message: string = '';
   @State messageTone: string = AppColors.Danger;
@@ -22,7 +22,7 @@ struct Login {
     }
 
     this.apiBaseUrl = ApiClient.getBaseUrl();
-    this.serviceMode = ApiClient.getServiceMode();
+    this.selectedServiceMode = ApiClient.getServiceMode();
   }
 
   build() {
@@ -207,7 +207,7 @@ struct Login {
       .width('100%')
       .alignItems(VerticalAlign.Center)
 
-      if (this.serviceMode === ServiceMode.Online) {
+      if (this.isOnlineSelected()) {
         TextInput({
           placeholder: 'http://192.168.x.x:8080',
           text: this.apiBaseUrl
@@ -285,8 +285,8 @@ struct Login {
   @Builder
   OnlineServiceModeButton() {
     this.ServiceButton('在线模式', $r('sys.symbol.checkmark_circle'),
-      this.serviceMode === ServiceMode.Online ? AppColors.Primary : AppColors.Surface,
-      this.serviceMode === ServiceMode.Online ? AppColors.Surface : AppColors.TextPrimary,
+      this.isOnlineSelected() ? AppColors.Success : AppColors.Surface,
+      this.isOnlineSelected() ? AppColors.Surface : AppColors.TextPrimary,
       () => {
         this.selectServiceMode(ServiceMode.Online);
       })
@@ -295,8 +295,8 @@ struct Login {
   @Builder
   OfflineServiceModeButton() {
     this.ServiceButton('离线模式', $r('sys.symbol.xmark_circle'),
-      this.serviceMode === ServiceMode.Offline ? AppColors.Warning : AppColors.Surface,
-      this.serviceMode === ServiceMode.Offline ? AppColors.Surface : AppColors.TextPrimary,
+      this.isOfflineSelected() ? AppColors.Warning : AppColors.Surface,
+      this.isOfflineSelected() ? AppColors.Surface : AppColors.TextPrimary,
       () => {
         this.selectServiceMode(ServiceMode.Offline);
       })
@@ -335,7 +335,7 @@ struct Login {
     }
 
     this.submitting = true;
-    if (this.serviceMode === ServiceMode.Online) {
+    if (this.isOnlineSelected()) {
       const validationMessage = ApiClient.validateRequiredBaseUrlInput(this.apiBaseUrl);
       if (validationMessage.length > 0) {
         this.message = validationMessage;
@@ -385,11 +385,11 @@ struct Login {
 
   selectServiceMode(mode: ServiceMode): void {
     ApiClient.setServiceMode(mode);
-    this.serviceMode = ApiClient.getServiceMode();
+    this.selectedServiceMode = mode;
     this.apiBaseUrl = ApiClient.getBaseUrl();
-    if (this.serviceMode === ServiceMode.Online) {
+    if (this.isOnlineSelected()) {
       this.message = this.apiBaseUrl.length > 0 ? '已选择在线模式' : '已选择在线模式，请配置后端服务地址';
-      this.messageTone = this.apiBaseUrl.length > 0 ? AppColors.Primary : AppColors.Danger;
+      this.messageTone = this.apiBaseUrl.length > 0 ? AppColors.Success : AppColors.Danger;
       return;
     }
 
@@ -398,7 +398,7 @@ struct Login {
   }
 
   getSelectedRuntimeStatusLabel(): string {
-    if (this.serviceMode === ServiceMode.Online) {
+    if (this.isOnlineSelected()) {
       return this.apiBaseUrl.trim().length > 0 ? '在线模式' : '在线模式未配置';
     }
 
@@ -406,7 +406,15 @@ struct Login {
   }
 
   getSelectedRuntimeStatusTone(): string {
-    return this.serviceMode === ServiceMode.Online ? AppColors.Primary : AppColors.Warning;
+    return this.isOnlineSelected() ? AppColors.Success : AppColors.Warning;
+  }
+
+  isOnlineSelected(): boolean {
+    return this.selectedServiceMode === ServiceMode.Online;
+  }
+
+  isOfflineSelected(): boolean {
+    return this.selectedServiceMode === ServiceMode.Offline;
   }
 
   openWorkbench(): void {
