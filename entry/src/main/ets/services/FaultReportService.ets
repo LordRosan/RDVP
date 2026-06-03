@@ -1,4 +1,4 @@
-import { ApiError, ApiResponse } from '../models/ApiModels';
+import { ApiError, ApiErrorCode, ApiResponse } from '../models/ApiModels';
 import {
   FaultReportForm,
   FaultReportRecord,
@@ -6,15 +6,21 @@ import {
   FaultSeverity,
   FaultType
 } from '../models/FaultModels';
+import {
+  FaultReportOfflineSyncPayload,
+  OfflineSyncOperationType
+} from '../models/OfflineSyncModels';
 import { OperationRecordType } from '../models/OperationRecordModels';
 import { ApiClient } from './ApiClient';
 import { DeviceService } from './DeviceService';
 import { LocalRepairTaskRepository } from './LocalRepairTaskRepository';
 import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
+import { OfflineSyncService } from './OfflineSyncService';
 import { SessionStore } from '../stores/SessionStore';
 
 const MAX_DESCRIPTION_LENGTH = 800;
 const MAX_SCENE_CONDITION_LENGTH = 500;
+const OFFLINE_SYNC_FAULT_REPORT_REQUEST_ID = 'offline-sync-fault-report';
 
 interface FaultReportApiResult {
   id: string;
@@ -111,7 +117,7 @@ export class FaultReportService {
     }
 
     if (!ApiClient.isConfigured()) {
-      return FaultReportService.createLocalFaultReportResponse(form);
+      return FaultReportService.createLocalQueuedFaultReportResponse(form);
     }
 
     return ApiClient.createServiceUnavailableResponse<FaultReportRecord>();
@@ -130,9 +136,47 @@ export class FaultReportService {
     }
 
     if (!ApiClient.isConfigured()) {
-      return FaultReportService.createLocalFaultReportResponse(form);
+      return FaultReportService.createLocalQueuedFaultReportResponse(form);
     }
 
+    const response = await FaultReportService.submitFaultReportToBackend(form);
+    if (!response.success &&
+      response.error !== undefined &&
+      response.error.code === ApiErrorCode.ServiceUnavailable) {
+      return FaultReportService.createLocalQueuedFaultReportResponse(form);
+    }
+
+    return response;
+  }
+
+  static async submitQueuedFaultReport(payloadJson: string): Promise<ApiResponse<FaultReportRecord>> {
+    const payload = FaultReportService.parseOfflineSyncPayload(payloadJson);
+    if (payload === undefined) {
+      return {
+        success: false,
+        error: {
+          code: 'OFFLINE_SYNC_PAYLOAD_INVALID',
+          message: '故障报告待同步数据无效'
+        },
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    return FaultReportService.submitFaultReportToBackend({
+      deviceCode: payload.deviceCode,
+      faultType: payload.faultType as FaultType,
+      severity: payload.severity as FaultSeverity,
+      occurredAt: payload.occurredAt,
+      description: payload.description,
+      sceneCondition: payload.sceneCondition
+    });
+  }
+
+  static isOfflineSyncQueuedResponse(response: ApiResponse<FaultReportRecord>): boolean {
+    return response.requestId === OFFLINE_SYNC_FAULT_REPORT_REQUEST_ID;
+  }
+
+  private static async submitFaultReportToBackend(form: FaultReportForm): Promise<ApiResponse<FaultReportRecord>> {
     const response = await ApiClient.request<FaultReportApiResult>('/api/v1/fault-reports', 'POST', true,
       JSON.stringify({
         deviceCode: DeviceService.normalizeDeviceCode(form.deviceCode),
@@ -281,6 +325,82 @@ export class FaultReportService {
       requestId: 'local-fault-report',
       timestamp: new Date().toISOString()
     };
+  }
+
+  private static createLocalQueuedFaultReportResponse(form: FaultReportForm): ApiResponse<FaultReportRecord> {
+    const normalizedDeviceCode = DeviceService.normalizeDeviceCode(form.deviceCode);
+    const conflictKey = FaultReportService.createOfflineConflictKey(normalizedDeviceCode);
+    if (OfflineSyncService.hasActiveConflict(OfflineSyncOperationType.FaultReportCreate, conflictKey)) {
+      return {
+        success: false,
+        error: FaultReportService.createSubmitError('DEVICE_ACTIVE_FAULT_EXISTS', ''),
+        requestId: 'offline-sync-fault-report-blocked',
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    const localResponse = FaultReportService.createLocalFaultReportResponse(form);
+    if (!localResponse.success || localResponse.data === undefined) {
+      return localResponse;
+    }
+
+    const payload = FaultReportService.createOfflineSyncPayload(form, localResponse.data.reportNo);
+    OfflineSyncService.enqueue(
+      OfflineSyncOperationType.FaultReportCreate,
+      `故障报告 ${normalizedDeviceCode}`,
+      JSON.stringify(payload),
+      conflictKey
+    );
+
+    return {
+      success: true,
+      data: localResponse.data,
+      requestId: OFFLINE_SYNC_FAULT_REPORT_REQUEST_ID,
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  private static createOfflineSyncPayload(form: FaultReportForm, localReportNo: string): FaultReportOfflineSyncPayload {
+    return {
+      deviceCode: DeviceService.normalizeDeviceCode(form.deviceCode),
+      faultType: form.faultType,
+      severity: form.severity,
+      occurredAt: FaultReportService.normalizeText(form.occurredAt),
+      description: FaultReportService.normalizeText(form.description),
+      sceneCondition: FaultReportService.normalizeText(form.sceneCondition),
+      localReportNo,
+      queuedAt: new Date().toISOString()
+    };
+  }
+
+  private static parseOfflineSyncPayload(payloadJson: string): FaultReportOfflineSyncPayload | undefined {
+    try {
+      const payload = JSON.parse(payloadJson) as FaultReportOfflineSyncPayload;
+      if (payload.deviceCode.length === 0 ||
+        payload.faultType.length === 0 ||
+        payload.severity.length === 0 ||
+        payload.occurredAt.length === 0 ||
+        payload.description.length === 0) {
+        return undefined;
+      }
+
+      return {
+        deviceCode: payload.deviceCode,
+        faultType: payload.faultType,
+        severity: payload.severity,
+        occurredAt: payload.occurredAt,
+        description: payload.description,
+        sceneCondition: payload.sceneCondition === undefined ? '' : payload.sceneCondition,
+        localReportNo: payload.localReportNo === undefined ? '' : payload.localReportNo,
+        queuedAt: payload.queuedAt === undefined ? '' : payload.queuedAt
+      };
+    } catch (err) {
+      return undefined;
+    }
+  }
+
+  private static createOfflineConflictKey(deviceCode: string): string {
+    return `fault-report:${DeviceService.normalizeDeviceCode(deviceCode)}`;
   }
 
   private static createRecordFromApiResult(form: FaultReportForm, result: FaultReportApiResult): FaultReportRecord {

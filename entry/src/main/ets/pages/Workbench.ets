@@ -3,6 +3,7 @@ import { ActionTile } from '../components/ActionTile';
 import { MetricTile } from '../components/MetricTile';
 import { WorkbenchAction, WorkbenchActionId, WorkbenchMetric, WorkbenchStatusItem } from '../models/WorkbenchModels';
 import { CurrentUserSnapshot } from '../models/SessionModels';
+import { OfflineSyncProcessorService } from '../services/OfflineSyncProcessorService';
 import { WorkbenchService } from '../services/WorkbenchService';
 import { SessionStore } from '../stores/SessionStore';
 
@@ -33,8 +34,14 @@ struct Workbench {
 
   refreshWorkbenchState(): void {
     this.applyWorkbenchState();
-    WorkbenchService.refreshSummaryRemoteFirst().then(() => {
+    OfflineSyncProcessorService.syncReadyItems().then(() => {
+      return WorkbenchService.refreshSummaryRemoteFirst();
+    }).then(() => {
       this.applyWorkbenchState();
+    }).catch(() => {
+      WorkbenchService.refreshSummaryRemoteFirst().then(() => {
+        this.applyWorkbenchState();
+      });
     });
   }
 

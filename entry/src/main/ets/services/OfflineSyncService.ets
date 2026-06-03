@@ -23,7 +23,13 @@ export class OfflineSyncService {
   private static items: OfflineSyncItem[] = [];
   private static runtimeState: OfflineSyncRuntimeState = OfflineSyncService.createDefaultRuntimeState();
 
-  static enqueue(operationType: string, payloadSummary: string, payloadJson: string): OfflineSyncItem {
+  static enqueue(
+    operationType: string,
+    payloadSummary: string,
+    payloadJson: string,
+    conflictKey?: string,
+    serverVersion?: string
+  ): OfflineSyncItem {
     OfflineSyncService.ensureInitialized();
 
     const now = new Date().toISOString();
@@ -36,7 +42,9 @@ export class OfflineSyncService {
       status: OfflineSyncItemStatus.Pending,
       createdAt: now,
       updatedAt: now,
-      retryCount: 0
+      retryCount: 0,
+      conflictKey,
+      serverVersion
     };
 
     OfflineSyncService.items.unshift(item);
@@ -45,8 +53,31 @@ export class OfflineSyncService {
     return item;
   }
 
+  static hasActiveConflict(operationType: string, conflictKey: string): boolean {
+    OfflineSyncService.ensureInitialized();
+    const normalizedOperationType = operationType.trim();
+    const normalizedConflictKey = conflictKey.trim();
+    if (normalizedOperationType.length === 0 || normalizedConflictKey.length === 0) {
+      return false;
+    }
+
+    return OfflineSyncService.items.some((item: OfflineSyncItem) => {
+      return item.operationType === normalizedOperationType &&
+        item.conflictKey === normalizedConflictKey &&
+        (item.status === OfflineSyncItemStatus.Pending || item.status === OfflineSyncItemStatus.Syncing);
+    });
+  }
+
+  static markSyncing(id: string): void {
+    OfflineSyncService.updateItemStatus(id, OfflineSyncItemStatus.Syncing, '');
+  }
+
   static markSynced(id: string): void {
     OfflineSyncService.updateItemStatus(id, OfflineSyncItemStatus.Synced, '');
+  }
+
+  static markFailedPermanently(id: string, error: string): void {
+    OfflineSyncService.updateItemStatus(id, OfflineSyncItemStatus.Failed, error);
   }
 
   static markFailed(id: string, error: string): void {
@@ -422,6 +453,10 @@ export class OfflineSyncService {
   }
 
   private static isRetryReady(item: OfflineSyncItem, now: number): boolean {
+    if (OfflineSyncService.runtimeState.networkPaused) {
+      return false;
+    }
+
     if (OfflineSyncService.isWaitingForNetworkStability()) {
       return false;
     }

@@ -5,6 +5,10 @@ export enum OfflineSyncItemStatus {
   Failed = 'FAILED'
 }
 
+export enum OfflineSyncOperationType {
+  FaultReportCreate = 'FAULT_REPORT_CREATE'
+}
+
 export interface OfflineSyncItem {
   id: string;
   operationType: string;
@@ -45,4 +49,23 @@ export interface OfflineSyncTransitionPreparation {
   success: boolean;
   message: string;
   waitingForNetworkStability: boolean;
+}
+
+export interface FaultReportOfflineSyncPayload {
+  deviceCode: string;
+  faultType: string;
+  severity: string;
+  occurredAt: string;
+  description: string;
+  sceneCondition: string;
+  localReportNo: string;
+  queuedAt: string;
+}
+
+export interface OfflineSyncExecutionResult {
+  processedCount: number;
+  syncedCount: number;
+  failedCount: number;
+  skippedCount: number;
+  message: string;
 }

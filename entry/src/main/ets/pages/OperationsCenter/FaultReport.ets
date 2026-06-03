@@ -671,7 +671,8 @@ struct FaultReport {
       const reportNo = response.data ? response.data.reportNo : '';
       this.latestReportNo = reportNo.length > 0 ? reportNo : '-';
       this.submitted = true;
-      this.message = '故障报告已提交';
+      this.message = FaultReportService.isOfflineSyncQueuedResponse(response) ?
+        '故障报告已在本地提交，待在线同步' : '故障报告已提交';
       this.messageTone = AppColors.Success;
     } catch (err) {
       this.message = '故障报告提交失败，请稍后重试';
