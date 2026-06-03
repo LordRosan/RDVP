@@ -234,6 +234,8 @@ struct PersonalCenter {
         .width('100%')
         .alignItems(VerticalAlign.Center)
 
+        this.ServiceModeMessageText()
+
         if (this.isOnlineSelected()) {
           TextInput({
             placeholder: '输入后端服务地址',
@@ -266,7 +268,7 @@ struct PersonalCenter {
             this.applyServiceSettings();
           })
 
-        if (this.message.length > 0) {
+        if (this.message.length > 0 && !this.isServiceModeMessage()) {
           Text(this.message)
             .fontSize(13)
             .fontColor(this.messageTone)
@@ -287,6 +289,18 @@ struct PersonalCenter {
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  ServiceModeMessageText() {
+    if (this.message.length > 0 && this.isServiceModeMessage()) {
+      Text(this.message)
+        .fontSize(13)
+        .fontColor(this.messageTone)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
+    }
   }
 
   @Builder
@@ -412,22 +426,120 @@ struct PersonalCenter {
 
   @Builder
   OnlineServiceModeButton() {
-    this.ServiceButton('在线模式', $r('sys.symbol.checkmark_circle'),
-      this.isOnlineSelected() ? AppColors.Success : AppColors.Surface,
-      this.isOnlineSelected() ? AppColors.Surface : AppColors.TextPrimary,
-      () => {
+    if (this.isOnlineSelected()) {
+      Button({ type: ButtonType.Capsule, stateEffect: true }) {
+        Row({ space: 6 }) {
+          SymbolGlyph($r('sys.symbol.checkmark_circle'))
+            .fontSize(18)
+            .fontColor([AppColors.Surface])
+
+          Text('在线模式')
+            .fontSize(15)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(AppColors.Surface)
+            .maxLines(1)
+        }
+        .width('100%')
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+      }
+      .height(46)
+      .width('100%')
+      .backgroundColor(AppColors.Success)
+      .border({
+        width: 1,
+        color: AppColors.Success
+      })
+      .onClick(() => {
         this.selectServiceMode(ServiceMode.Online);
       })
+    } else {
+      Button({ type: ButtonType.Capsule, stateEffect: true }) {
+        Row({ space: 6 }) {
+          SymbolGlyph($r('sys.symbol.checkmark_circle'))
+            .fontSize(18)
+            .fontColor([AppColors.TextPrimary])
+
+          Text('在线模式')
+            .fontSize(15)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(AppColors.TextPrimary)
+            .maxLines(1)
+        }
+        .width('100%')
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+      }
+      .height(46)
+      .width('100%')
+      .backgroundColor(AppColors.Surface)
+      .border({
+        width: 1,
+        color: AppColors.Border
+      })
+      .onClick(() => {
+        this.selectServiceMode(ServiceMode.Online);
+      })
+    }
   }
 
   @Builder
   OfflineServiceModeButton() {
-    this.ServiceButton('离线模式', $r('sys.symbol.xmark_circle'),
-      this.isOfflineSelected() ? AppColors.Warning : AppColors.Surface,
-      this.isOfflineSelected() ? AppColors.Surface : AppColors.TextPrimary,
-      () => {
+    if (this.isOfflineSelected()) {
+      Button({ type: ButtonType.Capsule, stateEffect: true }) {
+        Row({ space: 6 }) {
+          SymbolGlyph($r('sys.symbol.xmark_circle'))
+            .fontSize(18)
+            .fontColor([AppColors.Surface])
+
+          Text('离线模式')
+            .fontSize(15)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(AppColors.Surface)
+            .maxLines(1)
+        }
+        .width('100%')
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+      }
+      .height(46)
+      .width('100%')
+      .backgroundColor(AppColors.Warning)
+      .border({
+        width: 1,
+        color: AppColors.Warning
+      })
+      .onClick(() => {
         this.selectServiceMode(ServiceMode.Offline);
       })
+    } else {
+      Button({ type: ButtonType.Capsule, stateEffect: true }) {
+        Row({ space: 6 }) {
+          SymbolGlyph($r('sys.symbol.xmark_circle'))
+            .fontSize(18)
+            .fontColor([AppColors.TextPrimary])
+
+          Text('离线模式')
+            .fontSize(15)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(AppColors.TextPrimary)
+            .maxLines(1)
+        }
+        .width('100%')
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+      }
+      .height(46)
+      .width('100%')
+      .backgroundColor(AppColors.Surface)
+      .border({
+        width: 1,
+        color: AppColors.Border
+      })
+      .onClick(() => {
+        this.selectServiceMode(ServiceMode.Offline);
+      })
+    }
   }
 
   selectServiceMode(mode: ServiceMode): void {
@@ -483,6 +595,13 @@ struct PersonalCenter {
 
   isOfflineSelected(): boolean {
     return this.selectedServiceMode === ServiceMode.Offline;
+  }
+
+  isServiceModeMessage(): boolean {
+    return this.message === '已选择在线模式，保存设置后需要重新登录' ||
+      this.message === '已选择离线模式，保存设置后需要重新登录' ||
+      this.message === '当前已是在线模式' ||
+      this.message === '当前已是离线模式';
   }
 
   formatSessionExpiresAt(): string {
