@@ -15,6 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.rmf.rdvp.archive.DeviceArchive;
 import com.rmf.rdvp.archive.DeviceArchiveRepository;
+import com.rmf.rdvp.archive.DeviceVerificationRecord;
+import com.rmf.rdvp.archive.DeviceVerificationRecordCreate;
+import com.rmf.rdvp.archive.DeviceVerificationRepository;
+import com.rmf.rdvp.archive.DeviceVerificationResult;
 import com.rmf.rdvp.domain.common.BusinessException;
 import com.rmf.rdvp.domain.common.ErrorCode;
 import com.rmf.rdvp.identity.AuthenticatedUser;
@@ -29,16 +33,23 @@ public class OperationsService {
     private static final int MAX_ACTIVE_REPAIR_TASK_COUNT = 2;
     private static final int MAX_OPERATION_LIST_ITEMS = 100;
     private static final int MAX_AVAILABLE_REPAIR_TASK_CANDIDATES = 500;
+    private static final int MAX_VERIFICATION_DESCRIPTION_LENGTH = 500;
+    private static final int MAX_VERIFICATION_REMARK_LENGTH = 300;
     private static final Pattern DEVICE_CODE_PATTERN = Pattern.compile("^RDVP-DEVICE-\\d{4}$");
     private static final Pattern BUSINESS_ID_PATTERN = Pattern.compile("^[A-Za-z0-9_-]{1,64}$");
     private static final DateTimeFormatter LOCAL_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final DateTimeFormatter BUSINESS_NO_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     private final DeviceArchiveRepository archiveRepository;
+    private final DeviceVerificationRepository verificationRepository;
     private final OperationsRepository operationsRepository;
 
-    public OperationsService(DeviceArchiveRepository archiveRepository, OperationsRepository operationsRepository) {
+    public OperationsService(
+            DeviceArchiveRepository archiveRepository,
+            DeviceVerificationRepository verificationRepository,
+            OperationsRepository operationsRepository) {
         this.archiveRepository = archiveRepository;
+        this.verificationRepository = verificationRepository;
         this.operationsRepository = operationsRepository;
     }
 
@@ -83,6 +94,83 @@ public class OperationsService {
         archiveRepository.updateStatus(device.id(), "FAULTED", reporter.id());
         return operationsRepository.findFaultReportByIdOrNo(create.id())
                 .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR));
+    }
+
+    @Transactional
+    public DeviceVerificationFaultReportResult createVerificationWithFaultReport(
+            String deviceId,
+            DeviceVerificationResult result,
+            String verificationDescription,
+            String remark,
+            String verifiedAt,
+            FaultType faultType,
+            FaultSeverity severity,
+            String occurredAt,
+            String faultDescription,
+            String sceneCondition,
+            BigDecimal longitude,
+            BigDecimal latitude,
+            AuthenticatedUser operator) {
+        DeviceVerificationResult normalizedResult = requireEnum(result, "result");
+        if (normalizedResult == DeviceVerificationResult.NORMAL) {
+            throw new BusinessException(
+                    ErrorCode.DEVICE_VERIFICATION_INVALID,
+                    "Normal verification does not require a fault report.");
+        }
+
+        DeviceArchive device = archiveRepository.findById(normalizeId(deviceId, "deviceId"))
+                .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
+        if (operationsRepository.hasActiveFaultForDevice(device.id())) {
+            throw new BusinessException(ErrorCode.DEVICE_ACTIVE_FAULT_EXISTS);
+        }
+
+        OffsetDateTime normalizedVerifiedAt = parseDateTime(verifiedAt, "verifiedAt");
+        OffsetDateTime now = now();
+        DeviceVerificationRecordCreate verificationCreate = new DeviceVerificationRecordCreate(
+                "verification-" + UUID.randomUUID(),
+                device.id(),
+                operator.id(),
+                normalizedResult,
+                normalizeRequiredText(
+                        verificationDescription,
+                        "description",
+                        MAX_VERIFICATION_DESCRIPTION_LENGTH,
+                        ErrorCode.DEVICE_VERIFICATION_INVALID),
+                normalizeOptionalText(
+                        remark,
+                        MAX_VERIFICATION_REMARK_LENGTH,
+                        ErrorCode.DEVICE_VERIFICATION_INVALID),
+                normalizedVerifiedAt,
+                now);
+        verificationRepository.create(verificationCreate);
+        archiveRepository.updateLastVerificationTime(device.id(), normalizedVerifiedAt, operator.id());
+
+        FaultReportCreate faultCreate = new FaultReportCreate(
+                "fault-" + UUID.randomUUID(),
+                newBusinessNo("RDF", now),
+                device.id(),
+                operator.id(),
+                requireEnum(faultType, "faultType"),
+                requireEnum(severity, "severity"),
+                normalizeRequiredText(faultDescription, "faultDescription", 1000, ErrorCode.FAULT_REPORT_INVALID),
+                normalizeOptionalText(sceneCondition, 500, ErrorCode.FAULT_REPORT_INVALID),
+                parseDateTime(occurredAt, "occurredAt"),
+                longitude,
+                latitude,
+                now);
+
+        try {
+            operationsRepository.createFaultReport(faultCreate);
+        } catch (DataIntegrityViolationException exception) {
+            throw new BusinessException(ErrorCode.DEVICE_ACTIVE_FAULT_EXISTS);
+        }
+
+        archiveRepository.updateStatus(device.id(), "FAULTED", operator.id());
+        DeviceVerificationRecord verificationRecord = verificationRepository.findById(verificationCreate.id())
+                .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR));
+        FaultReportRecord faultReport = operationsRepository.findFaultReportByIdOrNo(faultCreate.id())
+                .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR));
+        return new DeviceVerificationFaultReportResult(verificationRecord, faultReport);
     }
 
     public AvailableRepairTaskList listAvailableRepairTasks(

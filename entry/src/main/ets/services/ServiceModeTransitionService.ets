@@ -7,7 +7,6 @@ import { ApiClient } from './ApiClient';
 import { OfflineSyncService } from './OfflineSyncService';
 import { WorkbenchService } from './WorkbenchService';
 import { DeviceArchiveFlowStore } from '../stores/DeviceArchiveFlowStore';
-import { OperationsFlowStore } from '../stores/OperationsFlowStore';
 import { SessionStore } from '../stores/SessionStore';
 
 export class ServiceModeTransitionService {
@@ -73,7 +72,6 @@ export class ServiceModeTransitionService {
 
   private static clearSessionScopedState(): void {
     DeviceArchiveFlowStore.clearFlow();
-    OperationsFlowStore.clearFlow();
     WorkbenchService.clearCachedSummary();
   }
 
@@ -87,4 +85,3 @@ export class ServiceModeTransitionService {
     };
   }
 }
-

@@ -273,12 +273,7 @@ struct OperationsCenter {
     this.message = '';
     this.messageTargetId = '';
     if (action.id === WorkbenchActionId.DeviceVerification) {
-      this.openPage('pages/OperationsCenter/DeviceVerification', '状态核验不可用');
-      return;
-    }
-
-    if (action.id === WorkbenchActionId.FaultReport) {
-      this.openPage('pages/OperationsCenter/FaultReport', '故障报告不可用');
+      this.openPage('pages/OperationsCenter/DeviceVerification', '设备核验与报修不可用');
       return;
     }
 
@@ -313,10 +308,6 @@ struct OperationsCenter {
   resolveActionIdByUrl(url: string): string {
     if (url === 'pages/OperationsCenter/DeviceVerification') {
       return `${WorkbenchActionId.DeviceVerification}`;
-    }
-
-    if (url === 'pages/OperationsCenter/FaultReport') {
-      return `${WorkbenchActionId.FaultReport}`;
     }
 
     if (url === 'pages/OperationsCenter/AvailableRepairTask') {

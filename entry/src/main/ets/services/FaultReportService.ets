@@ -156,7 +156,7 @@ export class FaultReportService {
         success: false,
         error: {
           code: 'OFFLINE_SYNC_PAYLOAD_INVALID',
-          message: '故障报告待同步数据无效'
+          message: '设备报修待同步数据无效'
         },
         timestamp: new Date().toISOString()
       };
@@ -306,7 +306,7 @@ export class FaultReportService {
       severity === FaultSeverity.Minor;
   }
 
-  private static createLocalFaultReportResponse(form: FaultReportForm): ApiResponse<FaultReportRecord> {
+  static createLocalFaultReportResponse(form: FaultReportForm): ApiResponse<FaultReportRecord> {
     const record = LocalRepairTaskRepository.createFaultReport(form);
     if (record === undefined) {
       return {
@@ -317,7 +317,7 @@ export class FaultReportService {
       };
     }
 
-    LocalOperationRecordRepository.append(OperationRecordType.FaultReport, '提交故障报告', record.reportNo,
+    LocalOperationRecordRepository.append(OperationRecordType.FaultReport, '提交设备报修', record.reportNo,
       `设备 ${record.deviceCode} 进入待接取状态`, SessionStore.getCurrentOperatorName());
     return {
       success: true,
@@ -347,7 +347,7 @@ export class FaultReportService {
     const payload = FaultReportService.createOfflineSyncPayload(form, localResponse.data.reportNo);
     OfflineSyncService.enqueue(
       OfflineSyncOperationType.FaultReportCreate,
-      `故障报告 ${normalizedDeviceCode}`,
+      `设备报修 ${normalizedDeviceCode}`,
       JSON.stringify(payload),
       conflictKey
     );
@@ -399,7 +399,7 @@ export class FaultReportService {
     }
   }
 
-  private static createOfflineConflictKey(deviceCode: string): string {
+  static createOfflineConflictKey(deviceCode: string): string {
     return `fault-report:${DeviceService.normalizeDeviceCode(deviceCode)}`;
   }
 
@@ -419,13 +419,13 @@ export class FaultReportService {
     if (code === 'DEVICE_ACTIVE_FAULT_EXISTS') {
       return {
         code,
-        message: '该设备已有进行中的故障处理流程，请勿重复提交故障报告'
+        message: '该设备已有进行中的故障处理流程，请勿重复提交报修信息'
       };
     }
 
     return {
       code: code.length === 0 ? 'FAULT_REPORT_SUBMIT_FAILED' : code,
-      message: fallbackMessage.length === 0 ? '故障报告提交失败' : fallbackMessage
+      message: fallbackMessage.length === 0 ? '设备报修提交失败' : fallbackMessage
     };
   }
 }

@@ -134,13 +134,8 @@ export class WorkbenchService {
     const actions: WorkbenchAction[] = [];
 
     if (SessionStore.hasPermission(PermissionCode.OpsDeviceVerify)) {
-      actions.push(WorkbenchService.createAction(WorkbenchActionId.DeviceVerification, '状态核验',
-        '提交现场核验记录', AppColors.Primary));
-    }
-
-    if (SessionStore.hasPermission(PermissionCode.OpsFaultReportCreate)) {
-      actions.push(WorkbenchService.createAction(WorkbenchActionId.FaultReport, '故障报告',
-        '登记设备故障信息', AppColors.Primary));
+      actions.push(WorkbenchService.createAction(WorkbenchActionId.DeviceVerification, '设备核验与报修',
+        '核验设备并联动报修', AppColors.Primary));
     }
 
     if (SessionStore.hasPermission(PermissionCode.OpsRepairTaskAccept)) {

@@ -1,22 +1,23 @@
 import { AppColors } from '../../styles/AppTheme';
 import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
+import { FaultSeverity, FaultType } from '../../models/FaultModels';
 import { PermissionCode } from '../../models/PermissionModels';
 import { VerificationResult } from '../../models/VerificationModels';
 import { ApiClient } from '../../services/ApiClient';
 import { DeviceService } from '../../services/DeviceService';
 import { DeviceVerificationService } from '../../services/DeviceVerificationService';
-import { OperationsFlowStore } from '../../stores/OperationsFlowStore';
+import { FaultReportService } from '../../services/FaultReportService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 
 const VERIFICATION_INFO_SECTIONS: InfoDialogSection[] = [
   {
-    title: '状态核验',
+    title: '设备核验与报修',
     items: [
       {
         label: '现场记录',
-        description: '记录设备当前运行、环境、外观和核验依据，形成可追溯的现场状态记录'
+        description: '记录设备当前运行、环境、外观和核验依据，形成可追溯的现场处理记录'
       }
     ]
   },
@@ -29,11 +30,20 @@ const VERIFICATION_INFO_SECTIONS: InfoDialogSection[] = [
       },
       {
         label: '异常',
-        description: '发现偏离预期的状态、现象或风险信号，应补充说明并视情况提交故障报告'
+        description: '发现偏离预期的状态、现象或风险信号时，必须同步补充报修信息'
       },
       {
         label: '不可用',
-        description: '设备无法完成基本业务能力或存在明显安全风险，应停止使用并进入维修流程'
+        description: '设备无法完成基本业务能力或存在明显安全风险时，必须同步进入维修流程'
+      }
+    ]
+  },
+  {
+    title: '联动报修',
+    items: [
+      {
+        label: '联动提交',
+        description: '异常或不可用核验会与报修信息一次提交，避免只记录异常而未进入维修处理'
       }
     ]
   }
@@ -46,16 +56,20 @@ struct DeviceVerification {
   @State verificationResult: string = '';
   @State description: string = '';
   @State remark: string = '';
+  @State faultType: string = '';
+  @State severity: string = '';
+  @State occurredAt: string = '';
+  @State faultDescription: string = '';
+  @State sceneCondition: string = '';
   @State message: string = '';
   @State messageTone: string = AppColors.Danger;
-  @State reportActionMessage: string = '';
-  @State reportActionMessageTone: string = AppColors.Danger;
   @State normalizedDeviceCode: string = '-';
+  @State latestReportNo: string = '-';
   @State submitting: boolean = false;
-  @State canReportFault: boolean = false;
+  @State submitted: boolean = false;
   private verificationInfoDialogController: CustomDialogController = new CustomDialogController({
     builder: InfoDialog({
-      title: '状态核验说明',
+      title: '设备核验与报修说明',
       sections: VERIFICATION_INFO_SECTIONS
     }),
     autoCancel: true,
@@ -135,7 +149,7 @@ struct DeviceVerification {
   ModeHeader() {
     Column({ space: 6 }) {
       Row({ space: 6 }) {
-        Text('状态核验')
+        Text('设备核验与报修')
           .fontSize(34)
           .fontWeight(FontWeight.Bold)
           .fontColor(AppColors.TextPrimary)
@@ -148,7 +162,7 @@ struct DeviceVerification {
       }
       .alignItems(VerticalAlign.Center)
 
-      Text('记录设备现场状态')
+      Text('记录设备现场状态，异常时同步进入维修流程')
         .fontSize(15)
         .fontColor(AppColors.TextSecondary)
         .maxLines(1)
@@ -169,17 +183,14 @@ struct DeviceVerification {
       this.ResultSelector()
       this.DescriptionField()
       this.RemarkField()
+      if (this.requiresFaultReport()) {
+        this.FaultReportSection()
+      }
       this.MessageText()
-      this.ActionButton(this.submitting ? '提交中' : '提交核验', $r('sys.symbol.checkmark_circle'), !this.submitting,
+      this.ActionButton(this.getSubmitButtonLabel(), $r('sys.symbol.checkmark_circle'), !this.submitting && !this.submitted,
         () => {
           this.submitVerification();
         })
-      if (this.canReportFault) {
-        this.ReportActionMessageText()
-        this.ActionButton('上报故障', $r('sys.symbol.exclamationmark_message'), true, () => {
-          this.openFaultReport();
-        })
-      }
     }
     .padding({
       left: 18,
@@ -216,11 +227,7 @@ struct DeviceVerification {
         })
         .onChange((value: string) => {
           this.deviceCode = value;
-          this.message = '';
-          this.messageTone = AppColors.Danger;
-          this.reportActionMessage = '';
-          this.reportActionMessageTone = AppColors.Danger;
-          this.canReportFault = false;
+          this.markFormChanged();
           this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(value);
           if (this.normalizedDeviceCode.length === 0) {
             this.normalizedDeviceCode = '-';
@@ -275,11 +282,7 @@ struct DeviceVerification {
     })
     .onClick(() => {
       this.verificationResult = `${result}`;
-      this.message = '';
-      this.messageTone = AppColors.Danger;
-      this.reportActionMessage = '';
-      this.reportActionMessageTone = AppColors.Danger;
-      this.canReportFault = false;
+      this.markFormChanged();
     })
   }
 
@@ -311,11 +314,7 @@ struct DeviceVerification {
         })
         .onChange((value: string) => {
           this.description = value;
-          this.message = '';
-          this.messageTone = AppColors.Danger;
-          this.reportActionMessage = '';
-          this.reportActionMessageTone = AppColors.Danger;
-          this.canReportFault = false;
+          this.markFormChanged();
         })
     }
     .width('100%')
@@ -350,11 +349,314 @@ struct DeviceVerification {
         })
         .onChange((value: string) => {
           this.remark = value;
-          this.message = '';
-          this.messageTone = AppColors.Danger;
-          this.reportActionMessage = '';
-          this.reportActionMessageTone = AppColors.Danger;
-          this.canReportFault = false;
+          this.markFormChanged();
+        })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  FaultReportSection() {
+    Column({ space: 16 }) {
+      Row({ space: 8 }) {
+        SymbolGlyph($r('sys.symbol.exclamationmark_message'))
+          .fontSize(20)
+          .fontColor([AppColors.Danger])
+
+        Text('报修信息')
+          .fontSize(20)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(AppColors.TextPrimary)
+          .maxLines(1)
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+
+      this.FaultTypeSelector()
+      this.SeveritySelector()
+      this.OccurredAtField()
+      this.FaultDescriptionField()
+      this.SceneConditionField()
+    }
+    .width('100%')
+    .padding({
+      left: 14,
+      right: 14,
+      top: 14,
+      bottom: 14
+    })
+    .backgroundColor(AppColors.FieldBackground)
+    .borderRadius(18)
+    .border({
+      width: 1,
+      color: AppColors.Border
+    })
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  FaultTypeSelector() {
+    Column({ space: 10 }) {
+      this.FieldTitle('故障类型')
+
+      Column({ space: 10 }) {
+        Row({ space: 10 }) {
+          Column() {
+            this.FaultTypeOption(FaultType.OperationAbnormal, $r('sys.symbol.exclamationmark_message'))
+          }
+          .layoutWeight(1)
+
+          Column() {
+            this.FaultTypeOption(FaultType.HardwareDamage, $r('sys.symbol.wrench_and_screwdriver'))
+          }
+          .layoutWeight(1)
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+
+        Row({ space: 10 }) {
+          Column() {
+            this.FaultTypeOption(FaultType.CommunicationFault, $r('sys.symbol.wifi_badge_exclamationmark'))
+          }
+          .layoutWeight(1)
+
+          Column() {
+            this.FaultTypeOption(FaultType.LogicFault, $r('sys.symbol.gearshape'))
+          }
+          .layoutWeight(1)
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+
+        Row({ space: 10 }) {
+          Column() {
+            this.FaultTypeOption(FaultType.EnergyFault, $r('sys.symbol.bolt'))
+          }
+          .layoutWeight(1)
+
+          Column() {
+            this.FaultTypeOption(FaultType.ExternalFactor, $r('sys.symbol.geologic_hazard'))
+          }
+          .layoutWeight(1)
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+
+        Row() {
+          Blank()
+            .layoutWeight(1)
+
+          Column() {
+            this.FaultTypeOption(FaultType.Other, $r('sys.symbol.text_clipboard'))
+          }
+          .width('48%')
+
+          Blank()
+            .layoutWeight(1)
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+      }
+      .width('100%')
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  FaultTypeOption(type: FaultType, icon: Resource) {
+    Button({ type: ButtonType.Capsule, stateEffect: true }) {
+      Row({ space: 5 }) {
+        SymbolGlyph(icon)
+          .fontSize(17)
+          .fontColor([this.faultType === `${type}` ? AppColors.Surface : AppColors.TextPrimary])
+
+        Text(FaultReportService.formatFaultType(type))
+          .fontSize(14)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.faultType === `${type}` ? AppColors.Surface : AppColors.TextPrimary)
+          .maxLines(1)
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+    }
+    .height(42)
+    .width('100%')
+    .backgroundColor(this.faultType === `${type}` ? AppColors.Primary : AppColors.Surface)
+    .border({
+      width: 1,
+      color: this.faultType === `${type}` ? AppColors.Primary : AppColors.Border
+    })
+    .onClick(() => {
+      this.faultType = `${type}`;
+      this.markFormChanged();
+    })
+  }
+
+  @Builder
+  SeveritySelector() {
+    Column({ space: 10 }) {
+      this.FieldTitle('故障等级')
+
+      Column({ space: 10 }) {
+        Row({ space: 10 }) {
+          this.SeverityOption(FaultSeverity.Emergency, $r('sys.symbol.exclamationmark_triangle_fill'))
+          this.SeverityOption(FaultSeverity.Severe, $r('sys.symbol.exclamationmark_circle'))
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+
+        Row({ space: 10 }) {
+          this.SeverityOption(FaultSeverity.General, $r('sys.symbol.exclamationmark_message'))
+          this.SeverityOption(FaultSeverity.Minor, $r('sys.symbol.checkmark_circle'))
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+      }
+      .width('100%')
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  SeverityOption(severity: FaultSeverity, icon: Resource) {
+    Button({ type: ButtonType.Capsule, stateEffect: true }) {
+      Row({ space: 6 }) {
+        SymbolGlyph(icon)
+          .fontSize(17)
+          .fontColor([this.severity === `${severity}` ? AppColors.Surface : AppColors.TextPrimary])
+
+        Text(FaultReportService.formatSeverity(severity))
+          .fontSize(14)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.severity === `${severity}` ? AppColors.Surface : AppColors.TextPrimary)
+          .maxLines(1)
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+    }
+    .height(42)
+    .layoutWeight(1)
+    .backgroundColor(this.severity === `${severity}` ? this.getSeverityTone(severity) : AppColors.Surface)
+    .border({
+      width: 1,
+      color: this.severity === `${severity}` ? this.getSeverityTone(severity) : AppColors.Border
+    })
+    .onClick(() => {
+      this.severity = `${severity}`;
+      this.markFormChanged();
+    })
+  }
+
+  @Builder
+  OccurredAtField() {
+    Column({ space: 10 }) {
+      this.FieldTitle('发生时间')
+
+      Row({ space: 10 }) {
+        SymbolGlyph($r('sys.symbol.calendar'))
+          .fontSize(20)
+          .fontColor([AppColors.TextPrimary])
+
+        Text(this.occurredAt.length > 0 ? this.occurredAt : '选择发生时间')
+          .fontSize(16)
+          .fontColor(this.occurredAt.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
+          .layoutWeight(1)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+        SymbolGlyph($r('sys.symbol.chevron_forward'))
+          .fontSize(18)
+          .fontColor([AppColors.TextSecondary])
+      }
+      .height(56)
+      .width('100%')
+      .backgroundColor(AppColors.Surface)
+      .borderRadius(18)
+      .padding({
+        left: 16,
+        right: 16
+      })
+      .border({
+        width: 1,
+        color: AppColors.Border
+      })
+      .onClick(() => {
+        this.showOccurredAtPicker();
+      })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  FaultDescriptionField() {
+    Column({ space: 10 }) {
+      this.FieldTitle('故障描述')
+
+      TextArea({
+        placeholder: '填写故障现象、影响范围和发现过程',
+        text: this.faultDescription
+      })
+        .height(128)
+        .width('100%')
+        .fontSize(15)
+        .lineHeight(22)
+        .maxLength(800)
+        .backgroundColor(AppColors.Surface)
+        .borderRadius(18)
+        .padding({
+          left: 14,
+          right: 14,
+          top: 12,
+          bottom: 12
+        })
+        .border({
+          width: 1,
+          color: AppColors.Border
+        })
+        .onChange((value: string) => {
+          this.faultDescription = value;
+          this.markFormChanged();
+        })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  SceneConditionField() {
+    Column({ space: 10 }) {
+      this.FieldTitle('现场情况')
+
+      TextArea({
+        placeholder: '填写现场环境、临时处理措施或补充说明',
+        text: this.sceneCondition
+      })
+        .height(96)
+        .width('100%')
+        .fontSize(15)
+        .lineHeight(22)
+        .maxLength(500)
+        .backgroundColor(AppColors.Surface)
+        .borderRadius(18)
+        .padding({
+          left: 14,
+          right: 14,
+          top: 12,
+          bottom: 12
+        })
+        .border({
+          width: 1,
+          color: AppColors.Border
+        })
+        .onChange((value: string) => {
+          this.sceneCondition = value;
+          this.markFormChanged();
         })
     }
     .width('100%')
@@ -376,18 +678,6 @@ struct DeviceVerification {
       Text(this.message)
         .fontSize(13)
         .fontColor(this.messageTone)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
-    }
-  }
-
-  @Builder
-  ReportActionMessageText() {
-    if (this.reportActionMessage.length > 0) {
-      Text(this.reportActionMessage)
-        .fontSize(13)
-        .fontColor(this.reportActionMessageTone)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
@@ -457,6 +747,18 @@ struct DeviceVerification {
         })
         this.CardDivider()
         StatusInfoRow({
+          label: '联动报修',
+          value: this.getFaultReportStatusText(),
+          tone: this.getFaultReportStatusTone()
+        })
+        this.CardDivider()
+        StatusInfoRow({
+          label: '报修编号',
+          value: this.latestReportNo,
+          tone: AppColors.TextSecondary
+        })
+        this.CardDivider()
+        StatusInfoRow({
           label: '服务模式',
           value: ApiClient.getRuntimeStatusLabel(),
           tone: ApiClient.getRuntimeStatusTone()
@@ -482,24 +784,34 @@ struct DeviceVerification {
   }
 
   async submitVerification(): Promise<void> {
-    if (this.submitting) {
+    if (this.submitting || this.submitted) {
       return;
     }
-
-    this.submitting = true;
-    const response = await DeviceVerificationService.submitVerificationRemoteFirst({
-      deviceCode: this.deviceCode,
-      result: this.verificationResult as VerificationResult,
-      description: this.description,
-      remark: this.remark
-    });
-    this.submitting = false;
 
     this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(this.deviceCode);
     if (this.normalizedDeviceCode.length === 0) {
       this.normalizedDeviceCode = '-';
     }
 
+    this.submitting = true;
+    try {
+      if (this.requiresFaultReport()) {
+        await this.submitVerificationWithFaultReport();
+      } else {
+        await this.submitNormalVerification();
+      }
+    } finally {
+      this.submitting = false;
+    }
+  }
+
+  async submitNormalVerification(): Promise<void> {
+    const response = await DeviceVerificationService.submitVerificationRemoteFirst({
+      deviceCode: this.deviceCode,
+      result: this.verificationResult as VerificationResult,
+      description: this.description,
+      remark: this.remark
+    });
     if (!response.success) {
       const error = response.error;
       this.message = error ? error.message : '核验提交失败';
@@ -514,9 +826,45 @@ struct DeviceVerification {
       this.message = recordId.length > 0 ? `核验记录已提交：${recordId}` : '核验记录已提交';
     }
     this.messageTone = AppColors.Success;
-    this.reportActionMessage = '';
-    this.reportActionMessageTone = AppColors.Danger;
-    this.canReportFault = this.shouldOfferFaultReport();
+    this.submitted = true;
+  }
+
+  async submitVerificationWithFaultReport(): Promise<void> {
+    if (!SessionStore.hasPermission(PermissionCode.OpsFaultReportCreate)) {
+      this.message = '当前账号无权提交报修信息，无法提交异常核验';
+      this.messageTone = AppColors.Danger;
+      return;
+    }
+
+    const response = await DeviceVerificationService.submitVerificationWithFaultReportRemoteFirst({
+      verification: {
+        deviceCode: this.deviceCode,
+        result: this.verificationResult as VerificationResult,
+        description: this.description,
+        remark: this.remark
+      },
+      faultReport: {
+        deviceCode: this.deviceCode,
+        faultType: this.faultType as FaultType,
+        severity: this.severity as FaultSeverity,
+        occurredAt: this.occurredAt,
+        description: this.faultDescription,
+        sceneCondition: this.sceneCondition
+      }
+    });
+    if (!response.success) {
+      const error = response.error;
+      this.message = error ? error.message : '设备核验与报修提交失败';
+      this.messageTone = AppColors.Danger;
+      return;
+    }
+
+    const reportNo = response.data ? response.data.faultReport.reportNo : '';
+    this.latestReportNo = reportNo.length > 0 ? reportNo : '-';
+    this.message = DeviceVerificationService.isOfflineSyncQueuedFaultReportResponse(response) ?
+      '设备核验与报修已在本地提交，待在线同步' : '设备核验与报修已提交';
+    this.messageTone = AppColors.Success;
+    this.submitted = true;
   }
 
   getVerificationResultStatusText(): string {
@@ -545,27 +893,115 @@ struct DeviceVerification {
     this.verificationInfoDialogController.open();
   }
 
-  shouldOfferFaultReport(): boolean {
-    return this.verificationResult !== `${VerificationResult.Normal}` &&
-      SessionStore.hasPermission(PermissionCode.OpsFaultReportCreate);
+  requiresFaultReport(): boolean {
+    return this.verificationResult === `${VerificationResult.Abnormal}` ||
+      this.verificationResult === `${VerificationResult.Unavailable}`;
   }
 
-  openFaultReport(): void {
-    const resultText = DeviceVerificationService.formatVerificationResult(this.verificationResult as VerificationResult);
-    const description = this.description.trim();
-    const remark = this.remark.trim();
-    OperationsFlowStore.setFaultReportPrefill({
-      deviceCode: this.normalizedDeviceCode === '-' ? this.deviceCode : this.normalizedDeviceCode,
-      description: description.length > 0 ? `状态核验结果为${resultText}。${description}` : `状态核验结果为${resultText}。`,
-      sceneCondition: remark
-    });
-
-    try {
-      this.getUIContext().getRouter().pushUrl({ url: 'pages/OperationsCenter/FaultReport' });
-    } catch (err) {
-      this.reportActionMessage = '故障报告不可用';
-      this.reportActionMessageTone = AppColors.Danger;
+  getSubmitButtonLabel(): string {
+    if (this.submitting) {
+      return '提交中';
     }
+
+    if (this.submitted) {
+      return '已提交';
+    }
+
+    return this.requiresFaultReport() ? '提交核验与报修' : '提交核验';
+  }
+
+  getFaultReportStatusText(): string {
+    if (!this.requiresFaultReport()) {
+      return '不需要';
+    }
+
+    if (this.submitted) {
+      return '已提交';
+    }
+
+    return '需填写';
+  }
+
+  getFaultReportStatusTone(): string {
+    if (!this.requiresFaultReport()) {
+      return AppColors.TextSecondary;
+    }
+
+    return this.submitted ? AppColors.Success : AppColors.Warning;
+  }
+
+  getSeverityTone(severity: FaultSeverity): string {
+    switch (severity) {
+      case FaultSeverity.Emergency:
+        return AppColors.Danger;
+      case FaultSeverity.Severe:
+        return AppColors.Warning;
+      case FaultSeverity.General:
+        return AppColors.Primary;
+      case FaultSeverity.Minor:
+        return AppColors.Success;
+      default:
+        return AppColors.TextSecondary;
+    }
+  }
+
+  markFormChanged(): void {
+    this.message = '';
+    this.messageTone = AppColors.Danger;
+    this.latestReportNo = '-';
+    this.submitted = false;
+  }
+
+  showOccurredAtPicker(): void {
+    this.getUIContext().showDatePickerDialog({
+      start: new Date(2000, 0, 1, 0, 0),
+      end: new Date(2100, 11, 31, 23, 59),
+      selected: this.resolveSelectedDate(this.occurredAt),
+      showTime: true,
+      useMilitaryTime: true,
+      onDateAccept: (value: Date) => {
+        this.occurredAt = this.formatDateTime(value);
+        this.markFormChanged();
+      }
+    });
+  }
+
+  resolveSelectedDate(value: string): Date {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      return new Date();
+    }
+
+    const segments = trimmed.split(' ');
+    if (segments.length !== 2) {
+      return new Date();
+    }
+
+    const dateSegments = segments[0].split('-');
+    const timeSegments = segments[1].split(':');
+    if (dateSegments.length !== 3 || timeSegments.length < 2) {
+      return new Date();
+    }
+
+    const year = Number(dateSegments[0]);
+    const month = Number(dateSegments[1]);
+    const day = Number(dateSegments[2]);
+    const hour = Number(timeSegments[0]);
+    const minute = Number(timeSegments[1]);
+    if (year !== year || month !== month || day !== day || hour !== hour || minute !== minute) {
+      return new Date();
+    }
+
+    return new Date(year, month - 1, day, hour, minute);
+  }
+
+  formatDateTime(value: Date): string {
+    return `${value.getFullYear()}-${this.pad2(value.getMonth() + 1)}-${this.pad2(value.getDate())} ${this.pad2(
+      value.getHours())}:${this.pad2(value.getMinutes())}`;
+  }
+
+  pad2(value: number): string {
+    return value < 10 ? `0${value}` : `${value}`;
   }
 
   backToWorkbench(): void {

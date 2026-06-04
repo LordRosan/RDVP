@@ -16,6 +16,9 @@ import com.rmf.rdvp.archive.DeviceVerificationResult;
 import com.rmf.rdvp.domain.common.BusinessException;
 import com.rmf.rdvp.domain.common.ErrorCode;
 import com.rmf.rdvp.identity.AuthenticatedUser;
+import com.rmf.rdvp.operations.FaultSeverity;
+import com.rmf.rdvp.operations.FaultType;
+import com.rmf.rdvp.operations.OperationsService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -25,9 +28,11 @@ import jakarta.validation.Valid;
 public class DeviceVerificationController {
 
     private final DeviceArchiveService archiveService;
+    private final OperationsService operationsService;
 
-    public DeviceVerificationController(DeviceArchiveService archiveService) {
+    public DeviceVerificationController(DeviceArchiveService archiveService, OperationsService operationsService) {
         this.archiveService = archiveService;
+        this.operationsService = operationsService;
     }
 
     @PostMapping("/devices/{deviceId}/verification-records")
@@ -47,11 +52,39 @@ public class DeviceVerificationController {
         return ResponseEntity.ok(ApiResponse.success(DeviceVerificationRecordResponse.from(record), RequestIds.resolve(request)));
     }
 
+    @PostMapping("/devices/{deviceId}/verification-records/fault-report")
+    @PreAuthorize("hasAuthority('OPS_DEVICE_VERIFY') and hasAuthority('OPS_FAULT_REPORT_CREATE')")
+    public ResponseEntity<ApiResponse<DeviceVerificationFaultReportResponse>> createVerificationWithFaultReport(
+            @PathVariable String deviceId,
+            @Valid @RequestBody CreateDeviceVerificationFaultReportRequest requestBody,
+            @AuthenticationPrincipal AuthenticatedUser user,
+            HttpServletRequest request) {
+        var result = operationsService.createVerificationWithFaultReport(
+                deviceId,
+                parseEnum(DeviceVerificationResult.class, requestBody.result(), "result"),
+                requestBody.description(),
+                requestBody.remark(),
+                requestBody.verifiedAt(),
+                parseEnum(FaultType.class, requestBody.faultType(), "faultType"),
+                parseEnum(FaultSeverity.class, requestBody.severity(), "severity"),
+                requestBody.occurredAt(),
+                requestBody.faultDescription(),
+                requestBody.sceneCondition(),
+                requestBody.longitude(),
+                requestBody.latitude(),
+                user);
+        return ResponseEntity.ok(ApiResponse.success(DeviceVerificationFaultReportResponse.from(result), RequestIds.resolve(request)));
+    }
+
     private DeviceVerificationResult parseResult(String value) {
+        return parseEnum(DeviceVerificationResult.class, value, "result");
+    }
+
+    private <T extends Enum<T>> T parseEnum(Class<T> enumType, String value, String field) {
         try {
-            return DeviceVerificationResult.valueOf(value.trim().toUpperCase());
+            return Enum.valueOf(enumType, value.trim().toUpperCase());
         } catch (RuntimeException exception) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "result is invalid.");
+            throw new BusinessException(ErrorCode.BAD_REQUEST, field + " is invalid.");
         }
     }
 }

@@ -5,7 +5,6 @@ export enum WorkbenchActionId {
   DeviceQuery = 'DEVICE_QUERY',
   DeviceArchiveCreate = 'DEVICE_ARCHIVE_CREATE',
   DeviceVerification = 'DEVICE_VERIFICATION',
-  FaultReport = 'FAULT_REPORT',
   AvailableRepairTask = 'AVAILABLE_REPAIR_TASK',
   MyRepairTask = 'MY_REPAIR_TASK',
   ReinspectionTask = 'REINSPECTION_TASK',

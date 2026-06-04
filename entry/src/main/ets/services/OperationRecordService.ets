@@ -78,11 +78,11 @@ export class OperationRecordService {
       case OperationRecordType.AuthLogin:
         return '登录';
       case OperationRecordType.DeviceVerification:
-        return '状态核验';
+        return '设备核验';
       case OperationRecordType.DeviceChangeRequest:
         return '档案变更';
       case OperationRecordType.FaultReport:
-        return '故障报告';
+        return '设备报修';
       case OperationRecordType.RepairTaskAccept:
         return '维修接取';
       case OperationRecordType.RepairReport:
@@ -169,9 +169,9 @@ export class OperationRecordService {
       case 'DEVICE_CHANGE_REVIEW':
         return '完成设备档案变更审核';
       case 'DEVICE_VERIFICATION':
-        return '提交设备状态核验记录';
+        return '提交设备核验记录';
       case 'FAULT_REPORT':
-        return '提交故障报告';
+        return '提交设备报修信息';
       case 'REPAIR_TASK_ACCEPT':
         return '接取维修任务';
       case 'REPAIR_REPORT':

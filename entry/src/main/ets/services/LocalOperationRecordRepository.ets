@@ -10,7 +10,7 @@ const LOCAL_OPERATION_SEEDS: OperationRecordSummary[] = [
   {
     id: 'local-operation-0001',
     type: OperationRecordType.DeviceVerification,
-    title: '提交状态核验',
+    title: '提交设备核验',
     targetNo: 'RDVP-DEVICE-0001',
     operatorName: '本地用户',
     occurredAt: '2026-05-29 09:20',
@@ -20,7 +20,7 @@ const LOCAL_OPERATION_SEEDS: OperationRecordSummary[] = [
   {
     id: 'local-operation-0002',
     type: OperationRecordType.FaultReport,
-    title: '提交故障报告',
+    title: '提交设备报修',
     targetNo: 'RDF-LOCAL-0001',
     operatorName: '本地用户',
     occurredAt: '2026-05-29 09:40',

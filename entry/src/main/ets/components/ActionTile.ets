@@ -75,10 +75,6 @@ export struct ActionTile {
       SymbolGlyph($r('sys.symbol.checkmark_shield'))
         .fontSize(23)
         .fontColor([AppColors.Surface])
-    } else if (this.action.id === WorkbenchActionId.FaultReport) {
-      SymbolGlyph($r('sys.symbol.exclamationmark_message'))
-        .fontSize(23)
-        .fontColor([AppColors.Surface])
     } else if (this.action.id === WorkbenchActionId.AvailableRepairTask) {
       SymbolGlyph($r('sys.symbol.location_up'))
         .fontSize(23)

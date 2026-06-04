@@ -123,6 +123,25 @@ export class OfflineSyncProcessorService {
       };
     }
 
+    if (item.operationType === OfflineSyncOperationType.DeviceVerificationFaultReportCreate) {
+      const response = await DeviceVerificationService.submitQueuedVerificationFaultReport(item.payloadJson);
+      if (response.success) {
+        return {
+          success: true,
+          data: item.id,
+          requestId: response.requestId,
+          timestamp: response.timestamp
+        };
+      }
+
+      return {
+        success: false,
+        error: response.error,
+        requestId: response.requestId,
+        timestamp: response.timestamp
+      };
+    }
+
     return {
       success: false,
       error: {

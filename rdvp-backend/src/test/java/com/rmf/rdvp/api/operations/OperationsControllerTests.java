@@ -133,6 +133,82 @@ class OperationsControllerTests {
     }
 
     @Test
+    void createsFaultReportWhenAbnormalVerificationIsSubmitted() throws Exception {
+        String operatorToken = login("fieldoperator", "password");
+        String maintainerToken = login("maintainer", "password");
+
+        String response = mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records/fault-report", "device-local-0001")
+                        .header("Authorization", "Bearer " + operatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "result": "ABNORMAL",
+                                  "description": "现场核验发现设备运行噪声异常。",
+                                  "remark": "已同步提交报修信息。",
+                                  "verifiedAt": "2026-06-03T08:30:00Z",
+                                  "faultType": "OPERATION_ABNORMAL",
+                                  "severity": "GENERAL",
+                                  "occurredAt": "2026-06-03T08:20:00Z",
+                                  "faultDescription": "设备运行噪声持续升高，存在进一步恶化风险。",
+                                  "sceneCondition": "现场负载已降低，等待维修人员接取。"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.verificationRecord.deviceId").value("device-local-0001"))
+                .andExpect(jsonPath("$.data.verificationRecord.result").value("ABNORMAL"))
+                .andExpect(jsonPath("$.data.faultReport.status").value("PENDING_ACCEPTANCE"))
+                .andExpect(jsonPath("$.data.faultReport.faultReportNo").isString())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        String faultId = objectMapper.readTree(response).path("data").path("faultReport").path("id").asText();
+
+        mockMvc.perform(get("/api/v1/devices/by-code/RDVP-DEVICE-0001")
+                        .header("Authorization", "Bearer " + operatorToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("FAULTED"))
+                .andExpect(jsonPath("$.data.lastVerificationTime").value("2026-06-03T08:30:00Z"));
+
+        mockMvc.perform(get("/api/v1/repair-tasks/available?radiusKm=10")
+                        .header("Authorization", "Bearer " + maintainerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items[0].faultReportId").value(faultId));
+    }
+
+    @Test
+    void rejectsDuplicateFaultReportFromAbnormalVerificationForActiveDeviceFault() throws Exception {
+        String operatorToken = login("fieldoperator", "password");
+
+        createFaultReport(
+                operatorToken,
+                "RDVP-DEVICE-0001",
+                "ENERGY_FAULT",
+                "GENERAL",
+                "Power supply fluctuates under load.");
+
+        mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records/fault-report", "device-local-0001")
+                        .header("Authorization", "Bearer " + operatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "result": "UNAVAILABLE",
+                                  "description": "设备已不可用。",
+                                  "remark": "",
+                                  "verifiedAt": "2026-06-03T08:30:00Z",
+                                  "faultType": "ENERGY_FAULT",
+                                  "severity": "SEVERE",
+                                  "occurredAt": "2026-06-03T08:20:00Z",
+                                  "faultDescription": "重复提交同一设备的活跃故障。",
+                                  "sceneCondition": "应被系统拦截。"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("DEVICE_ACTIVE_FAULT_EXISTS"));
+    }
+
+    @Test
     void derivesMaintainerWorkloadBeforeListingOrAcceptingTasks() throws Exception {
         String operatorToken = login("fieldoperator", "password");
         String maintainerToken = login("maintainer", "password");
