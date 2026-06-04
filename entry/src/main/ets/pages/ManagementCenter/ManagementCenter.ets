@@ -114,20 +114,6 @@ struct ManagementCenter {
       }
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
-
-      Stack() {
-        SymbolGlyph($r('sys.symbol.checkmark_shield'))
-          .fontSize(31)
-          .fontColor([AppColors.TextPrimary])
-      }
-      .width(58)
-      .height(58)
-      .borderRadius(29)
-      .backgroundColor(AppColors.Surface)
-      .border({
-        width: 1,
-        color: AppColors.Divider
-      })
     }
     .width('100%')
     .alignItems(VerticalAlign.Center)

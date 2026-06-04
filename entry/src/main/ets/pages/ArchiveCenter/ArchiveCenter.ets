@@ -106,7 +106,7 @@ struct ArchiveCenter {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-    Text('查询设备档案并从详情发起变更')
+        Text('查询设备档案并从详情发起变更')
           .fontSize(15)
           .fontColor(AppColors.TextSecondary)
           .maxLines(1)
@@ -114,20 +114,6 @@ struct ArchiveCenter {
       }
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
-
-      Stack() {
-        SymbolGlyph($r('sys.symbol.text_clipboard'))
-          .fontSize(31)
-          .fontColor([AppColors.TextPrimary])
-      }
-      .width(58)
-      .height(58)
-      .borderRadius(29)
-      .backgroundColor(AppColors.Surface)
-      .border({
-        width: 1,
-        color: AppColors.Divider
-      })
     }
     .width('100%')
     .alignItems(VerticalAlign.Center)
