@@ -10,6 +10,7 @@ import { SessionStore } from '../stores/SessionStore';
 @Entry
 @Component
 struct Workbench {
+  @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   @State metrics: WorkbenchMetric[] = WorkbenchService.getMetrics();
   @State actions: WorkbenchAction[] = WorkbenchService.getActions();
   @State statusItems: WorkbenchStatusItem[] = WorkbenchService.getStatusItems();

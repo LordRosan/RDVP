@@ -26,6 +26,7 @@ const OPERATION_RECORD_INFO_SECTIONS: InfoDialogSection[] = [
 @Entry
 @Component
 struct OperationRecord {
+  @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   @State records: OperationRecordSummary[] = [];
   @State message: string = '';
   @State refreshStatus: string = '未刷新';
@@ -165,7 +166,7 @@ struct OperationRecord {
         Button({ type: ButtonType.Circle, stateEffect: true }) {
           SymbolGlyph($r('sys.symbol.arrow_clockwise'))
             .fontSize(22)
-            .fontColor([AppColors.Surface])
+            .fontColor([AppColors.OnPrimary])
         }
         .width(44)
         .height(44)
@@ -231,7 +232,7 @@ struct OperationRecord {
         Stack() {
           SymbolGlyph($r('sys.symbol.text_clipboard'))
             .fontSize(23)
-            .fontColor([AppColors.Surface])
+            .fontColor([AppColors.OnPrimary])
         }
         .width(44)
         .height(44)

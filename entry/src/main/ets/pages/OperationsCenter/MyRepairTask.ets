@@ -47,6 +47,7 @@ const MY_REPAIR_TASK_INFO_SECTIONS: InfoDialogSection[] = [
 @Entry
 @Component
 struct MyRepairTask {
+  @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   @State taskItems: MyRepairTaskSummary[] = [];
   @State taskId: string = '';
   @State reportResult: string = '';
@@ -191,7 +192,7 @@ struct MyRepairTask {
         Button({ type: ButtonType.Circle, stateEffect: true }) {
           SymbolGlyph($r('sys.symbol.arrow_clockwise'))
             .fontSize(22)
-            .fontColor([AppColors.Surface])
+            .fontColor([AppColors.OnPrimary])
         }
         .width(44)
         .height(44)
@@ -263,7 +264,7 @@ struct MyRepairTask {
         Stack() {
           SymbolGlyph($r('sys.symbol.wrench_and_screwdriver'))
             .fontSize(23)
-            .fontColor([AppColors.Surface])
+            .fontColor([AppColors.OnPrimary])
         }
         .width(44)
         .height(44)
@@ -309,12 +310,12 @@ struct MyRepairTask {
         Row({ space: 8 }) {
           SymbolGlyph(this.isTaskSelected(item) ? $r('sys.symbol.checkmark_circle') : $r('sys.symbol.text_clipboard'))
             .fontSize(18)
-            .fontColor([AppColors.Surface])
+            .fontColor([AppColors.OnPrimary])
 
           Text(this.isTaskSelected(item) ? '已选择' : '填写维修报告')
             .fontSize(15)
             .fontWeight(FontWeight.Medium)
-            .fontColor(AppColors.Surface)
+            .fontColor(AppColors.OnPrimary)
             .maxLines(1)
         }
         .justifyContent(FlexAlign.Center)
@@ -432,12 +433,12 @@ struct MyRepairTask {
       Row({ space: 5 }) {
         SymbolGlyph(icon)
           .fontSize(17)
-          .fontColor([this.reportResult === `${result}` ? AppColors.Surface : AppColors.TextPrimary])
+          .fontColor([this.reportResult === `${result}` ? AppColors.OnPrimary : AppColors.TextPrimary])
 
         Text(RepairTaskService.formatRepairReportResult(result))
           .fontSize(13)
           .fontWeight(FontWeight.Medium)
-          .fontColor(this.reportResult === `${result}` ? AppColors.Surface : AppColors.TextPrimary)
+          .fontColor(this.reportResult === `${result}` ? AppColors.OnPrimary : AppColors.TextPrimary)
           .maxLines(1)
       }
       .width('100%')
@@ -652,12 +653,12 @@ struct MyRepairTask {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
           .fontSize(20)
-          .fontColor([AppColors.Surface])
+          .fontColor([AppColors.OnPrimary])
 
         Text(label)
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
-          .fontColor(AppColors.Surface)
+          .fontColor(AppColors.OnPrimary)
           .maxLines(1)
       }
       .width('100%')

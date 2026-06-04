@@ -55,6 +55,7 @@ const DEVICE_CHANGE_INFO_SECTIONS: InfoDialogSection[] = [
 @Entry
 @Component
 struct DeviceArchiveChange {
+  @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   @State deviceCode: string = '';
   @State deviceName: string = '';
   @State model: string = '';
@@ -454,12 +455,12 @@ struct DeviceArchiveChange {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
           .fontSize(20)
-          .fontColor([AppColors.Surface])
+          .fontColor([AppColors.OnPrimary])
 
         Text(label)
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
-          .fontColor(AppColors.Surface)
+          .fontColor(AppColors.OnPrimary)
           .maxLines(1)
       }
       .width('100%')

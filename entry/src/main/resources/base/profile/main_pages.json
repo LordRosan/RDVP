@@ -3,6 +3,7 @@
     "pages/Login",
     "pages/Workbench",
     "pages/PersonalCenter/PersonalCenter",
+    "pages/PersonalCenter/ApplicationSettings",
     "pages/ArchiveCenter/ArchiveCenter",
     "pages/OperationsCenter/OperationsCenter",
     "pages/ManagementCenter/ManagementCenter",

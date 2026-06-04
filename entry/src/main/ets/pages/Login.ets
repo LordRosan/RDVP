@@ -18,6 +18,7 @@ struct Login {
   @State serviceAddressMessage: string = '';
   @State serviceAddressMessageTone: string = AppColors.Success;
   @State submitting: boolean = false;
+  @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
 
   aboutToAppear(): void {
     if (SessionStore.isAuthenticated()) {
@@ -69,7 +70,7 @@ struct Login {
           Text('RD')
             .fontSize(18)
             .fontWeight(FontWeight.Bold)
-            .fontColor(AppColors.Surface)
+            .fontColor(AppColors.OnPrimary)
             .maxLines(1)
         }
         .width(52)
@@ -239,7 +240,7 @@ struct Login {
 
         this.ServiceAddressMessageText()
 
-        this.ServiceButton('保存地址', $r('sys.symbol.checkmark_circle'), AppColors.Primary, AppColors.Surface, () => {
+        this.ServiceButton('保存地址', $r('sys.symbol.checkmark_circle'), AppColors.Primary, AppColors.OnPrimary, () => {
           this.saveApiBaseUrl();
         })
       }
@@ -324,12 +325,12 @@ struct Login {
         Row({ space: 6 }) {
           SymbolGlyph($r('sys.symbol.checkmark_circle'))
             .fontSize(18)
-            .fontColor([AppColors.Surface])
+            .fontColor([AppColors.OnPrimary])
 
           Text('在线模式')
             .fontSize(15)
             .fontWeight(FontWeight.Medium)
-            .fontColor(AppColors.Surface)
+            .fontColor(AppColors.OnPrimary)
             .maxLines(1)
         }
         .width('100%')
@@ -383,12 +384,12 @@ struct Login {
         Row({ space: 6 }) {
           SymbolGlyph($r('sys.symbol.xmark_circle'))
             .fontSize(18)
-            .fontColor([AppColors.Surface])
+            .fontColor([AppColors.OnPrimary])
 
           Text('离线模式')
             .fontSize(15)
             .fontWeight(FontWeight.Medium)
-            .fontColor(AppColors.Surface)
+            .fontColor(AppColors.OnPrimary)
             .maxLines(1)
         }
         .width('100%')
@@ -441,12 +442,12 @@ struct Login {
       Row({ space: 8 }) {
         SymbolGlyph($r('sys.symbol.person_badge_checkmark'))
           .fontSize(20)
-          .fontColor([AppColors.Surface])
+          .fontColor([AppColors.OnPrimary])
 
         Text(this.submitting ? '登录中' : '登录')
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
-          .fontColor(AppColors.Surface)
+          .fontColor(AppColors.OnPrimary)
           .maxLines(1)
       }
       .width('100%')

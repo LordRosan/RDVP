@@ -54,47 +54,47 @@ export struct ActionTile {
     if (this.action.id === WorkbenchActionId.ArchiveCenter) {
       SymbolGlyph($r('sys.symbol.text_clipboard'))
         .fontSize(23)
-        .fontColor([AppColors.Surface])
+        .fontColor([AppColors.OnPrimary])
     } else if (this.action.id === WorkbenchActionId.OperationsCenter) {
       SymbolGlyph($r('sys.symbol.wrench_and_screwdriver'))
         .fontSize(23)
-        .fontColor([AppColors.Surface])
+        .fontColor([AppColors.OnPrimary])
     } else if (this.action.id === WorkbenchActionId.ManagementCenter) {
       SymbolGlyph($r('sys.symbol.checkmark_shield'))
         .fontSize(23)
-        .fontColor([AppColors.Surface])
+        .fontColor([AppColors.OnPrimary])
     } else if (this.action.id === WorkbenchActionId.DeviceQuery) {
       SymbolGlyph($r('sys.symbol.magnifyingglass'))
         .fontSize(22)
-        .fontColor([AppColors.Surface])
+        .fontColor([AppColors.OnPrimary])
     } else if (this.action.id === WorkbenchActionId.DeviceArchiveCreate) {
       SymbolGlyph($r('sys.symbol.plus_circle'))
         .fontSize(23)
-        .fontColor([AppColors.Surface])
+        .fontColor([AppColors.OnPrimary])
     } else if (this.action.id === WorkbenchActionId.DeviceVerification) {
       SymbolGlyph($r('sys.symbol.checkmark_shield'))
         .fontSize(23)
-        .fontColor([AppColors.Surface])
+        .fontColor([AppColors.OnPrimary])
     } else if (this.action.id === WorkbenchActionId.AvailableRepairTask) {
       SymbolGlyph($r('sys.symbol.location_up'))
         .fontSize(23)
-        .fontColor([AppColors.Surface])
+        .fontColor([AppColors.OnPrimary])
     } else if (this.action.id === WorkbenchActionId.MyRepairTask) {
       SymbolGlyph($r('sys.symbol.wrench_and_screwdriver'))
         .fontSize(23)
-        .fontColor([AppColors.Surface])
+        .fontColor([AppColors.OnPrimary])
     } else if (this.action.id === WorkbenchActionId.ReinspectionTask) {
       SymbolGlyph($r('sys.symbol.doc_text_badge_checkmark'))
         .fontSize(23)
-        .fontColor([AppColors.Surface])
+        .fontColor([AppColors.OnPrimary])
     } else if (this.action.id === WorkbenchActionId.DeviceChangeReview) {
       SymbolGlyph($r('sys.symbol.checkmark_shield'))
         .fontSize(23)
-        .fontColor([AppColors.Surface])
+        .fontColor([AppColors.OnPrimary])
     } else {
       SymbolGlyph($r('sys.symbol.text_clipboard'))
         .fontSize(23)
-        .fontColor([AppColors.Surface])
+        .fontColor([AppColors.OnPrimary])
     }
   }
 }

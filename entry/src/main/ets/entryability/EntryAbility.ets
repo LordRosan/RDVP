@@ -1,6 +1,7 @@
-import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
+import { AbilityConstant, Configuration, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
+import { AppThemeService } from '../services/AppThemeService';
 
 const DOMAIN = 0x0000;
 const LOG_TAG = 'RDVP';
@@ -8,7 +9,7 @@ const LOG_TAG = 'RDVP';
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     try {
-      this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
+      AppThemeService.applyToApplication(this.context.getApplicationContext(), this.context.config);
     } catch (err) {
       hilog.error(DOMAIN, LOG_TAG, 'Failed to set colorMode. Cause: %{public}s', JSON.stringify(err));
     }
@@ -41,5 +42,9 @@ export default class EntryAbility extends UIAbility {
 
   onBackground(): void {
     hilog.info(DOMAIN, LOG_TAG, '%{public}s', 'Ability onBackground');
+  }
+
+  onConfigurationUpdate(newConfig: Configuration): void {
+    AppThemeService.updateEffectiveColorMode(newConfig);
   }
 }

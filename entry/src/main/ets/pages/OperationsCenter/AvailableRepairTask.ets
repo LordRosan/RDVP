@@ -61,6 +61,7 @@ const REFRESH_TIMEOUT_MS = 5000;
 @Entry
 @Component
 struct AvailableRepairTask {
+  @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   @State radiusKm: number = RepairTaskService.getDefaultRadiusKm();
   @State workloadSnapshot: RepairerWorkloadSnapshot = RepairTaskService.getCurrentWorkloadSnapshot();
   @State message: string = '';
@@ -390,7 +391,7 @@ struct AvailableRepairTask {
         Stack() {
           SymbolGlyph($r('sys.symbol.exclamationmark_message'))
             .fontSize(24)
-            .fontColor([AppColors.Surface])
+            .fontColor([AppColors.OnPrimary])
         }
         .width(44)
         .height(44)
@@ -555,12 +556,12 @@ struct AvailableRepairTask {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
           .fontSize(20)
-          .fontColor([AppColors.Surface])
+          .fontColor([AppColors.OnPrimary])
 
         Text(label)
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
-          .fontColor(AppColors.Surface)
+          .fontColor(AppColors.OnPrimary)
           .maxLines(1)
       }
       .width('100%')

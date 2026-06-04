@@ -36,6 +36,7 @@ const DEVICE_ARCHIVE_REVIEW_INFO_SECTIONS: InfoDialogSection[] = [
 @Entry
 @Component
 struct DeviceArchiveReview {
+  @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   @State requests: DeviceArchiveReviewItem[] = [];
   @State selectedRequestId: string = '';
   @State reviewDecision: string = '';
@@ -175,7 +176,7 @@ struct DeviceArchiveReview {
         Button({ type: ButtonType.Circle, stateEffect: true }) {
           SymbolGlyph($r('sys.symbol.arrow_clockwise'))
             .fontSize(22)
-            .fontColor([AppColors.Surface])
+            .fontColor([AppColors.OnPrimary])
         }
         .width(44)
         .height(44)
@@ -210,7 +211,7 @@ struct DeviceArchiveReview {
         Stack() {
           SymbolGlyph(this.getRequestTypeIcon(item.type))
             .fontSize(23)
-            .fontColor([AppColors.Surface])
+            .fontColor([AppColors.OnPrimary])
         }
         .width(44)
         .height(44)
@@ -355,12 +356,12 @@ struct DeviceArchiveReview {
       Row({ space: 8 }) {
         SymbolGlyph(this.selectedRequestId === item.id ? $r('sys.symbol.checkmark_circle') : $r('sys.symbol.text_clipboard'))
           .fontSize(18)
-          .fontColor([AppColors.Surface])
+          .fontColor([AppColors.OnPrimary])
 
         Text(this.selectedRequestId === item.id ? '已选择' : '选择审核')
           .fontSize(15)
           .fontWeight(FontWeight.Medium)
-          .fontColor(AppColors.Surface)
+          .fontColor(AppColors.OnPrimary)
           .maxLines(1)
       }
       .width('100%')
@@ -447,12 +448,12 @@ struct DeviceArchiveReview {
       Row({ space: 6 }) {
         SymbolGlyph(icon)
           .fontSize(18)
-          .fontColor([this.reviewDecision === `${decision}` ? AppColors.Surface : AppColors.TextPrimary])
+          .fontColor([this.reviewDecision === `${decision}` ? AppColors.OnPrimary : AppColors.TextPrimary])
 
         Text(DeviceArchiveReviewService.formatDecision(decision))
           .fontSize(15)
           .fontWeight(FontWeight.Medium)
-          .fontColor(this.reviewDecision === `${decision}` ? AppColors.Surface : AppColors.TextPrimary)
+          .fontColor(this.reviewDecision === `${decision}` ? AppColors.OnPrimary : AppColors.TextPrimary)
           .maxLines(1)
       }
       .width('100%')
@@ -653,12 +654,12 @@ struct DeviceArchiveReview {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
           .fontSize(20)
-          .fontColor([AppColors.Surface])
+          .fontColor([AppColors.OnPrimary])
 
         Text(label)
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
-          .fontColor(AppColors.Surface)
+          .fontColor(AppColors.OnPrimary)
           .maxLines(1)
       }
       .width('100%')

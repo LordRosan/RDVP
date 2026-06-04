@@ -11,6 +11,7 @@ import { AuthGuard } from '../../utils/AuthGuard';
 @Entry
 @Component
 struct ManagementCenter {
+  @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   @State actions: WorkbenchAction[] = WorkbenchService.getManagementCenterActions();
   @State message: string = '';
   @State messageTargetId: string = '';

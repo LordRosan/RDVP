@@ -19,6 +19,8 @@ struct PersonalCenter {
   @State serviceModeMessageTone: string = AppColors.Success;
   @State serviceSettingsMessage: string = '';
   @State serviceSettingsMessageTone: string = AppColors.Success;
+  @State settingsMessage: string = '';
+  @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
 
   aboutToAppear(): void {
     if (!SessionStore.isAuthenticated()) {
@@ -84,6 +86,11 @@ struct PersonalCenter {
       .onClick(() => {
         this.backToWorkbench();
       })
+
+      Blank()
+        .layoutWeight(1)
+
+      this.SettingsButton()
     }
     .width('100%')
     .height(60)
@@ -93,6 +100,25 @@ struct PersonalCenter {
       right: 24
     })
     .backgroundColor(AppColors.PageBackground)
+  }
+
+  @Builder
+  SettingsButton() {
+    Button({ type: ButtonType.Circle, stateEffect: true }) {
+      SymbolGlyph($r('sys.symbol.gearshape'))
+        .fontSize(30)
+        .fontColor([AppColors.TextPrimary])
+    }
+    .width(58)
+    .height(58)
+    .backgroundColor(AppColors.Surface)
+    .border({
+      width: 1,
+      color: AppColors.Divider
+    })
+    .onClick(() => {
+      this.openApplicationSettings();
+    })
   }
 
   @Builder
@@ -129,7 +155,7 @@ struct PersonalCenter {
         Stack() {
           SymbolGlyph($r('sys.symbol.person_fill'))
             .fontSize(38)
-            .fontColor([AppColors.Surface])
+            .fontColor([AppColors.OnPrimary])
         }
         .width(64)
         .height(64)
@@ -201,6 +227,7 @@ struct PersonalCenter {
         this.backToWorkbench();
       })
 
+      this.SettingsMessageText()
       this.LogoutActionMessageText()
       this.DangerButton('退出登录', $r('sys.symbol.person_badge_nosign'), () => {
         this.logout();
@@ -270,7 +297,7 @@ struct PersonalCenter {
 
         this.ServiceButton('保存设置', $r('sys.symbol.checkmark_circle'),
           AppColors.Primary,
-          AppColors.Surface,
+          AppColors.OnPrimary,
           () => {
             this.applyServiceSettings();
           })
@@ -320,6 +347,18 @@ struct PersonalCenter {
       Text(this.logoutActionMessage)
         .fontSize(13)
         .fontColor(this.logoutActionMessageTone)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
+    }
+  }
+
+  @Builder
+  SettingsMessageText() {
+    if (this.settingsMessage.length > 0) {
+      Text(this.settingsMessage)
+        .fontSize(13)
+        .fontColor(AppColors.Danger)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
@@ -397,12 +436,12 @@ struct PersonalCenter {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
           .fontSize(20)
-          .fontColor([AppColors.Surface])
+          .fontColor([AppColors.OnPrimary])
 
         Text(label)
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
-          .fontColor(AppColors.Surface)
+          .fontColor(AppColors.OnPrimary)
           .maxLines(1)
       }
       .width('100%')
@@ -454,12 +493,12 @@ struct PersonalCenter {
         Row({ space: 6 }) {
           SymbolGlyph($r('sys.symbol.checkmark_circle'))
             .fontSize(18)
-            .fontColor([AppColors.Surface])
+            .fontColor([AppColors.OnPrimary])
 
           Text('在线模式')
             .fontSize(15)
             .fontWeight(FontWeight.Medium)
-            .fontColor(AppColors.Surface)
+            .fontColor(AppColors.OnPrimary)
             .maxLines(1)
         }
         .width('100%')
@@ -513,12 +552,12 @@ struct PersonalCenter {
         Row({ space: 6 }) {
           SymbolGlyph($r('sys.symbol.xmark_circle'))
             .fontSize(18)
-            .fontColor([AppColors.Surface])
+            .fontColor([AppColors.OnPrimary])
 
           Text('离线模式')
             .fontSize(15)
             .fontWeight(FontWeight.Medium)
-            .fontColor(AppColors.Surface)
+            .fontColor(AppColors.OnPrimary)
             .maxLines(1)
         }
         .width('100%')
@@ -658,6 +697,15 @@ struct PersonalCenter {
   logout(): void {
     SessionStore.clearSession();
     this.openLoginPage('logout');
+  }
+
+  openApplicationSettings(): void {
+    this.settingsMessage = '';
+    try {
+      this.getUIContext().getRouter().pushUrl({ url: 'pages/PersonalCenter/ApplicationSettings' });
+    } catch (err) {
+      this.settingsMessage = '应用设置不可用';
+    }
   }
 
   openLoginPage(source: string = ''): void {

@@ -52,6 +52,7 @@ const VERIFICATION_INFO_SECTIONS: InfoDialogSection[] = [
 @Entry
 @Component
 struct DeviceVerification {
+  @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   @State deviceCode: string = '';
   @State verificationResult: string = '';
   @State description: string = '';
@@ -261,12 +262,12 @@ struct DeviceVerification {
       Row({ space: 5 }) {
         SymbolGlyph(icon)
           .fontSize(17)
-          .fontColor([this.verificationResult === `${result}` ? AppColors.Surface : AppColors.TextPrimary])
+          .fontColor([this.verificationResult === `${result}` ? AppColors.OnPrimary : AppColors.TextPrimary])
 
         Text(DeviceVerificationService.formatVerificationResult(result))
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
-          .fontColor(this.verificationResult === `${result}` ? AppColors.Surface : AppColors.TextPrimary)
+          .fontColor(this.verificationResult === `${result}` ? AppColors.OnPrimary : AppColors.TextPrimary)
           .maxLines(1)
       }
       .width('100%')
@@ -470,12 +471,12 @@ struct DeviceVerification {
       Row({ space: 5 }) {
         SymbolGlyph(icon)
           .fontSize(17)
-          .fontColor([this.faultType === `${type}` ? AppColors.Surface : AppColors.TextPrimary])
+          .fontColor([this.faultType === `${type}` ? AppColors.OnPrimary : AppColors.TextPrimary])
 
         Text(FaultReportService.formatFaultType(type))
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
-          .fontColor(this.faultType === `${type}` ? AppColors.Surface : AppColors.TextPrimary)
+          .fontColor(this.faultType === `${type}` ? AppColors.OnPrimary : AppColors.TextPrimary)
           .maxLines(1)
       }
       .width('100%')
@@ -527,12 +528,12 @@ struct DeviceVerification {
       Row({ space: 6 }) {
         SymbolGlyph(icon)
           .fontSize(17)
-          .fontColor([this.severity === `${severity}` ? AppColors.Surface : AppColors.TextPrimary])
+          .fontColor([this.severity === `${severity}` ? AppColors.OnPrimary : AppColors.TextPrimary])
 
         Text(FaultReportService.formatSeverity(severity))
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
-          .fontColor(this.severity === `${severity}` ? AppColors.Surface : AppColors.TextPrimary)
+          .fontColor(this.severity === `${severity}` ? AppColors.OnPrimary : AppColors.TextPrimary)
           .maxLines(1)
       }
       .width('100%')
@@ -690,12 +691,12 @@ struct DeviceVerification {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
           .fontSize(20)
-          .fontColor([AppColors.Surface])
+          .fontColor([AppColors.OnPrimary])
 
         Text(label)
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
-          .fontColor(AppColors.Surface)
+          .fontColor(AppColors.OnPrimary)
           .maxLines(1)
       }
       .width('100%')

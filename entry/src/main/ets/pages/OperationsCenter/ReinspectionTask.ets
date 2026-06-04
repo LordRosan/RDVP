@@ -29,6 +29,7 @@ const REINSPECTION_INFO_SECTIONS: InfoDialogSection[] = [
 @Entry
 @Component
 struct ReinspectionTask {
+  @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   @State taskItems: ReinspectionTaskSummary[] = [];
   @State taskId: string = '';
   @State result: string = '';
@@ -172,7 +173,7 @@ struct ReinspectionTask {
         Button({ type: ButtonType.Circle, stateEffect: true }) {
           SymbolGlyph($r('sys.symbol.arrow_clockwise'))
             .fontSize(22)
-            .fontColor([AppColors.Surface])
+            .fontColor([AppColors.OnPrimary])
         }
         .width(44)
         .height(44)
@@ -238,7 +239,7 @@ struct ReinspectionTask {
         Stack() {
           SymbolGlyph($r('sys.symbol.doc_text_badge_checkmark'))
             .fontSize(23)
-            .fontColor([AppColors.Surface])
+            .fontColor([AppColors.OnPrimary])
         }
         .width(44)
         .height(44)
@@ -285,12 +286,12 @@ struct ReinspectionTask {
         Row({ space: 8 }) {
           SymbolGlyph($r('sys.symbol.text_clipboard'))
             .fontSize(18)
-            .fontColor([AppColors.Surface])
+            .fontColor([AppColors.OnPrimary])
 
           Text('填写复检记录')
             .fontSize(15)
             .fontWeight(FontWeight.Medium)
-            .fontColor(AppColors.Surface)
+            .fontColor(AppColors.OnPrimary)
             .maxLines(1)
         }
         .justifyContent(FlexAlign.Center)
@@ -402,12 +403,12 @@ struct ReinspectionTask {
       Row({ space: 6 }) {
         SymbolGlyph(icon)
           .fontSize(17)
-          .fontColor([this.result === `${result}` ? AppColors.Surface : AppColors.TextPrimary])
+          .fontColor([this.result === `${result}` ? AppColors.OnPrimary : AppColors.TextPrimary])
 
         Text(ReinspectionService.formatResult(result))
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
-          .fontColor(this.result === `${result}` ? AppColors.Surface : AppColors.TextPrimary)
+          .fontColor(this.result === `${result}` ? AppColors.OnPrimary : AppColors.TextPrimary)
           .maxLines(1)
       }
       .width('100%')
@@ -586,12 +587,12 @@ struct ReinspectionTask {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
           .fontSize(20)
-          .fontColor([AppColors.Surface])
+          .fontColor([AppColors.OnPrimary])
 
         Text(label)
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
-          .fontColor(AppColors.Surface)
+          .fontColor(AppColors.OnPrimary)
           .maxLines(1)
       }
       .width('100%')

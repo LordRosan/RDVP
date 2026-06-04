@@ -32,6 +32,7 @@ const DEVICE_ARCHIVE_DETAIL_INFO_SECTIONS: InfoDialogSection[] = [
 @Entry
 @Component
 struct DeviceArchiveDetail {
+  @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   @State device: DeviceSummary = {
     id: '',
     deviceCode: '-',
@@ -414,12 +415,12 @@ struct DeviceArchiveDetail {
         Row({ space: 8 }) {
           SymbolGlyph($r('sys.symbol.text_clipboard'))
             .fontSize(20)
-            .fontColor([AppColors.Surface])
+            .fontColor([AppColors.OnPrimary])
 
           Text('修改设备档案')
             .fontSize(17)
             .fontWeight(FontWeight.Medium)
-            .fontColor(AppColors.Surface)
+            .fontColor(AppColors.OnPrimary)
             .maxLines(1)
         }
         .width('100%')
@@ -443,12 +444,12 @@ struct DeviceArchiveDetail {
         Row({ space: 8 }) {
           SymbolGlyph($r('sys.symbol.trash'))
             .fontSize(20)
-            .fontColor([AppColors.Surface])
+            .fontColor([AppColors.OnPrimary])
 
           Text('删除设备档案')
             .fontSize(17)
             .fontWeight(FontWeight.Medium)
-            .fontColor(AppColors.Surface)
+            .fontColor(AppColors.OnPrimary)
             .maxLines(1)
         }
         .width('100%')

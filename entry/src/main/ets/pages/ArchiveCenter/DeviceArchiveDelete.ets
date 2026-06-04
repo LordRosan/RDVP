@@ -36,6 +36,7 @@ const DEVICE_ARCHIVE_DELETE_INFO_SECTIONS: InfoDialogSection[] = [
 @Entry
 @Component
 struct DeviceArchiveDelete {
+  @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   @State device: DeviceSummary = {
     id: '',
     deviceCode: '-',
@@ -523,12 +524,12 @@ struct DeviceArchiveDelete {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
           .fontSize(20)
-          .fontColor([AppColors.Surface])
+          .fontColor([AppColors.OnPrimary])
 
         Text(label)
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
-          .fontColor(AppColors.Surface)
+          .fontColor(AppColors.OnPrimary)
           .maxLines(1)
       }
       .width('100%')
@@ -550,7 +551,7 @@ struct DeviceArchiveDelete {
       Text(label)
         .fontSize(16)
         .fontWeight(FontWeight.Medium)
-        .fontColor(AppColors.Surface)
+        .fontColor(AppColors.OnPrimary)
         .maxLines(1)
     }
     .height(52)
