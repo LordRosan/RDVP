@@ -25,6 +25,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class OperationsControllerTests {
 
+    private static final String NEAR_DEVICE_LOCATION_BODY = """
+            {
+              "longitude": 114.1694,
+              "latitude": 22.3193
+            }
+            """;
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -57,7 +64,7 @@ class OperationsControllerTests {
         String acceptResponse = mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/accept", faultId)
                         .header("Authorization", "Bearer " + maintainerToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content(NEAR_DEVICE_LOCATION_BODY))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("ACCEPTED"))
                 .andReturn()
@@ -169,6 +176,51 @@ class OperationsControllerTests {
     }
 
     @Test
+    void requiresLocationWhenAcceptingRepairTask() throws Exception {
+        String operatorToken = login("fieldoperator", "password");
+        String maintainerToken = login("maintainer", "password");
+
+        String faultId = createFaultReport(
+                operatorToken,
+                "RDVP-DEVICE-0001",
+                "ENERGY_FAULT",
+                "GENERAL",
+                "Power supply fluctuates under load.");
+
+        mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/accept", faultId)
+                        .header("Authorization", "Bearer " + maintainerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.error.code").value("REPAIR_TASK_RADIUS_INVALID"));
+    }
+
+    @Test
+    void rejectsRepairTaskAcceptWhenLocationIsOutOfWorkloadRange() throws Exception {
+        String operatorToken = login("fieldoperator", "password");
+        String maintainerToken = login("maintainer", "password");
+
+        String faultId = createFaultReport(
+                operatorToken,
+                "RDVP-DEVICE-0001",
+                "ENERGY_FAULT",
+                "GENERAL",
+                "Power supply fluctuates under load.");
+
+        mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/accept", faultId)
+                        .header("Authorization", "Bearer " + maintainerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "longitude": 120.0000,
+                                  "latitude": 30.0000
+                                }
+                                """))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.error.code").value("REPAIR_TASK_RADIUS_EXCEEDS_WORKLOAD"));
+    }
+
+    @Test
     void createsFaultReportWhenAbnormalVerificationIsSubmitted() throws Exception {
         String operatorToken = login("fieldoperator", "password");
         String maintainerToken = login("maintainer", "password");
@@ -271,7 +323,7 @@ class OperationsControllerTests {
         mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/accept", firstFaultId)
                         .header("Authorization", "Bearer " + maintainerToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content(NEAR_DEVICE_LOCATION_BODY))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/v1/repair-tasks/available?radiusKm=20")
@@ -288,7 +340,7 @@ class OperationsControllerTests {
         mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/accept", secondFaultId)
                         .header("Authorization", "Bearer " + maintainerToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content(NEAR_DEVICE_LOCATION_BODY))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/v1/repair-tasks/available?radiusKm=10")
@@ -299,7 +351,7 @@ class OperationsControllerTests {
         mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/accept", thirdFaultId)
                         .header("Authorization", "Bearer " + maintainerToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content(NEAR_DEVICE_LOCATION_BODY))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("REPAIRER_BUSY"));
     }
@@ -558,7 +610,7 @@ class OperationsControllerTests {
         String response = mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/accept", faultId)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content(NEAR_DEVICE_LOCATION_BODY))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("ACCEPTED"))
                 .andReturn()

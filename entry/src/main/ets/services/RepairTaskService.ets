@@ -69,6 +69,11 @@ interface RepairTaskAcceptApiResult {
   acceptedAt: string;
 }
 
+interface RepairTaskAcceptRequestBody {
+  longitude?: number;
+  latitude?: number;
+}
+
 interface RepairReportApiResult {
   id: string;
   repairReportNo: string;
@@ -336,7 +341,11 @@ export class RepairTaskService {
     return ApiClient.createServiceUnavailableResponse<RepairTaskAcceptResult>();
   }
 
-  static async acceptRepairTaskRemoteFirst(taskId: string): Promise<ApiResponse<RepairTaskAcceptResult>> {
+  static async acceptRepairTaskRemoteFirst(
+    taskId: string,
+    longitude?: number,
+    latitude?: number
+  ): Promise<ApiResponse<RepairTaskAcceptResult>> {
     const validation = RepairTaskService.validateRepairTaskId(taskId);
     if (!validation.valid) {
       return {
@@ -375,12 +384,18 @@ export class RepairTaskService {
       return RepairTaskService.createLocalAcceptTaskResponse(taskId, workloadResponse.data);
     }
 
+    const requestBody: RepairTaskAcceptRequestBody = {};
+    if (longitude !== undefined && latitude !== undefined) {
+      requestBody.longitude = longitude;
+      requestBody.latitude = latitude;
+    }
+
     const faultReportId = encodeURIComponent(taskId.trim());
     const response = await ApiClient.request<RepairTaskAcceptApiResult>(
       `/api/v1/fault-reports/${faultReportId}/accept`,
       'POST',
       true,
-      JSON.stringify({})
+      JSON.stringify(requestBody)
     );
 
     if (!response.success) {

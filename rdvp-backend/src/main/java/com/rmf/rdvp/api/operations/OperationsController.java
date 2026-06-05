@@ -78,9 +78,14 @@ public class OperationsController {
     @PreAuthorize("hasAuthority('OPS_REPAIR_TASK_ACCEPT')")
     public ResponseEntity<ApiResponse<RepairTaskAcceptResponse>> acceptFaultReport(
             @PathVariable String faultReportId,
+            @RequestBody(required = false) RepairTaskAcceptRequest requestBody,
             @AuthenticationPrincipal AuthenticatedUser user,
             HttpServletRequest request) {
-        var result = operationsService.acceptFaultReport(faultReportId, user);
+        var result = operationsService.acceptFaultReport(
+                faultReportId,
+                requestBody == null ? null : requestBody.longitude(),
+                requestBody == null ? null : requestBody.latitude(),
+                user);
         return ResponseEntity.ok(ApiResponse.success(RepairTaskAcceptResponse.from(result), RequestIds.resolve(request)));
     }
 

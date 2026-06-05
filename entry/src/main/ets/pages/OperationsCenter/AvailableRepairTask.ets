@@ -4,6 +4,7 @@ import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { FaultSeverity } from '../../models/FaultModels';
 import { PermissionCode } from '../../models/PermissionModels';
 import {
+  AvailableRepairTaskQuery,
   AvailableRepairTaskSummary,
   RepairerWorkloadSnapshot,
   RepairerWorkloadStatus
@@ -11,6 +12,7 @@ import {
 import { ApiResponse } from '../../models/ApiModels';
 import { ApiClient } from '../../services/ApiClient';
 import { FaultReportService } from '../../services/FaultReportService';
+import { LocationService, LocationResolutionResult } from '../../services/LocationService';
 import { RepairTaskService } from '../../services/RepairTaskService';
 import { AuthGuard } from '../../utils/AuthGuard';
 
@@ -72,6 +74,11 @@ struct AvailableRepairTask {
   @State acceptActionMessageTone: string = AppColors.Danger;
   @State acceptActionTaskId: string = '';
   @State refreshStatus: string = '未刷新';
+  @State locationStatus: string = '未定位';
+  @State locationStatusTone: string = AppColors.TextSecondary;
+  @State hasCurrentLocation: boolean = false;
+  @State currentLongitude: number = 0;
+  @State currentLatitude: number = 0;
   @State taskItems: AvailableRepairTaskSummary[] = [];
   @State refreshing: boolean = false;
   @State acceptingTaskId: string = '';
@@ -489,6 +496,12 @@ struct AvailableRepairTask {
           tone: AppColors.TextSecondary
         })
         this.CardDivider()
+        StatusInfoRow({
+          label: '定位状态',
+          value: this.locationStatus,
+          tone: this.locationStatusTone
+        })
+        this.CardDivider()
         this.RefreshStatusRow()
         this.CardDivider()
         StatusInfoRow({
@@ -643,6 +656,9 @@ struct AvailableRepairTask {
     this.taskListMessage = '';
     this.acceptActionMessage = '';
     this.acceptActionTaskId = '';
+    this.locationStatus = ApiClient.isConfigured() ? '未定位' : '本地模式';
+    this.locationStatusTone = ApiClient.isConfigured() ? AppColors.TextSecondary : AppColors.TextSecondary;
+    this.hasCurrentLocation = false;
     try {
       const workloadResponse = await this.withRefreshTimeout<RepairerWorkloadSnapshot>(
         RepairTaskService.getCurrentWorkloadSnapshotRemoteFirst(),
@@ -665,10 +681,22 @@ struct AvailableRepairTask {
         return;
       }
 
+      const query: AvailableRepairTaskQuery = {
+        radiusKm: this.radiusKm
+      };
+      let locationMessage = '';
+      if (ApiClient.isConfigured()) {
+        const locationResult = await this.resolveCurrentLocation();
+        if (locationResult.success && locationResult.coordinates !== undefined) {
+          query.longitude = locationResult.coordinates.longitude;
+          query.latitude = locationResult.coordinates.latitude;
+        } else {
+          locationMessage = `${locationResult.message}，任务需定位后才可接取。`;
+        }
+      }
+
       const response = await this.withRefreshTimeout(
-        RepairTaskService.queryAvailableRepairTasksRemoteFirst({
-          radiusKm: this.radiusKm
-        }, this.workloadSnapshot),
+        RepairTaskService.queryAvailableRepairTasksRemoteFirst(query, this.workloadSnapshot),
         '附近故障刷新超时，请稍后手动刷新'
       );
 
@@ -686,7 +714,10 @@ struct AvailableRepairTask {
       }
       this.taskItems = data ? data.items : [];
       this.refreshStatus = '已刷新';
-      if (this.workloadSnapshot.status === RepairerWorkloadStatus.LowLoad) {
+      if (locationMessage.length > 0) {
+        this.message = locationMessage;
+        this.messageTone = AppColors.Warning;
+      } else if (this.workloadSnapshot.status === RepairerWorkloadStatus.LowLoad) {
         this.message = this.workloadSnapshot.message;
         this.messageTone = AppColors.Primary;
       } else {
@@ -723,6 +754,12 @@ struct AvailableRepairTask {
 
       this.applyWorkloadSnapshot(workloadResponse.data);
       const selectedTask = this.findTaskItem(taskId);
+      if (selectedTask !== undefined && selectedTask.distanceKm === undefined) {
+        this.acceptActionMessage = '任务距离未定位，暂不可接取。请授权位置并刷新后再操作。';
+        this.acceptActionMessageTone = AppColors.Danger;
+        return;
+      }
+
       if (!this.workloadSnapshot.canAccept ||
         (selectedTask !== undefined &&
           selectedTask.distanceKm !== undefined &&
@@ -734,7 +771,17 @@ struct AvailableRepairTask {
         return;
       }
 
-      const response = await RepairTaskService.acceptRepairTaskRemoteFirst(taskId);
+      if (ApiClient.isConfigured() && !this.hasCurrentLocation) {
+        this.acceptActionMessage = '当前位置未确认，暂不可接取。请先刷新附近故障。';
+        this.acceptActionMessageTone = AppColors.Danger;
+        return;
+      }
+
+      const response = await RepairTaskService.acceptRepairTaskRemoteFirst(
+        taskId,
+        this.hasCurrentLocation ? this.currentLongitude : undefined,
+        this.hasCurrentLocation ? this.currentLatitude : undefined
+      );
 
       if (!response.success) {
         const error = response.error;
@@ -871,7 +918,8 @@ struct AvailableRepairTask {
     return this.acceptingTaskId.length === 0 &&
       !this.refreshing &&
       this.workloadSnapshot.canAccept &&
-      (item.distanceKm === undefined || item.distanceKm <= this.workloadSnapshot.maxRadiusKm);
+      item.distanceKm !== undefined &&
+      item.distanceKm <= this.workloadSnapshot.maxRadiusKm;
   }
 
   formatDistance(item: AvailableRepairTaskSummary): string {
@@ -910,6 +958,25 @@ struct AvailableRepairTask {
 
   isRefreshTimeout<T>(response: ApiResponse<T>): boolean {
     return response.error !== undefined && `${response.error.code}` === 'REFRESH_TIMEOUT';
+  }
+
+  async resolveCurrentLocation(): Promise<LocationResolutionResult> {
+    this.locationStatus = '定位中';
+    this.locationStatusTone = AppColors.TextSecondary;
+    const result = await LocationService.resolveCurrentLocation(this.getUIContext().getHostContext());
+    if (result.success && result.coordinates !== undefined) {
+      this.hasCurrentLocation = true;
+      this.currentLongitude = result.coordinates.longitude;
+      this.currentLatitude = result.coordinates.latitude;
+      this.locationStatus = '已定位';
+      this.locationStatusTone = AppColors.Success;
+      return result;
+    }
+
+    this.hasCurrentLocation = false;
+    this.locationStatus = '未定位';
+    this.locationStatusTone = AppColors.Warning;
+    return result;
   }
 
   findTaskItem(taskId: string): AvailableRepairTaskSummary | undefined {

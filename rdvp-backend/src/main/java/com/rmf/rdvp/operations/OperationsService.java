@@ -1,6 +1,7 @@
 package com.rmf.rdvp.operations;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -228,9 +229,23 @@ public class OperationsService {
     }
 
     @Transactional
-    public RepairTaskAcceptResult acceptFaultReport(String faultReportId, AuthenticatedUser maintainer) {
+    public RepairTaskAcceptResult acceptFaultReport(
+            String faultReportId,
+            BigDecimal longitude,
+            BigDecimal latitude,
+            AuthenticatedUser maintainer) {
         RepairerWorkloadSnapshot workload = currentWorkload(maintainer.id());
         validateWorkloadForAccept(workload);
+        BigDecimal normalizedLongitude = normalizeRequiredCoordinate(
+                longitude,
+                "longitude",
+                BigDecimal.valueOf(-180),
+                BigDecimal.valueOf(180));
+        BigDecimal normalizedLatitude = normalizeRequiredCoordinate(
+                latitude,
+                "latitude",
+                BigDecimal.valueOf(-90),
+                BigDecimal.valueOf(90));
 
         String normalizedFaultReportId = normalizeId(faultReportId, "faultReportId");
         FaultReportRecord faultReport = operationsRepository.findFaultReportByIdOrNo(normalizedFaultReportId)
@@ -239,6 +254,9 @@ public class OperationsService {
                 || operationsRepository.hasActiveRepairTaskForFault(faultReport.id())) {
             throw new BusinessException(ErrorCode.FAULT_ALREADY_ACCEPTED);
         }
+        DeviceArchive device = archiveRepository.findById(faultReport.deviceId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
+        validateRepairTaskDistance(workload, device, normalizedLongitude, normalizedLatitude);
 
         OffsetDateTime now = now();
         RepairTaskCreate create = new RepairTaskCreate(
@@ -246,8 +264,8 @@ public class OperationsService {
                 newBusinessNo("RDT", now),
                 faultReport.id(),
                 maintainer.id(),
-                null,
-                null,
+                normalizedLongitude,
+                normalizedLatitude,
                 now);
         try {
             operationsRepository.createRepairTask(create);
@@ -478,6 +496,26 @@ public class OperationsService {
         }
     }
 
+    private void validateRepairTaskDistance(
+            RepairerWorkloadSnapshot workload,
+            DeviceArchive device,
+            BigDecimal longitude,
+            BigDecimal latitude) {
+        if (device.longitude() == null || device.latitude() == null) {
+            throw new BusinessException(
+                    ErrorCode.REPAIR_TASK_RADIUS_INVALID,
+                    "Device location is unavailable.");
+        }
+
+        BigDecimal distanceKm = calculateDistanceKm(longitude, latitude, device.longitude(), device.latitude());
+        if (distanceKm.compareTo(BigDecimal.valueOf(workload.maxRadiusKm())) > 0) {
+            throw new BusinessException(
+                    ErrorCode.REPAIR_TASK_RADIUS_EXCEEDS_WORKLOAD,
+                    "当前处于%s状态，仅可接取%d公里内的维修任务。"
+                            .formatted(formatWorkloadStatus(workload.status()), workload.maxRadiusKm()));
+        }
+    }
+
     private int normalizeRadiusKm(int radiusKm) {
         if (radiusKm < MIN_RADIUS_KM || radiusKm > IDLE_MAX_RADIUS_KM) {
             throw new BusinessException(ErrorCode.REPAIR_TASK_RADIUS_INVALID, "查询范围必须在1到20公里之间。");
@@ -496,6 +534,33 @@ public class OperationsService {
         }
 
         return value;
+    }
+
+    private BigDecimal normalizeRequiredCoordinate(BigDecimal value, String field, BigDecimal min, BigDecimal max) {
+        if (value == null) {
+            throw new BusinessException(
+                    ErrorCode.REPAIR_TASK_RADIUS_INVALID,
+                    field + " is required when accepting a repair task.");
+        }
+
+        return normalizeCoordinate(value, field, min, max);
+    }
+
+    private BigDecimal calculateDistanceKm(
+            BigDecimal sourceLongitude,
+            BigDecimal sourceLatitude,
+            BigDecimal targetLongitude,
+            BigDecimal targetLatitude) {
+        double earthRadiusKm = 6371.0088;
+        double sourceLat = Math.toRadians(sourceLatitude.doubleValue());
+        double targetLat = Math.toRadians(targetLatitude.doubleValue());
+        double deltaLat = Math.toRadians(targetLatitude.subtract(sourceLatitude).doubleValue());
+        double deltaLon = Math.toRadians(targetLongitude.subtract(sourceLongitude).doubleValue());
+        double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2)
+                + Math.cos(sourceLat) * Math.cos(targetLat)
+                * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return BigDecimal.valueOf(earthRadiusKm * c).setScale(2, RoundingMode.HALF_UP);
     }
 
     private String normalizeDeviceCode(String deviceCode) {
