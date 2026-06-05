@@ -22,6 +22,8 @@ export enum RepairReportResult {
 
 export interface AvailableRepairTaskQuery {
   radiusKm: number;
+  longitude?: number;
+  latitude?: number;
 }
 
 export interface RepairerWorkloadSnapshot {
@@ -47,7 +49,7 @@ export interface AvailableRepairTaskSummary {
   deviceName: string;
   faultType: FaultType;
   severity: FaultSeverity;
-  distanceKm: number;
+  distanceKm?: number;
   location: string;
   submittedAt: string;
   status: RepairTaskStatus;

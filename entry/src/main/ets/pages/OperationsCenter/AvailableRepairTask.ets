@@ -415,9 +415,9 @@ struct AvailableRepairTask {
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
 
-        Text(`${item.distanceKm.toFixed(1)} km`)
+        Text(this.formatDistance(item))
           .fontSize(13)
-          .fontColor(AppColors.Primary)
+          .fontColor(item.distanceKm === undefined ? AppColors.TextSecondary : AppColors.Primary)
           .fontWeight(FontWeight.Medium)
           .maxLines(1)
       }
@@ -724,7 +724,9 @@ struct AvailableRepairTask {
       this.applyWorkloadSnapshot(workloadResponse.data);
       const selectedTask = this.findTaskItem(taskId);
       if (!this.workloadSnapshot.canAccept ||
-        (selectedTask !== undefined && selectedTask.distanceKm > this.workloadSnapshot.maxRadiusKm)) {
+        (selectedTask !== undefined &&
+          selectedTask.distanceKm !== undefined &&
+          selectedTask.distanceKm > this.workloadSnapshot.maxRadiusKm)) {
         this.acceptActionMessage = this.workloadSnapshot.canAccept ?
           `当前处于${RepairTaskService.formatWorkloadStatus(this.workloadSnapshot.status)}状态，仅可接取${this.workloadSnapshot.maxRadiusKm}公里内的维修任务。` :
           this.workloadSnapshot.message;
@@ -869,7 +871,11 @@ struct AvailableRepairTask {
     return this.acceptingTaskId.length === 0 &&
       !this.refreshing &&
       this.workloadSnapshot.canAccept &&
-      item.distanceKm <= this.workloadSnapshot.maxRadiusKm;
+      (item.distanceKm === undefined || item.distanceKm <= this.workloadSnapshot.maxRadiusKm);
+  }
+
+  formatDistance(item: AvailableRepairTaskSummary): string {
+    return item.distanceKm === undefined ? '待定位' : `${item.distanceKm.toFixed(1)} km`;
   }
 
   withRefreshTimeout<T>(request: Promise<ApiResponse<T>>, timeoutMessage: string): Promise<ApiResponse<T>> {

@@ -119,15 +119,33 @@ public class JdbcOperationsRepository implements OperationsRepository {
     }
 
     @Override
-    public List<AvailableRepairTaskSummary> listAvailableRepairTasks(FaultSeverity severity, int limit) {
+    public List<AvailableRepairTaskSummary> listAvailableRepairTasks(
+            FaultSeverity severity,
+            int radiusKm,
+            BigDecimal longitude,
+            BigDecimal latitude,
+            int limit) {
         List<String> conditions = new ArrayList<>();
         MapSqlParameterSource parameters = new MapSqlParameterSource()
-                .addValue("limit", limit);
+                .addValue("limit", limit)
+                .addValue("longitude", longitude)
+                .addValue("latitude", latitude)
+                .addValue("radiusMeters", BigDecimal.valueOf(radiusKm).multiply(BigDecimal.valueOf(1000)));
         conditions.add("f.status = 'PENDING_ACCEPTANCE'");
         conditions.add("d.deleted_at IS NULL");
         if (severity != null) {
             conditions.add("f.severity = :severity");
             parameters.addValue("severity", severity.name());
+        }
+        if (longitude != null && latitude != null) {
+            conditions.add("d.longitude IS NOT NULL");
+            conditions.add("d.latitude IS NOT NULL");
+            conditions.add("""
+                    ST_DistanceSphere(
+                        ST_MakePoint(:longitude, :latitude),
+                        ST_MakePoint(d.longitude, d.latitude)
+                    ) <= :radiusMeters
+                    """);
         }
 
         return jdbcTemplate.query(
@@ -139,6 +157,16 @@ public class JdbcOperationsRepository implements OperationsRepository {
                             d.name AS device_name,
                             f.fault_type,
                             f.severity,
+                            CASE
+                                WHEN :longitude IS NULL OR :latitude IS NULL OR d.longitude IS NULL OR d.latitude IS NULL
+                                THEN NULL
+                                ELSE ROUND((
+                                    ST_DistanceSphere(
+                                        ST_MakePoint(:longitude, :latitude),
+                                        ST_MakePoint(d.longitude, d.latitude)
+                                    ) / 1000.0
+                                )::numeric, 2)
+                            END AS distance_km,
                             d.address,
                             d.longitude,
                             d.latitude,
@@ -146,7 +174,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                         FROM fault_reports f
                         JOIN devices d ON d.id = f.device_id
                         WHERE %s
-                        ORDER BY f.created_at DESC
+                        ORDER BY distance_km ASC NULLS LAST, f.created_at DESC
                         LIMIT :limit
                         """.formatted(String.join(" AND ", conditions)),
                 parameters,
@@ -531,7 +559,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                 resultSet.getString("device_name"),
                 FaultType.valueOf(resultSet.getString("fault_type")),
                 FaultSeverity.valueOf(resultSet.getString("severity")),
-                BigDecimal.ZERO,
+                resultSet.getBigDecimal("distance_km"),
                 new AvailableRepairTaskSummary.DeviceLocation(
                         resultSet.getString("address"),
                         resultSet.getBigDecimal("longitude"),

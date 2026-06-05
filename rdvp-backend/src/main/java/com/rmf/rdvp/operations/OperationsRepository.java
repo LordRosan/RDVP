@@ -1,5 +1,6 @@
 package com.rmf.rdvp.operations;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -12,7 +13,12 @@ public interface OperationsRepository {
 
     boolean hasActiveFaultForDevice(String deviceId);
 
-    List<AvailableRepairTaskSummary> listAvailableRepairTasks(FaultSeverity severity, int limit);
+    List<AvailableRepairTaskSummary> listAvailableRepairTasks(
+            FaultSeverity severity,
+            int radiusKm,
+            BigDecimal longitude,
+            BigDecimal latitude,
+            int limit);
 
     long countPendingAcceptanceFaults();
 

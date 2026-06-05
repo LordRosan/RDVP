@@ -133,6 +133,42 @@ class OperationsControllerTests {
     }
 
     @Test
+    void filtersAvailableRepairTasksByProvidedLocation() throws Exception {
+        String operatorToken = login("fieldoperator", "password");
+        String maintainerToken = login("maintainer", "password");
+
+        String faultId = createFaultReport(
+                operatorToken,
+                "RDVP-DEVICE-0001",
+                "ENERGY_FAULT",
+                "GENERAL",
+                "Power supply fluctuates under load.");
+
+        mockMvc.perform(get("/api/v1/repair-tasks/available?radiusKm=1&longitude=114.1694&latitude=22.3193")
+                        .header("Authorization", "Bearer " + maintainerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items[0].faultReportId").value(faultId))
+                .andExpect(jsonPath("$.data.items[0].distanceKm").isNumber());
+
+        mockMvc.perform(get("/api/v1/repair-tasks/available?radiusKm=1&longitude=120.0000&latitude=30.0000")
+                        .header("Authorization", "Bearer " + maintainerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0))
+                .andExpect(jsonPath("$.data.items").isEmpty());
+    }
+
+    @Test
+    void rejectsPartialRepairTaskLocationQuery() throws Exception {
+        String maintainerToken = login("maintainer", "password");
+
+        mockMvc.perform(get("/api/v1/repair-tasks/available?radiusKm=1&longitude=114.1694")
+                        .header("Authorization", "Bearer " + maintainerToken))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.error.code").value("REPAIR_TASK_RADIUS_INVALID"));
+    }
+
+    @Test
     void createsFaultReportWhenAbnormalVerificationIsSubmitted() throws Exception {
         String operatorToken = login("fieldoperator", "password");
         String maintainerToken = login("maintainer", "password");

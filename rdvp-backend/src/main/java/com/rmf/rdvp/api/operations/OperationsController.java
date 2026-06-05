@@ -1,5 +1,7 @@
 package com.rmf.rdvp.api.operations;
 
+import java.math.BigDecimal;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -59,11 +61,15 @@ public class OperationsController {
     public ResponseEntity<ApiResponse<AvailableRepairTaskListResponse>> listAvailableRepairTasks(
             @RequestParam(defaultValue = "10") int radiusKm,
             @RequestParam(required = false) String severity,
+            @RequestParam(required = false) BigDecimal longitude,
+            @RequestParam(required = false) BigDecimal latitude,
             @AuthenticationPrincipal AuthenticatedUser user,
             HttpServletRequest request) {
         var result = operationsService.listAvailableRepairTasks(
                 radiusKm,
                 severity == null || severity.isBlank() ? null : parseEnum(FaultSeverity.class, severity, "severity"),
+                longitude,
+                latitude,
                 user);
         return ResponseEntity.ok(ApiResponse.success(AvailableRepairTaskListResponse.from(result), RequestIds.resolve(request)));
     }

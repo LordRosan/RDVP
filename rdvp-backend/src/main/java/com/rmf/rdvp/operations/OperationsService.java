@@ -200,14 +200,28 @@ public class OperationsService {
     public AvailableRepairTaskList listAvailableRepairTasks(
             int radiusKm,
             FaultSeverity severity,
+            BigDecimal longitude,
+            BigDecimal latitude,
             AuthenticatedUser maintainer) {
         int normalizedRadiusKm = normalizeRadiusKm(radiusKm);
+        BigDecimal normalizedLongitude = normalizeCoordinate(longitude, "longitude", BigDecimal.valueOf(-180), BigDecimal.valueOf(180));
+        BigDecimal normalizedLatitude = normalizeCoordinate(latitude, "latitude", BigDecimal.valueOf(-90), BigDecimal.valueOf(90));
+        if ((normalizedLongitude == null) != (normalizedLatitude == null)) {
+            throw new BusinessException(
+                    ErrorCode.REPAIR_TASK_RADIUS_INVALID,
+                    "longitude and latitude must be provided together.");
+        }
+
         RepairerWorkloadSnapshot workload = currentWorkload(maintainer.id());
         validateWorkloadForRefresh(workload, normalizedRadiusKm);
 
-        var items = operationsRepository.listAvailableRepairTasks(severity, MAX_AVAILABLE_REPAIR_TASK_CANDIDATES)
+        var items = operationsRepository.listAvailableRepairTasks(
+                        severity,
+                        normalizedRadiusKm,
+                        normalizedLongitude,
+                        normalizedLatitude,
+                        MAX_AVAILABLE_REPAIR_TASK_CANDIDATES)
                 .stream()
-                .filter(item -> item.distanceKm() == null || item.distanceKm().compareTo(BigDecimal.valueOf(normalizedRadiusKm)) <= 0)
                 .limit(MAX_OPERATION_LIST_ITEMS)
                 .toList();
         return new AvailableRepairTaskList(normalizedRadiusKm, workload, items, items.size());
@@ -470,6 +484,18 @@ public class OperationsService {
         }
 
         return radiusKm;
+    }
+
+    private BigDecimal normalizeCoordinate(BigDecimal value, String field, BigDecimal min, BigDecimal max) {
+        if (value == null) {
+            return null;
+        }
+
+        if (value.compareTo(min) < 0 || value.compareTo(max) > 0) {
+            throw new BusinessException(ErrorCode.REPAIR_TASK_RADIUS_INVALID, field + " is out of range.");
+        }
+
+        return value;
     }
 
     private String normalizeDeviceCode(String deviceCode) {

@@ -1,6 +1,7 @@
 package com.rmf.rdvp.operations;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -64,14 +65,20 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     }
 
     @Override
-    public List<AvailableRepairTaskSummary> listAvailableRepairTasks(FaultSeverity severity, int limit) {
+    public List<AvailableRepairTaskSummary> listAvailableRepairTasks(
+            FaultSeverity severity,
+            int radiusKm,
+            BigDecimal longitude,
+            BigDecimal latitude,
+            int limit) {
         return faultReportsById.values()
                 .stream()
                 .filter(item -> item.status() == FaultStatus.PENDING_ACCEPTANCE)
                 .filter(item -> severity == null || item.severity() == severity)
-                .sorted(Comparator.comparing(FaultReportRecord::createdAt).reversed())
+                .map(item -> toAvailableTask(item, longitude, latitude))
+                .filter(item -> item.distanceKm() == null || item.distanceKm().compareTo(BigDecimal.valueOf(radiusKm)) <= 0)
+                .sorted(Comparator.comparing(AvailableRepairTaskSummary::submittedAt).reversed())
                 .limit(limit)
-                .map(this::toAvailableTask)
                 .toList();
     }
 
@@ -263,7 +270,7 @@ public class InMemoryOperationsRepository implements OperationsRepository {
         reinspectionRecordsById.put(create.id(), create);
     }
 
-    private AvailableRepairTaskSummary toAvailableTask(FaultReportRecord fault) {
+    private AvailableRepairTaskSummary toAvailableTask(FaultReportRecord fault, BigDecimal longitude, BigDecimal latitude) {
         DeviceArchive device = archiveRepository.findById(fault.deviceId()).orElseThrow();
         return new AvailableRepairTaskSummary(
                 fault.id(),
@@ -273,10 +280,31 @@ public class InMemoryOperationsRepository implements OperationsRepository {
                 device.name(),
                 fault.faultType(),
                 fault.severity(),
-                BigDecimal.ZERO,
+                calculateDistanceKm(longitude, latitude, device.longitude(), device.latitude()),
                 new AvailableRepairTaskSummary.DeviceLocation(device.address(), device.longitude(), device.latitude()),
                 fault.createdAt(),
                 RepairTaskStatus.AVAILABLE);
+    }
+
+    private BigDecimal calculateDistanceKm(
+            BigDecimal sourceLongitude,
+            BigDecimal sourceLatitude,
+            BigDecimal targetLongitude,
+            BigDecimal targetLatitude) {
+        if (sourceLongitude == null || sourceLatitude == null || targetLongitude == null || targetLatitude == null) {
+            return null;
+        }
+
+        double earthRadiusKm = 6371.0088;
+        double sourceLat = Math.toRadians(sourceLatitude.doubleValue());
+        double targetLat = Math.toRadians(targetLatitude.doubleValue());
+        double deltaLat = Math.toRadians(targetLatitude.subtract(sourceLatitude).doubleValue());
+        double deltaLon = Math.toRadians(targetLongitude.subtract(sourceLongitude).doubleValue());
+        double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2)
+                + Math.cos(sourceLat) * Math.cos(targetLat)
+                * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return BigDecimal.valueOf(earthRadiusKm * c).setScale(2, RoundingMode.HALF_UP);
     }
 
     private MyRepairTaskSummary toMyTask(RepairTaskRecord task) {

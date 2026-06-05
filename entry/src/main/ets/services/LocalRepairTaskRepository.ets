@@ -137,7 +137,9 @@ export class LocalRepairTaskRepository {
   static queryAvailableTasks(radiusKm: number): AvailableRepairTaskListResult {
     const items = LocalRepairTaskRepository.availableTasks
       .filter((item: AvailableRepairTaskSummary) => {
-        return item.status === RepairTaskStatus.Available && item.distanceKm <= radiusKm;
+        return item.status === RepairTaskStatus.Available &&
+          item.distanceKm !== undefined &&
+          item.distanceKm <= radiusKm;
       })
       .map((item: AvailableRepairTaskSummary) => {
         return LocalRepairTaskRepository.cloneAvailableTask(item);

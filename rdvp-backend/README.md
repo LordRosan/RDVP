@@ -143,6 +143,7 @@ POST http://localhost:8080/api/v1/device-change-requests/{requestId}/review
 ```text
 POST http://localhost:8080/api/v1/fault-reports
 GET http://localhost:8080/api/v1/repair-tasks/available?radiusKm=10
+GET http://localhost:8080/api/v1/repair-tasks/available?radiusKm=10&longitude=114.1694&latitude=22.3193
 POST http://localhost:8080/api/v1/fault-reports/{faultReportId}/accept
 GET http://localhost:8080/api/v1/repair-tasks/my
 POST http://localhost:8080/api/v1/repair-tasks/{repairTaskId}/repair-reports

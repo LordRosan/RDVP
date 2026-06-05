@@ -42,11 +42,45 @@ class WorkbenchControllerTests {
                         .header("Authorization", "Bearer " + maintainerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.pendingChangeRequests").value(1))
+                .andExpect(jsonPath("$.data.pendingChangeRequests").value(0))
                 .andExpect(jsonPath("$.data.availableRepairTasks").value(1))
                 .andExpect(jsonPath("$.data.activeRepairTasks").value(0))
                 .andExpect(jsonPath("$.data.pendingReinspections").value(0))
                 .andExpect(jsonPath("$.data.offlineDrafts").value(0));
+    }
+
+    @Test
+    void returnsOnlyPermittedSummaryCounters() throws Exception {
+        String operatorToken = login("fieldoperator", "password");
+        String readonlyToken = login("readonly", "password");
+        String deviceAdminToken = login("deviceadmin", "password");
+        String reinspectorToken = login("reinspector", "password");
+
+        createFaultReport(operatorToken, "RDVP-DEVICE-0001", "ENERGY_FAULT", "GENERAL");
+
+        mockMvc.perform(get("/api/v1/workbench/summary")
+                        .header("Authorization", "Bearer " + readonlyToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.pendingChangeRequests").value(0))
+                .andExpect(jsonPath("$.data.availableRepairTasks").value(0))
+                .andExpect(jsonPath("$.data.activeRepairTasks").value(0))
+                .andExpect(jsonPath("$.data.pendingReinspections").value(0));
+
+        mockMvc.perform(get("/api/v1/workbench/summary")
+                        .header("Authorization", "Bearer " + deviceAdminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.pendingChangeRequests").value(1))
+                .andExpect(jsonPath("$.data.availableRepairTasks").value(0))
+                .andExpect(jsonPath("$.data.activeRepairTasks").value(0))
+                .andExpect(jsonPath("$.data.pendingReinspections").value(0));
+
+        mockMvc.perform(get("/api/v1/workbench/summary")
+                        .header("Authorization", "Bearer " + reinspectorToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.pendingChangeRequests").value(0))
+                .andExpect(jsonPath("$.data.availableRepairTasks").value(0))
+                .andExpect(jsonPath("$.data.activeRepairTasks").value(0))
+                .andExpect(jsonPath("$.data.pendingReinspections").value(0));
     }
 
     @Test

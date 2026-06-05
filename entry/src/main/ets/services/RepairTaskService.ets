@@ -45,7 +45,7 @@ interface AvailableRepairTaskApiSummary {
   deviceName: string;
   faultType: string;
   severity: string;
-  distanceKm: number;
+  distanceKm?: number;
   location: DeviceLocationApiResult;
   submittedAt: string;
   status: string;
@@ -189,6 +189,22 @@ export class RepairTaskService {
       };
     }
 
+    if ((query.longitude === undefined) !== (query.latitude === undefined)) {
+      return {
+        valid: false,
+        message: '经纬度必须同时提供'
+      };
+    }
+
+    if (query.longitude !== undefined &&
+      (query.longitude < -180 || query.longitude > 180 ||
+        query.latitude === undefined || query.latitude < -90 || query.latitude > 90)) {
+      return {
+        valid: false,
+        message: '经纬度超出有效范围'
+      };
+    }
+
     const workload = workloadSnapshot === undefined ? RepairTaskService.getCurrentWorkloadSnapshot() : workloadSnapshot;
     const workloadValidation = RepairTaskService.validateRepairerCanAccept(workload);
     if (!workloadValidation.valid) {
@@ -269,8 +285,10 @@ export class RepairTaskService {
       return RepairTaskService.createLocalAvailableTasksResponse(radiusKm, workload);
     }
 
+    const locationQuery = query.longitude !== undefined && query.latitude !== undefined ?
+      `&longitude=${query.longitude}&latitude=${query.latitude}` : '';
     const response = await ApiClient.request<ApiListResult<AvailableRepairTaskApiSummary>>(
-      `/api/v1/repair-tasks/available?radiusKm=${radiusKm}`,
+      `/api/v1/repair-tasks/available?radiusKm=${radiusKm}${locationQuery}`,
       'GET',
       true
     );
@@ -808,7 +826,7 @@ export class RepairTaskService {
       deviceName: item.deviceName,
       faultType: item.faultType as FaultType,
       severity: item.severity as FaultSeverity,
-      distanceKm: item.distanceKm,
+      distanceKm: typeof item.distanceKm === 'number' ? item.distanceKm : undefined,
       location: item.location.address,
       submittedAt: item.submittedAt,
       status: item.status as RepairTaskStatus
