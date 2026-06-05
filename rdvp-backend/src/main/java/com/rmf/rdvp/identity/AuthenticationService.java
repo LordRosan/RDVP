@@ -91,6 +91,12 @@ public class AuthenticationService {
 
         Instant now = Instant.now();
         if (isPasswordVerificationLocked(authenticatedUser.id(), now)) {
+            auditLogService.recordFailure(
+                    AuditAction.AUTH_PASSWORD_VERIFY,
+                    authenticatedUser.id(),
+                    authenticatedUser.username(),
+                    authenticatedUser,
+                    "用户密码复核失败：PASSWORD_VERIFICATION_LOCKED。");
             throw new BusinessException(
                     ErrorCode.PASSWORD_VERIFICATION_LOCKED,
                     "Password verification is locked. Please retry later.");
@@ -102,10 +108,22 @@ public class AuthenticationService {
                 .isPresent();
         if (verified) {
             passwordVerificationAttemptStore.clear(authenticatedUser.id());
+            auditLogService.recordSuccess(
+                    AuditAction.AUTH_PASSWORD_VERIFY,
+                    authenticatedUser.id(),
+                    authenticatedUser.username(),
+                    authenticatedUser,
+                    "用户密码复核成功。");
             return true;
         }
 
         registerPasswordVerificationFailure(authenticatedUser.id(), now);
+        auditLogService.recordFailure(
+                AuditAction.AUTH_PASSWORD_VERIFY,
+                authenticatedUser.id(),
+                authenticatedUser.username(),
+                authenticatedUser,
+                "用户密码复核失败：INVALID_CREDENTIALS。");
         return false;
     }
 

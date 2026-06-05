@@ -5,6 +5,8 @@ import java.time.ZoneOffset;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.rmf.rdvp.domain.common.BusinessException;
 import com.rmf.rdvp.domain.common.ErrorCode;
@@ -15,6 +17,7 @@ public class AuditLogService {
 
     private static final int DEFAULT_PAGE_SIZE = 20;
     private static final int MAX_PAGE_SIZE = 100;
+    private static final int MAX_PAGE_NUMBER = 10_000;
     private static final int MAX_TARGET_TEXT_LENGTH = 128;
     private static final int MAX_DESCRIPTION_LENGTH = 500;
 
@@ -50,6 +53,23 @@ public class AuditLogService {
         record(action, targetId, targetNo, actorId, actorName, AuditStatus.SUCCESS, description);
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void recordFailure(
+            AuditAction action,
+            String targetId,
+            String targetNo,
+            AuthenticatedUser actor,
+            String description) {
+        recordFailure(
+                action,
+                targetId,
+                targetNo,
+                actor == null ? null : actor.id(),
+                actor == null ? null : actor.displayName(),
+                description);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordFailure(
             AuditAction action,
             String targetId,
@@ -104,7 +124,7 @@ public class AuditLogService {
     }
 
     private int normalizePage(int page) {
-        return Math.max(page, 1);
+        return Math.min(Math.max(page, 1), MAX_PAGE_NUMBER);
     }
 
     private int normalizePageSize(int pageSize) {

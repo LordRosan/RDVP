@@ -25,6 +25,8 @@ import com.rmf.rdvp.identity.UserAccountRepository;
 public class DeviceChangeRequestService {
 
     private static final Duration CHANGE_FREEZE_DURATION = Duration.ofHours(12);
+    private static final int MAX_PAGE_NUMBER = 10_000;
+    private static final int MAX_PAGE_SIZE = 100;
     private static final Pattern REQUEST_ID_PATTERN = Pattern.compile("^[A-Za-z0-9_-]{1,64}$");
     private static final Pattern DEVICE_CODE_PATTERN = Pattern.compile("^RDVP-DEVICE-\\d{4}$");
     private static final Set<String> SUPPORTED_FIELDS = Set.of("name", "model", "manufacturer", "location.address");
@@ -55,11 +57,16 @@ public class DeviceChangeRequestService {
             Map<String, DeviceChangeValue> changes,
             AuthenticatedUser applicant) {
         DeviceChangeRequestType requestType = type == null ? DeviceChangeRequestType.UPDATE : type;
-        return switch (requestType) {
-            case UPDATE -> createUpdateRequest(deviceId, reason, changes, applicant);
-            case CREATE -> createArchiveCreateRequest(deviceCode, reason, changes, applicant);
-            case DELETE -> createArchiveDeleteRequest(deviceId, reason, applicant);
-        };
+        try {
+            return switch (requestType) {
+                case UPDATE -> createUpdateRequest(deviceId, reason, changes, applicant);
+                case CREATE -> createArchiveCreateRequest(deviceCode, reason, changes, applicant);
+                case DELETE -> createArchiveDeleteRequest(deviceId, reason, applicant);
+            };
+        } catch (BusinessException exception) {
+            recordChangeRequestFailure(requestType, deviceId, deviceCode, applicant, exception);
+            throw exception;
+        }
     }
 
     public DeviceChangeRequestPage list(
@@ -91,46 +98,80 @@ public class DeviceChangeRequestService {
             String reviewedAtText,
             String reviewComment,
             AuthenticatedUser reviewer) {
-        String normalizedRequestId = normalizeRequiredId(requestId, "requestId");
-        DeviceChangeRequest request = changeRequestRepository.findById(normalizedRequestId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.CHANGE_REQUEST_NOT_FOUND));
+        String normalizedRequestId = normalizeText(requestId);
+        DeviceChangeRequest request = null;
+        try {
+            normalizedRequestId = normalizeRequiredId(requestId, "requestId");
+            request = changeRequestRepository.findById(normalizedRequestId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.CHANGE_REQUEST_NOT_FOUND));
 
-        if (request.status() != DeviceChangeRequestStatus.PENDING_REVIEW) {
-            throw new BusinessException(ErrorCode.CHANGE_REQUEST_ALREADY_REVIEWED);
-        }
-
-        OffsetDateTime reviewedAt = parseReviewedAt(reviewedAtText);
-        String normalizedComment = reviewComment == null ? "" : reviewComment.trim();
-        if (decision == DeviceChangeReviewDecision.REJECTED && normalizedComment.isBlank()) {
-            throw new BusinessException(
-                    ErrorCode.DEVICE_CHANGE_REQUEST_INVALID,
-                    "Review comment is required when rejecting a change request.");
-        }
-
-        if (decision == DeviceChangeReviewDecision.APPROVED) {
-            applyApprovedRequest(request, normalizedComment, reviewer, reviewedAt);
-        } else {
-            boolean reviewed = changeRequestRepository.applyRejectedReview(
-                    request.id(),
-                    reviewer.id(),
-                    normalizedComment,
-                    reviewedAt);
-            if (!reviewed) {
+            if (request.status() != DeviceChangeRequestStatus.PENDING_REVIEW) {
                 throw new BusinessException(ErrorCode.CHANGE_REQUEST_ALREADY_REVIEWED);
             }
-        }
 
-        DeviceChangeRequest reviewed = enrichApplicantName(changeRequestRepository.findById(request.id())
-                .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR)));
-        auditLogService.recordSuccess(
+            OffsetDateTime reviewedAt = parseReviewedAt(reviewedAtText);
+            String normalizedComment = reviewComment == null ? "" : reviewComment.trim();
+            if (decision == DeviceChangeReviewDecision.REJECTED && normalizedComment.isBlank()) {
+                throw new BusinessException(
+                        ErrorCode.DEVICE_CHANGE_REQUEST_INVALID,
+                        "Review comment is required when rejecting a change request.");
+            }
+
+            if (decision == DeviceChangeReviewDecision.APPROVED) {
+                applyApprovedRequest(request, normalizedComment, reviewer, reviewedAt);
+            } else {
+                boolean reviewed = changeRequestRepository.applyRejectedReview(
+                        request.id(),
+                        reviewer.id(),
+                        normalizedComment,
+                        reviewedAt);
+                if (!reviewed) {
+                    throw new BusinessException(ErrorCode.CHANGE_REQUEST_ALREADY_REVIEWED);
+                }
+            }
+
+            DeviceChangeRequest reviewed = enrichApplicantName(changeRequestRepository.findById(request.id())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR)));
+            auditLogService.recordSuccess(
+                    AuditAction.DEVICE_CHANGE_REVIEW,
+                    reviewed.id(),
+                    reviewed.deviceCode(),
+                    reviewer,
+                    decision == DeviceChangeReviewDecision.APPROVED
+                            ? "Device archive change request approved."
+                            : "Device archive change request rejected.");
+            return reviewed;
+        } catch (BusinessException exception) {
+            recordChangeReviewFailure(normalizedRequestId, request, reviewer, exception);
+            throw exception;
+        }
+    }
+
+    private void recordChangeRequestFailure(
+            DeviceChangeRequestType requestType,
+            String deviceId,
+            String deviceCode,
+            AuthenticatedUser applicant,
+            BusinessException exception) {
+        auditLogService.recordFailure(
+                AuditAction.DEVICE_CHANGE_REQUEST,
+                requestType == DeviceChangeRequestType.CREATE ? null : normalizeAuditTarget(deviceId),
+                resolveChangeRequestTargetNo(deviceId, deviceCode),
+                applicant,
+                "设备档案%s申请提交失败：%s。".formatted(formatRequestType(requestType), exception.getErrorCode().code()));
+    }
+
+    private void recordChangeReviewFailure(
+            String requestId,
+            DeviceChangeRequest request,
+            AuthenticatedUser reviewer,
+            BusinessException exception) {
+        auditLogService.recordFailure(
                 AuditAction.DEVICE_CHANGE_REVIEW,
-                reviewed.id(),
-                reviewed.deviceCode(),
+                request == null ? requestId : request.id(),
+                request == null ? requestId : request.deviceCode(),
                 reviewer,
-                decision == DeviceChangeReviewDecision.APPROVED
-                        ? "Device archive change request approved."
-                        : "Device archive change request rejected.");
-        return reviewed;
+                "设备档案审核提交失败：%s。".formatted(exception.getErrorCode().code()));
     }
 
     private DeviceChangeRequest createUpdateRequest(
@@ -529,6 +570,39 @@ public class DeviceChangeRequestService {
         return value == null ? "" : value.trim();
     }
 
+    private String normalizeAuditTarget(String value) {
+        String normalized = normalizeText(value);
+        return normalized.isBlank() ? null : normalized;
+    }
+
+    private String resolveChangeRequestTargetNo(String deviceId, String deviceCode) {
+        String normalizedDeviceCode = normalizeAuditTarget(deviceCode);
+        if (normalizedDeviceCode != null) {
+            return normalizedDeviceCode.toUpperCase();
+        }
+
+        String normalizedDeviceId = normalizeAuditTarget(deviceId);
+        if (normalizedDeviceId == null) {
+            return null;
+        }
+
+        try {
+            return archiveRepository.findById(normalizedDeviceId)
+                    .map(DeviceArchive::deviceCode)
+                    .orElse(normalizedDeviceId);
+        } catch (RuntimeException exception) {
+            return normalizedDeviceId;
+        }
+    }
+
+    private String formatRequestType(DeviceChangeRequestType requestType) {
+        return switch (requestType) {
+            case UPDATE -> "变更";
+            case CREATE -> "新增";
+            case DELETE -> "删除";
+        };
+    }
+
     private String normalizeRequiredId(String id, String field) {
         String normalized = id == null ? "" : id.trim();
         if (!REQUEST_ID_PATTERN.matcher(normalized).matches()) {
@@ -563,7 +637,7 @@ public class DeviceChangeRequestService {
     }
 
     private int normalizePage(int page) {
-        return Math.max(page, 1);
+        return Math.min(Math.max(page, 1), MAX_PAGE_NUMBER);
     }
 
     private int normalizePageSize(int pageSize) {
@@ -571,7 +645,7 @@ public class DeviceChangeRequestService {
             return 20;
         }
 
-        return Math.min(pageSize, 100);
+        return Math.min(pageSize, MAX_PAGE_SIZE);
     }
 
     private String newRequestId() {

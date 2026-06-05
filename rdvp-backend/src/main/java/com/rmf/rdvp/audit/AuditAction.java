@@ -2,6 +2,8 @@ package com.rmf.rdvp.audit;
 
 public enum AuditAction {
     AUTH_LOGIN,
+    AUTH_PASSWORD_VERIFY,
+    AUTHORIZATION_DENIED,
     DEVICE_VERIFICATION,
     DEVICE_CHANGE_REQUEST,
     DEVICE_CHANGE_REVIEW,

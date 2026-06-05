@@ -107,37 +107,43 @@ public class DeviceArchiveService {
             String remark,
             String verifiedAt,
             AuthenticatedUser operator) {
-        DeviceArchive device = findById(deviceId);
-        OffsetDateTime normalizedVerifiedAt = parseDateTime(verifiedAt, "verifiedAt");
-        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        DeviceVerificationRecordCreate create = new DeviceVerificationRecordCreate(
-                "verification-" + UUID.randomUUID(),
-                device.id(),
-                operator.id(),
-                requireVerificationResult(result),
-                normalizeRequiredText(
-                        description,
-                        "description",
-                        MAX_VERIFICATION_DESCRIPTION_LENGTH,
-                        ErrorCode.DEVICE_VERIFICATION_INVALID),
-                normalizeOptionalText(
-                        remark,
-                        MAX_VERIFICATION_REMARK_LENGTH,
-                        ErrorCode.DEVICE_VERIFICATION_INVALID),
-                normalizedVerifiedAt,
-                now);
+        DeviceArchive device = null;
+        try {
+            device = findById(deviceId);
+            OffsetDateTime normalizedVerifiedAt = parseDateTime(verifiedAt, "verifiedAt");
+            OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+            DeviceVerificationRecordCreate create = new DeviceVerificationRecordCreate(
+                    "verification-" + UUID.randomUUID(),
+                    device.id(),
+                    operator.id(),
+                    requireVerificationResult(result),
+                    normalizeRequiredText(
+                            description,
+                            "description",
+                            MAX_VERIFICATION_DESCRIPTION_LENGTH,
+                            ErrorCode.DEVICE_VERIFICATION_INVALID),
+                    normalizeOptionalText(
+                            remark,
+                            MAX_VERIFICATION_REMARK_LENGTH,
+                            ErrorCode.DEVICE_VERIFICATION_INVALID),
+                    normalizedVerifiedAt,
+                    now);
 
-        verificationRepository.create(create);
-        archiveRepository.updateLastVerificationTime(device.id(), normalizedVerifiedAt, operator.id());
-        DeviceVerificationRecord record = verificationRepository.findById(create.id())
-                .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR));
-        auditLogService.recordSuccess(
-                AuditAction.DEVICE_VERIFICATION,
-                record.id(),
-                device.deviceCode(),
-                operator,
-                "Submitted device verification record.");
-        return record;
+            verificationRepository.create(create);
+            archiveRepository.updateLastVerificationTime(device.id(), normalizedVerifiedAt, operator.id());
+            DeviceVerificationRecord record = verificationRepository.findById(create.id())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR));
+            auditLogService.recordSuccess(
+                    AuditAction.DEVICE_VERIFICATION,
+                    record.id(),
+                    device.deviceCode(),
+                    operator,
+                    "Submitted device verification record.");
+            return record;
+        } catch (BusinessException exception) {
+            recordDeviceVerificationFailure(deviceId, device, operator, exception);
+            throw exception;
+        }
     }
 
     private String normalizeDeviceCode(String deviceCode) {
@@ -240,6 +246,24 @@ public class DeviceArchiveService {
         byte[] leftBytes = left.getBytes(StandardCharsets.UTF_8);
         byte[] rightBytes = right.getBytes(StandardCharsets.UTF_8);
         return MessageDigest.isEqual(leftBytes, rightBytes);
+    }
+
+    private void recordDeviceVerificationFailure(
+            String deviceId,
+            DeviceArchive device,
+            AuthenticatedUser operator,
+            BusinessException exception) {
+        auditLogService.recordFailure(
+                AuditAction.DEVICE_VERIFICATION,
+                device == null ? normalizeAuditTarget(deviceId) : device.id(),
+                device == null ? normalizeAuditTarget(deviceId) : device.deviceCode(),
+                operator,
+                "设备核验提交失败：%s。".formatted(exception.getErrorCode().code()));
+    }
+
+    private String normalizeAuditTarget(String value) {
+        String normalized = value == null ? "" : value.trim();
+        return normalized.isBlank() ? null : normalized;
     }
 
     private record ParsedQrContent(int version, String deviceCode, String nonce, String signature) {

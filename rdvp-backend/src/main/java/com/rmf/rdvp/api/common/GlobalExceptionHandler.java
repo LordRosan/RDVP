@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.rmf.rdvp.domain.common.BusinessException;
 import com.rmf.rdvp.domain.common.ErrorCode;
+import com.rmf.rdvp.security.SecurityAuditService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
@@ -24,6 +25,12 @@ import jakarta.validation.ConstraintViolationException;
 public class GlobalExceptionHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    private final SecurityAuditService securityAuditService;
+
+    public GlobalExceptionHandler(SecurityAuditService securityAuditService) {
+        this.securityAuditService = securityAuditService;
+    }
 
     @ExceptionHandler(BusinessException.class)
     ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException exception, HttpServletRequest request) {
@@ -82,6 +89,7 @@ public class GlobalExceptionHandler {
     ResponseEntity<ApiResponse<Void>> handleAuthorizationDenied(
             AuthorizationDeniedException exception,
             HttpServletRequest request) {
+        securityAuditService.recordAccessDenied(request);
         return build(
                 ErrorCode.FORBIDDEN.status(),
                 ErrorCode.FORBIDDEN.code(),

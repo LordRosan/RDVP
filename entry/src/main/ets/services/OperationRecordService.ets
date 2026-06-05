@@ -83,6 +83,10 @@ export class OperationRecordService {
     switch (type) {
       case OperationRecordType.AuthLogin:
         return '登录';
+      case OperationRecordType.AuthPasswordVerify:
+        return '密码复核';
+      case OperationRecordType.AuthorizationDenied:
+        return '权限拦截';
       case OperationRecordType.DeviceVerification:
         return '设备核验';
       case OperationRecordType.DeviceChangeRequest:
@@ -144,6 +148,10 @@ export class OperationRecordService {
     switch (action) {
       case 'AUTH_LOGIN':
         return OperationRecordType.AuthLogin;
+      case 'AUTH_PASSWORD_VERIFY':
+        return OperationRecordType.AuthPasswordVerify;
+      case 'AUTHORIZATION_DENIED':
+        return OperationRecordType.AuthorizationDenied;
       case 'DEVICE_VERIFICATION':
         return OperationRecordType.DeviceVerification;
       case 'DEVICE_CHANGE_REQUEST':
@@ -180,6 +188,10 @@ export class OperationRecordService {
     switch (action) {
       case 'AUTH_LOGIN':
         return status === OperationRecordStatus.Success ? '登录成功' : '登录失败';
+      case 'AUTH_PASSWORD_VERIFY':
+        return status === OperationRecordStatus.Success ? '密码复核成功' : '密码复核失败';
+      case 'AUTHORIZATION_DENIED':
+        return '接口访问被拒绝';
       case 'DEVICE_CHANGE_REQUEST':
         return '提交设备档案变更申请';
       case 'DEVICE_CHANGE_REVIEW':

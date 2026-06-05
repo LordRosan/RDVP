@@ -18,9 +18,13 @@ import jakarta.servlet.http.HttpServletResponse;
 public class ApiAccessDeniedHandler implements AccessDeniedHandler {
 
     private final ApiResponseWriter responseWriter;
+    private final SecurityAuditService securityAuditService;
 
-    public ApiAccessDeniedHandler(ApiResponseWriter responseWriter) {
+    public ApiAccessDeniedHandler(
+            ApiResponseWriter responseWriter,
+            SecurityAuditService securityAuditService) {
         this.responseWriter = responseWriter;
+        this.securityAuditService = securityAuditService;
     }
 
     @Override
@@ -28,6 +32,7 @@ public class ApiAccessDeniedHandler implements AccessDeniedHandler {
             HttpServletRequest request,
             HttpServletResponse response,
             AccessDeniedException accessDeniedException) throws IOException, ServletException {
+        securityAuditService.recordAccessDenied(request);
         responseWriter.writeError(
                 request,
                 response,
