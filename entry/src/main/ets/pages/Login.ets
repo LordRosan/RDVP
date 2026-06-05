@@ -456,7 +456,7 @@ struct Login {
     }
     .height(54)
     .width('100%')
-    .backgroundColor(AppColors.Primary)
+    .backgroundColor(this.submitting ? AppColors.Disabled : AppColors.Primary)
     .enabled(!this.submitting)
     .onClick(() => {
       this.submitLogin();

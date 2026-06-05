@@ -6,6 +6,10 @@ public enum ErrorCode {
     BAD_REQUEST("BAD_REQUEST", HttpStatus.BAD_REQUEST, "Request parameters are invalid."),
     UNAUTHORIZED("UNAUTHORIZED", HttpStatus.UNAUTHORIZED, "Authentication is required."),
     INVALID_CREDENTIALS("INVALID_CREDENTIALS", HttpStatus.UNAUTHORIZED, "Username or password is incorrect."),
+    PASSWORD_VERIFICATION_LOCKED(
+            "PASSWORD_VERIFICATION_LOCKED",
+            HttpStatus.TOO_MANY_REQUESTS,
+            "Password verification is temporarily locked."),
     FORBIDDEN("FORBIDDEN", HttpStatus.FORBIDDEN, "Permission is denied."),
     NOT_FOUND("NOT_FOUND", HttpStatus.NOT_FOUND, "Resource was not found."),
     CONFLICT("CONFLICT", HttpStatus.CONFLICT, "Resource state conflict."),

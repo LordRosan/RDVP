@@ -226,6 +226,7 @@ struct DeviceVerification {
           width: 1,
           color: AppColors.Border
         })
+        .enabled(!this.submitting && !this.submitted)
         .onChange((value: string) => {
           this.deviceCode = value;
           this.markFormChanged();
@@ -281,6 +282,7 @@ struct DeviceVerification {
       width: 1,
       color: this.verificationResult === `${result}` ? this.getResultTone(result) : AppColors.Border
     })
+    .enabled(!this.submitting && !this.submitted)
     .onClick(() => {
       this.verificationResult = `${result}`;
       this.markFormChanged();
@@ -313,6 +315,7 @@ struct DeviceVerification {
           width: 1,
           color: AppColors.Border
         })
+        .enabled(!this.submitting && !this.submitted)
         .onChange((value: string) => {
           this.description = value;
           this.markFormChanged();
@@ -348,6 +351,7 @@ struct DeviceVerification {
           width: 1,
           color: AppColors.Border
         })
+        .enabled(!this.submitting && !this.submitted)
         .onChange((value: string) => {
           this.remark = value;
           this.markFormChanged();
@@ -490,6 +494,7 @@ struct DeviceVerification {
       width: 1,
       color: this.faultType === `${type}` ? AppColors.Primary : AppColors.Border
     })
+    .enabled(!this.submitting && !this.submitted)
     .onClick(() => {
       this.faultType = `${type}`;
       this.markFormChanged();
@@ -547,6 +552,7 @@ struct DeviceVerification {
       width: 1,
       color: this.severity === `${severity}` ? this.getSeverityTone(severity) : AppColors.Border
     })
+    .enabled(!this.submitting && !this.submitted)
     .onClick(() => {
       this.severity = `${severity}`;
       this.markFormChanged();
@@ -587,6 +593,10 @@ struct DeviceVerification {
         color: AppColors.Border
       })
       .onClick(() => {
+        if (this.submitting || this.submitted) {
+          return;
+        }
+
         this.showOccurredAtPicker();
       })
     }
@@ -620,6 +630,7 @@ struct DeviceVerification {
           width: 1,
           color: AppColors.Border
         })
+        .enabled(!this.submitting && !this.submitted)
         .onChange((value: string) => {
           this.faultDescription = value;
           this.markFormChanged();
@@ -655,6 +666,7 @@ struct DeviceVerification {
           width: 1,
           color: AppColors.Border
         })
+        .enabled(!this.submitting && !this.submitted)
         .onChange((value: string) => {
           this.sceneCondition = value;
           this.markFormChanged();
@@ -705,7 +717,7 @@ struct DeviceVerification {
     }
     .height(54)
     .width('100%')
-    .backgroundColor(AppColors.Primary)
+    .backgroundColor(enabled ? AppColors.Primary : AppColors.Disabled)
     .enabled(enabled)
     .onClick(() => {
       action();
@@ -954,6 +966,10 @@ struct DeviceVerification {
   }
 
   showOccurredAtPicker(): void {
+    if (this.submitting || this.submitted) {
+      return;
+    }
+
     this.getUIContext().showDatePickerDialog({
       start: new Date(2000, 0, 1, 0, 0),
       end: new Date(2100, 11, 31, 23, 59),

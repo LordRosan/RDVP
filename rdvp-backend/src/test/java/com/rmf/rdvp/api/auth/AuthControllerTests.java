@@ -127,6 +127,46 @@ class AuthControllerTests {
     }
 
     @Test
+    void locksPasswordVerificationAfterConsecutiveFailures() throws Exception {
+        String token = login("auditor", "password");
+
+        for (int index = 0; index < 4; index++) {
+            mockMvc.perform(post("/api/v1/auth/password-verification")
+                            .header("Authorization", "Bearer " + token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "password": "wrong"
+                                    }
+                                    """))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
+        }
+
+        mockMvc.perform(post("/api/v1/auth/password-verification")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "password": "wrong"
+                                }
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
+
+        mockMvc.perform(post("/api/v1/auth/password-verification")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "password": "password"
+                                }
+                                """))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.error.code").value("PASSWORD_VERIFICATION_LOCKED"));
+    }
+
+    @Test
     void validatesLoginRequest() throws Exception {
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

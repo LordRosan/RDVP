@@ -170,7 +170,7 @@ struct OperationRecord {
         }
         .width(44)
         .height(44)
-        .backgroundColor(AppColors.Primary)
+        .backgroundColor(this.refreshing ? AppColors.Disabled : AppColors.Primary)
         .enabled(!this.refreshing)
         .onClick(() => {
           this.refreshRecords();

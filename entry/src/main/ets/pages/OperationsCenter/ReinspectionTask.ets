@@ -177,7 +177,7 @@ struct ReinspectionTask {
         }
         .width(44)
         .height(44)
-        .backgroundColor(AppColors.Primary)
+        .backgroundColor(this.refreshing || this.submitting ? AppColors.Disabled : AppColors.Primary)
         .enabled(!this.refreshing && !this.submitting)
         .onClick(() => {
           this.refreshTasks();
@@ -364,6 +364,7 @@ struct ReinspectionTask {
           width: 1,
           color: AppColors.Border
         })
+        .enabled(this.canSubmitRecord())
         .onChange((value: string) => {
           this.taskId = value;
           this.normalizedTaskId = value.trim().toUpperCase();
@@ -422,6 +423,7 @@ struct ReinspectionTask {
       width: 1,
       color: this.result === `${result}` ? ReinspectionService.getResultTone(result) : AppColors.Border
     })
+    .enabled(this.canSubmitRecord())
     .onClick(() => {
       this.result = `${result}`;
       this.recordMessage = '';
@@ -463,6 +465,10 @@ struct ReinspectionTask {
         color: AppColors.Border
       })
       .onClick(() => {
+        if (!this.canSubmitRecord()) {
+          return;
+        }
+
         this.showReinspectedAtPicker();
         this.recordMessage = '';
         this.recordMessageTone = AppColors.Danger;
@@ -498,6 +504,7 @@ struct ReinspectionTask {
           width: 1,
           color: AppColors.Border
         })
+        .enabled(this.canSubmitRecord())
         .onChange((value: string) => {
           this.description = value;
           this.recordMessage = '';
@@ -721,6 +728,10 @@ struct ReinspectionTask {
   }
 
   showReinspectedAtPicker(): void {
+    if (!this.canSubmitRecord()) {
+      return;
+    }
+
     this.getUIContext().showDatePickerDialog({
       start: new Date(2000, 0, 1, 0, 0),
       end: new Date(2100, 11, 31, 23, 59),

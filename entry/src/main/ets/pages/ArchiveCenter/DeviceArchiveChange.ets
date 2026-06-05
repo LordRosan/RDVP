@@ -244,7 +244,7 @@ struct DeviceArchiveChange {
     Column({ space: 10 }) {
       this.FieldTitle('设备名称')
 
-      if (this.isChangeSubmitted()) {
+      if (this.submitting || this.isChangeSubmitted()) {
         Text(this.deviceName)
           .height(56)
           .width('100%')
@@ -282,7 +282,7 @@ struct DeviceArchiveChange {
     Column({ space: 10 }) {
       this.FieldTitle('设备型号')
 
-      if (this.isChangeSubmitted()) {
+      if (this.submitting || this.isChangeSubmitted()) {
         Text(this.model)
           .height(56)
           .width('100%')
@@ -320,7 +320,7 @@ struct DeviceArchiveChange {
     Column({ space: 10 }) {
       this.FieldTitle('生产厂商')
 
-      if (this.isChangeSubmitted()) {
+      if (this.submitting || this.isChangeSubmitted()) {
         Text(this.manufacturer)
           .height(56)
           .width('100%')
@@ -358,7 +358,7 @@ struct DeviceArchiveChange {
     Column({ space: 10 }) {
       this.FieldTitle('设备位置')
 
-      if (this.isChangeSubmitted()) {
+      if (this.submitting || this.isChangeSubmitted()) {
         Text(this.locationAddress)
           .height(56)
           .width('100%')
@@ -417,7 +417,7 @@ struct DeviceArchiveChange {
           width: 1,
           color: AppColors.Border
         })
-        .enabled(!this.isChangeSubmitted())
+        .enabled(!this.submitting && !this.isChangeSubmitted())
         .onChange((value: string) => {
           this.reason = value;
           this.message = '';

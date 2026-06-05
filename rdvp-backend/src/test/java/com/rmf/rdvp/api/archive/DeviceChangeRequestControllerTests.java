@@ -124,6 +124,45 @@ class DeviceChangeRequestControllerTests {
     }
 
     @Test
+    void requiresExplicitReviewTime() throws Exception {
+        String applicantToken = login("fieldoperator", "password");
+        String reviewerToken = login("deviceadmin", "password");
+        String requestId = createNameChange(applicantToken, "冷却泵A-02");
+
+        mockMvc.perform(post("/api/v1/device-change-requests/{requestId}/review", requestId)
+                        .header("Authorization", "Bearer " + reviewerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "decision": "APPROVED",
+                                  "reviewComment": "Review time must be selected by the reviewer."
+                                }
+                                """))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"));
+    }
+
+    @Test
+    void rejectsInvalidReviewDecisionWithoutUnhandledException() throws Exception {
+        String applicantToken = login("fieldoperator", "password");
+        String reviewerToken = login("deviceadmin", "password");
+        String requestId = createNameChange(applicantToken, "冷却泵A-02");
+
+        mockMvc.perform(post("/api/v1/device-change-requests/{requestId}/review", requestId)
+                        .header("Authorization", "Bearer " + reviewerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "decision": "ACCEPTED",
+                                  "reviewedAt": "2026-06-01T08:00:00Z",
+                                  "reviewComment": "Unsupported decision must be rejected."
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"));
+    }
+
+    @Test
     void createsDeviceArchiveOnlyAfterCreateRequestApproval() throws Exception {
         String token = login("deviceadmin", "password");
         String requestId = createArchiveCreateRequest(token, "RDVP-DEVICE-0099");

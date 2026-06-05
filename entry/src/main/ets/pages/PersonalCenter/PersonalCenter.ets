@@ -101,11 +101,11 @@ struct PersonalCenter {
   SettingsButton() {
     Button({ type: ButtonType.Circle, stateEffect: true }) {
       SymbolGlyph($r('sys.symbol.gearshape'))
-        .fontSize(30)
+        .fontSize(22)
         .fontColor([AppColors.TextPrimary])
     }
-    .width(58)
-    .height(58)
+    .width(42)
+    .height(42)
     .backgroundColor(AppColors.Surface)
     .border({
       width: 1,
@@ -118,8 +118,8 @@ struct PersonalCenter {
 
   @Builder
   ModeHeader() {
-    Row({ space: 16 }) {
-      Column({ space: 6 }) {
+    Column({ space: 6 }) {
+      Row({ space: 8 }) {
         Text('个人中心')
           .fontSize(34)
           .fontWeight(FontWeight.Bold)
@@ -127,19 +127,18 @@ struct PersonalCenter {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-        Text('账号、权限和会话状态')
-          .fontSize(15)
-          .fontColor(AppColors.TextSecondary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        this.SettingsButton()
       }
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start)
+      .alignItems(VerticalAlign.Center)
 
-      this.SettingsButton()
+      Text('账号、权限和会话状态')
+        .fontSize(15)
+        .fontColor(AppColors.TextSecondary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .width('100%')
-    .alignItems(VerticalAlign.Center)
+    .alignItems(HorizontalAlign.Start)
     .padding({
       bottom: 2
     })

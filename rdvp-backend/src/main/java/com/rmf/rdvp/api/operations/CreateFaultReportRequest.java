@@ -3,14 +3,15 @@ package com.rmf.rdvp.api.operations;
 import java.math.BigDecimal;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 public record CreateFaultReportRequest(
-        @NotBlank String deviceCode,
-        @NotBlank String faultType,
-        @NotBlank String severity,
-        @NotBlank String occurredAt,
-        @NotBlank String description,
-        String sceneCondition,
+        @NotBlank @Size(max = 64) String deviceCode,
+        @NotBlank @Size(max = 32) String faultType,
+        @NotBlank @Size(max = 32) String severity,
+        @NotBlank @Size(max = 64) String occurredAt,
+        @NotBlank @Size(max = 1000) String description,
+        @Size(max = 500) String sceneCondition,
         BigDecimal longitude,
         BigDecimal latitude) {
 }

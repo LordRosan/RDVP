@@ -752,11 +752,6 @@ struct DeviceArchiveDelete {
   backToDetail(): void {
     try {
       const router = this.getUIContext().getRouter();
-      if (router.getState().index > 1) {
-        router.back();
-        return;
-      }
-
       router.replaceUrl({ url: 'pages/ArchiveCenter/DeviceArchiveDetail' });
     } catch (err) {
       try {

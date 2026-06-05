@@ -115,7 +115,7 @@ public class DeviceChangeRequestController {
     private DeviceChangeReviewDecision parseDecision(String decision) {
         try {
             return DeviceChangeReviewDecision.valueOf(decision.trim().toUpperCase());
-        } catch (IllegalArgumentException exception) {
+        } catch (RuntimeException exception) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "decision is invalid.");
         }
     }

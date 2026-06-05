@@ -89,14 +89,15 @@ export class DeviceArchiveDeleteGuardService {
     }
 
     const response = await AuthService.verifyCurrentUserPasswordRemoteFirst(form.password);
-    if (!DeviceArchiveDeleteGuardService.isPasswordIncorrectResponse(response)) {
+    if (response.success && response.data === true) {
+      DeviceArchiveDeleteGuardService.clearRecord(normalizedDeviceCode);
       return {
-        verified: false,
-        message: response.error ? response.error.message : '账号密码校验失败'
+        verified: true,
+        message: ''
       };
     }
 
-    if (response.data !== true) {
+    if (DeviceArchiveDeleteGuardService.isPasswordIncorrectResponse(response)) {
       const record = DeviceArchiveDeleteGuardService.registerPasswordFailure(normalizedDeviceCode);
       if (DeviceArchiveDeleteGuardService.isLocked(record)) {
         return {
@@ -114,10 +115,9 @@ export class DeviceArchiveDeleteGuardService {
       };
     }
 
-    DeviceArchiveDeleteGuardService.clearRecord(normalizedDeviceCode);
     return {
-      verified: true,
-      message: ''
+      verified: false,
+      message: response.error ? response.error.message : '账号密码校验失败'
     };
   }
 

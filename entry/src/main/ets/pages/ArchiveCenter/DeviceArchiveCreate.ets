@@ -199,7 +199,7 @@ struct DeviceArchiveCreate {
         .borderRadius(18)
         .padding({ left: 16, right: 16 })
         .border({ width: 1, color: AppColors.Border })
-        .enabled(!this.isSubmitted())
+        .enabled(!this.submitting && !this.isSubmitted())
         .onChange((value: string) => {
           this.deviceCode = value;
           this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(value);
@@ -228,7 +228,7 @@ struct DeviceArchiveCreate {
         .borderRadius(18)
         .padding({ left: 16, right: 16 })
         .border({ width: 1, color: AppColors.Border })
-        .enabled(!this.isSubmitted())
+        .enabled(!this.submitting && !this.isSubmitted())
         .onChange((input: string) => {
           change(input);
         })
@@ -260,7 +260,7 @@ struct DeviceArchiveCreate {
           bottom: 12
         })
         .border({ width: 1, color: AppColors.Border })
-        .enabled(!this.isSubmitted())
+        .enabled(!this.submitting && !this.isSubmitted())
         .onChange((value: string) => {
           this.reason = value;
           this.onFormChanged();

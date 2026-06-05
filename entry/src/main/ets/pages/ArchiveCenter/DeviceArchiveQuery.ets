@@ -420,7 +420,7 @@ struct DeviceArchiveQuery {
     }
     .height(54)
     .width('100%')
-    .backgroundColor(AppColors.Primary)
+    .backgroundColor(enabled ? AppColors.Primary : AppColors.Disabled)
     .enabled(enabled)
     .onClick(() => {
       action();

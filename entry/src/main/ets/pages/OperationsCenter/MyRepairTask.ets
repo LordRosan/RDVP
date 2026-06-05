@@ -196,7 +196,7 @@ struct MyRepairTask {
         }
         .width(44)
         .height(44)
-        .backgroundColor(AppColors.Primary)
+        .backgroundColor(this.refreshing || this.submitting ? AppColors.Disabled : AppColors.Primary)
         .enabled(!this.refreshing && !this.submitting)
         .onClick(() => {
           this.refreshTasks();
@@ -393,6 +393,7 @@ struct MyRepairTask {
           width: 1,
           color: AppColors.Border
         })
+        .enabled(this.canSubmitRepairReport())
         .onChange((value: string) => {
           this.taskId = value;
           this.normalizedTaskId = DeviceService.normalizeDeviceCode(value);
@@ -452,6 +453,7 @@ struct MyRepairTask {
       width: 1,
       color: this.reportResult === `${result}` ? this.getRepairResultTone(result) : AppColors.Border
     })
+    .enabled(this.canSubmitRepairReport())
     .onClick(() => {
       this.reportResult = `${result}`;
       this.reportMessage = '';
@@ -493,6 +495,10 @@ struct MyRepairTask {
         color: AppColors.Border
       })
       .onClick(() => {
+        if (!this.canSubmitRepairReport()) {
+          return;
+        }
+
         this.showRepairedAtPicker();
         this.reportMessage = '';
         this.reportMessageTone = AppColors.Danger;
@@ -528,6 +534,7 @@ struct MyRepairTask {
           width: 1,
           color: AppColors.Border
         })
+        .enabled(this.canSubmitRepairReport())
         .onChange((value: string) => {
           this.processDescription = value;
           this.reportMessage = '';
@@ -564,6 +571,7 @@ struct MyRepairTask {
           width: 1,
           color: AppColors.Border
         })
+        .enabled(this.canSubmitRepairReport())
         .onChange((value: string) => {
           this.partsUsed = value;
           this.reportMessage = '';
@@ -830,6 +838,10 @@ struct MyRepairTask {
   }
 
   showRepairedAtPicker(): void {
+    if (!this.canSubmitRepairReport()) {
+      return;
+    }
+
     this.getUIContext().showDatePickerDialog({
       start: new Date(2000, 0, 1, 0, 0),
       end: new Date(2100, 11, 31, 23, 59),

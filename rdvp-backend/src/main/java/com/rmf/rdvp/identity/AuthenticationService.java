@@ -4,6 +4,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -18,10 +20,13 @@ import com.rmf.rdvp.domain.common.ErrorCode;
 public class AuthenticationService {
 
     private static final Duration ACCESS_TOKEN_TTL = Duration.ofDays(7);
+    private static final Duration PASSWORD_VERIFICATION_LOCK_DURATION = Duration.ofHours(12);
+    private static final int MAX_PASSWORD_VERIFICATION_FAILURES = 5;
 
     private final BootstrapUserStore userStore;
     private final PasswordEncoder passwordEncoder;
     private final TokenSessionStore tokenSessionStore;
+    private final ConcurrentMap<String, PasswordVerificationAttempt> passwordVerificationAttempts = new ConcurrentHashMap<>();
 
     public AuthenticationService(
             BootstrapUserStore userStore,
@@ -57,13 +62,54 @@ public class AuthenticationService {
             return false;
         }
 
-        return userStore.findById(authenticatedUser.id())
+        Instant now = Instant.now();
+        if (isPasswordVerificationLocked(authenticatedUser.id(), now)) {
+            throw new BusinessException(
+                    ErrorCode.PASSWORD_VERIFICATION_LOCKED,
+                    "Password verification is locked. Please retry later.");
+        }
+
+        boolean verified = userStore.findById(authenticatedUser.id())
                 .filter(user -> user.status() == UserStatus.ACTIVE)
                 .filter(user -> passwordEncoder.matches(password, user.passwordHash()))
                 .isPresent();
+        if (verified) {
+            passwordVerificationAttempts.remove(authenticatedUser.id());
+            return true;
+        }
+
+        registerPasswordVerificationFailure(authenticatedUser.id(), now);
+        return false;
     }
 
     public void logout(String token) {
         tokenSessionStore.remove(token);
+    }
+
+    private boolean isPasswordVerificationLocked(String userId, Instant now) {
+        PasswordVerificationAttempt attempt = passwordVerificationAttempts.get(userId);
+        if (attempt == null || attempt.lockedUntil() == null) {
+            return false;
+        }
+
+        if (attempt.lockedUntil().isAfter(now)) {
+            return true;
+        }
+
+        passwordVerificationAttempts.remove(userId);
+        return false;
+    }
+
+    private void registerPasswordVerificationFailure(String userId, Instant now) {
+        passwordVerificationAttempts.compute(userId, (key, current) -> {
+            int failedCount = current == null ? 1 : current.failedCount() + 1;
+            Instant lockedUntil = failedCount >= MAX_PASSWORD_VERIFICATION_FAILURES
+                    ? now.plus(PASSWORD_VERIFICATION_LOCK_DURATION)
+                    : null;
+            return new PasswordVerificationAttempt(failedCount, lockedUntil);
+        });
+    }
+
+    private record PasswordVerificationAttempt(int failedCount, Instant lockedUntil) {
     }
 }

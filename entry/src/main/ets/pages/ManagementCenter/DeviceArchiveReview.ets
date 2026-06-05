@@ -180,7 +180,7 @@ struct DeviceArchiveReview {
         }
         .width(44)
         .height(44)
-        .backgroundColor(AppColors.Primary)
+        .backgroundColor(this.refreshing || this.submitting ? AppColors.Disabled : AppColors.Primary)
         .enabled(!this.refreshing && !this.submitting)
         .onClick(() => {
           this.refreshRequests();
@@ -503,6 +503,10 @@ struct DeviceArchiveReview {
       .padding({ left: 16, right: 16 })
       .border({ width: 1, color: AppColors.Border })
       .onClick(() => {
+        if (this.submitting) {
+          return;
+        }
+
         this.showReviewedAtPicker();
         this.message = '';
         this.messageTone = AppColors.Danger;
@@ -849,6 +853,10 @@ struct DeviceArchiveReview {
   }
 
   showReviewedAtPicker(): void {
+    if (this.submitting) {
+      return;
+    }
+
     this.getUIContext().showDatePickerDialog({
       start: new Date(2000, 0, 1, 0, 0),
       end: new Date(2100, 11, 31, 23, 59),
