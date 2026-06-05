@@ -16,8 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.rmf.rdvp.domain.common.BusinessException;
 import com.rmf.rdvp.domain.common.ErrorCode;
 import com.rmf.rdvp.identity.AuthenticatedUser;
-import com.rmf.rdvp.identity.BootstrapUserStore;
 import com.rmf.rdvp.identity.PermissionCode;
+import com.rmf.rdvp.identity.UserAccountRepository;
 
 @Service
 public class DeviceChangeRequestService {
@@ -30,12 +30,12 @@ public class DeviceChangeRequestService {
 
     private final DeviceArchiveRepository archiveRepository;
     private final DeviceChangeRequestRepository changeRequestRepository;
-    private final BootstrapUserStore userStore;
+    private final UserAccountRepository userStore;
 
     public DeviceChangeRequestService(
             DeviceArchiveRepository archiveRepository,
             DeviceChangeRequestRepository changeRequestRepository,
-            BootstrapUserStore userStore) {
+            UserAccountRepository userStore) {
         this.archiveRepository = archiveRepository;
         this.changeRequestRepository = changeRequestRepository;
         this.userStore = userStore;

@@ -1,6 +1,6 @@
 # RDVP Backend
 
-RDVP Backend 是 RDVP 移动端应用的后端服务，负责认证、设备档案、二维码校验、运维流程、管理审核、审计日志和附件等服务端能力。
+RDVP Backend 是 RDVP 移动端应用的后端服务，负责认证、设备档案、二维码校验、运维流程、管理审核和系统健康检查等服务端能力。
 
 ## 技术栈
 
@@ -131,6 +131,7 @@ POST http://localhost:8080/api/v1/device-change-requests/{requestId}/review
 ```json
 {
   "decision": "APPROVED",
+  "reviewedAt": "2026-06-01T08:00:00Z",
   "reviewComment": "Approved."
 }
 ```
@@ -148,6 +149,8 @@ POST http://localhost:8080/api/v1/fault-reports/{faultReportId}/reinspection-rec
 ```
 
 ## 本地引导账号
+
+数据库模式下，本地引导账号会在服务启动时写入 `users`、`user_roles`、`user_permissions` 表。再次启动时会同步账号显示名、状态、角色和权限，但不会覆盖已经存在的密码哈希；测试配置使用内存账号仓储。
 
 | 用户名 | 密码 | 角色 |
 | --- | --- | --- |

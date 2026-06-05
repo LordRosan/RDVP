@@ -23,13 +23,13 @@ public class AuthenticationService {
     private static final Duration PASSWORD_VERIFICATION_LOCK_DURATION = Duration.ofHours(12);
     private static final int MAX_PASSWORD_VERIFICATION_FAILURES = 5;
 
-    private final BootstrapUserStore userStore;
+    private final UserAccountRepository userStore;
     private final PasswordEncoder passwordEncoder;
     private final TokenSessionStore tokenSessionStore;
     private final ConcurrentMap<String, PasswordVerificationAttempt> passwordVerificationAttempts = new ConcurrentHashMap<>();
 
     public AuthenticationService(
-            BootstrapUserStore userStore,
+            UserAccountRepository userStore,
             PasswordEncoder passwordEncoder,
             TokenSessionStore tokenSessionStore) {
         this.userStore = userStore;
