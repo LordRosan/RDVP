@@ -1,6 +1,6 @@
 # RDVP Backend
 
-RDVP Backend 是 RDVP 移动端应用的后端服务，负责认证、设备档案、二维码校验、运维流程、管理审核和系统健康检查等服务端能力。
+RDVP Backend 是 RDVP 移动端应用的后端服务，负责认证、设备档案、二维码校验、运维流程、管理审核、操作审计和系统健康检查等服务端能力。
 
 ## 技术栈
 
@@ -146,6 +146,13 @@ GET http://localhost:8080/api/v1/repair-tasks/my
 POST http://localhost:8080/api/v1/repair-tasks/{repairTaskId}/repair-reports
 GET http://localhost:8080/api/v1/reinspections/pending
 POST http://localhost:8080/api/v1/fault-reports/{faultReportId}/reinspection-records
+```
+
+操作审计记录：
+
+```text
+GET http://localhost:8080/api/v1/audit-logs
+GET http://localhost:8080/api/v1/audit-logs?action=FAULT_REPORT
 ```
 
 ## 本地引导账号

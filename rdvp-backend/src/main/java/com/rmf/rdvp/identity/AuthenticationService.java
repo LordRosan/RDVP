@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import com.rmf.rdvp.api.auth.LoginRequest;
 import com.rmf.rdvp.api.auth.LoginResponse;
 import com.rmf.rdvp.api.auth.UserResponse;
+import com.rmf.rdvp.audit.AuditAction;
+import com.rmf.rdvp.audit.AuditLogService;
 import com.rmf.rdvp.domain.common.BusinessException;
 import com.rmf.rdvp.domain.common.ErrorCode;
 
@@ -26,15 +28,18 @@ public class AuthenticationService {
     private final UserAccountRepository userStore;
     private final PasswordEncoder passwordEncoder;
     private final TokenSessionStore tokenSessionStore;
+    private final AuditLogService auditLogService;
     private final ConcurrentMap<String, PasswordVerificationAttempt> passwordVerificationAttempts = new ConcurrentHashMap<>();
 
     public AuthenticationService(
             UserAccountRepository userStore,
             PasswordEncoder passwordEncoder,
-            TokenSessionStore tokenSessionStore) {
+            TokenSessionStore tokenSessionStore,
+            AuditLogService auditLogService) {
         this.userStore = userStore;
         this.passwordEncoder = passwordEncoder;
         this.tokenSessionStore = tokenSessionStore;
+        this.auditLogService = auditLogService;
     }
 
     public LoginResponse login(LoginRequest request) {
@@ -46,7 +51,15 @@ public class AuthenticationService {
 
         Instant expiresAt = Instant.now().plus(ACCESS_TOKEN_TTL);
         String token = tokenSessionStore.create(user.id(), request.clientDeviceId(), expiresAt);
-        return new LoginResponse(token, ACCESS_TOKEN_TTL.toSeconds(), UserResponse.from(user.toAuthenticatedUser()));
+        AuthenticatedUser authenticatedUser = user.toAuthenticatedUser();
+        auditLogService.recordSuccess(
+                AuditAction.AUTH_LOGIN,
+                user.id(),
+                user.username(),
+                user.id(),
+                user.displayName(),
+                "User login succeeded.");
+        return new LoginResponse(token, ACCESS_TOKEN_TTL.toSeconds(), UserResponse.from(authenticatedUser));
     }
 
     public Optional<AuthenticatedUser> authenticate(String token) {

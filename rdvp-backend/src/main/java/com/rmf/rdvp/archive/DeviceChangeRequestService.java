@@ -13,6 +13,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.rmf.rdvp.audit.AuditAction;
+import com.rmf.rdvp.audit.AuditLogService;
 import com.rmf.rdvp.domain.common.BusinessException;
 import com.rmf.rdvp.domain.common.ErrorCode;
 import com.rmf.rdvp.identity.AuthenticatedUser;
@@ -31,14 +33,17 @@ public class DeviceChangeRequestService {
     private final DeviceArchiveRepository archiveRepository;
     private final DeviceChangeRequestRepository changeRequestRepository;
     private final UserAccountRepository userStore;
+    private final AuditLogService auditLogService;
 
     public DeviceChangeRequestService(
             DeviceArchiveRepository archiveRepository,
             DeviceChangeRequestRepository changeRequestRepository,
-            UserAccountRepository userStore) {
+            UserAccountRepository userStore,
+            AuditLogService auditLogService) {
         this.archiveRepository = archiveRepository;
         this.changeRequestRepository = changeRequestRepository;
         this.userStore = userStore;
+        this.auditLogService = auditLogService;
     }
 
     @Transactional
@@ -115,8 +120,17 @@ public class DeviceChangeRequestService {
             }
         }
 
-        return enrichApplicantName(changeRequestRepository.findById(request.id())
+        DeviceChangeRequest reviewed = enrichApplicantName(changeRequestRepository.findById(request.id())
                 .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR)));
+        auditLogService.recordSuccess(
+                AuditAction.DEVICE_CHANGE_REVIEW,
+                reviewed.id(),
+                reviewed.deviceCode(),
+                reviewer,
+                decision == DeviceChangeReviewDecision.APPROVED
+                        ? "Device archive change request approved."
+                        : "Device archive change request rejected.");
+        return reviewed;
     }
 
     private DeviceChangeRequest createUpdateRequest(
@@ -138,7 +152,7 @@ public class DeviceChangeRequestService {
         }
 
         Map<String, DeviceChangeValue> normalizedChanges = normalizeAndValidateUpdateChanges(device, changes);
-        return createRequest(new DeviceChangeRequestCreate(
+        DeviceChangeRequest created = createRequest(new DeviceChangeRequestCreate(
                 newRequestId(),
                 DeviceChangeRequestType.UPDATE,
                 device.id(),
@@ -148,6 +162,13 @@ public class DeviceChangeRequestService {
                 normalizeRequiredText(reason, "reason", 500),
                 normalizedChanges,
                 now));
+        auditLogService.recordSuccess(
+                AuditAction.DEVICE_CHANGE_REQUEST,
+                created.id(),
+                created.deviceCode(),
+                applicant,
+                "Submitted device archive update request.");
+        return created;
     }
 
     private DeviceChangeRequest createArchiveCreateRequest(
@@ -163,7 +184,7 @@ public class DeviceChangeRequestService {
         }
 
         Map<String, DeviceChangeValue> normalizedChanges = normalizeAndValidateCreateChanges(changes);
-        return createRequest(new DeviceChangeRequestCreate(
+        DeviceChangeRequest created = createRequest(new DeviceChangeRequestCreate(
                 newRequestId(),
                 DeviceChangeRequestType.CREATE,
                 null,
@@ -173,6 +194,13 @@ public class DeviceChangeRequestService {
                 normalizeRequiredText(reason, "reason", 500),
                 normalizedChanges,
                 now()));
+        auditLogService.recordSuccess(
+                AuditAction.DEVICE_CHANGE_REQUEST,
+                created.id(),
+                created.deviceCode(),
+                applicant,
+                "Submitted device archive create request.");
+        return created;
     }
 
     private DeviceChangeRequest createArchiveDeleteRequest(
@@ -193,7 +221,7 @@ public class DeviceChangeRequestService {
             throw new BusinessException(ErrorCode.DEVICE_ARCHIVE_DELETE_BLOCKED);
         }
 
-        return createRequest(new DeviceChangeRequestCreate(
+        DeviceChangeRequest created = createRequest(new DeviceChangeRequestCreate(
                 newRequestId(),
                 DeviceChangeRequestType.DELETE,
                 device.id(),
@@ -203,6 +231,13 @@ public class DeviceChangeRequestService {
                 normalizeRequiredText(reason, "reason", 500),
                 buildDeleteSnapshot(device),
                 now));
+        auditLogService.recordSuccess(
+                AuditAction.DEVICE_CHANGE_REQUEST,
+                created.id(),
+                created.deviceCode(),
+                applicant,
+                "Submitted device archive delete request.");
+        return created;
     }
 
     private DeviceChangeRequest createRequest(DeviceChangeRequestCreate request) {

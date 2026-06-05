@@ -19,6 +19,8 @@ import com.rmf.rdvp.archive.DeviceVerificationRecord;
 import com.rmf.rdvp.archive.DeviceVerificationRecordCreate;
 import com.rmf.rdvp.archive.DeviceVerificationRepository;
 import com.rmf.rdvp.archive.DeviceVerificationResult;
+import com.rmf.rdvp.audit.AuditAction;
+import com.rmf.rdvp.audit.AuditLogService;
 import com.rmf.rdvp.domain.common.BusinessException;
 import com.rmf.rdvp.domain.common.ErrorCode;
 import com.rmf.rdvp.identity.AuthenticatedUser;
@@ -43,14 +45,17 @@ public class OperationsService {
     private final DeviceArchiveRepository archiveRepository;
     private final DeviceVerificationRepository verificationRepository;
     private final OperationsRepository operationsRepository;
+    private final AuditLogService auditLogService;
 
     public OperationsService(
             DeviceArchiveRepository archiveRepository,
             DeviceVerificationRepository verificationRepository,
-            OperationsRepository operationsRepository) {
+            OperationsRepository operationsRepository,
+            AuditLogService auditLogService) {
         this.archiveRepository = archiveRepository;
         this.verificationRepository = verificationRepository;
         this.operationsRepository = operationsRepository;
+        this.auditLogService = auditLogService;
     }
 
     @Transactional
@@ -92,8 +97,15 @@ public class OperationsService {
         }
 
         archiveRepository.updateStatus(device.id(), "FAULTED", reporter.id());
-        return operationsRepository.findFaultReportByIdOrNo(create.id())
+        FaultReportRecord record = operationsRepository.findFaultReportByIdOrNo(create.id())
                 .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR));
+        auditLogService.recordSuccess(
+                AuditAction.FAULT_REPORT,
+                record.id(),
+                record.faultReportNo(),
+                reporter,
+                "Submitted fault report.");
+        return record;
     }
 
     @Transactional
@@ -170,6 +182,18 @@ public class OperationsService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR));
         FaultReportRecord faultReport = operationsRepository.findFaultReportByIdOrNo(faultCreate.id())
                 .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR));
+        auditLogService.recordSuccess(
+                AuditAction.DEVICE_VERIFICATION,
+                verificationRecord.id(),
+                device.deviceCode(),
+                operator,
+                "Submitted abnormal device verification record.");
+        auditLogService.recordSuccess(
+                AuditAction.FAULT_REPORT,
+                faultReport.id(),
+                faultReport.faultReportNo(),
+                operator,
+                "Submitted fault report from device verification.");
         return new DeviceVerificationFaultReportResult(verificationRecord, faultReport);
     }
 
@@ -222,6 +246,12 @@ public class OperationsService {
         }
 
         archiveRepository.updateStatus(faultReport.deviceId(), "UNDER_REPAIR", maintainer.id());
+        auditLogService.recordSuccess(
+                AuditAction.REPAIR_TASK_ACCEPT,
+                create.id(),
+                create.repairTaskNo(),
+                maintainer,
+                "Accepted repair task.");
         return new RepairTaskAcceptResult(create.id(), faultReport.id(), RepairTaskStatus.ACCEPTED, create.acceptedAt());
     }
 
@@ -283,7 +313,14 @@ public class OperationsService {
         }
 
         archiveRepository.updateStatus(task.deviceId(), nextDeviceStatus(nextFaultStatus, normalizedResult), maintainer.id());
-        return toRecord(create);
+        RepairReportRecord record = toRecord(create);
+        auditLogService.recordSuccess(
+                AuditAction.REPAIR_REPORT,
+                record.id(),
+                record.repairReportNo(),
+                maintainer,
+                "Submitted repair report.");
+        return record;
     }
 
     public ReinspectionTaskList listPendingReinspections() {
@@ -338,7 +375,7 @@ public class OperationsService {
         }
 
         archiveRepository.updateStatus(faultReport.deviceId(), nextDeviceStatus, reinspector.id());
-        return new ReinspectionRecord(
+        ReinspectionRecord record = new ReinspectionRecord(
                 create.id(),
                 create.reinspectionRecordNo(),
                 create.faultReportId(),
@@ -350,6 +387,13 @@ public class OperationsService {
                 nextFaultStatus,
                 nextDeviceStatus,
                 create.createdAt());
+        auditLogService.recordSuccess(
+                AuditAction.REINSPECTION_RECORD,
+                record.id(),
+                record.reinspectionRecordNo(),
+                reinspector,
+                "Submitted reinspection record.");
+        return record;
     }
 
     private RepairReportRecord toRecord(RepairReportCreate create) {

@@ -18,6 +18,8 @@ import javax.crypto.spec.SecretKeySpec;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.rmf.rdvp.audit.AuditAction;
+import com.rmf.rdvp.audit.AuditLogService;
 import com.rmf.rdvp.config.RdvpRuntimeProperties;
 import com.rmf.rdvp.domain.common.BusinessException;
 import com.rmf.rdvp.domain.common.ErrorCode;
@@ -41,16 +43,19 @@ public class DeviceArchiveService {
     private final DeviceQrCodeRepository qrCodeRepository;
     private final DeviceVerificationRepository verificationRepository;
     private final RdvpRuntimeProperties runtimeProperties;
+    private final AuditLogService auditLogService;
 
     public DeviceArchiveService(
             DeviceArchiveRepository archiveRepository,
             DeviceQrCodeRepository qrCodeRepository,
             DeviceVerificationRepository verificationRepository,
-            RdvpRuntimeProperties runtimeProperties) {
+            RdvpRuntimeProperties runtimeProperties,
+            AuditLogService auditLogService) {
         this.archiveRepository = archiveRepository;
         this.qrCodeRepository = qrCodeRepository;
         this.verificationRepository = verificationRepository;
         this.runtimeProperties = runtimeProperties;
+        this.auditLogService = auditLogService;
     }
 
     public DeviceArchive findByCode(String deviceCode) {
@@ -124,8 +129,15 @@ public class DeviceArchiveService {
 
         verificationRepository.create(create);
         archiveRepository.updateLastVerificationTime(device.id(), normalizedVerifiedAt, operator.id());
-        return verificationRepository.findById(create.id())
+        DeviceVerificationRecord record = verificationRepository.findById(create.id())
                 .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR));
+        auditLogService.recordSuccess(
+                AuditAction.DEVICE_VERIFICATION,
+                record.id(),
+                device.deviceCode(),
+                operator,
+                "Submitted device verification record.");
+        return record;
     }
 
     private String normalizeDeviceCode(String deviceCode) {

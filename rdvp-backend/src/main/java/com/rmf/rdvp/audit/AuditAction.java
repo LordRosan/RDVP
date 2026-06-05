@@ -1,0 +1,12 @@
+package com.rmf.rdvp.audit;
+
+public enum AuditAction {
+    AUTH_LOGIN,
+    DEVICE_VERIFICATION,
+    DEVICE_CHANGE_REQUEST,
+    DEVICE_CHANGE_REVIEW,
+    FAULT_REPORT,
+    REPAIR_TASK_ACCEPT,
+    REPAIR_REPORT,
+    REINSPECTION_RECORD
+}
