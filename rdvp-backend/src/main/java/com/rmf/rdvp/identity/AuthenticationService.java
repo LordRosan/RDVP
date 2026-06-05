@@ -4,8 +4,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -28,17 +26,19 @@ public class AuthenticationService {
     private final UserAccountRepository userStore;
     private final PasswordEncoder passwordEncoder;
     private final TokenSessionStore tokenSessionStore;
+    private final PasswordVerificationAttemptStore passwordVerificationAttemptStore;
     private final AuditLogService auditLogService;
-    private final ConcurrentMap<String, PasswordVerificationAttempt> passwordVerificationAttempts = new ConcurrentHashMap<>();
 
     public AuthenticationService(
             UserAccountRepository userStore,
             PasswordEncoder passwordEncoder,
             TokenSessionStore tokenSessionStore,
+            PasswordVerificationAttemptStore passwordVerificationAttemptStore,
             AuditLogService auditLogService) {
         this.userStore = userStore;
         this.passwordEncoder = passwordEncoder;
         this.tokenSessionStore = tokenSessionStore;
+        this.passwordVerificationAttemptStore = passwordVerificationAttemptStore;
         this.auditLogService = auditLogService;
     }
 
@@ -87,7 +87,7 @@ public class AuthenticationService {
                 .filter(user -> passwordEncoder.matches(password, user.passwordHash()))
                 .isPresent();
         if (verified) {
-            passwordVerificationAttempts.remove(authenticatedUser.id());
+            passwordVerificationAttemptStore.clear(authenticatedUser.id());
             return true;
         }
 
@@ -100,29 +100,25 @@ public class AuthenticationService {
     }
 
     private boolean isPasswordVerificationLocked(String userId, Instant now) {
-        PasswordVerificationAttempt attempt = passwordVerificationAttempts.get(userId);
-        if (attempt == null || attempt.lockedUntil() == null) {
+        Optional<PasswordVerificationAttempt> optionalAttempt = passwordVerificationAttemptStore.find(userId);
+        if (optionalAttempt.isEmpty() || optionalAttempt.get().lockedUntil() == null) {
             return false;
         }
 
+        PasswordVerificationAttempt attempt = optionalAttempt.get();
         if (attempt.lockedUntil().isAfter(now)) {
             return true;
         }
 
-        passwordVerificationAttempts.remove(userId);
+        passwordVerificationAttemptStore.clear(userId);
         return false;
     }
 
     private void registerPasswordVerificationFailure(String userId, Instant now) {
-        passwordVerificationAttempts.compute(userId, (key, current) -> {
-            int failedCount = current == null ? 1 : current.failedCount() + 1;
-            Instant lockedUntil = failedCount >= MAX_PASSWORD_VERIFICATION_FAILURES
-                    ? now.plus(PASSWORD_VERIFICATION_LOCK_DURATION)
-                    : null;
-            return new PasswordVerificationAttempt(failedCount, lockedUntil);
-        });
-    }
-
-    private record PasswordVerificationAttempt(int failedCount, Instant lockedUntil) {
+        passwordVerificationAttemptStore.registerFailure(
+                userId,
+                now,
+                PASSWORD_VERIFICATION_LOCK_DURATION,
+                MAX_PASSWORD_VERIFICATION_FAILURES);
     }
 }

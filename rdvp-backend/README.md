@@ -65,6 +65,8 @@ POST http://localhost:8080/api/v1/auth/login
 Authorization: Bearer <accessToken>
 ```
 
+数据库模式下，访问凭证以哈希形式保存到 `token_sessions` 表，并按登录响应中的有效期进行校验；登出会撤销当前访问凭证。敏感操作前的密码复核失败计数保存到 `password_verification_attempts` 表，达到阈值后会临时锁定密码复核。
+
 ## 已实现业务接口
 
 设备档案查询：
