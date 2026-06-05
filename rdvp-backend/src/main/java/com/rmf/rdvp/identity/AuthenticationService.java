@@ -44,11 +44,15 @@ public class AuthenticationService {
 
     public LoginResponse login(LoginRequest request) {
         String username = request.username().trim().toLowerCase(Locale.ROOT);
-        BootstrapUser user = userStore.findByUsername(username)
-                .filter(candidate -> passwordEncoder.matches(request.password(), candidate.passwordHash()))
-                .filter(candidate -> candidate.status() == UserStatus.ACTIVE)
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));
+        Optional<BootstrapUser> optionalUser = userStore.findByUsername(username);
+        if (optionalUser.isEmpty()
+                || optionalUser.get().status() != UserStatus.ACTIVE
+                || !passwordEncoder.matches(request.password(), optionalUser.get().passwordHash())) {
+            recordLoginFailure(username, optionalUser);
+            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
+        }
 
+        BootstrapUser user = optionalUser.get();
         Instant expiresAt = Instant.now().plus(ACCESS_TOKEN_TTL);
         String token = tokenSessionStore.create(user.id(), request.clientDeviceId(), expiresAt);
         AuthenticatedUser authenticatedUser = user.toAuthenticatedUser();
@@ -58,8 +62,18 @@ public class AuthenticationService {
                 user.username(),
                 user.id(),
                 user.displayName(),
-                "User login succeeded.");
+                "用户登录成功。");
         return new LoginResponse(token, ACCESS_TOKEN_TTL.toSeconds(), UserResponse.from(authenticatedUser));
+    }
+
+    private void recordLoginFailure(String username, Optional<BootstrapUser> optionalUser) {
+        auditLogService.recordFailure(
+                AuditAction.AUTH_LOGIN,
+                optionalUser.map(BootstrapUser::id).orElse(null),
+                username,
+                optionalUser.map(BootstrapUser::id).orElse(null),
+                optionalUser.map(BootstrapUser::displayName).orElse(null),
+                "用户登录失败。");
     }
 
     public Optional<AuthenticatedUser> authenticate(String token) {

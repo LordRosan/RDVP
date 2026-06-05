@@ -50,6 +50,16 @@ public class AuditLogService {
         record(action, targetId, targetNo, actorId, actorName, AuditStatus.SUCCESS, description);
     }
 
+    public void recordFailure(
+            AuditAction action,
+            String targetId,
+            String targetNo,
+            String actorId,
+            String actorName,
+            String description) {
+        record(action, targetId, targetNo, actorId, actorName, AuditStatus.FAILED, description);
+    }
+
     public AuditLogPage list(String action, int page, int pageSize) {
         return auditLogRepository.list(new AuditLogQuery(
                 parseAction(action),

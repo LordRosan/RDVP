@@ -9,6 +9,8 @@ import {
 import { ApiClient } from './ApiClient';
 import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
 
+const DEFAULT_AUDIT_LOG_PAGE_SIZE = 50;
+
 interface OperationRecordApiSummary {
   id: string;
   action: string;
@@ -17,7 +19,7 @@ interface OperationRecordApiSummary {
   actorName?: string;
   occurredAt: string;
   status: string;
-  description: string;
+  description?: string;
 }
 
 interface ApiListResult<T> {
@@ -49,7 +51,11 @@ export class OperationRecordService {
       };
     }
 
-    const response = await ApiClient.request<ApiListResult<OperationRecordApiSummary>>('/api/v1/audit-logs', 'GET', true);
+    const response = await ApiClient.request<ApiListResult<OperationRecordApiSummary>>(
+      `/api/v1/audit-logs?page=1&pageSize=${DEFAULT_AUDIT_LOG_PAGE_SIZE}`,
+      'GET',
+      true
+    );
 
     if (!response.success) {
       return {
@@ -126,7 +132,11 @@ export class OperationRecordService {
       operatorName: item.actorName === undefined ? '-' : item.actorName,
       occurredAt: item.occurredAt,
       status: item.status as OperationRecordStatus,
-      description: OperationRecordService.formatApiDescription(item.action, item.status as OperationRecordStatus)
+      description: OperationRecordService.formatApiDescription(
+        item.action,
+        item.status as OperationRecordStatus,
+        item.description
+      )
     };
   }
 
@@ -160,7 +170,13 @@ export class OperationRecordService {
     return OperationRecordService.formatRecordType(type);
   }
 
-  private static formatApiDescription(action: string, status: OperationRecordStatus): string {
+  private static formatApiDescription(action: string, status: OperationRecordStatus, description?: string): string {
+    const normalizedDescription = description === undefined ? '' : description.trim();
+    const localizedDescription = OperationRecordService.localizeApiDescription(normalizedDescription);
+    if (localizedDescription.length > 0) {
+      return localizedDescription;
+    }
+
     switch (action) {
       case 'AUTH_LOGIN':
         return status === OperationRecordStatus.Success ? '登录成功' : '登录失败';
@@ -180,6 +196,40 @@ export class OperationRecordService {
         return '提交复检记录';
       default:
         return status === OperationRecordStatus.Success ? '操作成功' : '操作失败';
+    }
+  }
+
+  private static localizeApiDescription(description: string): string {
+    switch (description) {
+      case '用户登录成功。':
+      case '用户登录失败。':
+        return description;
+      case 'Submitted fault report.':
+        return '提交设备报修记录';
+      case 'Submitted abnormal device verification record.':
+        return '提交异常设备核验记录';
+      case 'Submitted fault report from device verification.':
+        return '由设备核验同步提交报修记录';
+      case 'Accepted repair task.':
+        return '接取维修任务';
+      case 'Submitted repair report.':
+        return '提交维修报告';
+      case 'Submitted reinspection record.':
+        return '提交复检记录';
+      case 'Submitted device verification record.':
+        return '提交设备核验记录';
+      case 'Submitted device archive update request.':
+        return '提交设备档案变更申请';
+      case 'Submitted device archive create request.':
+        return '提交设备档案建档申请';
+      case 'Submitted device archive delete request.':
+        return '提交设备档案删除申请';
+      case 'Device archive change request approved.':
+        return '设备档案申请审核通过';
+      case 'Device archive change request rejected.':
+        return '设备档案申请审核驳回';
+      default:
+        return description;
     }
   }
 }

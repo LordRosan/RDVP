@@ -1,5 +1,6 @@
 package com.rmf.rdvp.api.audit;
 
+import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -57,6 +58,30 @@ class AuditLogControllerTests {
                         .header("Authorization", "Bearer " + readonlyToken))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("FORBIDDEN"));
+    }
+
+    @Test
+    void recordsFailedLoginForAuditReview() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "fieldoperator",
+                                  "password": "wrong",
+                                  "clientDeviceId": "test-device"
+                                }
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
+        String auditorToken = login("auditor", "password");
+
+        mockMvc.perform(get("/api/v1/audit-logs?action=AUTH_LOGIN")
+                        .header("Authorization", "Bearer " + auditorToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(2))
+                .andExpect(jsonPath("$.data.items[*].status").value(hasItem("FAILED")))
+                .andExpect(jsonPath("$.data.items[?(@.status == 'FAILED')].targetNo").value(hasItem("fieldoperator")))
+                .andExpect(jsonPath("$.data.items[?(@.status == 'FAILED')].description").value(hasItem("用户登录失败。")));
     }
 
     @Test

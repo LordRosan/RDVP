@@ -28,6 +28,7 @@ const OPERATION_RECORD_INFO_SECTIONS: InfoDialogSection[] = [
 struct OperationRecord {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   @State records: OperationRecordSummary[] = [];
+  @State totalRecords: number = 0;
   @State message: string = '';
   @State refreshStatus: string = '未刷新';
   @State refreshing: boolean = false;
@@ -279,6 +280,21 @@ struct OperationRecord {
       }
       .width('100%')
 
+      Row() {
+        Text('操作人')
+          .fontSize(13)
+          .fontColor(AppColors.TextSecondary)
+          .layoutWeight(1)
+          .maxLines(1)
+
+        Text(item.operatorName)
+          .fontSize(13)
+          .fontColor(AppColors.TextSecondary)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .width('100%')
+
       Text(item.description)
         .fontSize(13)
         .fontColor(AppColors.TextSecondary)
@@ -302,7 +318,7 @@ struct OperationRecord {
         .maxLines(1)
 
       Column() {
-        StatusInfoRow({ label: '记录数量', value: `${this.records.length}条`, tone: AppColors.TextSecondary })
+        StatusInfoRow({ label: '记录数量', value: this.getRecordCountText(), tone: AppColors.TextSecondary })
         this.CardDivider()
         StatusInfoRow({
           label: '刷新状态',
@@ -380,8 +396,17 @@ struct OperationRecord {
 
     const data = response.data;
     this.records = data ? data.items : [];
+    this.totalRecords = data ? data.total : this.records.length;
     this.message = '';
     this.refreshStatus = '已刷新';
+  }
+
+  getRecordCountText(): string {
+    if (this.totalRecords > this.records.length) {
+      return `${this.records.length}/${this.totalRecords}条`;
+    }
+
+    return `${this.records.length}条`;
   }
 
   backToWorkbench(): void {
