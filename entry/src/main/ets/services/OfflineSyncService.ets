@@ -100,11 +100,11 @@ export class OfflineSyncService {
     OfflineSyncService.updateItemStatus(id, OfflineSyncItemStatus.Synced, '');
   }
 
-  static markFailedPermanently(id: string, error: string): void {
-    OfflineSyncService.updateItemStatus(id, OfflineSyncItemStatus.Failed, error);
+  static markFailedPermanently(id: string, error: string, errorCode?: string): void {
+    OfflineSyncService.updateItemStatus(id, OfflineSyncItemStatus.Failed, error, errorCode);
   }
 
-  static markFailed(id: string, error: string): void {
+  static markFailed(id: string, error: string, errorCode?: string): void {
     OfflineSyncService.ensureInitialized();
 
     const now = new Date();
@@ -130,6 +130,7 @@ export class OfflineSyncService {
         nextRetryAt: retryExhausted ? undefined : new Date(now.getTime() + OfflineSyncService.getRetryDelayMs(nextRetryCount)).toISOString(),
         conflictKey: item.conflictKey,
         serverVersion: item.serverVersion,
+        lastErrorCode: OfflineSyncService.normalizeOptionalErrorCode(errorCode, item.lastErrorCode),
         lastError: error.trim().length === 0 ? undefined : error.trim()
       });
     });
@@ -381,7 +382,12 @@ export class OfflineSyncService {
     return items;
   }
 
-  private static updateItemStatus(id: string, status: OfflineSyncItemStatus, error: string): void {
+  private static updateItemStatus(
+    id: string,
+    status: OfflineSyncItemStatus,
+    error: string,
+    errorCode?: string
+  ): void {
     OfflineSyncService.ensureInitialized();
 
     const now = new Date().toISOString();
@@ -405,6 +411,8 @@ export class OfflineSyncService {
         nextRetryAt: undefined,
         conflictKey: item.conflictKey,
         serverVersion: item.serverVersion,
+        lastErrorCode: error.length === 0 ? undefined :
+          OfflineSyncService.normalizeOptionalErrorCode(errorCode, item.lastErrorCode),
         lastError: error.length === 0 ? undefined : error
       });
     });
@@ -489,6 +497,7 @@ export class OfflineSyncService {
       nextRetryAt: item.nextRetryAt,
       conflictKey: item.conflictKey,
       serverVersion: item.serverVersion,
+      lastErrorCode: item.lastErrorCode,
       lastError: item.lastError
     };
   }
@@ -594,6 +603,7 @@ export class OfflineSyncService {
       nextRetryAt: item.nextRetryAt,
       conflictKey: item.conflictKey,
       serverVersion: item.serverVersion,
+      lastErrorCode: item.lastErrorCode,
       lastError: item.lastError
     };
   }
@@ -612,8 +622,18 @@ export class OfflineSyncService {
       nextRetryAt: item.nextRetryAt,
       conflictKey: item.conflictKey,
       serverVersion: item.serverVersion,
+      lastErrorCode: item.lastErrorCode,
       lastError: error.length === 0 ? item.lastError : error
     };
+  }
+
+  private static normalizeOptionalErrorCode(value: string | undefined, fallback: string | undefined): string | undefined {
+    const normalized = value === undefined ? '' : value.trim();
+    if (normalized.length > 0) {
+      return normalized;
+    }
+
+    return fallback;
   }
 
   private static createItemId(): string {

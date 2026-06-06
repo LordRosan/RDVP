@@ -33,6 +33,7 @@ export interface OfflineSyncItem {
   nextRetryAt?: string;
   conflictKey?: string;
   serverVersion?: string;
+  lastErrorCode?: string;
   lastError?: string;
 }
 

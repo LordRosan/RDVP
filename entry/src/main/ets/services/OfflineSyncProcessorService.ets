@@ -67,7 +67,11 @@ export class OfflineSyncProcessorService {
         const record = OfflineSyncProcessorService.toRecordRequest(item);
         if (record === undefined) {
           OfflineSyncProcessorService.releaseLocalArchiveLockIfNeeded(item);
-          OfflineSyncService.markFailedPermanently(item.id, '离线同步内容无法解析');
+          OfflineSyncService.markFailedPermanently(
+            item.id,
+            '离线同步内容无法解析',
+            `${ApiErrorCode.OfflineSyncRecordInvalid}`
+          );
           failedCount += 1;
           return;
         }
@@ -90,12 +94,13 @@ export class OfflineSyncProcessorService {
       const response = await OfflineSyncProcessorService.submitBatch(records);
       if (!response.success || response.data === undefined) {
         const message = response.error === undefined ? '同步失败' : response.error.message;
+        const errorCode = response.error === undefined ? undefined : `${response.error.code}`;
         validItems.forEach((item: OfflineSyncItem) => {
           if (OfflineSyncProcessorService.shouldRetry(response)) {
-            OfflineSyncService.markFailed(item.id, message);
+            OfflineSyncService.markFailed(item.id, message, errorCode);
           } else {
             OfflineSyncProcessorService.releaseLocalArchiveLockIfNeeded(item);
-            OfflineSyncService.markFailedPermanently(item.id, message);
+            OfflineSyncService.markFailedPermanently(item.id, message, errorCode);
           }
           failedCount += 1;
         });
@@ -104,7 +109,7 @@ export class OfflineSyncProcessorService {
         validItems.forEach((item: OfflineSyncItem) => {
           const result = resultMap.get(item.id);
           if (result === undefined) {
-            OfflineSyncService.markFailed(item.id, '后端未返回该离线记录的同步结果');
+            OfflineSyncService.markFailed(item.id, '后端未返回该离线记录的同步结果', `${ApiErrorCode.InternalError}`);
             failedCount += 1;
             return;
           }
@@ -117,11 +122,12 @@ export class OfflineSyncProcessorService {
           }
 
           const errorMessage = OfflineSyncProcessorService.formatRecordError(result);
+          const errorCode = OfflineSyncProcessorService.getRecordErrorCode(result);
           if (OfflineSyncProcessorService.shouldRetryRecord(result)) {
-            OfflineSyncService.markFailed(item.id, errorMessage);
+            OfflineSyncService.markFailed(item.id, errorMessage, errorCode);
           } else {
             OfflineSyncProcessorService.releaseLocalArchiveLockIfNeeded(item);
-            OfflineSyncService.markFailedPermanently(item.id, errorMessage);
+            OfflineSyncService.markFailedPermanently(item.id, errorMessage, errorCode);
           }
           failedCount += 1;
         });
@@ -176,14 +182,17 @@ export class OfflineSyncProcessorService {
   }
 
   private static formatRecordError(result: OfflineSyncRecordResult): string {
-    const message = result.errorMessage === undefined || result.errorMessage.trim().length === 0 ?
+    return result.errorMessage === undefined || result.errorMessage.trim().length === 0 ?
       '同步失败' :
       result.errorMessage.trim();
+  }
+
+  private static getRecordErrorCode(result: OfflineSyncRecordResult): string | undefined {
     if (result.errorCode === undefined || result.errorCode.trim().length === 0) {
-      return message;
+      return undefined;
     }
 
-    return `${result.errorCode.trim()}：${message}`;
+    return result.errorCode.trim();
   }
 
   private static shouldRetryRecord(result: OfflineSyncRecordResult): boolean {

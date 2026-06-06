@@ -314,6 +314,9 @@ struct SyncCenter {
         if (item.lastError !== undefined && item.lastError.length > 0) {
           this.CompactInfoRow('处理类型', this.getHandlingCategoryLabel(item), this.getHandlingCategoryTone(item))
           this.CompactInfoRow('处理建议', this.getHandlingSuggestion(item), this.getHandlingCategoryTone(item))
+          if (item.lastErrorCode !== undefined && item.lastErrorCode.length > 0) {
+            this.CompactInfoRow('错误码', item.lastErrorCode, AppColors.TextSecondary)
+          }
           this.CompactInfoRow('失败原因', item.lastError, AppColors.Danger)
         }
       }
@@ -704,6 +707,10 @@ struct SyncCenter {
   }
 
   getErrorCode(item: OfflineSyncItem): string {
+    if (item.lastErrorCode !== undefined && item.lastErrorCode.trim().length > 0) {
+      return item.lastErrorCode.trim();
+    }
+
     if (item.lastError === undefined) {
       return '';
     }
