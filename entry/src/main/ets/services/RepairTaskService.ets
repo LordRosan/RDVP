@@ -43,12 +43,12 @@ interface AvailableRepairTaskApiSummary {
   faultReportNo: string;
   deviceCode: string;
   deviceName: string;
-  faultType: string;
-  severity: string;
+  faultType: FaultType;
+  severity: FaultSeverity;
   distanceKm?: number;
   location: DeviceLocationApiResult;
   submittedAt: string;
-  status: string;
+  status: RepairTaskStatus;
 }
 
 interface MyRepairTaskApiSummary {
@@ -57,15 +57,15 @@ interface MyRepairTaskApiSummary {
   faultReportNo: string;
   deviceCode: string;
   deviceName: string;
-  faultType: string;
-  severity: string;
+  faultType: FaultType;
+  severity: FaultSeverity;
   acceptedAt: string;
-  status: string;
+  status: RepairTaskStatus;
 }
 
 interface RepairTaskAcceptApiResult {
   repairTaskId: string;
-  status: string;
+  status: RepairTaskStatus;
   acceptedAt: string;
 }
 
@@ -78,7 +78,7 @@ interface RepairReportApiResult {
   id: string;
   repairReportNo: string;
   repairTaskId: string;
-  result: string;
+  result: RepairReportResult;
   createdAt: string;
 }
 
@@ -423,7 +423,7 @@ export class RepairTaskService {
       success: true,
       data: {
         taskId: response.data.repairTaskId,
-        status: response.data.status as RepairTaskStatus,
+        status: response.data.status,
         acceptedAt: response.data.acceptedAt
       },
       requestId: response.requestId,
@@ -609,7 +609,7 @@ export class RepairTaskService {
         id: response.data.id,
         reportNo: response.data.repairReportNo,
         taskId: response.data.repairTaskId,
-        result: response.data.result as RepairReportResult,
+        result: response.data.result,
         submittedAt: response.data.createdAt
       },
       requestId: response.requestId,
@@ -839,12 +839,12 @@ export class RepairTaskService {
       faultNo: item.faultReportNo,
       deviceCode: item.deviceCode,
       deviceName: item.deviceName,
-      faultType: item.faultType as FaultType,
-      severity: item.severity as FaultSeverity,
+      faultType: item.faultType,
+      severity: item.severity,
       distanceKm: typeof item.distanceKm === 'number' ? item.distanceKm : undefined,
       location: item.location.address,
       submittedAt: item.submittedAt,
-      status: item.status as RepairTaskStatus
+      status: item.status
     };
   }
 
@@ -855,10 +855,10 @@ export class RepairTaskService {
       faultNo: item.faultReportNo,
       deviceCode: item.deviceCode,
       deviceName: item.deviceName,
-      faultType: item.faultType as FaultType,
-      severity: item.severity as FaultSeverity,
+      faultType: item.faultType,
+      severity: item.severity,
       acceptedAt: item.acceptedAt,
-      status: item.status as RepairTaskStatus
+      status: item.status
     };
   }
 }

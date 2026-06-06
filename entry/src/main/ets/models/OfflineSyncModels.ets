@@ -11,6 +11,12 @@ export enum OfflineSyncOperationType {
   DeviceVerificationFaultReportCreate = 'DEVICE_VERIFICATION_FAULT_REPORT_CREATE'
 }
 
+export enum OfflineSyncBatchStatus {
+  Completed = 'COMPLETED',
+  PartiallyFailed = 'PARTIALLY_FAILED',
+  Failed = 'FAILED'
+}
+
 export interface OfflineSyncItem {
   id: string;
   operationType: string;
@@ -130,6 +136,6 @@ export interface OfflineSyncRecordResult {
 
 export interface OfflineSyncBatchResult {
   clientBatchId: string;
-  status: string;
+  status: OfflineSyncBatchStatus;
   results: OfflineSyncRecordResult[];
 }

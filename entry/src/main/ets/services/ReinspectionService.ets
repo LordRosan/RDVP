@@ -1,6 +1,6 @@
 import { AppColors } from '../styles/AppTheme';
 import { ApiResponse } from '../models/ApiModels';
-import { FaultSeverity } from '../models/FaultModels';
+import { FaultSeverity, FaultStatus } from '../models/FaultModels';
 import { OperationRecordType } from '../models/OperationRecordModels';
 import {
   ReinspectionRecord,
@@ -28,17 +28,17 @@ interface ReinspectionTaskApiSummary {
   faultReportNo: string;
   deviceCode: string;
   deviceName: string;
-  severity: string;
+  severity: FaultSeverity;
   location: DeviceLocationApiResult;
   repairedAt?: string;
-  status: string;
+  status: FaultStatus;
 }
 
 interface ReinspectionRecordApiResult {
   id: string;
   reinspectionRecordNo?: string;
   faultReportId: string;
-  result: string;
+  result: ReinspectionResult;
   createdAt: string;
 }
 
@@ -216,7 +216,7 @@ export class ReinspectionService {
         id: response.data.id,
         recordNo: response.data.reinspectionRecordNo === undefined ? response.data.id : response.data.reinspectionRecordNo,
         taskId: response.data.faultReportId,
-        result: response.data.result as ReinspectionResult,
+        result: response.data.result,
         submittedAt: response.data.createdAt
       },
       requestId: response.requestId,
@@ -309,10 +309,10 @@ export class ReinspectionService {
       faultNo: item.faultReportNo,
       deviceCode: item.deviceCode,
       deviceName: item.deviceName,
-      severity: item.severity as FaultSeverity,
+      severity: item.severity,
       location: item.location.address,
       repairedAt: item.repairedAt === undefined ? '-' : item.repairedAt,
-      status: ReinspectionTaskStatus.Pending
+      status: item.status === FaultStatus.PendingReinspection ? ReinspectionTaskStatus.Pending : ReinspectionTaskStatus.Completed
     };
   }
 }

@@ -18,7 +18,7 @@ interface OperationRecordApiSummary {
   targetNo?: string;
   actorName?: string;
   occurredAt: string;
-  status: string;
+  status: OperationRecordStatus;
   description?: string;
 }
 
@@ -141,10 +141,10 @@ export class OperationRecordService {
       targetNo: item.targetNo === undefined ? (item.targetId === undefined ? '-' : item.targetId) : item.targetNo,
       operatorName: item.actorName === undefined ? '-' : item.actorName,
       occurredAt: item.occurredAt,
-      status: item.status as OperationRecordStatus,
+      status: item.status,
       description: OperationRecordService.formatApiDescription(
         item.action,
-        item.status as OperationRecordStatus,
+        item.status,
         item.description
       )
     };
