@@ -24,12 +24,15 @@ public class BearerTokenAuthenticationFilter extends OncePerRequestFilter {
 
     private final AuthenticationService authenticationService;
     private final ApiResponseWriter responseWriter;
+    private final SecurityAuditService securityAuditService;
 
     public BearerTokenAuthenticationFilter(
             AuthenticationService authenticationService,
-            ApiResponseWriter responseWriter) {
+            ApiResponseWriter responseWriter,
+            SecurityAuditService securityAuditService) {
         this.authenticationService = authenticationService;
         this.responseWriter = responseWriter;
+        this.securityAuditService = securityAuditService;
     }
 
     @Override
@@ -46,6 +49,7 @@ public class BearerTokenAuthenticationFilter extends OncePerRequestFilter {
         var user = authenticationService.authenticate(token.get());
         if (user.isEmpty()) {
             SecurityContextHolder.clearContext();
+            securityAuditService.recordAuthenticationFailed(request, "INVALID_OR_EXPIRED_TOKEN");
             responseWriter.writeError(
                     request,
                     response,

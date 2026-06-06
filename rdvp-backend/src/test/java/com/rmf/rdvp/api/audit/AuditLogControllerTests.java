@@ -102,6 +102,28 @@ class AuditLogControllerTests {
     }
 
     @Test
+    void recordsAuthenticationFailuresForAuditReview() throws Exception {
+        mockMvc.perform(get("/api/v1/devices/by-code/RDVP-DEVICE-0001"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
+
+        mockMvc.perform(get("/api/v1/devices/by-code/RDVP-DEVICE-0001")
+                        .header("Authorization", "Bearer invalid-token-value"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
+        String auditorToken = login("auditor", "password");
+
+        mockMvc.perform(get("/api/v1/audit-logs?action=AUTHENTICATION_FAILED")
+                        .header("Authorization", "Bearer " + auditorToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(2))
+                .andExpect(jsonPath("$.data.items[*].status").value(hasItem("FAILED")))
+                .andExpect(jsonPath("$.data.items[*].targetNo").value(hasItem("GET /api/v1/devices/by-code/RDVP-DEVICE-0001")))
+                .andExpect(jsonPath("$.data.items[*].description").value(hasItem("接口认证失败：MISSING_CREDENTIALS。")))
+                .andExpect(jsonPath("$.data.items[*].description").value(hasItem("接口认证失败：INVALID_OR_EXPIRED_TOKEN。")));
+    }
+
+    @Test
     void recordsFailedPasswordVerificationForAuditReview() throws Exception {
         String deviceAdminToken = login("deviceadmin", "password");
 

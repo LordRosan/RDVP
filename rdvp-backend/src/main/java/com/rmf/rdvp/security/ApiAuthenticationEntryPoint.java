@@ -18,9 +18,13 @@ import jakarta.servlet.http.HttpServletResponse;
 public class ApiAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
     private final ApiResponseWriter responseWriter;
+    private final SecurityAuditService securityAuditService;
 
-    public ApiAuthenticationEntryPoint(ApiResponseWriter responseWriter) {
+    public ApiAuthenticationEntryPoint(
+            ApiResponseWriter responseWriter,
+            SecurityAuditService securityAuditService) {
         this.responseWriter = responseWriter;
+        this.securityAuditService = securityAuditService;
     }
 
     @Override
@@ -28,6 +32,7 @@ public class ApiAuthenticationEntryPoint implements AuthenticationEntryPoint {
             HttpServletRequest request,
             HttpServletResponse response,
             AuthenticationException authException) throws IOException, ServletException {
+        securityAuditService.recordAuthenticationFailed(request, "MISSING_CREDENTIALS");
         responseWriter.writeError(
                 request,
                 response,

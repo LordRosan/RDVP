@@ -83,6 +83,8 @@ export class OperationRecordService {
     switch (type) {
       case OperationRecordType.AuthLogin:
         return '登录';
+      case OperationRecordType.AuthenticationFailed:
+        return '认证失败';
       case OperationRecordType.AuthPasswordVerify:
         return '密码复核';
       case OperationRecordType.AuthorizationDenied:
@@ -99,6 +101,8 @@ export class OperationRecordService {
         return '维修报告';
       case OperationRecordType.ReinspectionRecord:
         return '复检记录';
+      case OperationRecordType.Unknown:
+        return '未知操作';
       default:
         return '-';
     }
@@ -148,6 +152,8 @@ export class OperationRecordService {
     switch (action) {
       case 'AUTH_LOGIN':
         return OperationRecordType.AuthLogin;
+      case 'AUTHENTICATION_FAILED':
+        return OperationRecordType.AuthenticationFailed;
       case 'AUTH_PASSWORD_VERIFY':
         return OperationRecordType.AuthPasswordVerify;
       case 'AUTHORIZATION_DENIED':
@@ -166,7 +172,7 @@ export class OperationRecordService {
       case 'REINSPECTION_RECORD':
         return OperationRecordType.ReinspectionRecord;
       default:
-        return OperationRecordType.DeviceVerification;
+        return OperationRecordType.Unknown;
     }
   }
 
@@ -188,6 +194,8 @@ export class OperationRecordService {
     switch (action) {
       case 'AUTH_LOGIN':
         return status === OperationRecordStatus.Success ? '登录成功' : '登录失败';
+      case 'AUTHENTICATION_FAILED':
+        return '接口认证失败';
       case 'AUTH_PASSWORD_VERIFY':
         return status === OperationRecordStatus.Success ? '密码复核成功' : '密码复核失败';
       case 'AUTHORIZATION_DENIED':
@@ -216,6 +224,10 @@ export class OperationRecordService {
       case '用户登录成功。':
       case '用户登录失败。':
         return description;
+      case '接口认证失败：MISSING_CREDENTIALS。':
+        return '接口认证失败：缺少访问凭证。';
+      case '接口认证失败：INVALID_OR_EXPIRED_TOKEN。':
+        return '接口认证失败：访问凭证无效或已过期。';
       case 'Submitted fault report.':
         return '提交设备报修记录';
       case 'Submitted abnormal device verification record.':

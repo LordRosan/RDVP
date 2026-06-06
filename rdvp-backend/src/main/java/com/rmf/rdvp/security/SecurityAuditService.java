@@ -30,6 +30,16 @@ public class SecurityAuditService {
                 "接口访问被拒绝：权限不足。");
     }
 
+    public void recordAuthenticationFailed(HttpServletRequest request, String reason) {
+        String target = target(request);
+        auditLogService.recordFailure(
+                AuditAction.AUTHENTICATION_FAILED,
+                target,
+                target,
+                null,
+                "接口认证失败：%s。".formatted(normalizeReason(reason)));
+    }
+
     private AuthenticatedUser currentActor() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !(authentication.getPrincipal() instanceof AuthenticatedUser user)) {
@@ -44,5 +54,10 @@ public class SecurityAuditService {
         String uri = request == null ? "" : request.getRequestURI();
         String normalized = (method + " " + uri).trim();
         return normalized.isBlank() ? "UNKNOWN" : normalized;
+    }
+
+    private String normalizeReason(String reason) {
+        String normalized = reason == null ? "" : reason.trim();
+        return normalized.isBlank() ? "UNAUTHORIZED" : normalized;
     }
 }

@@ -1,5 +1,6 @@
 export enum OperationRecordType {
   AuthLogin = 'AUTH_LOGIN',
+  AuthenticationFailed = 'AUTHENTICATION_FAILED',
   AuthPasswordVerify = 'AUTH_PASSWORD_VERIFY',
   AuthorizationDenied = 'AUTHORIZATION_DENIED',
   DeviceVerification = 'DEVICE_VERIFICATION',
@@ -7,7 +8,8 @@ export enum OperationRecordType {
   FaultReport = 'FAULT_REPORT',
   RepairTaskAccept = 'REPAIR_TASK_ACCEPT',
   RepairReport = 'REPAIR_REPORT',
-  ReinspectionRecord = 'REINSPECTION_RECORD'
+  ReinspectionRecord = 'REINSPECTION_RECORD',
+  Unknown = 'UNKNOWN'
 }
 
 export enum OperationRecordStatus {
