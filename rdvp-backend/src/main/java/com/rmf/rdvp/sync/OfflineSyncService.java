@@ -1,0 +1,440 @@
+package com.rmf.rdvp.sync;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.HexFormat;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.UUID;
+import java.util.regex.Pattern;
+
+import org.springframework.stereotype.Service;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rmf.rdvp.archive.DeviceArchive;
+import com.rmf.rdvp.archive.DeviceArchiveRepository;
+import com.rmf.rdvp.archive.DeviceArchiveService;
+import com.rmf.rdvp.archive.DeviceVerificationRecord;
+import com.rmf.rdvp.archive.DeviceVerificationResult;
+import com.rmf.rdvp.audit.AuditAction;
+import com.rmf.rdvp.audit.AuditLogService;
+import com.rmf.rdvp.domain.common.BusinessException;
+import com.rmf.rdvp.domain.common.ErrorCode;
+import com.rmf.rdvp.identity.AuthenticatedUser;
+import com.rmf.rdvp.identity.PermissionCode;
+import com.rmf.rdvp.operations.DeviceVerificationFaultReportResult;
+import com.rmf.rdvp.operations.FaultReportRecord;
+import com.rmf.rdvp.operations.FaultSeverity;
+import com.rmf.rdvp.operations.FaultType;
+import com.rmf.rdvp.operations.OperationsService;
+
+@Service
+public class OfflineSyncService {
+
+    private static final int MAX_BATCH_RECORDS = 20;
+    private static final int MAX_PAYLOAD_LENGTH = 8_000;
+    private static final int MAX_ERROR_MESSAGE_LENGTH = 300;
+    private static final Pattern CLIENT_ID_PATTERN = Pattern.compile("^[A-Za-z0-9._-]{1,128}$");
+    private static final String PAYLOAD_HASH_ALGORITHM = "SHA-256";
+
+    private final OfflineSyncRepository offlineSyncRepository;
+    private final DeviceArchiveRepository archiveRepository;
+    private final DeviceArchiveService archiveService;
+    private final OperationsService operationsService;
+    private final AuditLogService auditLogService;
+    private final ObjectMapper objectMapper;
+
+    public OfflineSyncService(
+            OfflineSyncRepository offlineSyncRepository,
+            DeviceArchiveRepository archiveRepository,
+            DeviceArchiveService archiveService,
+            OperationsService operationsService,
+            AuditLogService auditLogService,
+            ObjectMapper objectMapper) {
+        this.offlineSyncRepository = offlineSyncRepository;
+        this.archiveRepository = archiveRepository;
+        this.archiveService = archiveService;
+        this.operationsService = operationsService;
+        this.auditLogService = auditLogService;
+        this.objectMapper = objectMapper;
+    }
+
+    public OfflineSyncBatchResult synchronize(
+            String clientBatchId,
+            List<OfflineSyncRecordInput> records,
+            AuthenticatedUser operator) {
+        String normalizedBatchId = normalizeClientId(
+                clientBatchId,
+                "clientBatchId",
+                ErrorCode.OFFLINE_SYNC_BATCH_INVALID);
+        List<OfflineSyncRecordInput> normalizedRecords = normalizeRecords(records);
+        return offlineSyncRepository.findBatchResult(operator.id(), normalizedBatchId)
+                .orElseGet(() -> processNewBatch(normalizedBatchId, normalizedRecords, operator));
+    }
+
+    private OfflineSyncBatchResult processNewBatch(
+            String clientBatchId,
+            List<OfflineSyncRecordInput> records,
+            AuthenticatedUser operator) {
+        OffsetDateTime now = now();
+        List<OfflineSyncRecordCreate> creates = new ArrayList<>();
+        List<OfflineSyncRecordResult> results = new ArrayList<>();
+
+        for (OfflineSyncRecordInput record : records) {
+            PreparedPayload preparedPayload = preparePayload(record);
+            OfflineSyncRecordResult result = preparedPayload.errorResult() == null
+                    ? resolveRecordResult(record, operator, preparedPayload)
+                    : preparedPayload.errorResult();
+            results.add(result);
+            creates.add(toCreate(record, preparedPayload, result, now));
+        }
+
+        OfflineSyncBatchStatus status = resolveBatchStatus(results);
+        OfflineSyncBatchCreate batch = new OfflineSyncBatchCreate(
+                "offline-batch-" + UUID.randomUUID(),
+                clientBatchId,
+                operator.id(),
+                status,
+                now,
+                now,
+                creates);
+        offlineSyncRepository.saveBatch(batch);
+        recordAudit(batch, results, operator);
+        return new OfflineSyncBatchResult(clientBatchId, status, List.copyOf(results));
+    }
+
+    private OfflineSyncRecordResult resolveRecordResult(
+            OfflineSyncRecordInput record,
+            AuthenticatedUser operator,
+            PreparedPayload preparedPayload) {
+        var existingRecord = offlineSyncRepository.findRecord(operator.id(), record.clientRecordId());
+        if (existingRecord.isPresent()) {
+            OfflineSyncStoredRecord storedRecord = existingRecord.get();
+            if (storedRecord.recordType() != record.recordType()
+                    || !storedRecord.payloadHash().equals(preparedPayload.payloadHash())) {
+                return failed(
+                        record,
+                        ErrorCode.OFFLINE_RECORD_CONFLICT,
+                        "clientRecordId has already been used for a different offline record.");
+            }
+
+            return storedRecord.result();
+        }
+
+        return processRecord(record, operator);
+    }
+
+    private OfflineSyncRecordResult processRecord(OfflineSyncRecordInput record, AuthenticatedUser operator) {
+        try {
+            return switch (record.recordType()) {
+                case FAULT_REPORT_CREATE -> processFaultReport(record, operator);
+                case DEVICE_VERIFICATION_CREATE -> processDeviceVerification(record, operator);
+                case DEVICE_VERIFICATION_FAULT_REPORT_CREATE -> processDeviceVerificationFaultReport(record, operator);
+            };
+        } catch (BusinessException exception) {
+            return failed(record, exception.getErrorCode(), exception.getMessage());
+        } catch (JsonProcessingException exception) {
+            return failed(record, ErrorCode.OFFLINE_SYNC_RECORD_INVALID, "payload is invalid.");
+        } catch (RuntimeException exception) {
+            return failed(record, ErrorCode.INTERNAL_ERROR, ErrorCode.INTERNAL_ERROR.defaultMessage());
+        }
+    }
+
+    private OfflineSyncRecordResult processFaultReport(
+            OfflineSyncRecordInput record,
+            AuthenticatedUser operator) throws JsonProcessingException {
+        requirePermission(operator, PermissionCode.OPS_FAULT_REPORT_CREATE);
+        FaultReportPayload payload = readPayload(record.payload(), FaultReportPayload.class);
+        FaultReportRecord created = operationsService.createFaultReport(
+                payload.deviceCode(),
+                parseEnum(FaultType.class, payload.faultType(), "faultType"),
+                parseEnum(FaultSeverity.class, payload.severity(), "severity"),
+                payload.occurredAt(),
+                payload.description(),
+                payload.sceneCondition(),
+                null,
+                null,
+                operator);
+        return OfflineSyncRecordResult.succeeded(record.clientRecordId(), record.recordType(), created.id());
+    }
+
+    private OfflineSyncRecordResult processDeviceVerification(
+            OfflineSyncRecordInput record,
+            AuthenticatedUser operator) throws JsonProcessingException {
+        requirePermission(operator, PermissionCode.OPS_DEVICE_VERIFY);
+        DeviceVerificationPayload payload = readPayload(record.payload(), DeviceVerificationPayload.class);
+        DeviceArchive device = findDeviceByCode(payload.deviceCode());
+        DeviceVerificationRecord created = archiveService.createVerificationRecord(
+                device.id(),
+                parseEnum(DeviceVerificationResult.class, payload.result(), "result"),
+                payload.description(),
+                payload.remark(),
+                payload.verifiedAt(),
+                operator);
+        return OfflineSyncRecordResult.succeeded(record.clientRecordId(), record.recordType(), created.id());
+    }
+
+    private OfflineSyncRecordResult processDeviceVerificationFaultReport(
+            OfflineSyncRecordInput record,
+            AuthenticatedUser operator) throws JsonProcessingException {
+        requirePermission(operator, PermissionCode.OPS_DEVICE_VERIFY);
+        requirePermission(operator, PermissionCode.OPS_FAULT_REPORT_CREATE);
+        DeviceVerificationFaultReportPayload payload = readPayload(record.payload(), DeviceVerificationFaultReportPayload.class);
+        DeviceArchive device = findDeviceByCode(payload.deviceCode());
+        DeviceVerificationFaultReportResult created = operationsService.createVerificationWithFaultReport(
+                device.id(),
+                parseEnum(DeviceVerificationResult.class, payload.result(), "result"),
+                payload.description(),
+                payload.remark(),
+                payload.verifiedAt(),
+                parseEnum(FaultType.class, payload.faultType(), "faultType"),
+                parseEnum(FaultSeverity.class, payload.severity(), "severity"),
+                payload.occurredAt(),
+                payload.faultDescription(),
+                payload.sceneCondition(),
+                null,
+                null,
+                operator);
+        return OfflineSyncRecordResult.succeeded(
+                record.clientRecordId(),
+                record.recordType(),
+                created.verificationRecord().id());
+    }
+
+    private List<OfflineSyncRecordInput> normalizeRecords(List<OfflineSyncRecordInput> records) {
+        if (records == null || records.isEmpty() || records.size() > MAX_BATCH_RECORDS) {
+            throw new BusinessException(
+                    ErrorCode.OFFLINE_SYNC_BATCH_INVALID,
+                    "records must contain 1 to %d items.".formatted(MAX_BATCH_RECORDS));
+        }
+
+        Set<String> clientRecordIds = new HashSet<>();
+        List<OfflineSyncRecordInput> normalizedRecords = new ArrayList<>();
+        for (OfflineSyncRecordInput record : records) {
+            if (record == null) {
+                throw new BusinessException(ErrorCode.OFFLINE_SYNC_RECORD_INVALID, "record is required.");
+            }
+
+            String clientRecordId = normalizeClientId(
+                    record.clientRecordId(),
+                    "clientRecordId",
+                    ErrorCode.OFFLINE_SYNC_RECORD_INVALID);
+            if (!clientRecordIds.add(clientRecordId)) {
+                throw new BusinessException(ErrorCode.OFFLINE_RECORD_DUPLICATED, "clientRecordId is duplicated.");
+            }
+
+            if (record.recordType() == null || record.payload() == null || record.createdOfflineAt() == null) {
+                throw new BusinessException(ErrorCode.OFFLINE_SYNC_RECORD_INVALID);
+            }
+
+            normalizedRecords.add(new OfflineSyncRecordInput(
+                    clientRecordId,
+                    record.recordType(),
+                    record.payload(),
+                    record.createdOfflineAt().withOffsetSameInstant(ZoneOffset.UTC)));
+        }
+
+        return List.copyOf(normalizedRecords);
+    }
+
+    private String normalizeClientId(String value, String field, ErrorCode errorCode) {
+        String normalized = value == null ? "" : value.trim();
+        if (!CLIENT_ID_PATTERN.matcher(normalized).matches()) {
+            throw new BusinessException(errorCode, field + " is invalid.");
+        }
+
+        return normalized;
+    }
+
+    private OfflineSyncRecordCreate toCreate(
+            OfflineSyncRecordInput record,
+            PreparedPayload preparedPayload,
+            OfflineSyncRecordResult result,
+            OffsetDateTime now) {
+        return new OfflineSyncRecordCreate(
+                "offline-record-" + UUID.randomUUID(),
+                record.clientRecordId(),
+                record.recordType(),
+                preparedPayload.payloadJson(),
+                preparedPayload.payloadHash(),
+                result.status(),
+                result.serverRecordId(),
+                result.errorCode(),
+                result.errorMessage(),
+                record.createdOfflineAt(),
+                now,
+                now);
+    }
+
+    private OfflineSyncBatchStatus resolveBatchStatus(List<OfflineSyncRecordResult> results) {
+        long successCount = results.stream().filter(OfflineSyncRecordResult::success).count();
+        if (successCount == results.size()) {
+            return OfflineSyncBatchStatus.COMPLETED;
+        }
+
+        return successCount == 0 ? OfflineSyncBatchStatus.FAILED : OfflineSyncBatchStatus.PARTIALLY_FAILED;
+    }
+
+    private void recordAudit(
+            OfflineSyncBatchCreate batch,
+            List<OfflineSyncRecordResult> results,
+            AuthenticatedUser operator) {
+        long successCount = results.stream().filter(OfflineSyncRecordResult::success).count();
+        long failedCount = results.size() - successCount;
+        String description = "离线同步批次完成：成功%d项，失败%d项。".formatted(successCount, failedCount);
+        if (failedCount == 0) {
+            auditLogService.recordSuccess(AuditAction.OFFLINE_SYNC, batch.id(), batch.clientBatchId(), operator, description);
+            return;
+        }
+
+        auditLogService.recordFailure(AuditAction.OFFLINE_SYNC, batch.id(), batch.clientBatchId(), operator, description);
+    }
+
+    private void requirePermission(AuthenticatedUser operator, PermissionCode permission) {
+        if (operator == null || !operator.permissions().contains(permission)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+    }
+
+    private DeviceArchive findDeviceByCode(String deviceCode) {
+        return archiveRepository.findByCode(deviceCode == null ? "" : deviceCode.trim().toUpperCase())
+                .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
+    }
+
+    private <T> T readPayload(Object payload, Class<T> type) throws JsonProcessingException {
+        return objectMapper.readValue(serializePayload(payload), type);
+    }
+
+    private <T extends Enum<T>> T parseEnum(Class<T> enumType, String value, String field) {
+        try {
+            return Enum.valueOf(enumType, value.trim().toUpperCase());
+        } catch (RuntimeException exception) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, field + " is invalid.");
+        }
+    }
+
+    private String serializePayload(Object payload) throws JsonProcessingException {
+        return objectMapper.writeValueAsString(canonicalizePayload(payload == null ? Map.of() : payload));
+    }
+
+    private Object canonicalizePayload(Object payload) {
+        if (payload instanceof Map<?, ?> map) {
+            Map<String, Object> sorted = new TreeMap<>();
+            map.forEach((key, value) -> sorted.put(String.valueOf(key), canonicalizePayload(value)));
+            return sorted;
+        }
+
+        if (payload instanceof List<?> list) {
+            return list.stream().map(this::canonicalizePayload).toList();
+        }
+
+        return payload;
+    }
+
+    private PreparedPayload preparePayload(OfflineSyncRecordInput record) {
+        try {
+            String payloadJson = serializePayload(record.payload());
+            if (payloadJson.length() > MAX_PAYLOAD_LENGTH) {
+                String fallbackJson = "{}";
+                return PreparedPayload.failed(
+                        fallbackJson,
+                        hashPayloadJson(fallbackJson),
+                        failed(record, ErrorCode.OFFLINE_SYNC_RECORD_INVALID, "payload is too large."));
+            }
+
+            return PreparedPayload.valid(payloadJson, hashPayloadJson(payloadJson));
+        } catch (JsonProcessingException exception) {
+            String fallbackJson = "{}";
+            return PreparedPayload.failed(
+                    fallbackJson,
+                    hashPayloadJson(fallbackJson),
+                    failed(record, ErrorCode.OFFLINE_SYNC_RECORD_INVALID, "payload is invalid."));
+        }
+    }
+
+    private String hashPayloadJson(String payloadJson) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance(PAYLOAD_HASH_ALGORITHM);
+            return HexFormat.of().formatHex(digest.digest(payloadJson.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException exception) {
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR);
+        }
+    }
+
+    private OfflineSyncRecordResult failed(
+            OfflineSyncRecordInput record,
+            ErrorCode errorCode,
+            String message) {
+        return OfflineSyncRecordResult.failed(
+                record.clientRecordId(),
+                record.recordType(),
+                errorCode.code(),
+                normalizeErrorMessage(message, errorCode.defaultMessage()));
+    }
+
+    private String normalizeErrorMessage(String value, String fallback) {
+        String normalized = value == null || value.isBlank() ? fallback : value.trim();
+        return normalized.length() <= MAX_ERROR_MESSAGE_LENGTH
+                ? normalized
+                : normalized.substring(0, MAX_ERROR_MESSAGE_LENGTH);
+    }
+
+    private OffsetDateTime now() {
+        return OffsetDateTime.now(ZoneOffset.UTC);
+    }
+
+    private record FaultReportPayload(
+            String deviceCode,
+            String faultType,
+            String severity,
+            String occurredAt,
+            String description,
+            String sceneCondition) {
+    }
+
+    private record DeviceVerificationPayload(
+            String deviceCode,
+            String result,
+            String description,
+            String remark,
+            String verifiedAt) {
+    }
+
+    private record DeviceVerificationFaultReportPayload(
+            String deviceCode,
+            String result,
+            String description,
+            String remark,
+            String verifiedAt,
+            String faultType,
+            String severity,
+            String occurredAt,
+            String faultDescription,
+            String sceneCondition) {
+    }
+
+    private record PreparedPayload(
+            String payloadJson,
+            String payloadHash,
+            OfflineSyncRecordResult errorResult) {
+
+        private static PreparedPayload valid(String payloadJson, String payloadHash) {
+            return new PreparedPayload(payloadJson, payloadHash, null);
+        }
+
+        private static PreparedPayload failed(
+                String payloadJson,
+                String payloadHash,
+                OfflineSyncRecordResult errorResult) {
+            return new PreparedPayload(payloadJson, payloadHash, errorResult);
+        }
+    }
+}

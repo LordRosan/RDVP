@@ -5,6 +5,10 @@ export enum ApiErrorCode {
   NotFound = 'NOT_FOUND',
   Conflict = 'CONFLICT',
   ValidationFailed = 'VALIDATION_FAILED',
+  OfflineSyncBatchInvalid = 'OFFLINE_SYNC_BATCH_INVALID',
+  OfflineSyncRecordInvalid = 'OFFLINE_SYNC_RECORD_INVALID',
+  OfflineRecordDuplicated = 'OFFLINE_RECORD_DUPLICATED',
+  OfflineRecordConflict = 'OFFLINE_RECORD_CONFLICT',
   RateLimited = 'RATE_LIMITED',
   InternalError = 'INTERNAL_ERROR',
   ServiceUnavailable = 'SERVICE_UNAVAILABLE'
@@ -36,4 +40,3 @@ export interface ApiRequestOptions {
   requiresAuth: boolean;
   body?: string;
 }
-

@@ -97,3 +97,30 @@ export interface OfflineSyncExecutionResult {
   skippedCount: number;
   message: string;
 }
+
+export interface OfflineSyncRecordRequest {
+  clientRecordId: string;
+  recordType: string;
+  payload: object;
+  createdOfflineAt: string;
+}
+
+export interface OfflineSyncBatchRequest {
+  clientBatchId: string;
+  records: OfflineSyncRecordRequest[];
+}
+
+export interface OfflineSyncRecordResult {
+  clientRecordId: string;
+  recordType: string;
+  success: boolean;
+  serverRecordId?: string;
+  errorCode?: string;
+  errorMessage?: string;
+}
+
+export interface OfflineSyncBatchResult {
+  clientBatchId: string;
+  status: string;
+  results: OfflineSyncRecordResult[];
+}

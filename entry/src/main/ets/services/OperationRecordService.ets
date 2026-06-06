@@ -89,6 +89,8 @@ export class OperationRecordService {
         return '密码复核';
       case OperationRecordType.AuthorizationDenied:
         return '权限拦截';
+      case OperationRecordType.OfflineSync:
+        return '离线同步';
       case OperationRecordType.DeviceVerification:
         return '设备核验';
       case OperationRecordType.DeviceChangeRequest:
@@ -158,6 +160,8 @@ export class OperationRecordService {
         return OperationRecordType.AuthPasswordVerify;
       case 'AUTHORIZATION_DENIED':
         return OperationRecordType.AuthorizationDenied;
+      case 'OFFLINE_SYNC':
+        return OperationRecordType.OfflineSync;
       case 'DEVICE_VERIFICATION':
         return OperationRecordType.DeviceVerification;
       case 'DEVICE_CHANGE_REQUEST':
@@ -200,6 +204,8 @@ export class OperationRecordService {
         return status === OperationRecordStatus.Success ? '密码复核成功' : '密码复核失败';
       case 'AUTHORIZATION_DENIED':
         return '接口访问被拒绝';
+      case 'OFFLINE_SYNC':
+        return '处理离线同步批次';
       case 'DEVICE_CHANGE_REQUEST':
         return '提交设备档案变更申请';
       case 'DEVICE_CHANGE_REVIEW':

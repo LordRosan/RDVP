@@ -1,12 +1,13 @@
 import { ApiErrorCode, ApiResponse } from '../models/ApiModels';
 import {
+  OfflineSyncBatchRequest,
+  OfflineSyncBatchResult,
   OfflineSyncExecutionResult,
   OfflineSyncItem,
-  OfflineSyncOperationType
+  OfflineSyncRecordRequest,
+  OfflineSyncRecordResult
 } from '../models/OfflineSyncModels';
 import { ApiClient } from './ApiClient';
-import { DeviceVerificationService } from './DeviceVerificationService';
-import { FaultReportService } from './FaultReportService';
 import { OfflineSyncService } from './OfflineSyncService';
 
 const DEFAULT_SYNC_BATCH_LIMIT = 5;
@@ -52,24 +53,66 @@ export class OfflineSyncProcessorService {
     let skippedCount = 0;
 
     try {
-      for (let index = 0; index < items.length; index += 1) {
-        const item = items[index];
+      const validItems: OfflineSyncItem[] = [];
+      const records: OfflineSyncRecordRequest[] = [];
+      items.forEach((item: OfflineSyncItem) => {
+        const record = OfflineSyncProcessorService.toRecordRequest(item);
+        if (record === undefined) {
+          OfflineSyncService.markFailedPermanently(item.id, '离线同步内容无法解析');
+          failedCount += 1;
+          return;
+        }
+
         OfflineSyncService.markSyncing(item.id);
+        validItems.push(item);
+        records.push(record);
+      });
 
-        const response = await OfflineSyncProcessorService.executeItem(item);
-        if (response.success) {
-          OfflineSyncService.markSynced(item.id);
-          syncedCount += 1;
-          continue;
-        }
+      if (records.length === 0) {
+        return {
+          processedCount: items.length,
+          syncedCount,
+          failedCount,
+          skippedCount,
+          message: OfflineSyncProcessorService.createResultMessage(items.length, syncedCount, failedCount, skippedCount)
+        };
+      }
 
+      const response = await OfflineSyncProcessorService.submitBatch(records);
+      if (!response.success || response.data === undefined) {
         const message = response.error === undefined ? '同步失败' : response.error.message;
-        if (OfflineSyncProcessorService.shouldRetry(response)) {
-          OfflineSyncService.markFailed(item.id, message);
-        } else {
-          OfflineSyncService.markFailedPermanently(item.id, message);
-        }
-        failedCount += 1;
+        validItems.forEach((item: OfflineSyncItem) => {
+          if (OfflineSyncProcessorService.shouldRetry(response)) {
+            OfflineSyncService.markFailed(item.id, message);
+          } else {
+            OfflineSyncService.markFailedPermanently(item.id, message);
+          }
+          failedCount += 1;
+        });
+      } else {
+        const resultMap = OfflineSyncProcessorService.indexResults(response.data.results);
+        validItems.forEach((item: OfflineSyncItem) => {
+          const result = resultMap.get(item.id);
+          if (result === undefined) {
+            OfflineSyncService.markFailed(item.id, '后端未返回该离线记录的同步结果');
+            failedCount += 1;
+            return;
+          }
+
+          if (result.success) {
+            OfflineSyncService.markSynced(item.id);
+            syncedCount += 1;
+            return;
+          }
+
+          const errorMessage = OfflineSyncProcessorService.formatRecordError(result);
+          if (OfflineSyncProcessorService.shouldRetryRecord(result)) {
+            OfflineSyncService.markFailed(item.id, errorMessage);
+          } else {
+            OfflineSyncService.markFailedPermanently(item.id, errorMessage);
+          }
+          failedCount += 1;
+        });
       }
     } finally {
       OfflineSyncProcessorService.syncInProgress = false;
@@ -84,75 +127,61 @@ export class OfflineSyncProcessorService {
     };
   }
 
-  private static async executeItem(item: OfflineSyncItem): Promise<ApiResponse<string>> {
-    if (item.operationType === OfflineSyncOperationType.FaultReportCreate) {
-      const response = await FaultReportService.submitQueuedFaultReport(item.payloadJson);
-      if (response.success) {
-        return {
-          success: true,
-          data: item.id,
-          requestId: response.requestId,
-          timestamp: response.timestamp
-        };
-      }
-
-      return {
-        success: false,
-        error: response.error,
-        requestId: response.requestId,
-        timestamp: response.timestamp
-      };
-    }
-
-    if (item.operationType === OfflineSyncOperationType.DeviceVerificationCreate) {
-      const response = await DeviceVerificationService.submitQueuedVerification(item.payloadJson);
-      if (response.success) {
-        return {
-          success: true,
-          data: item.id,
-          requestId: response.requestId,
-          timestamp: response.timestamp
-        };
-      }
-
-      return {
-        success: false,
-        error: response.error,
-        requestId: response.requestId,
-        timestamp: response.timestamp
-      };
-    }
-
-    if (item.operationType === OfflineSyncOperationType.DeviceVerificationFaultReportCreate) {
-      const response = await DeviceVerificationService.submitQueuedVerificationFaultReport(item.payloadJson);
-      if (response.success) {
-        return {
-          success: true,
-          data: item.id,
-          requestId: response.requestId,
-          timestamp: response.timestamp
-        };
-      }
-
-      return {
-        success: false,
-        error: response.error,
-        requestId: response.requestId,
-        timestamp: response.timestamp
-      };
-    }
-
-    return {
-      success: false,
-      error: {
-        code: 'OFFLINE_SYNC_OPERATION_UNSUPPORTED',
-        message: '暂不支持的离线同步操作类型'
-      },
-      timestamp: new Date().toISOString()
+  private static async submitBatch(records: OfflineSyncRecordRequest[]): Promise<ApiResponse<OfflineSyncBatchResult>> {
+    const request: OfflineSyncBatchRequest = {
+      clientBatchId: OfflineSyncProcessorService.createClientBatchId(),
+      records
     };
+    return ApiClient.request<OfflineSyncBatchResult>(
+      '/api/v1/sync/offline-records',
+      'POST',
+      true,
+      JSON.stringify(request),
+      true
+    );
   }
 
-  private static shouldRetry(response: ApiResponse<string>): boolean {
+  private static toRecordRequest(item: OfflineSyncItem): OfflineSyncRecordRequest | undefined {
+    try {
+      const payload = JSON.parse(item.payloadJson) as object;
+      return {
+        clientRecordId: item.id,
+        recordType: item.operationType,
+        payload,
+        createdOfflineAt: item.createdAt
+      };
+    } catch (err) {
+      return undefined;
+    }
+  }
+
+  private static indexResults(results: OfflineSyncRecordResult[]): Map<string, OfflineSyncRecordResult> {
+    const resultMap = new Map<string, OfflineSyncRecordResult>();
+    results.forEach((result: OfflineSyncRecordResult) => {
+      resultMap.set(result.clientRecordId, result);
+    });
+    return resultMap;
+  }
+
+  private static formatRecordError(result: OfflineSyncRecordResult): string {
+    const message = result.errorMessage === undefined || result.errorMessage.trim().length === 0 ?
+      '同步失败' :
+      result.errorMessage.trim();
+    if (result.errorCode === undefined || result.errorCode.trim().length === 0) {
+      return message;
+    }
+
+    return `${result.errorCode.trim()}：${message}`;
+  }
+
+  private static shouldRetryRecord(result: OfflineSyncRecordResult): boolean {
+    const errorCode = result.errorCode === undefined ? '' : result.errorCode.trim();
+    return errorCode === ApiErrorCode.InternalError ||
+      errorCode === ApiErrorCode.ServiceUnavailable ||
+      errorCode === ApiErrorCode.RateLimited;
+  }
+
+  private static shouldRetry(response: ApiResponse<OfflineSyncBatchResult>): boolean {
     if (response.error === undefined) {
       return false;
     }
@@ -167,6 +196,10 @@ export class OfflineSyncProcessorService {
     }
 
     return Math.min(20, Math.floor(limit));
+  }
+
+  private static createClientBatchId(): string {
+    return `offline-batch-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
   }
 
   private static createResultMessage(
