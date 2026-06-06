@@ -191,6 +191,8 @@ export class DeviceArchiveReviewService {
         return '已通过';
       case DeviceArchiveChangeRequestStatus.Rejected:
         return '已驳回';
+      case DeviceArchiveChangeRequestStatus.Withdrawn:
+        return '已撤回';
       default:
         return '-';
     }
@@ -204,6 +206,8 @@ export class DeviceArchiveReviewService {
         return AppColors.Success;
       case DeviceArchiveChangeRequestStatus.Rejected:
         return AppColors.Danger;
+      case DeviceArchiveChangeRequestStatus.Withdrawn:
+        return AppColors.TextSecondary;
       default:
         return AppColors.TextSecondary;
     }

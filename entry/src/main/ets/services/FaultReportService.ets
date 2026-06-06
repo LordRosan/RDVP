@@ -4,6 +4,7 @@ import {
   FaultReportRecord,
   FaultReportValidationResult,
   FaultSeverity,
+  FaultStatus,
   FaultType
 } from '../models/FaultModels';
 import {
@@ -25,7 +26,7 @@ const OFFLINE_SYNC_FAULT_REPORT_REQUEST_ID = 'offline-sync-fault-report';
 interface FaultReportApiResult {
   id: string;
   faultReportNo: string;
-  status: string;
+  status: FaultStatus;
   createdAt: string;
 }
 
@@ -268,6 +269,23 @@ export class FaultReportService {
     }
   }
 
+  static formatFaultStatus(status: FaultStatus): string {
+    switch (status) {
+      case FaultStatus.PendingAcceptance:
+        return '待接取';
+      case FaultStatus.Accepted:
+        return '已接取';
+      case FaultStatus.UnderRepair:
+        return '维修中';
+      case FaultStatus.PendingReinspection:
+        return '待复检';
+      case FaultStatus.Closed:
+        return '已关闭';
+      default:
+        return '-';
+    }
+  }
+
   static formatFaultTypeDescription(type: FaultType): string {
     switch (type) {
       case FaultType.OperationAbnormal:
@@ -410,7 +428,7 @@ export class FaultReportService {
       deviceCode: DeviceService.normalizeDeviceCode(form.deviceCode),
       faultType: form.faultType,
       severity: form.severity,
-      status: result.status,
+      status: result.status as FaultStatus,
       submittedAt: result.createdAt
     };
   }

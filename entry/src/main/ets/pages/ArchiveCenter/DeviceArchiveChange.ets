@@ -607,6 +607,8 @@ struct DeviceArchiveChange {
         return AppColors.Success;
       case DeviceArchiveChangeRequestStatus.Rejected:
         return AppColors.Danger;
+      case DeviceArchiveChangeRequestStatus.Withdrawn:
+        return AppColors.TextSecondary;
       case DeviceArchiveChangeRequestStatus.Draft:
       default:
         return AppColors.TextSecondary;

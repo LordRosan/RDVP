@@ -266,6 +266,8 @@ export class DeviceArchiveChangeService {
         return '已通过';
       case DeviceArchiveChangeRequestStatus.Rejected:
         return '已驳回';
+      case DeviceArchiveChangeRequestStatus.Withdrawn:
+        return '已撤回';
       default:
         return '未知';
     }

@@ -15,6 +15,14 @@ export enum FaultSeverity {
   Minor = 'MINOR'
 }
 
+export enum FaultStatus {
+  PendingAcceptance = 'PENDING_ACCEPTANCE',
+  Accepted = 'ACCEPTED',
+  UnderRepair = 'UNDER_REPAIR',
+  PendingReinspection = 'PENDING_REINSPECTION',
+  Closed = 'CLOSED'
+}
+
 export interface FaultReportForm {
   deviceCode: string;
   faultType: FaultType;
@@ -35,6 +43,6 @@ export interface FaultReportRecord {
   deviceCode: string;
   faultType: FaultType;
   severity: FaultSeverity;
-  status: string;
+  status: FaultStatus;
   submittedAt: string;
 }

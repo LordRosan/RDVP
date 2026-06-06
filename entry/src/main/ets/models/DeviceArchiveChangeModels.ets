@@ -2,7 +2,8 @@ export enum DeviceArchiveChangeRequestStatus {
   Draft = 'DRAFT',
   PendingReview = 'PENDING_REVIEW',
   Approved = 'APPROVED',
-  Rejected = 'REJECTED'
+  Rejected = 'REJECTED',
+  Withdrawn = 'WITHDRAWN'
 }
 
 export interface DeviceArchiveChangeBaseline {

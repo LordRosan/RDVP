@@ -1,4 +1,4 @@
-import { FaultReportForm, FaultReportRecord, FaultSeverity, FaultType } from '../models/FaultModels';
+import { FaultReportForm, FaultReportRecord, FaultSeverity, FaultStatus, FaultType } from '../models/FaultModels';
 import { DeviceStatus } from '../models/DeviceModels';
 import {
   AvailableRepairTaskListResult,
@@ -81,7 +81,7 @@ export class LocalRepairTaskRepository {
       deviceCode,
       faultType: form.faultType,
       severity: form.severity,
-      status: 'PENDING_ACCEPTANCE',
+      status: FaultStatus.PendingAcceptance,
       submittedAt
     };
 

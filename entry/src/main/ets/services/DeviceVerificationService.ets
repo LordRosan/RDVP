@@ -4,6 +4,7 @@ import {
   DeviceVerificationOfflineSyncPayload,
   OfflineSyncOperationType
 } from '../models/OfflineSyncModels';
+import { FaultStatus } from '../models/FaultModels';
 import { OperationRecordType } from '../models/OperationRecordModels';
 import {
   DeviceVerificationForm,
@@ -39,7 +40,7 @@ interface DeviceVerificationApiResult {
 interface FaultReportApiResult {
   id: string;
   faultReportNo: string;
-  status: string;
+  status: FaultStatus;
   createdAt: string;
 }
 
@@ -400,7 +401,7 @@ export class DeviceVerificationService {
           deviceCode: DeviceService.normalizeDeviceCode(form.faultReport.deviceCode),
           faultType: form.faultReport.faultType,
           severity: form.faultReport.severity,
-          status: response.data.faultReport.status,
+          status: response.data.faultReport.status as FaultStatus,
           submittedAt: response.data.faultReport.createdAt
         }
       },
