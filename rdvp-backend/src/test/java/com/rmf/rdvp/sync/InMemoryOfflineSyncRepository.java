@@ -41,8 +41,38 @@ public class InMemoryOfflineSyncRepository implements OfflineSyncRepository {
     }
 
     @Override
+    public OfflineSyncAuditPage listAuditRecords(int page, int pageSize) {
+        int normalizedPage = Math.max(page, 1);
+        int normalizedPageSize = Math.max(pageSize, 1);
+        List<OfflineSyncAuditRecord> auditRecords = records.stream()
+                .sorted(Comparator.comparing(StoredRecord::createdAt).reversed())
+                .map(record -> {
+                    StoredBatch batch = findStoredBatch(record.batchId());
+                    return new OfflineSyncAuditRecord(
+                            record.batchId(),
+                            batch == null ? "" : batch.clientBatchId(),
+                            batch == null ? OfflineSyncBatchStatus.FAILED : batch.status(),
+                            record.userId(),
+                            record.userId(),
+                            record.result().clientRecordId(),
+                            record.recordType(),
+                            record.result().status(),
+                            record.result().serverRecordId(),
+                            record.result().errorCode(),
+                            record.result().errorMessage(),
+                            record.createdOfflineAt(),
+                            batch == null ? record.createdAt() : batch.submittedAt(),
+                            record.createdAt());
+                })
+                .toList();
+        int fromIndex = Math.min((normalizedPage - 1) * normalizedPageSize, auditRecords.size());
+        int toIndex = Math.min(fromIndex + normalizedPageSize, auditRecords.size());
+        return new OfflineSyncAuditPage(auditRecords.subList(fromIndex, toIndex), auditRecords.size());
+    }
+
+    @Override
     public void saveBatch(OfflineSyncBatchCreate batch) {
-        batches.add(new StoredBatch(batch.id(), batch.clientBatchId(), batch.userId(), batch.status()));
+        batches.add(new StoredBatch(batch.id(), batch.clientBatchId(), batch.userId(), batch.status(), batch.submittedAt()));
         List<StoredRecord> nextRecords = new ArrayList<>();
         for (OfflineSyncRecordCreate record : batch.records()) {
             OfflineSyncRecordResult result = new OfflineSyncRecordResult(
@@ -58,17 +88,26 @@ public class InMemoryOfflineSyncRepository implements OfflineSyncRepository {
                     record.recordType(),
                     record.payloadHash(),
                     result,
+                    record.createdOfflineAt(),
                     record.createdAt()));
         }
 
         records.addAll(nextRecords);
     }
 
+    private StoredBatch findStoredBatch(String batchId) {
+        return batches.stream()
+                .filter(batch -> batch.id().equals(batchId))
+                .findFirst()
+                .orElse(null);
+    }
+
     private record StoredBatch(
             String id,
             String clientBatchId,
             String userId,
-            OfflineSyncBatchStatus status) {
+            OfflineSyncBatchStatus status,
+            java.time.OffsetDateTime submittedAt) {
     }
 
     private record StoredRecord(
@@ -77,6 +116,7 @@ public class InMemoryOfflineSyncRepository implements OfflineSyncRepository {
             OfflineSyncRecordType recordType,
             String payloadHash,
             OfflineSyncRecordResult result,
+            java.time.OffsetDateTime createdOfflineAt,
             java.time.OffsetDateTime createdAt) {
     }
 }

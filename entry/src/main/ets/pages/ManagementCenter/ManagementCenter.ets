@@ -245,6 +245,11 @@ struct ManagementCenter {
       return;
     }
 
+    if (action.id === WorkbenchActionId.OfflineSyncAudit) {
+      this.openPage('pages/ManagementCenter/OfflineSyncAudit', '同步审计不可用');
+      return;
+    }
+
     this.message = '功能暂不可用';
     this.messageTargetId = `${action.id}`;
   }
@@ -265,6 +270,10 @@ struct ManagementCenter {
 
     if (url === 'pages/ManagementCenter/OperationRecord') {
       return `${WorkbenchActionId.OperationRecord}`;
+    }
+
+    if (url === 'pages/ManagementCenter/OfflineSyncAudit') {
+      return `${WorkbenchActionId.OfflineSyncAudit}`;
     }
 
     return '';

@@ -10,7 +10,8 @@ export enum WorkbenchActionId {
   MyRepairTask = 'MY_REPAIR_TASK',
   ReinspectionTask = 'REINSPECTION_TASK',
   DeviceChangeReview = 'DEVICE_CHANGE_REVIEW',
-  OperationRecord = 'OPERATION_RECORD'
+  OperationRecord = 'OPERATION_RECORD',
+  OfflineSyncAudit = 'OFFLINE_SYNC_AUDIT'
 }
 
 export interface WorkbenchAction {

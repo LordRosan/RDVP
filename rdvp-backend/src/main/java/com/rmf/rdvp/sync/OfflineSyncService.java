@@ -46,6 +46,9 @@ public class OfflineSyncService {
     private static final int MAX_BATCH_RECORDS = 20;
     private static final int MAX_PAYLOAD_LENGTH = 8_000;
     private static final int MAX_ERROR_MESSAGE_LENGTH = 300;
+    private static final int DEFAULT_AUDIT_PAGE_SIZE = 20;
+    private static final int MAX_AUDIT_PAGE_SIZE = 100;
+    private static final int MAX_AUDIT_PAGE_NUMBER = 10_000;
     private static final Pattern CLIENT_ID_PATTERN = Pattern.compile("^[A-Za-z0-9._-]{1,128}$");
     private static final String PAYLOAD_HASH_ALGORITHM = "SHA-256";
 
@@ -116,6 +119,13 @@ public class OfflineSyncService {
         offlineSyncRepository.saveBatch(batch);
         recordAudit(batch, results, operator);
         return new OfflineSyncBatchResult(clientBatchId, status, List.copyOf(results));
+    }
+
+    public OfflineSyncAuditPage listAuditRecords(int page, int pageSize, AuthenticatedUser operator) {
+        requirePermission(operator, PermissionCode.MGMT_AUDIT_LOG_READ);
+        return offlineSyncRepository.listAuditRecords(
+                normalizeAuditPage(page),
+                normalizeAuditPageSize(pageSize));
     }
 
     private OfflineSyncRecordResult resolveRecordResult(
@@ -335,6 +345,18 @@ public class OfflineSyncService {
         }
 
         return normalized;
+    }
+
+    private int normalizeAuditPage(int page) {
+        return Math.min(Math.max(page, 1), MAX_AUDIT_PAGE_NUMBER);
+    }
+
+    private int normalizeAuditPageSize(int pageSize) {
+        if (pageSize <= 0) {
+            return DEFAULT_AUDIT_PAGE_SIZE;
+        }
+
+        return Math.min(pageSize, MAX_AUDIT_PAGE_SIZE);
     }
 
     private OfflineSyncRecordCreate toCreate(

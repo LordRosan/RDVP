@@ -181,6 +181,12 @@ export class WorkbenchService {
         summary: '查看业务流转记录',
         tone: AppColors.Primary
       });
+      actions.push({
+        id: WorkbenchActionId.OfflineSyncAudit,
+        title: '同步审计',
+        summary: '查看离线同步记录',
+        tone: AppColors.Primary
+      });
     }
 
     return actions;

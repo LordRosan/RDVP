@@ -80,6 +80,40 @@ public class JdbcOfflineSyncRepository implements OfflineSyncRepository {
     }
 
     @Override
+    public OfflineSyncAuditPage listAuditRecords(int page, int pageSize) {
+        int normalizedPage = Math.max(page, 1);
+        int normalizedPageSize = Math.max(pageSize, 1);
+        long total = countAuditRecords();
+        List<OfflineSyncAuditRecord> items = jdbcTemplate.query(
+                """
+                        SELECT r.batch_id,
+                               b.client_batch_id,
+                               b.status AS batch_status,
+                               r.user_id,
+                               COALESCE(u.display_name, r.user_id) AS operator_name,
+                               r.client_record_id,
+                               r.record_type,
+                               r.status,
+                               r.server_record_id,
+                               r.error_code,
+                               r.error_message,
+                               r.created_offline_at,
+                               b.submitted_at,
+                               r.processed_at
+                        FROM offline_sync_records r
+                        JOIN offline_sync_batches b ON b.id = r.batch_id
+                        LEFT JOIN users u ON u.id = r.user_id
+                        ORDER BY r.processed_at DESC NULLS LAST, r.created_at DESC, r.id DESC
+                        LIMIT :limit OFFSET :offset
+                        """,
+                new MapSqlParameterSource()
+                        .addValue("limit", normalizedPageSize)
+                        .addValue("offset", (normalizedPage - 1) * normalizedPageSize),
+                this::mapAuditRecord);
+        return new OfflineSyncAuditPage(items, total);
+    }
+
+    @Override
     @Transactional
     public void saveBatch(OfflineSyncBatchCreate batch) {
         jdbcTemplate.update(
@@ -183,5 +217,31 @@ public class JdbcOfflineSyncRepository implements OfflineSyncRepository {
                         resultSet.getString("server_record_id"),
                         resultSet.getString("error_code"),
                         resultSet.getString("error_message")));
+    }
+
+    private long countAuditRecords() {
+        Long total = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM offline_sync_records",
+                Map.of(),
+                Long.class);
+        return total == null ? 0L : total;
+    }
+
+    private OfflineSyncAuditRecord mapAuditRecord(ResultSet resultSet, int rowNumber) throws SQLException {
+        return new OfflineSyncAuditRecord(
+                resultSet.getString("batch_id"),
+                resultSet.getString("client_batch_id"),
+                OfflineSyncBatchStatus.valueOf(resultSet.getString("batch_status")),
+                resultSet.getString("user_id"),
+                resultSet.getString("operator_name"),
+                resultSet.getString("client_record_id"),
+                OfflineSyncRecordType.valueOf(resultSet.getString("record_type")),
+                OfflineSyncRecordStatus.valueOf(resultSet.getString("status")),
+                resultSet.getString("server_record_id"),
+                resultSet.getString("error_code"),
+                resultSet.getString("error_message"),
+                resultSet.getObject("created_offline_at", OffsetDateTime.class),
+                resultSet.getObject("submitted_at", OffsetDateTime.class),
+                resultSet.getObject("processed_at", OffsetDateTime.class));
     }
 }
