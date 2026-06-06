@@ -111,7 +111,7 @@ struct SyncCenter {
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      Text('管理离线内容、同步策略和撤回操作')
+      Text('管理离线内容、同步策略、撤回和失败归档')
         .fontSize(15)
         .fontColor(AppColors.TextSecondary)
         .maxLines(1)
@@ -323,17 +323,17 @@ struct SyncCenter {
       .width('100%')
 
       Button({ type: ButtonType.Capsule, stateEffect: true }) {
-        Text('撤回')
+        Text(this.getItemActionLabel(item))
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
-          .fontColor(this.canWithdraw(item) ? AppColors.OnPrimary : AppColors.TextSecondary)
+          .fontColor(this.canOperateItem(item) ? AppColors.OnPrimary : AppColors.TextSecondary)
       }
       .height(40)
       .width('100%')
-      .backgroundColor(this.canWithdraw(item) ? AppColors.Danger : AppColors.FieldBackground)
-      .enabled(this.canWithdraw(item))
+      .backgroundColor(this.canOperateItem(item) ? this.getItemActionTone(item) : AppColors.FieldBackground)
+      .enabled(this.canOperateItem(item))
       .onClick(() => {
-        this.withdrawItem(item.id);
+        this.handleItemAction(item);
       })
     }
     .padding(16)
@@ -535,12 +535,58 @@ struct SyncCenter {
     this.refreshState();
   }
 
+  archiveFailedItem(id: string): void {
+    if (!OfflineSyncService.archiveFailedItem(id)) {
+      this.message = '该失败记录当前不可归档';
+      this.messageTone = AppColors.Danger;
+      this.refreshState();
+      return;
+    }
+
+    this.message = '已归档同步失败记录';
+    this.messageTone = AppColors.Primary;
+    this.refreshState();
+  }
+
   canManualSync(): boolean {
     return !this.settings.autoSyncEnabled && !this.syncing && this.summary.readyToSyncCount > 0 && ApiClient.isConfigured();
   }
 
   canWithdraw(item: OfflineSyncItem): boolean {
     return !this.settings.autoSyncEnabled && item.status === OfflineSyncItemStatus.Pending;
+  }
+
+  canArchiveFailedItem(item: OfflineSyncItem): boolean {
+    return item.status === OfflineSyncItemStatus.Failed;
+  }
+
+  canOperateItem(item: OfflineSyncItem): boolean {
+    return this.canWithdraw(item) || this.canArchiveFailedItem(item);
+  }
+
+  getItemActionLabel(item: OfflineSyncItem): string {
+    if (item.status === OfflineSyncItemStatus.Failed) {
+      return '归档';
+    }
+
+    return '撤回';
+  }
+
+  getItemActionTone(item: OfflineSyncItem): string {
+    if (item.status === OfflineSyncItemStatus.Failed) {
+      return AppColors.Primary;
+    }
+
+    return AppColors.Danger;
+  }
+
+  handleItemAction(item: OfflineSyncItem): void {
+    if (item.status === OfflineSyncItemStatus.Failed) {
+      this.archiveFailedItem(item.id);
+      return;
+    }
+
+    this.withdrawItem(item.id);
   }
 
   isPolicySelected(autoSync: boolean): boolean {

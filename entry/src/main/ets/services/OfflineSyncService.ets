@@ -117,6 +117,10 @@ export class OfflineSyncService {
 
       const nextRetryCount = item.retryCount + 1;
       const retryExhausted = nextRetryCount >= MAX_SYNC_RETRY_COUNT;
+      if (retryExhausted) {
+        OfflineSyncService.releaseProvisionalArchiveLock(item);
+      }
+
       nextItems.push({
         id: item.id,
         operationType: item.operationType,
@@ -154,6 +158,31 @@ export class OfflineSyncService {
     const nextItems: OfflineSyncItem[] = [];
     OfflineSyncService.items.forEach((item: OfflineSyncItem) => {
       if (item.id === normalizedId && item.status === OfflineSyncItemStatus.Pending) {
+        removed = true;
+        OfflineSyncService.releaseProvisionalArchiveLock(item);
+        return;
+      }
+
+      nextItems.push(item);
+    });
+
+    if (!removed) {
+      return false;
+    }
+
+    OfflineSyncService.items = nextItems;
+    OfflineSyncService.persistItems();
+    WorkbenchRefreshStore.notifyChanged();
+    return true;
+  }
+
+  static archiveFailedItem(id: string): boolean {
+    OfflineSyncService.ensureInitialized();
+    const normalizedId = id.trim();
+    let removed = false;
+    const nextItems: OfflineSyncItem[] = [];
+    OfflineSyncService.items.forEach((item: OfflineSyncItem) => {
+      if (item.id === normalizedId && item.status === OfflineSyncItemStatus.Failed) {
         removed = true;
         OfflineSyncService.releaseProvisionalArchiveLock(item);
         return;
