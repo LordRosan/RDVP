@@ -32,7 +32,9 @@ interface DeviceArchiveReviewApiItem {
   applicantName?: string;
   reason: string;
   status: DeviceArchiveChangeRequestStatus;
+  initiatedAt?: string;
   createdAt: string;
+  submittedAt?: string;
   changes: Record<string, DeviceArchiveChangeApiValue>;
 }
 
@@ -185,6 +187,8 @@ export class DeviceArchiveReviewService {
 
   static formatStatus(status: DeviceArchiveChangeRequestStatus): string {
     switch (status) {
+      case DeviceArchiveChangeRequestStatus.PendingSync:
+        return '待同步';
       case DeviceArchiveChangeRequestStatus.PendingReview:
         return '待审核';
       case DeviceArchiveChangeRequestStatus.Approved:
@@ -200,6 +204,7 @@ export class DeviceArchiveReviewService {
 
   static getStatusTone(status: DeviceArchiveChangeRequestStatus): string {
     switch (status) {
+      case DeviceArchiveChangeRequestStatus.PendingSync:
       case DeviceArchiveChangeRequestStatus.PendingReview:
         return AppColors.Warning;
       case DeviceArchiveChangeRequestStatus.Approved:
@@ -238,9 +243,18 @@ export class DeviceArchiveReviewService {
       applicantName: item.applicantName,
       reason: item.reason,
       status: item.status,
-      submittedAt: item.createdAt,
+      initiatedAt: DeviceArchiveReviewService.resolveTimeText(item.initiatedAt, item.createdAt),
+      submittedAt: DeviceArchiveReviewService.resolveTimeText(item.submittedAt, item.createdAt),
       changes: DeviceArchiveReviewService.mapApiChanges(item.changes)
     };
+  }
+
+  private static resolveTimeText(value: string | undefined, fallback: string): string {
+    if (value !== undefined && value.trim().length > 0) {
+      return value.trim();
+    }
+
+    return fallback;
   }
 
   private static mapApiChanges(changes: Record<string, DeviceArchiveChangeApiValue>): DeviceArchiveChangeFieldDiff[] {

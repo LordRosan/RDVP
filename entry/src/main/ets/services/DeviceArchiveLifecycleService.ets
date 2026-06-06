@@ -5,12 +5,19 @@ import {
   DeviceArchiveChangeRequestValidationResult
 } from '../models/DeviceArchiveChangeModels';
 import { DeviceSummary } from '../models/DeviceModels';
+import {
+  DeviceArchiveCreateRequestOfflineSyncPayload,
+  DeviceArchiveDeleteRequestOfflineSyncPayload,
+  DeviceArchiveOfflineChangeValuePayload,
+  OfflineSyncOperationType
+} from '../models/OfflineSyncModels';
 import { OperationRecordType } from '../models/OperationRecordModels';
 import { ApiClient } from './ApiClient';
 import { DeviceService } from './DeviceService';
 import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
 import { LocalDeviceChangeRequestRepository } from './LocalDeviceChangeRequestRepository';
 import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
+import { OfflineSyncService } from './OfflineSyncService';
 import { SessionStore } from '../stores/SessionStore';
 
 interface DeviceArchiveLifecycleApiResult {
@@ -18,6 +25,9 @@ interface DeviceArchiveLifecycleApiResult {
   status: DeviceArchiveChangeRequestStatus;
   createdAt: string;
 }
+
+const OFFLINE_SYNC_DEVICE_ARCHIVE_CREATE_REQUEST_ID = 'offline-sync-device-archive-create-request';
+const OFFLINE_SYNC_DEVICE_ARCHIVE_DELETE_REQUEST_ID = 'offline-sync-device-archive-delete-request';
 
 export interface DeviceArchiveCreateRequestForm {
   deviceCode: string;
@@ -168,11 +178,15 @@ export class DeviceArchiveLifecycleService {
         return DeviceArchiveLifecycleService.createInvalidResponse('设备编号已存在');
       }
 
-      return DeviceArchiveLifecycleService.createLocalCreateRequestResponse(form, normalizedDeviceCode);
+      return DeviceArchiveLifecycleService.createLocalQueuedCreateRequestResponse(form, normalizedDeviceCode);
     }
 
     const response = await ApiClient.request<DeviceArchiveLifecycleApiResult>('/api/v1/device-change-requests', 'POST',
       true, DeviceArchiveLifecycleService.buildCreateRequestBody(form, normalizedDeviceCode));
+    if (!response.success && response.error !== undefined && response.error.code === 'SERVICE_UNAVAILABLE') {
+      return DeviceArchiveLifecycleService.createLocalQueuedCreateRequestResponse(form, normalizedDeviceCode);
+    }
+
     return DeviceArchiveLifecycleService.mapLifecycleResponse(response, normalizedDeviceCode, form.deviceName,
       form.model, form.manufacturer, form.locationAddress, form.reason);
   }
@@ -186,11 +200,15 @@ export class DeviceArchiveLifecycleService {
     }
 
     if (!ApiClient.isConfigured()) {
-      return DeviceArchiveLifecycleService.createLocalDeleteRequestResponse(form);
+      return DeviceArchiveLifecycleService.createLocalQueuedDeleteRequestResponse(form);
     }
 
     const response = await ApiClient.request<DeviceArchiveLifecycleApiResult>('/api/v1/device-change-requests', 'POST',
       true, DeviceArchiveLifecycleService.buildDeleteRequestBody(form));
+    if (!response.success && response.error !== undefined && response.error.code === 'SERVICE_UNAVAILABLE') {
+      return DeviceArchiveLifecycleService.createLocalQueuedDeleteRequestResponse(form);
+    }
+
     return DeviceArchiveLifecycleService.mapLifecycleResponse(response, form.device.deviceCode, form.device.name,
       form.device.model, form.device.manufacturer, form.device.location.address, form.reason);
   }
@@ -249,6 +267,52 @@ export class DeviceArchiveLifecycleService {
     };
   }
 
+  private static createLocalQueuedCreateRequestResponse(form: DeviceArchiveCreateRequestForm,
+    normalizedDeviceCode: string): ApiResponse<DeviceArchiveChangeRequestRecord> {
+    const conflictKey = DeviceArchiveLifecycleService.createOfflineConflictKey(normalizedDeviceCode);
+    const duplicate = LocalDeviceArchiveRepository.findByCode(normalizedDeviceCode);
+    if (duplicate !== undefined || LocalDeviceChangeRequestRepository.hasPendingByDeviceCode(normalizedDeviceCode)) {
+      return DeviceArchiveLifecycleService.createInvalidResponse('设备编号已存在');
+    }
+
+    if (OfflineSyncService.hasActiveConflictKey(conflictKey)) {
+      return DeviceArchiveLifecycleService.createInvalidResponse('该设备编号存在待同步档案申请，请同步或撤回后再提交');
+    }
+
+    const submittedAt = new Date().toISOString();
+    const requestId = DeviceArchiveLifecycleService.newOfflineRequestId(submittedAt);
+    const operatorName = SessionStore.getCurrentOperatorName();
+    const payload = DeviceArchiveLifecycleService.createArchiveCreateOfflineSyncPayload(
+      form,
+      normalizedDeviceCode,
+      requestId,
+      submittedAt);
+    LocalOperationRecordRepository.append(OperationRecordType.DeviceChangeRequest, '保存档案新增待同步', normalizedDeviceCode,
+      '设备新增档案申请已保存至本地同步队列', operatorName);
+    OfflineSyncService.enqueue(
+      OfflineSyncOperationType.DeviceArchiveCreateRequestCreate,
+      `档案新增 ${normalizedDeviceCode}`,
+      JSON.stringify(payload),
+      conflictKey
+    );
+
+    return {
+      success: true,
+      data: DeviceArchiveLifecycleService.createRecord(
+        requestId,
+        normalizedDeviceCode,
+        form.deviceName,
+        form.model,
+        form.manufacturer,
+        form.locationAddress,
+        form.reason,
+        submittedAt,
+        DeviceArchiveChangeRequestStatus.PendingSync),
+      requestId: OFFLINE_SYNC_DEVICE_ARCHIVE_CREATE_REQUEST_ID,
+      timestamp: submittedAt
+    };
+  }
+
   private static createLocalDeleteRequestResponse(
     form: DeviceArchiveDeleteRequestForm
   ): ApiResponse<DeviceArchiveChangeRequestRecord> {
@@ -276,6 +340,45 @@ export class DeviceArchiveLifecycleService {
         form.reason,
         submittedAt),
       requestId: 'local-device-archive-delete-request',
+      timestamp: submittedAt
+    };
+  }
+
+  private static createLocalQueuedDeleteRequestResponse(
+    form: DeviceArchiveDeleteRequestForm
+  ): ApiResponse<DeviceArchiveChangeRequestRecord> {
+    const conflictKey = DeviceArchiveLifecycleService.createOfflineConflictKey(form.device.deviceCode);
+    if (OfflineSyncService.hasActiveConflictKey(conflictKey)) {
+      return DeviceArchiveLifecycleService.createInvalidResponse('该设备存在待同步档案申请，请同步或撤回后再提交');
+    }
+
+    const submittedAt = new Date().toISOString();
+    const requestId = DeviceArchiveLifecycleService.newOfflineRequestId(submittedAt);
+    const operatorName = SessionStore.getCurrentOperatorName();
+    const payload = DeviceArchiveLifecycleService.createArchiveDeleteOfflineSyncPayload(form, requestId, submittedAt);
+    LocalDeviceArchiveRepository.markChangePending(form.device.deviceCode, requestId);
+    LocalOperationRecordRepository.append(OperationRecordType.DeviceChangeRequest, '保存档案删除待同步', form.device.deviceCode,
+      '设备删除档案申请已保存至本地同步队列', operatorName);
+    OfflineSyncService.enqueue(
+      OfflineSyncOperationType.DeviceArchiveDeleteRequestCreate,
+      `档案删除 ${form.device.deviceCode}`,
+      JSON.stringify(payload),
+      conflictKey
+    );
+
+    return {
+      success: true,
+      data: DeviceArchiveLifecycleService.createRecord(
+        requestId,
+        form.device.deviceCode,
+        form.device.name,
+        form.device.model,
+        form.device.manufacturer,
+        form.device.location.address,
+        form.reason,
+        submittedAt,
+        DeviceArchiveChangeRequestStatus.PendingSync),
+      requestId: OFFLINE_SYNC_DEVICE_ARCHIVE_DELETE_REQUEST_ID,
       timestamp: submittedAt
     };
   }
@@ -337,7 +440,8 @@ export class DeviceArchiveLifecycleService {
     manufacturer: string,
     locationAddress: string,
     reason: string,
-    submittedAt: string
+    submittedAt: string,
+    status: DeviceArchiveChangeRequestStatus = DeviceArchiveChangeRequestStatus.PendingReview
   ): DeviceArchiveChangeRequestRecord {
     return {
       id: requestId,
@@ -347,7 +451,7 @@ export class DeviceArchiveLifecycleService {
       manufacturer: DeviceArchiveLifecycleService.normalizeText(manufacturer),
       locationAddress: DeviceArchiveLifecycleService.normalizeText(locationAddress),
       reason: DeviceArchiveLifecycleService.normalizeText(reason),
-      status: DeviceArchiveChangeRequestStatus.PendingReview,
+      status,
       submittedAt
     };
   }
@@ -376,8 +480,72 @@ export class DeviceArchiveLifecycleService {
     return `${JSON.stringify(field)}:{"newValue":${JSON.stringify(newValue)}}`;
   }
 
+  private static createArchiveCreateOfflineSyncPayload(
+    form: DeviceArchiveCreateRequestForm,
+    normalizedDeviceCode: string,
+    localRequestId: string,
+    queuedAt: string
+  ): DeviceArchiveCreateRequestOfflineSyncPayload {
+    return {
+      deviceCode: normalizedDeviceCode,
+      reason: DeviceArchiveLifecycleService.normalizeText(form.reason),
+      changes: DeviceArchiveLifecycleService.buildCreateOfflineChanges(form),
+      localRequestId,
+      queuedAt
+    };
+  }
+
+  private static createArchiveDeleteOfflineSyncPayload(
+    form: DeviceArchiveDeleteRequestForm,
+    localRequestId: string,
+    queuedAt: string
+  ): DeviceArchiveDeleteRequestOfflineSyncPayload {
+    return {
+      deviceId: form.device.id,
+      deviceCode: form.device.deviceCode,
+      reason: DeviceArchiveLifecycleService.normalizeText(form.reason),
+      localRequestId,
+      queuedAt
+    };
+  }
+
+  private static buildCreateOfflineChanges(form: DeviceArchiveCreateRequestForm): DeviceArchiveOfflineChangeValuePayload[] {
+    const changes: DeviceArchiveOfflineChangeValuePayload[] = [];
+    DeviceArchiveLifecycleService.appendCreateOfflineChange(changes, 'name', form.deviceName);
+    DeviceArchiveLifecycleService.appendCreateOfflineChange(changes, 'model', form.model);
+    DeviceArchiveLifecycleService.appendCreateOfflineChange(changes, 'manufacturer', form.manufacturer);
+    DeviceArchiveLifecycleService.appendCreateOfflineChange(changes, 'location.address', form.locationAddress);
+    return changes;
+  }
+
+  private static appendCreateOfflineChange(changes: DeviceArchiveOfflineChangeValuePayload[], field: string,
+    value: string): void {
+    const normalizedValue = DeviceArchiveLifecycleService.normalizeText(value);
+    if (normalizedValue.length === 0) {
+      return;
+    }
+
+    changes.push({
+      field,
+      newValue: normalizedValue
+    });
+  }
+
   private static newLocalRequestId(submittedAt: string): string {
     return `DCR-LOCAL-${submittedAt.replace(/[-:.TZ]/g, '').substring(0, 14)}`;
+  }
+
+  private static newOfflineRequestId(submittedAt: string): string {
+    return `DCR-OFFLINE-${submittedAt.replace(/[-:.TZ]/g, '').substring(0, 14)}-${Math.floor(Math.random() * 1000000)}`;
+  }
+
+  static isOfflineSyncQueuedResponse(response: ApiResponse<DeviceArchiveChangeRequestRecord>): boolean {
+    return response.requestId === OFFLINE_SYNC_DEVICE_ARCHIVE_CREATE_REQUEST_ID ||
+      response.requestId === OFFLINE_SYNC_DEVICE_ARCHIVE_DELETE_REQUEST_ID;
+  }
+
+  private static createOfflineConflictKey(deviceCode: string): string {
+    return `device-archive:${DeviceService.normalizeDeviceCode(deviceCode)}`;
   }
 
   private static normalizeText(value: string): string {

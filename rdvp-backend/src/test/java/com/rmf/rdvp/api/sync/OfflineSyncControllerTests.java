@@ -164,6 +164,102 @@ class OfflineSyncControllerTests {
     }
 
     @Test
+    void synchronizesDeviceArchiveUpdateRequest() throws Exception {
+        String operatorToken = login("fieldoperator", "password");
+        String reviewerToken = login("deviceadmin", "password");
+
+        String response = syncBatch(
+                        operatorToken,
+                        validArchiveUpdateRequestBatch("batch-archive-update-001", "record-archive-update-001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.results[0].success").value(true))
+                .andExpect(jsonPath("$.data.results[0].recordType").value("DEVICE_ARCHIVE_UPDATE_REQUEST_CREATE"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        String requestId = resultAt(response, 0).path("serverRecordId").asText();
+
+        mockMvc.perform(get("/api/v1/devices/device-local-0001")
+                        .header("Authorization", "Bearer " + operatorToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.changeState.locked").value(true))
+                .andExpect(jsonPath("$.data.changeState.pendingRequestId").value(requestId));
+
+        mockMvc.perform(get("/api/v1/device-change-requests?status=PENDING_REVIEW")
+                        .header("Authorization", "Bearer " + reviewerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(2))
+                .andExpect(jsonPath("$.data.items[0].id").value(requestId))
+                .andExpect(jsonPath("$.data.items[0].applicantName").value("现场运维人员"))
+                .andExpect(jsonPath("$.data.items[0].initiatedAt").value("2026-06-04T08:00:00Z"))
+                .andExpect(jsonPath("$.data.items[0].submittedAt").isString());
+    }
+
+    @Test
+    void synchronizesDeviceArchiveCreateRequest() throws Exception {
+        String token = login("deviceadmin", "password");
+
+        String response = syncBatch(
+                        token,
+                        validArchiveCreateRequestBatch("batch-archive-create-001", "record-archive-create-001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.results[0].success").value(true))
+                .andExpect(jsonPath("$.data.results[0].recordType").value("DEVICE_ARCHIVE_CREATE_REQUEST_CREATE"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        String requestId = resultAt(response, 0).path("serverRecordId").asText();
+
+        mockMvc.perform(get("/api/v1/devices/by-code/RDVP-DEVICE-0098")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("DEVICE_NOT_FOUND"));
+
+        mockMvc.perform(get("/api/v1/device-change-requests?status=PENDING_REVIEW")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].id").value(requestId))
+                .andExpect(jsonPath("$.data.items[0].deviceCode").value("RDVP-DEVICE-0098"));
+    }
+
+    @Test
+    void synchronizesDeviceArchiveDeleteRequest() throws Exception {
+        String token = login("deviceadmin", "password");
+
+        String response = syncBatch(
+                        token,
+                        validArchiveDeleteRequestBatch("batch-archive-delete-001", "record-archive-delete-001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.results[0].success").value(true))
+                .andExpect(jsonPath("$.data.results[0].recordType").value("DEVICE_ARCHIVE_DELETE_REQUEST_CREATE"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        String requestId = resultAt(response, 0).path("serverRecordId").asText();
+
+        mockMvc.perform(get("/api/v1/devices/device-local-0001")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.changeState.locked").value(true))
+                .andExpect(jsonPath("$.data.changeState.pendingRequestId").value(requestId));
+    }
+
+    @Test
+    void rejectsConflictingDeviceArchiveOfflineRequestsInSameBatch() throws Exception {
+        String token = login("fieldoperator", "password");
+
+        syncBatch(token, conflictingArchiveUpdateRequestBatch())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PARTIALLY_FAILED"))
+                .andExpect(jsonPath("$.data.results[0].success").value(true))
+                .andExpect(jsonPath("$.data.results[1].success").value(false))
+                .andExpect(jsonPath("$.data.results[1].errorCode").value("DEVICE_CHANGE_LOCKED"));
+    }
+
+    @Test
     void returnsPartialFailureForMixedBatch() throws Exception {
         String operatorToken = login("fieldoperator", "password");
 
@@ -323,6 +419,134 @@ class OfflineSyncControllerTests {
                   ]
                 }
                 """.formatted(batchId, recordId, deviceCode);
+    }
+
+    private String validArchiveUpdateRequestBatch(String batchId, String recordId) {
+        return """
+                {
+                  "clientBatchId": "%s",
+                  "records": [
+                    {
+                      "clientRecordId": "%s",
+                      "recordType": "DEVICE_ARCHIVE_UPDATE_REQUEST_CREATE",
+                      "createdOfflineAt": "2026-06-04T08:00:00Z",
+                      "payload": {
+                        "deviceId": "device-local-0001",
+                        "deviceCode": "RDVP-DEVICE-0001",
+                        "reason": "离线巡检后修正设备名称。",
+                        "changes": [
+                          {
+                            "field": "name",
+                            "oldValue": "冷却泵A-01",
+                            "newValue": "冷却泵A-02"
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+                """.formatted(batchId, recordId);
+    }
+
+    private String validArchiveCreateRequestBatch(String batchId, String recordId) {
+        return """
+                {
+                  "clientBatchId": "%s",
+                  "records": [
+                    {
+                      "clientRecordId": "%s",
+                      "recordType": "DEVICE_ARCHIVE_CREATE_REQUEST_CREATE",
+                      "createdOfflineAt": "2026-06-04T08:00:00Z",
+                      "payload": {
+                        "deviceCode": "RDVP-DEVICE-0098",
+                        "reason": "离线完成新设备建档信息采集。",
+                        "changes": [
+                          {
+                            "field": "name",
+                            "newValue": "巡检网关G-98"
+                          },
+                          {
+                            "field": "model",
+                            "newValue": "IG-980"
+                          },
+                          {
+                            "field": "manufacturer",
+                            "newValue": "北方设备"
+                          },
+                          {
+                            "field": "location.address",
+                            "newValue": "九号厂房巡检区"
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+                """.formatted(batchId, recordId);
+    }
+
+    private String validArchiveDeleteRequestBatch(String batchId, String recordId) {
+        return """
+                {
+                  "clientBatchId": "%s",
+                  "records": [
+                    {
+                      "clientRecordId": "%s",
+                      "recordType": "DEVICE_ARCHIVE_DELETE_REQUEST_CREATE",
+                      "createdOfflineAt": "2026-06-04T08:00:00Z",
+                      "payload": {
+                        "deviceId": "device-local-0001",
+                        "deviceCode": "RDVP-DEVICE-0001",
+                        "reason": "离线确认设备退役。"
+                      }
+                    }
+                  ]
+                }
+                """.formatted(batchId, recordId);
+    }
+
+    private String conflictingArchiveUpdateRequestBatch() {
+        return """
+                {
+                  "clientBatchId": "batch-archive-update-conflict-001",
+                  "records": [
+                    {
+                      "clientRecordId": "record-archive-update-conflict-001",
+                      "recordType": "DEVICE_ARCHIVE_UPDATE_REQUEST_CREATE",
+                      "createdOfflineAt": "2026-06-04T08:00:00Z",
+                      "payload": {
+                        "deviceId": "device-local-0001",
+                        "deviceCode": "RDVP-DEVICE-0001",
+                        "reason": "第一次离线档案修正。",
+                        "changes": [
+                          {
+                            "field": "name",
+                            "oldValue": "冷却泵A-01",
+                            "newValue": "冷却泵A-02"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "clientRecordId": "record-archive-update-conflict-002",
+                      "recordType": "DEVICE_ARCHIVE_UPDATE_REQUEST_CREATE",
+                      "createdOfflineAt": "2026-06-04T08:02:00Z",
+                      "payload": {
+                        "deviceId": "device-local-0001",
+                        "deviceCode": "RDVP-DEVICE-0001",
+                        "reason": "第二次离线档案修正。",
+                        "changes": [
+                          {
+                            "field": "model",
+                            "oldValue": "CP-A100",
+                            "newValue": "CP-A101"
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+                """;
     }
 
     private String mixedVerificationAndInvalidFaultBatch() {

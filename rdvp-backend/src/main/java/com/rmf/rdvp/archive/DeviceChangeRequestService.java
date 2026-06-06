@@ -56,12 +56,24 @@ public class DeviceChangeRequestService {
             String reason,
             Map<String, DeviceChangeValue> changes,
             AuthenticatedUser applicant) {
+        return create(type, deviceId, deviceCode, reason, changes, null, applicant);
+    }
+
+    @Transactional
+    public DeviceChangeRequest create(
+            DeviceChangeRequestType type,
+            String deviceId,
+            String deviceCode,
+            String reason,
+            Map<String, DeviceChangeValue> changes,
+            OffsetDateTime initiatedAt,
+            AuthenticatedUser applicant) {
         DeviceChangeRequestType requestType = type == null ? DeviceChangeRequestType.UPDATE : type;
         try {
             return switch (requestType) {
-                case UPDATE -> createUpdateRequest(deviceId, reason, changes, applicant);
-                case CREATE -> createArchiveCreateRequest(deviceCode, reason, changes, applicant);
-                case DELETE -> createArchiveDeleteRequest(deviceId, reason, applicant);
+                case UPDATE -> createUpdateRequest(deviceId, reason, changes, initiatedAt, applicant);
+                case CREATE -> createArchiveCreateRequest(deviceCode, reason, changes, initiatedAt, applicant);
+                case DELETE -> createArchiveDeleteRequest(deviceId, reason, initiatedAt, applicant);
             };
         } catch (BusinessException exception) {
             recordChangeRequestFailure(requestType, deviceId, deviceCode, applicant, exception);
@@ -178,6 +190,7 @@ public class DeviceChangeRequestService {
             String deviceId,
             String reason,
             Map<String, DeviceChangeValue> changes,
+            OffsetDateTime initiatedAt,
             AuthenticatedUser applicant) {
         requirePermission(applicant, PermissionCode.ARCHIVE_CHANGE_REQUEST_CREATE);
         DeviceArchive device = archiveRepository.findById(normalizeRequiredId(deviceId, "deviceId"))
@@ -202,6 +215,7 @@ public class DeviceChangeRequestService {
                 device.status(),
                 normalizeRequiredText(reason, "reason", 500),
                 normalizedChanges,
+                normalizeInitiatedAt(initiatedAt, now),
                 now));
         auditLogService.recordSuccess(
                 AuditAction.DEVICE_CHANGE_REQUEST,
@@ -216,6 +230,7 @@ public class DeviceChangeRequestService {
             String deviceCode,
             String reason,
             Map<String, DeviceChangeValue> changes,
+            OffsetDateTime initiatedAt,
             AuthenticatedUser applicant) {
         requirePermission(applicant, PermissionCode.ARCHIVE_DEVICE_CREATE);
         String normalizedDeviceCode = normalizeDeviceCode(deviceCode);
@@ -224,6 +239,7 @@ public class DeviceChangeRequestService {
             throw new BusinessException(ErrorCode.DEVICE_CODE_DUPLICATED);
         }
 
+        OffsetDateTime submittedAt = now();
         Map<String, DeviceChangeValue> normalizedChanges = normalizeAndValidateCreateChanges(changes);
         DeviceChangeRequest created = createRequest(new DeviceChangeRequestCreate(
                 newRequestId(),
@@ -234,7 +250,8 @@ public class DeviceChangeRequestService {
                 "NEW",
                 normalizeRequiredText(reason, "reason", 500),
                 normalizedChanges,
-                now()));
+                normalizeInitiatedAt(initiatedAt, submittedAt),
+                submittedAt));
         auditLogService.recordSuccess(
                 AuditAction.DEVICE_CHANGE_REQUEST,
                 created.id(),
@@ -247,6 +264,7 @@ public class DeviceChangeRequestService {
     private DeviceChangeRequest createArchiveDeleteRequest(
             String deviceId,
             String reason,
+            OffsetDateTime initiatedAt,
             AuthenticatedUser applicant) {
         requirePermission(applicant, PermissionCode.ARCHIVE_DEVICE_DELETE);
         DeviceArchive device = archiveRepository.findById(normalizeRequiredId(deviceId, "deviceId"))
@@ -271,6 +289,7 @@ public class DeviceChangeRequestService {
                 device.status(),
                 normalizeRequiredText(reason, "reason", 500),
                 buildDeleteSnapshot(device),
+                normalizeInitiatedAt(initiatedAt, now),
                 now));
         auditLogService.recordSuccess(
                 AuditAction.DEVICE_CHANGE_REQUEST,
@@ -570,6 +589,10 @@ public class DeviceChangeRequestService {
         return value == null ? "" : value.trim();
     }
 
+    private OffsetDateTime normalizeInitiatedAt(OffsetDateTime initiatedAt, OffsetDateTime submittedAt) {
+        return initiatedAt == null ? submittedAt : initiatedAt.withOffsetSameInstant(ZoneOffset.UTC);
+    }
+
     private String normalizeAuditTarget(String value) {
         String normalized = normalizeText(value);
         return normalized.isBlank() ? null : normalized;
@@ -671,6 +694,7 @@ public class DeviceChangeRequestService {
                 request.status(),
                 request.reason(),
                 request.changes(),
+                request.initiatedAt(),
                 request.createdAt(),
                 request.reviewerId(),
                 request.reviewComment(),

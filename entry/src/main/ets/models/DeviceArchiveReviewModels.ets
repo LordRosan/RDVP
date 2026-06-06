@@ -27,6 +27,7 @@ export interface DeviceArchiveReviewItem {
   applicantName?: string;
   reason: string;
   status: DeviceArchiveChangeRequestStatus;
+  initiatedAt: string;
   submittedAt: string;
   changes: DeviceArchiveChangeFieldDiff[];
 }

@@ -8,6 +8,7 @@ import {
 import { ApiClient } from '../../services/ApiClient';
 import { OfflineSyncProcessorService } from '../../services/OfflineSyncProcessorService';
 import { OfflineSyncService } from '../../services/OfflineSyncService';
+import { WorkbenchService } from '../../services/WorkbenchService';
 import { SessionStore } from '../../stores/SessionStore';
 
 @Entry
@@ -138,6 +139,9 @@ struct SyncCenter {
         this.InfoRow('可同步', `${this.summary.readyToSyncCount}项`, this.summary.readyToSyncCount > 0 ? AppColors.Primary : AppColors.TextSecondary)
         this.CardDivider()
         this.InfoRow('同步失败', `${this.summary.failedCount}项`, this.summary.failedCount > 0 ? AppColors.Danger : AppColors.TextSecondary)
+        this.CardDivider()
+        this.InfoRow('待人工处理', `${this.getManualHandlingCount()}项`,
+          this.getManualHandlingCount() > 0 ? AppColors.Warning : AppColors.TextSecondary)
         this.CardDivider()
         this.InfoRow('服务模式', ApiClient.getRuntimeStatusLabel(), ApiClient.getRuntimeStatusTone())
       }
@@ -304,7 +308,12 @@ struct SyncCenter {
         this.CompactInfoRow('发起时间', this.formatTime(item.createdAt), AppColors.TextSecondary)
         this.CompactInfoRow('更新时间', this.formatTime(item.updatedAt), AppColors.TextSecondary)
         this.CompactInfoRow('操作人', item.operatorName.length > 0 ? item.operatorName : '-', AppColors.TextSecondary)
+        if (this.hasRetrySchedule(item)) {
+          this.CompactInfoRow('下次重试', this.formatTime(item.nextRetryAt ? item.nextRetryAt : ''), AppColors.Primary)
+        }
         if (item.lastError !== undefined && item.lastError.length > 0) {
+          this.CompactInfoRow('处理类型', this.getHandlingCategoryLabel(item), this.getHandlingCategoryTone(item))
+          this.CompactInfoRow('处理建议', this.getHandlingSuggestion(item), this.getHandlingCategoryTone(item))
           this.CompactInfoRow('失败原因', item.lastError, AppColors.Danger)
         }
       }
@@ -495,6 +504,10 @@ struct SyncCenter {
       this.message = '同步执行失败';
       this.messageTone = AppColors.Danger;
     } finally {
+      try {
+        await WorkbenchService.refreshSummaryRemoteFirst();
+      } catch (refreshErr) {
+      }
       this.syncing = false;
       this.refreshState();
     }
@@ -548,11 +561,27 @@ struct SyncCenter {
       return '设备核验与报修';
     }
 
+    if (operationType === 'DEVICE_ARCHIVE_UPDATE_REQUEST_CREATE') {
+      return '档案变更申请';
+    }
+
+    if (operationType === 'DEVICE_ARCHIVE_CREATE_REQUEST_CREATE') {
+      return '档案新增申请';
+    }
+
+    if (operationType === 'DEVICE_ARCHIVE_DELETE_REQUEST_CREATE') {
+      return '档案删除申请';
+    }
+
     return '离线操作';
   }
 
   getItemStatusLabel(item: OfflineSyncItem): string {
     if (item.status === OfflineSyncItemStatus.Pending) {
+      if (this.hasRetryError(item)) {
+        return this.hasRetrySchedule(item) ? '等待重试' : '可重试';
+      }
+
       return '已保存待同步';
     }
 
@@ -569,6 +598,10 @@ struct SyncCenter {
 
   getItemStatusTone(item: OfflineSyncItem): string {
     if (item.status === OfflineSyncItemStatus.Pending) {
+      if (this.hasRetryError(item)) {
+        return AppColors.Primary;
+      }
+
       return AppColors.Warning;
     }
 
@@ -581,6 +614,112 @@ struct SyncCenter {
     }
 
     return AppColors.Danger;
+  }
+
+  getManualHandlingCount(): number {
+    let count = 0;
+    this.items.forEach((item: OfflineSyncItem) => {
+      if (item.status === OfflineSyncItemStatus.Failed && !this.isRetryableError(item)) {
+        count += 1;
+      }
+    });
+    return count;
+  }
+
+  getHandlingCategoryLabel(item: OfflineSyncItem): string {
+    if (item.status === OfflineSyncItemStatus.Pending && this.hasRetryError(item)) {
+      return '可重试';
+    }
+
+    if (this.isConflictError(item)) {
+      return '冲突无效';
+    }
+
+    if (this.isRetryableError(item)) {
+      return item.status === OfflineSyncItemStatus.Failed ? '重试受限' : '可重试';
+    }
+
+    return '需人工处理';
+  }
+
+  getHandlingCategoryTone(item: OfflineSyncItem): string {
+    if (item.status === OfflineSyncItemStatus.Pending && this.hasRetryError(item)) {
+      return AppColors.Primary;
+    }
+
+    if (this.isConflictError(item)) {
+      return AppColors.Danger;
+    }
+
+    if (this.isRetryableError(item)) {
+      return AppColors.Warning;
+    }
+
+    return AppColors.Warning;
+  }
+
+  getHandlingSuggestion(item: OfflineSyncItem): string {
+    if (item.status === OfflineSyncItemStatus.Pending && this.hasRetryError(item)) {
+      return '系统将按退避策略再次同步，也可稍后手动触发同步';
+    }
+
+    if (this.isConflictError(item)) {
+      return '该内容未进入审核流程，请核对最新档案或业务状态后重新发起';
+    }
+
+    if (this.isRetryableError(item)) {
+      return '请确认后端服务稳定后重新发起同步，必要时调整批次数量';
+    }
+
+    return '请检查权限、内容格式或业务前置条件后重新提交';
+  }
+
+  hasRetryError(item: OfflineSyncItem): boolean {
+    return item.lastError !== undefined && item.lastError.trim().length > 0 &&
+      item.status === OfflineSyncItemStatus.Pending;
+  }
+
+  hasRetrySchedule(item: OfflineSyncItem): boolean {
+    return item.nextRetryAt !== undefined && item.nextRetryAt.trim().length > 0 &&
+      item.status === OfflineSyncItemStatus.Pending;
+  }
+
+  isRetryableError(item: OfflineSyncItem): boolean {
+    const errorCode = this.getErrorCode(item);
+    return errorCode === 'INTERNAL_ERROR' ||
+      errorCode === 'SERVICE_UNAVAILABLE' ||
+      errorCode === 'RATE_LIMITED';
+  }
+
+  isConflictError(item: OfflineSyncItem): boolean {
+    const errorCode = this.getErrorCode(item);
+    return errorCode === 'CONFLICT' ||
+      errorCode === 'OFFLINE_RECORD_CONFLICT' ||
+      errorCode === 'DEVICE_CHANGE_LOCKED' ||
+      errorCode === 'DEVICE_CHANGE_FROZEN' ||
+      errorCode === 'DEVICE_CODE_DUPLICATED' ||
+      errorCode === 'DEVICE_ARCHIVE_DELETE_BLOCKED' ||
+      errorCode === 'DEVICE_ACTIVE_FAULT_EXISTS' ||
+      errorCode === 'DEVICE_NOT_FOUND';
+  }
+
+  getErrorCode(item: OfflineSyncItem): string {
+    if (item.lastError === undefined) {
+      return '';
+    }
+
+    const errorText = item.lastError.trim();
+    const chineseSeparatorIndex = errorText.indexOf('：');
+    if (chineseSeparatorIndex > 0) {
+      return errorText.substring(0, chineseSeparatorIndex).trim();
+    }
+
+    const separatorIndex = errorText.indexOf(':');
+    if (separatorIndex > 0) {
+      return errorText.substring(0, separatorIndex).trim();
+    }
+
+    return '';
   }
 
   formatTime(value: string): string {

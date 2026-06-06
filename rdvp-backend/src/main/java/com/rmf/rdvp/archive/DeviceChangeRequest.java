@@ -14,6 +14,7 @@ public record DeviceChangeRequest(
         DeviceChangeRequestStatus status,
         String reason,
         Map<String, DeviceChangeValue> changes,
+        OffsetDateTime initiatedAt,
         OffsetDateTime createdAt,
         String reviewerId,
         String reviewComment,

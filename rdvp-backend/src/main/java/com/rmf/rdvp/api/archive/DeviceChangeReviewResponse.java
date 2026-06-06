@@ -15,7 +15,9 @@ public record DeviceChangeReviewResponse(
         String applicantName,
         String reason,
         String status,
+        String initiatedAt,
         String createdAt,
+        String submittedAt,
         Map<String, DeviceChangeValueResponse> changes) {
 
     public static DeviceChangeReviewResponse from(DeviceChangeRequest request) {
@@ -28,6 +30,8 @@ public record DeviceChangeReviewResponse(
                 request.applicantName(),
                 request.reason(),
                 request.status().name(),
+                toIsoString(request.initiatedAt()),
+                toIsoString(request.createdAt()),
                 toIsoString(request.createdAt()),
                 request.changes()
                         .entrySet()

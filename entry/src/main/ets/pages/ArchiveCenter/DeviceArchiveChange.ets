@@ -571,11 +571,13 @@ struct DeviceArchiveChange {
     }
 
     const submittedDraft = this.buildDraft();
-    this.requestStatus = DeviceArchiveChangeRequestStatus.PendingReview;
-    DeviceArchiveFlowStore.markChangePending(response.data ? response.data.id : '', submittedDraft);
+    this.requestStatus = response.data === undefined ? DeviceArchiveChangeRequestStatus.PendingReview : response.data.status;
+    DeviceArchiveFlowStore.markChangePending(response.data ? response.data.id : '', submittedDraft, this.requestStatus);
     this.applyDraft(submittedDraft);
     this.changeCount = DeviceArchiveChangeService.countChangedFields(this.buildForm());
-    this.message = '变更申请已提交，等待管理员审核';
+    this.message = DeviceArchiveChangeService.isOfflineSyncQueuedResponse(response) ?
+      '变更申请已保存至本地同步队列，恢复在线并同步成功后将提交审核' :
+      '变更申请已提交，等待管理员审核';
     this.messageTone = AppColors.Success;
   }
 
@@ -602,6 +604,7 @@ struct DeviceArchiveChange {
   getStatusTone(status: DeviceArchiveChangeRequestStatus): string {
     switch (status) {
       case DeviceArchiveChangeRequestStatus.PendingReview:
+      case DeviceArchiveChangeRequestStatus.PendingSync:
         return AppColors.Warning;
       case DeviceArchiveChangeRequestStatus.Approved:
         return AppColors.Success;
@@ -616,7 +619,8 @@ struct DeviceArchiveChange {
   }
 
   isChangeSubmitted(): boolean {
-    return this.requestStatus === DeviceArchiveChangeRequestStatus.PendingReview;
+    return this.requestStatus === DeviceArchiveChangeRequestStatus.PendingReview ||
+      this.requestStatus === DeviceArchiveChangeRequestStatus.PendingSync;
   }
 
   getSubmitButtonLabel(): string {
@@ -658,8 +662,10 @@ struct DeviceArchiveChange {
       this.applyDraft(pendingDraft);
       this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(this.deviceCode);
       this.changeCount = DeviceArchiveChangeService.countChangedFields(this.buildForm());
-      this.requestStatus = DeviceArchiveChangeRequestStatus.PendingReview;
-      this.message = '变更申请已提交，等待管理员审核';
+      this.requestStatus = DeviceArchiveFlowStore.getPendingRequestStatus();
+      this.message = this.requestStatus === DeviceArchiveChangeRequestStatus.PendingSync ?
+        '变更申请已保存至本地同步队列，恢复在线并同步成功后将提交审核' :
+        '变更申请已提交，等待管理员审核';
       this.messageTone = AppColors.Success;
       return;
     }

@@ -249,15 +249,12 @@ struct DeviceArchiveReview {
           .fontSize(13)
           .fontWeight(FontWeight.Medium)
           .fontColor(DeviceArchiveReviewService.getRequestTypeTone(item.type))
-          .layoutWeight(1)
-          .maxLines(1)
-
-        Text(item.submittedAt)
-          .fontSize(12)
-          .fontColor(AppColors.TextSecondary)
           .maxLines(1)
       }
       .width('100%')
+
+      this.RequestTimeRow('发起时间', this.formatReviewTime(item.initiatedAt))
+      this.RequestTimeRow('提交时间', this.formatReviewTime(item.submittedAt))
 
       Row() {
         Text('审核记录编号')
@@ -321,6 +318,27 @@ struct DeviceArchiveReview {
       width: this.selectedRequestId === item.id ? 2 : 0,
       color: this.selectedRequestId === item.id ? AppColors.Primary : AppColors.Transparent
     })
+  }
+
+  @Builder
+  RequestTimeRow(label: string, value: string) {
+    Row() {
+      Text(label)
+        .fontSize(13)
+        .fontColor(AppColors.TextSecondary)
+        .fontWeight(FontWeight.Medium)
+        .layoutWeight(1)
+        .maxLines(1)
+
+      Text(value)
+        .fontSize(13)
+        .fontColor(AppColors.TextSecondary)
+        .textAlign(TextAlign.End)
+        .width('58%')
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .width('100%')
   }
 
   @Builder
@@ -850,6 +868,15 @@ struct DeviceArchiveReview {
       default:
         return $r('sys.symbol.text_clipboard');
     }
+  }
+
+  formatReviewTime(value: string): string {
+    const normalized = value.trim();
+    if (normalized.length === 0) {
+      return '-';
+    }
+
+    return normalized.replace('T', ' ').replace('Z', '');
   }
 
   showReviewedAtPicker(): void {

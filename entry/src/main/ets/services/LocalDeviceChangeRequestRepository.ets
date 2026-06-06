@@ -26,6 +26,7 @@ const LOCAL_REVIEW_SEEDS: DeviceArchiveReviewItem[] = [
     applicantName: '本地用户',
     reason: '现场标识位置需要补充。',
     status: DeviceArchiveChangeRequestStatus.PendingReview,
+    initiatedAt: '2026-05-29 10:10',
     submittedAt: '2026-05-29 10:10',
     changes: [
       {
@@ -54,6 +55,7 @@ export class LocalDeviceChangeRequestRepository {
       applicantName,
       reason: record.reason,
       status: DeviceArchiveChangeRequestStatus.PendingReview,
+      initiatedAt: record.submittedAt,
       submittedAt: record.submittedAt,
       changes: LocalDeviceChangeRequestRepository.buildDiffs(form)
     });
@@ -69,6 +71,7 @@ export class LocalDeviceChangeRequestRepository {
       applicantName,
       reason,
       status: DeviceArchiveChangeRequestStatus.PendingReview,
+      initiatedAt: submittedAt,
       submittedAt,
       changes: LocalDeviceChangeRequestRepository.buildCreateDiffs(deviceName, model, manufacturer, locationAddress)
     });
@@ -85,6 +88,7 @@ export class LocalDeviceChangeRequestRepository {
       applicantName,
       reason,
       status: DeviceArchiveChangeRequestStatus.PendingReview,
+      initiatedAt: submittedAt,
       submittedAt,
       changes: LocalDeviceChangeRequestRepository.buildDeleteDiffs(device)
     });
@@ -270,6 +274,7 @@ export class LocalDeviceChangeRequestRepository {
       applicantName: item.applicantName,
       reason: item.reason,
       status: item.status,
+      initiatedAt: item.initiatedAt,
       submittedAt: item.submittedAt,
       changes: item.changes.map((change: DeviceArchiveChangeFieldDiff): DeviceArchiveChangeFieldDiff => {
         return {

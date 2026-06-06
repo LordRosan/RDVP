@@ -1,5 +1,6 @@
 export enum DeviceArchiveChangeRequestStatus {
   Draft = 'DRAFT',
+  PendingSync = 'PENDING_SYNC',
   PendingReview = 'PENDING_REVIEW',
   Approved = 'APPROVED',
   Rejected = 'REJECTED',

@@ -6,12 +6,18 @@ import {
   DeviceArchiveChangeRequestStatus,
   DeviceArchiveChangeRequestValidationResult
 } from '../models/DeviceArchiveChangeModels';
+import {
+  DeviceArchiveOfflineChangeValuePayload,
+  DeviceArchiveUpdateRequestOfflineSyncPayload,
+  OfflineSyncOperationType
+} from '../models/OfflineSyncModels';
 import { OperationRecordType } from '../models/OperationRecordModels';
 import { ApiClient } from './ApiClient';
 import { DeviceService } from './DeviceService';
 import { LocalDeviceChangeRequestRepository } from './LocalDeviceChangeRequestRepository';
 import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
 import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
+import { OfflineSyncService } from './OfflineSyncService';
 import { SessionStore } from '../stores/SessionStore';
 
 interface DeviceArchiveChangeApiResult {
@@ -19,6 +25,8 @@ interface DeviceArchiveChangeApiResult {
   status: DeviceArchiveChangeRequestStatus;
   createdAt: string;
 }
+
+const OFFLINE_SYNC_DEVICE_ARCHIVE_UPDATE_REQUEST_ID = 'offline-sync-device-archive-update-request';
 
 export class DeviceArchiveChangeService {
   static validateChangeRequestForm(form: DeviceArchiveChangeRequestForm): DeviceArchiveChangeRequestValidationResult {
@@ -164,7 +172,7 @@ export class DeviceArchiveChangeService {
     }
 
     if (!ApiClient.isConfigured()) {
-      return DeviceArchiveChangeService.createLocalChangeRequestResponse(form, validation.normalizedDeviceCode ?
+      return DeviceArchiveChangeService.createLocalQueuedChangeRequestResponse(form, validation.normalizedDeviceCode ?
         validation.normalizedDeviceCode : DeviceService.normalizeDeviceCode(form.deviceCode));
     }
 
@@ -205,6 +213,11 @@ export class DeviceArchiveChangeService {
       DeviceArchiveChangeService.buildCreateRequestBody(form));
 
     if (!response.success) {
+      if (response.error !== undefined && response.error.code === 'SERVICE_UNAVAILABLE') {
+        return DeviceArchiveChangeService.createLocalQueuedChangeRequestResponse(form, validation.normalizedDeviceCode ?
+          validation.normalizedDeviceCode : DeviceService.normalizeDeviceCode(form.deviceCode));
+      }
+
       return {
         success: false,
         error: response.error,
@@ -260,6 +273,8 @@ export class DeviceArchiveChangeService {
     switch (status) {
       case DeviceArchiveChangeRequestStatus.Draft:
         return '待提交';
+      case DeviceArchiveChangeRequestStatus.PendingSync:
+        return '待同步';
       case DeviceArchiveChangeRequestStatus.PendingReview:
         return '待审核';
       case DeviceArchiveChangeRequestStatus.Approved:
@@ -334,6 +349,69 @@ export class DeviceArchiveChangeService {
     };
   }
 
+  private static createLocalQueuedChangeRequestResponse(form: DeviceArchiveChangeRequestForm,
+    normalizedDeviceCode: string): ApiResponse<DeviceArchiveChangeRequestRecord> {
+    if (form.deviceId === undefined || form.deviceId.trim().length === 0 || form.baseline === undefined) {
+      return {
+        success: false,
+        error: {
+          code: 'DEVICE_CHANGE_BASELINE_MISSING',
+          message: '缺少设备档案基准信息，请重新查询后提交'
+        }
+      };
+    }
+
+    const conflictKey = DeviceArchiveChangeService.createOfflineConflictKey(normalizedDeviceCode);
+    const currentDevice = LocalDeviceArchiveRepository.findByCode(normalizedDeviceCode);
+    if ((currentDevice !== undefined && DeviceService.isArchiveChangeLocked(currentDevice)) ||
+      OfflineSyncService.hasActiveConflictKey(conflictKey)) {
+      return {
+        success: false,
+        error: {
+          code: 'DEVICE_CHANGE_LOCKED',
+          message: '该设备存在待处理档案申请，请处理完成后再提交'
+        },
+        requestId: 'offline-sync-device-archive-update-blocked',
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    const submittedAt = new Date().toISOString();
+    const requestId = `DCR-OFFLINE-${submittedAt.replace(/[-:.TZ]/g, '').substring(0, 14)}-${Math.floor(Math.random() * 1000000)}`;
+    const operatorName = SessionStore.getCurrentOperatorName();
+    const payload = DeviceArchiveChangeService.createOfflineSyncPayload(form, normalizedDeviceCode, requestId, submittedAt);
+    LocalDeviceArchiveRepository.markChangePending(normalizedDeviceCode, requestId);
+    LocalOperationRecordRepository.append(OperationRecordType.DeviceChangeRequest, '保存档案变更待同步', normalizedDeviceCode,
+      '设备档案变更已保存至本地同步队列', operatorName);
+    OfflineSyncService.enqueue(
+      OfflineSyncOperationType.DeviceArchiveUpdateRequestCreate,
+      `档案变更 ${normalizedDeviceCode}`,
+      JSON.stringify(payload),
+      conflictKey
+    );
+
+    return {
+      success: true,
+      data: {
+        id: requestId,
+        deviceCode: normalizedDeviceCode,
+        deviceName: form.deviceName.trim(),
+        model: form.model.trim(),
+        manufacturer: form.manufacturer.trim(),
+        locationAddress: form.locationAddress.trim(),
+        reason: form.reason.trim(),
+        status: DeviceArchiveChangeRequestStatus.PendingSync,
+        submittedAt
+      },
+      requestId: OFFLINE_SYNC_DEVICE_ARCHIVE_UPDATE_REQUEST_ID,
+      timestamp: submittedAt
+    };
+  }
+
+  static isOfflineSyncQueuedResponse(response: ApiResponse<DeviceArchiveChangeRequestRecord>): boolean {
+    return response.requestId === OFFLINE_SYNC_DEVICE_ARCHIVE_UPDATE_REQUEST_ID;
+  }
+
   private static buildApiChangesPayload(form: DeviceArchiveChangeRequestForm): string {
     const baseline = form.baseline;
     if (baseline === undefined) {
@@ -362,6 +440,81 @@ export class DeviceArchiveChangeService {
     }
 
     return `{${changeItems.join(',')}}`;
+  }
+
+  private static createOfflineSyncPayload(
+    form: DeviceArchiveChangeRequestForm,
+    normalizedDeviceCode: string,
+    localRequestId: string,
+    queuedAt: string
+  ): DeviceArchiveUpdateRequestOfflineSyncPayload {
+    return {
+      deviceId: form.deviceId === undefined ? '' : form.deviceId.trim(),
+      deviceCode: normalizedDeviceCode,
+      reason: DeviceArchiveChangeService.normalizeText(form.reason),
+      changes: DeviceArchiveChangeService.buildOfflineChangeItems(form),
+      localRequestId,
+      queuedAt
+    };
+  }
+
+  private static buildOfflineChangeItems(form: DeviceArchiveChangeRequestForm): DeviceArchiveOfflineChangeValuePayload[] {
+    const baseline = form.baseline;
+    if (baseline === undefined) {
+      return [];
+    }
+
+    const changeItems: DeviceArchiveOfflineChangeValuePayload[] = [];
+    DeviceArchiveChangeService.appendOfflineChangeItem(changeItems, baseline, 'name', 'deviceName', form.deviceName);
+    DeviceArchiveChangeService.appendOfflineChangeItem(changeItems, baseline, 'model', 'model', form.model);
+    DeviceArchiveChangeService.appendOfflineChangeItem(changeItems, baseline, 'manufacturer', 'manufacturer', form.manufacturer);
+    DeviceArchiveChangeService.appendOfflineChangeItem(changeItems, baseline, 'location.address', 'locationAddress',
+      form.locationAddress);
+    return changeItems;
+  }
+
+  private static appendOfflineChangeItem(
+    changeItems: DeviceArchiveOfflineChangeValuePayload[],
+    baseline: DeviceArchiveChangeBaseline,
+    field: string,
+    baselineField: string,
+    newValue: string
+  ): void {
+    const normalizedNewValue = DeviceArchiveChangeService.normalizeText(newValue);
+    const oldValue = DeviceArchiveChangeService.getBaselineValue(baseline, baselineField);
+    if (normalizedNewValue === DeviceArchiveChangeService.normalizeText(oldValue)) {
+      return;
+    }
+
+    changeItems.push({
+      field,
+      oldValue,
+      newValue: normalizedNewValue
+    });
+  }
+
+  private static getBaselineValue(baseline: DeviceArchiveChangeBaseline, field: string): string {
+    if (field === 'deviceName') {
+      return baseline.deviceName;
+    }
+
+    if (field === 'model') {
+      return baseline.model;
+    }
+
+    if (field === 'manufacturer') {
+      return baseline.manufacturer;
+    }
+
+    if (field === 'locationAddress') {
+      return baseline.locationAddress;
+    }
+
+    return '';
+  }
+
+  private static createOfflineConflictKey(deviceCode: string): string {
+    return `device-archive:${DeviceService.normalizeDeviceCode(deviceCode)}`;
   }
 
   private static buildCreateRequestBody(form: DeviceArchiveChangeRequestForm): string {

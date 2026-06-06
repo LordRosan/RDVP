@@ -408,8 +408,10 @@ struct DeviceArchiveCreate {
       return;
     }
 
-    this.requestStatus = DeviceArchiveChangeRequestStatus.PendingReview;
-    this.message = '建档申请已提交，等待管理员审核';
+    this.requestStatus = response.data === undefined ? DeviceArchiveChangeRequestStatus.PendingReview : response.data.status;
+    this.message = DeviceArchiveLifecycleService.isOfflineSyncQueuedResponse(response) ?
+      '建档申请已保存至本地同步队列，恢复在线并同步成功后将提交审核' :
+      '建档申请已提交，等待管理员审核';
     this.messageTone = AppColors.Success;
   }
 
@@ -434,7 +436,8 @@ struct DeviceArchiveCreate {
   }
 
   isSubmitted(): boolean {
-    return this.requestStatus === DeviceArchiveChangeRequestStatus.PendingReview;
+    return this.requestStatus === DeviceArchiveChangeRequestStatus.PendingReview ||
+      this.requestStatus === DeviceArchiveChangeRequestStatus.PendingSync;
   }
 
   getSubmitButtonLabel(): string {
@@ -452,6 +455,7 @@ struct DeviceArchiveCreate {
   getStatusTone(status: DeviceArchiveChangeRequestStatus): string {
     switch (status) {
       case DeviceArchiveChangeRequestStatus.PendingReview:
+      case DeviceArchiveChangeRequestStatus.PendingSync:
         return AppColors.Warning;
       case DeviceArchiveChangeRequestStatus.Approved:
         return AppColors.Success;

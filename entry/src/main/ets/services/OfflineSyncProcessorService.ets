@@ -1,16 +1,24 @@
 import { ApiErrorCode, ApiResponse } from '../models/ApiModels';
+import { DeviceArchiveChangeRequestStatus } from '../models/DeviceArchiveChangeModels';
 import {
   OfflineSyncBatchRequest,
   OfflineSyncBatchResult,
   OfflineSyncExecutionResult,
   OfflineSyncItem,
+  OfflineSyncOperationType,
   OfflineSyncRecordRequest,
   OfflineSyncRecordResult
 } from '../models/OfflineSyncModels';
 import { ApiClient } from './ApiClient';
+import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
 import { OfflineSyncService } from './OfflineSyncService';
+import { DeviceArchiveFlowStore } from '../stores/DeviceArchiveFlowStore';
 
 const DEFAULT_SYNC_BATCH_LIMIT = 5;
+
+interface ArchiveOfflineSyncPayload {
+  deviceCode: string;
+}
 
 export class OfflineSyncProcessorService {
   private static syncInProgress: boolean = false;
@@ -58,6 +66,7 @@ export class OfflineSyncProcessorService {
       items.forEach((item: OfflineSyncItem) => {
         const record = OfflineSyncProcessorService.toRecordRequest(item);
         if (record === undefined) {
+          OfflineSyncProcessorService.releaseLocalArchiveLockIfNeeded(item);
           OfflineSyncService.markFailedPermanently(item.id, '离线同步内容无法解析');
           failedCount += 1;
           return;
@@ -85,6 +94,7 @@ export class OfflineSyncProcessorService {
           if (OfflineSyncProcessorService.shouldRetry(response)) {
             OfflineSyncService.markFailed(item.id, message);
           } else {
+            OfflineSyncProcessorService.releaseLocalArchiveLockIfNeeded(item);
             OfflineSyncService.markFailedPermanently(item.id, message);
           }
           failedCount += 1;
@@ -100,6 +110,7 @@ export class OfflineSyncProcessorService {
           }
 
           if (result.success) {
+            OfflineSyncProcessorService.applySuccessfulLocalArchiveSync(item, result);
             OfflineSyncService.markSynced(item.id);
             syncedCount += 1;
             return;
@@ -109,6 +120,7 @@ export class OfflineSyncProcessorService {
           if (OfflineSyncProcessorService.shouldRetryRecord(result)) {
             OfflineSyncService.markFailed(item.id, errorMessage);
           } else {
+            OfflineSyncProcessorService.releaseLocalArchiveLockIfNeeded(item);
             OfflineSyncService.markFailedPermanently(item.id, errorMessage);
           }
           failedCount += 1;
@@ -188,6 +200,51 @@ export class OfflineSyncProcessorService {
 
     const code = `${response.error.code}`;
     return code === ApiErrorCode.ServiceUnavailable || code === ApiErrorCode.RateLimited;
+  }
+
+  private static applySuccessfulLocalArchiveSync(item: OfflineSyncItem, result: OfflineSyncRecordResult): void {
+    if (item.operationType !== OfflineSyncOperationType.DeviceArchiveUpdateRequestCreate &&
+      item.operationType !== OfflineSyncOperationType.DeviceArchiveDeleteRequestCreate) {
+      return;
+    }
+
+    const deviceCode = OfflineSyncProcessorService.readArchivePayloadDeviceCode(item.payloadJson);
+    if (deviceCode.length === 0) {
+      return;
+    }
+
+    const requestId = result.serverRecordId === undefined || result.serverRecordId.trim().length === 0 ?
+      item.id : result.serverRecordId.trim();
+    LocalDeviceArchiveRepository.markChangePending(deviceCode, requestId);
+    DeviceArchiveFlowStore.markCurrentDeviceChangePendingByCode(
+      deviceCode,
+      requestId,
+      DeviceArchiveChangeRequestStatus.PendingReview
+    );
+  }
+
+  private static releaseLocalArchiveLockIfNeeded(item: OfflineSyncItem): void {
+    if (item.operationType !== OfflineSyncOperationType.DeviceArchiveUpdateRequestCreate &&
+      item.operationType !== OfflineSyncOperationType.DeviceArchiveDeleteRequestCreate) {
+      return;
+    }
+
+    const deviceCode = OfflineSyncProcessorService.readArchivePayloadDeviceCode(item.payloadJson);
+    if (deviceCode.length === 0) {
+      return;
+    }
+
+    LocalDeviceArchiveRepository.releaseChangeLock(deviceCode);
+    DeviceArchiveFlowStore.releaseCurrentDeviceChangeLockByCode(deviceCode);
+  }
+
+  private static readArchivePayloadDeviceCode(payloadJson: string): string {
+    try {
+      const payload = JSON.parse(payloadJson) as ArchiveOfflineSyncPayload;
+      return payload.deviceCode === undefined ? '' : payload.deviceCode.trim();
+    } catch (err) {
+      return '';
+    }
   }
 
   private static normalizeLimit(limit: number): number {

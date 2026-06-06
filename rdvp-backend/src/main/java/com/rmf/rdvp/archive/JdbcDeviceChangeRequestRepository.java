@@ -140,6 +140,7 @@ public class JdbcDeviceChangeRequestRepository implements DeviceChangeRequestRep
                             previous_device_status,
                             reason,
                             changes,
+                            initiated_at,
                             created_at,
                             created_by,
                             updated_at,
@@ -154,6 +155,7 @@ public class JdbcDeviceChangeRequestRepository implements DeviceChangeRequestRep
                             :previousDeviceStatus,
                             :reason,
                             CAST(:changes AS jsonb),
+                            :initiatedAt,
                             :createdAt,
                             :applicantId,
                             :createdAt,
@@ -169,6 +171,7 @@ public class JdbcDeviceChangeRequestRepository implements DeviceChangeRequestRep
                         .addValue("previousDeviceStatus", request.previousDeviceStatus())
                         .addValue("reason", request.reason())
                         .addValue("changes", writeChanges(request.changes()))
+                        .addValue("initiatedAt", request.initiatedAt())
                         .addValue("createdAt", request.createdAt()));
     }
 
@@ -289,6 +292,7 @@ public class JdbcDeviceChangeRequestRepository implements DeviceChangeRequestRep
                     cr.status,
                     cr.reason,
                     cr.changes,
+                    COALESCE(cr.initiated_at, cr.created_at) AS initiated_at,
                     cr.created_at,
                     cr.reviewer_id,
                     cr.review_comment,
@@ -336,6 +340,7 @@ public class JdbcDeviceChangeRequestRepository implements DeviceChangeRequestRep
                 DeviceChangeRequestStatus.valueOf(resultSet.getString("status")),
                 resultSet.getString("reason"),
                 changes,
+                resultSet.getObject("initiated_at", OffsetDateTime.class),
                 resultSet.getObject("created_at", OffsetDateTime.class),
                 resultSet.getString("reviewer_id"),
                 resultSet.getString("review_comment"),

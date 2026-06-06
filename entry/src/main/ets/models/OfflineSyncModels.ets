@@ -8,7 +8,10 @@ export enum OfflineSyncItemStatus {
 export enum OfflineSyncOperationType {
   FaultReportCreate = 'FAULT_REPORT_CREATE',
   DeviceVerificationCreate = 'DEVICE_VERIFICATION_CREATE',
-  DeviceVerificationFaultReportCreate = 'DEVICE_VERIFICATION_FAULT_REPORT_CREATE'
+  DeviceVerificationFaultReportCreate = 'DEVICE_VERIFICATION_FAULT_REPORT_CREATE',
+  DeviceArchiveUpdateRequestCreate = 'DEVICE_ARCHIVE_UPDATE_REQUEST_CREATE',
+  DeviceArchiveCreateRequestCreate = 'DEVICE_ARCHIVE_CREATE_REQUEST_CREATE',
+  DeviceArchiveDeleteRequestCreate = 'DEVICE_ARCHIVE_DELETE_REQUEST_CREATE'
 }
 
 export enum OfflineSyncBatchStatus {
@@ -102,6 +105,37 @@ export interface DeviceVerificationFaultReportOfflineSyncPayload {
   sceneCondition: string;
   localRecordId: string;
   localReportNo: string;
+  queuedAt: string;
+}
+
+export interface DeviceArchiveOfflineChangeValuePayload {
+  field: string;
+  oldValue?: string;
+  newValue: string;
+}
+
+export interface DeviceArchiveUpdateRequestOfflineSyncPayload {
+  deviceId: string;
+  deviceCode: string;
+  reason: string;
+  changes: DeviceArchiveOfflineChangeValuePayload[];
+  localRequestId: string;
+  queuedAt: string;
+}
+
+export interface DeviceArchiveCreateRequestOfflineSyncPayload {
+  deviceCode: string;
+  reason: string;
+  changes: DeviceArchiveOfflineChangeValuePayload[];
+  localRequestId: string;
+  queuedAt: string;
+}
+
+export interface DeviceArchiveDeleteRequestOfflineSyncPayload {
+  deviceId: string;
+  deviceCode: string;
+  reason: string;
+  localRequestId: string;
   queuedAt: string;
 }
 

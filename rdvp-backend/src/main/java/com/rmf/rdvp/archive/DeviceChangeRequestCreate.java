@@ -12,5 +12,6 @@ public record DeviceChangeRequestCreate(
         String previousDeviceStatus,
         String reason,
         Map<String, DeviceChangeValue> changes,
+        OffsetDateTime initiatedAt,
         OffsetDateTime createdAt) {
 }

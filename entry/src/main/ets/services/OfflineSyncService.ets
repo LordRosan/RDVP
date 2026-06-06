@@ -1,6 +1,7 @@
 import {
   OfflineSyncItem,
   OfflineSyncItemStatus,
+  OfflineSyncOperationType,
   OfflineSyncRuntimeState,
   OfflineSyncSettings,
   OfflineSyncSummary,
@@ -9,6 +10,8 @@ import {
 import { AppColors } from '../styles/AppTheme';
 import { SessionStore } from '../stores/SessionStore';
 import { WorkbenchRefreshStore } from '../stores/WorkbenchRefreshStore';
+import { DeviceArchiveFlowStore } from '../stores/DeviceArchiveFlowStore';
+import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
 
 const OFFLINE_SYNC_QUEUE_STORAGE_KEY = 'rdvp_offline_sync_queue';
 const OFFLINE_SYNC_RUNTIME_STORAGE_KEY = 'rdvp_offline_sync_runtime';
@@ -21,6 +24,10 @@ const BASE_RETRY_DELAY_MS = 2000;
 const DEFAULT_AUTO_SYNC_BATCH_LIMIT = 5;
 const MIN_AUTO_SYNC_BATCH_LIMIT = 1;
 const MAX_AUTO_SYNC_BATCH_LIMIT = 5;
+
+interface ArchiveOfflineSyncPayload {
+  deviceCode: string;
+}
 
 export class OfflineSyncService {
   private static initialized: boolean = false;
@@ -68,6 +75,19 @@ export class OfflineSyncService {
     return OfflineSyncService.items.some((item: OfflineSyncItem) => {
       return item.operationType === normalizedOperationType &&
         item.conflictKey === normalizedConflictKey &&
+        (item.status === OfflineSyncItemStatus.Pending || item.status === OfflineSyncItemStatus.Syncing);
+    });
+  }
+
+  static hasActiveConflictKey(conflictKey: string): boolean {
+    OfflineSyncService.ensureInitialized();
+    const normalizedConflictKey = conflictKey.trim();
+    if (normalizedConflictKey.length === 0) {
+      return false;
+    }
+
+    return OfflineSyncService.items.some((item: OfflineSyncItem) => {
+      return item.conflictKey === normalizedConflictKey &&
         (item.status === OfflineSyncItemStatus.Pending || item.status === OfflineSyncItemStatus.Syncing);
     });
   }
@@ -134,6 +154,7 @@ export class OfflineSyncService {
     OfflineSyncService.items.forEach((item: OfflineSyncItem) => {
       if (item.id === normalizedId && item.status === OfflineSyncItemStatus.Pending) {
         removed = true;
+        OfflineSyncService.releaseProvisionalArchiveLock(item);
         return;
       }
 
@@ -597,5 +618,29 @@ export class OfflineSyncService {
 
   private static createItemId(): string {
     return `offline-sync-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+  }
+
+  private static releaseProvisionalArchiveLock(item: OfflineSyncItem): void {
+    if (item.operationType !== OfflineSyncOperationType.DeviceArchiveUpdateRequestCreate &&
+      item.operationType !== OfflineSyncOperationType.DeviceArchiveDeleteRequestCreate) {
+      return;
+    }
+
+    const deviceCode = OfflineSyncService.readArchivePayloadDeviceCode(item.payloadJson);
+    if (deviceCode.length === 0) {
+      return;
+    }
+
+    LocalDeviceArchiveRepository.releaseChangeLock(deviceCode);
+    DeviceArchiveFlowStore.releaseCurrentDeviceChangeLockByCode(deviceCode);
+  }
+
+  private static readArchivePayloadDeviceCode(payloadJson: string): string {
+    try {
+      const payload = JSON.parse(payloadJson) as ArchiveOfflineSyncPayload;
+      return payload.deviceCode === undefined ? '' : payload.deviceCode.trim();
+    } catch (err) {
+      return '';
+    }
   }
 }

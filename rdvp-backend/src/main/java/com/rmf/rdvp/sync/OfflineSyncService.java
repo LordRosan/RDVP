@@ -22,6 +22,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rmf.rdvp.archive.DeviceArchive;
 import com.rmf.rdvp.archive.DeviceArchiveRepository;
 import com.rmf.rdvp.archive.DeviceArchiveService;
+import com.rmf.rdvp.archive.DeviceChangeRequest;
+import com.rmf.rdvp.archive.DeviceChangeRequestService;
+import com.rmf.rdvp.archive.DeviceChangeRequestType;
+import com.rmf.rdvp.archive.DeviceChangeValue;
 import com.rmf.rdvp.archive.DeviceVerificationRecord;
 import com.rmf.rdvp.archive.DeviceVerificationResult;
 import com.rmf.rdvp.audit.AuditAction;
@@ -48,6 +52,7 @@ public class OfflineSyncService {
     private final OfflineSyncRepository offlineSyncRepository;
     private final DeviceArchiveRepository archiveRepository;
     private final DeviceArchiveService archiveService;
+    private final DeviceChangeRequestService changeRequestService;
     private final OperationsService operationsService;
     private final AuditLogService auditLogService;
     private final ObjectMapper objectMapper;
@@ -56,12 +61,14 @@ public class OfflineSyncService {
             OfflineSyncRepository offlineSyncRepository,
             DeviceArchiveRepository archiveRepository,
             DeviceArchiveService archiveService,
+            DeviceChangeRequestService changeRequestService,
             OperationsService operationsService,
             AuditLogService auditLogService,
             ObjectMapper objectMapper) {
         this.offlineSyncRepository = offlineSyncRepository;
         this.archiveRepository = archiveRepository;
         this.archiveService = archiveService;
+        this.changeRequestService = changeRequestService;
         this.operationsService = operationsService;
         this.auditLogService = auditLogService;
         this.objectMapper = objectMapper;
@@ -138,6 +145,9 @@ public class OfflineSyncService {
                 case FAULT_REPORT_CREATE -> processFaultReport(record, operator);
                 case DEVICE_VERIFICATION_CREATE -> processDeviceVerification(record, operator);
                 case DEVICE_VERIFICATION_FAULT_REPORT_CREATE -> processDeviceVerificationFaultReport(record, operator);
+                case DEVICE_ARCHIVE_UPDATE_REQUEST_CREATE -> processDeviceArchiveUpdateRequest(record, operator);
+                case DEVICE_ARCHIVE_CREATE_REQUEST_CREATE -> processDeviceArchiveCreateRequest(record, operator);
+                case DEVICE_ARCHIVE_DELETE_REQUEST_CREATE -> processDeviceArchiveDeleteRequest(record, operator);
             };
         } catch (BusinessException exception) {
             return failed(record, exception.getErrorCode(), exception.getMessage());
@@ -207,6 +217,79 @@ public class OfflineSyncService {
                 record.clientRecordId(),
                 record.recordType(),
                 created.verificationRecord().id());
+    }
+
+    private OfflineSyncRecordResult processDeviceArchiveUpdateRequest(
+            OfflineSyncRecordInput record,
+            AuthenticatedUser operator) throws JsonProcessingException {
+        requirePermission(operator, PermissionCode.ARCHIVE_CHANGE_REQUEST_CREATE);
+        DeviceArchiveUpdateRequestPayload payload = readPayload(record.payload(), DeviceArchiveUpdateRequestPayload.class);
+        DeviceChangeRequest created = changeRequestService.create(
+                DeviceChangeRequestType.UPDATE,
+                payload.deviceId(),
+                payload.deviceCode(),
+                payload.reason(),
+                toChangeMap(payload.changes(), true),
+                record.createdOfflineAt(),
+                operator);
+        return OfflineSyncRecordResult.succeeded(record.clientRecordId(), record.recordType(), created.id());
+    }
+
+    private OfflineSyncRecordResult processDeviceArchiveCreateRequest(
+            OfflineSyncRecordInput record,
+            AuthenticatedUser operator) throws JsonProcessingException {
+        requirePermission(operator, PermissionCode.ARCHIVE_DEVICE_CREATE);
+        DeviceArchiveCreateRequestPayload payload = readPayload(record.payload(), DeviceArchiveCreateRequestPayload.class);
+        DeviceChangeRequest created = changeRequestService.create(
+                DeviceChangeRequestType.CREATE,
+                null,
+                payload.deviceCode(),
+                payload.reason(),
+                toChangeMap(payload.changes(), false),
+                record.createdOfflineAt(),
+                operator);
+        return OfflineSyncRecordResult.succeeded(record.clientRecordId(), record.recordType(), created.id());
+    }
+
+    private OfflineSyncRecordResult processDeviceArchiveDeleteRequest(
+            OfflineSyncRecordInput record,
+            AuthenticatedUser operator) throws JsonProcessingException {
+        requirePermission(operator, PermissionCode.ARCHIVE_DEVICE_DELETE);
+        DeviceArchiveDeleteRequestPayload payload = readPayload(record.payload(), DeviceArchiveDeleteRequestPayload.class);
+        DeviceChangeRequest created = changeRequestService.create(
+                DeviceChangeRequestType.DELETE,
+                payload.deviceId(),
+                payload.deviceCode(),
+                payload.reason(),
+                Map.of(),
+                record.createdOfflineAt(),
+                operator);
+        return OfflineSyncRecordResult.succeeded(record.clientRecordId(), record.recordType(), created.id());
+    }
+
+    private Map<String, DeviceChangeValue> toChangeMap(List<DeviceArchiveChangeValuePayload> changes, boolean requireOldValue) {
+        if (changes == null || changes.isEmpty()) {
+            throw new BusinessException(ErrorCode.DEVICE_CHANGE_REQUEST_INVALID);
+        }
+
+        Map<String, DeviceChangeValue> result = new TreeMap<>();
+        for (DeviceArchiveChangeValuePayload change : changes) {
+            if (change == null || change.field() == null || change.field().isBlank()) {
+                throw new BusinessException(ErrorCode.DEVICE_CHANGE_REQUEST_INVALID);
+            }
+
+            if (requireOldValue && change.oldValue() == null) {
+                throw new BusinessException(
+                        ErrorCode.DEVICE_CHANGE_REQUEST_INVALID,
+                        "oldValue is required when updating a device archive.");
+            }
+
+            result.put(
+                    change.field().trim(),
+                    new DeviceChangeValue(change.oldValue(), change.newValue()));
+        }
+
+        return Map.copyOf(result);
     }
 
     private List<OfflineSyncRecordInput> normalizeRecords(List<OfflineSyncRecordInput> records) {
@@ -419,6 +502,31 @@ public class OfflineSyncService {
             String occurredAt,
             String faultDescription,
             String sceneCondition) {
+    }
+
+    private record DeviceArchiveChangeValuePayload(
+            String field,
+            String oldValue,
+            String newValue) {
+    }
+
+    private record DeviceArchiveUpdateRequestPayload(
+            String deviceId,
+            String deviceCode,
+            String reason,
+            List<DeviceArchiveChangeValuePayload> changes) {
+    }
+
+    private record DeviceArchiveCreateRequestPayload(
+            String deviceCode,
+            String reason,
+            List<DeviceArchiveChangeValuePayload> changes) {
+    }
+
+    private record DeviceArchiveDeleteRequestPayload(
+            String deviceId,
+            String deviceCode,
+            String reason) {
     }
 
     private record PreparedPayload(
