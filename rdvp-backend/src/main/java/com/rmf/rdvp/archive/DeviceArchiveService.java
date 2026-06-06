@@ -1,5 +1,6 @@
 package com.rmf.rdvp.archive;
 
+import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
@@ -7,6 +8,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.Base64;
 import java.util.HexFormat;
 import java.util.Locale;
 import java.util.UUID;
@@ -18,6 +20,10 @@ import javax.crypto.spec.SecretKeySpec;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.MultiFormatWriter;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.rmf.rdvp.audit.AuditAction;
 import com.rmf.rdvp.audit.AuditLogService;
 import com.rmf.rdvp.config.RdvpRuntimeProperties;
@@ -35,6 +41,7 @@ public class DeviceArchiveService {
     private static final String QR_PREFIX = "RDVP";
     private static final String QR_HMAC_ALGORITHM = "HmacSHA256";
     private static final int MAX_QR_VERSION = 999;
+    private static final int QR_EXPORT_IMAGE_SIZE = 512;
     private static final int MAX_VERIFICATION_DESCRIPTION_LENGTH = 500;
     private static final int MAX_VERIFICATION_REMARK_LENGTH = 300;
     private static final DateTimeFormatter LOCAL_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -97,6 +104,39 @@ public class DeviceArchiveService {
         }
 
         return new QrVerificationResult(true, device);
+    }
+
+    public DeviceQrCodeExport exportQrCode(String deviceId, AuthenticatedUser operator) {
+        DeviceArchive device = null;
+        try {
+            device = findById(deviceId);
+            DeviceQrCode qrCode = qrCodeRepository.findLatestActiveByDeviceId(device.id())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.QR_CODE_INVALID, "No active QR code exists."));
+            String qrContent = buildQrContent(device.deviceCode(), qrCode);
+            OffsetDateTime exportedAt = OffsetDateTime.now(ZoneOffset.UTC);
+            DeviceQrCodeExport export = new DeviceQrCodeExport(
+                    device.id(),
+                    device.deviceCode(),
+                    device.deviceCode() + ".png",
+                    generateQrPngBase64(qrContent),
+                    sha256Hex(qrContent),
+                    exportedAt);
+            auditLogService.recordSuccess(
+                    AuditAction.DEVICE_QRCODE_EXPORT,
+                    device.id(),
+                    device.deviceCode(),
+                    operator,
+                    "导出设备二维码。");
+            return export;
+        } catch (BusinessException exception) {
+            auditLogService.recordFailure(
+                    AuditAction.DEVICE_QRCODE_EXPORT,
+                    device == null ? normalizeAuditTarget(deviceId) : device.id(),
+                    device == null ? normalizeAuditTarget(deviceId) : device.deviceCode(),
+                    operator,
+                    "设备二维码导出失败：%s。".formatted(exception.getErrorCode().code()));
+            throw exception;
+        }
     }
 
     @Transactional
@@ -197,6 +237,38 @@ public class DeviceArchiveService {
             mac.init(key);
             byte[] digest = mac.doFinal("%d:%s:%s".formatted(version, deviceCode, nonce).getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(digest);
+        } catch (Exception exception) {
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR);
+        }
+    }
+
+    private String buildQrContent(String deviceCode, DeviceQrCode qrCode) {
+        return "%s:%d:%s:%s:%s".formatted(
+                QR_PREFIX,
+                qrCode.version(),
+                deviceCode,
+                qrCode.nonce(),
+                qrCode.signatureHash());
+    }
+
+    private String generateQrPngBase64(String content) {
+        try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            BitMatrix matrix = new MultiFormatWriter().encode(
+                    content,
+                    BarcodeFormat.QR_CODE,
+                    QR_EXPORT_IMAGE_SIZE,
+                    QR_EXPORT_IMAGE_SIZE);
+            MatrixToImageWriter.writeToStream(matrix, "PNG", output);
+            return Base64.getEncoder().encodeToString(output.toByteArray());
+        } catch (Exception exception) {
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR);
+        }
+    }
+
+    private String sha256Hex(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
         } catch (Exception exception) {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR);
         }

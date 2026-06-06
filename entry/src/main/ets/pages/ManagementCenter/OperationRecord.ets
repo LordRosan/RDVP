@@ -1,26 +1,41 @@
 import { AppColors } from '../../styles/AppTheme';
-import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
-import { OperationRecordSummary } from '../../models/OperationRecordModels';
+import { OperationRecordQueryFilter, OperationRecordSummary } from '../../models/OperationRecordModels';
 import { PermissionCode } from '../../models/PermissionModels';
 import { ApiClient } from '../../services/ApiClient';
 import { OperationRecordService } from '../../services/OperationRecordService';
 import { AuthGuard } from '../../utils/AuthGuard';
 
-const OPERATION_RECORD_INFO_SECTIONS: InfoDialogSection[] = [
-  {
-    title: '操作记录',
-    items: [
-      {
-        label: '记录范围',
-        description: '集中展示登录、核验、档案变更、故障、维修和复检等关键业务动作'
-      },
-      {
-        label: '审计价值',
-        description: '保留操作对象、时间、结果和摘要，便于追踪业务流程和定位异常操作'
-      }
-    ]
-  }
+const OPERATION_ACTION_LABELS: string[] = [
+  '全部记录',
+  '二维码导出',
+  '档案变更申请',
+  '档案审核',
+  '设备核验',
+  '设备报修',
+  '维修接取',
+  '维修报告',
+  '复检记录',
+  '离线同步',
+  '登录',
+  '密码复核',
+  '权限拦截'
+];
+
+const OPERATION_ACTION_VALUES: string[] = [
+  '',
+  'DEVICE_QRCODE_EXPORT',
+  'DEVICE_CHANGE_REQUEST',
+  'DEVICE_CHANGE_REVIEW',
+  'DEVICE_VERIFICATION',
+  'FAULT_REPORT',
+  'REPAIR_TASK_ACCEPT',
+  'REPAIR_REPORT',
+  'REINSPECTION_RECORD',
+  'OFFLINE_SYNC',
+  'AUTH_LOGIN',
+  'AUTH_PASSWORD_VERIFY',
+  'AUTHORIZATION_DENIED'
 ];
 
 @Entry
@@ -32,15 +47,8 @@ struct OperationRecord {
   @State message: string = '';
   @State refreshStatus: string = '未刷新';
   @State refreshing: boolean = false;
-  private operationRecordInfoDialogController: CustomDialogController = new CustomDialogController({
-    builder: InfoDialog({
-      title: '操作记录说明',
-      sections: OPERATION_RECORD_INFO_SECTIONS
-    }),
-    autoCancel: true,
-    alignment: DialogAlignment.Center,
-    customStyle: true
-  });
+  @State selectedActionIndex: number = 0;
+  @State keyword: string = '';
 
   aboutToAppear(): void {
     if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.MgmtAuditLogRead)) {
@@ -63,6 +71,7 @@ struct OperationRecord {
 
         Column({ space: 18 }) {
           this.ModeHeader()
+          this.FilterPanel()
           this.RecordListPanel()
           this.StatusPanel()
         }
@@ -123,19 +132,12 @@ struct OperationRecord {
   @Builder
   ModeHeader() {
     Column({ space: 6 }) {
-      Row({ space: 6 }) {
-        Text('操作记录')
-          .fontSize(34)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TextPrimary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-        this.InfoButton(() => {
-          this.operationRecordInfoDialogController.open();
-        })
-      }
-      .alignItems(VerticalAlign.Center)
+      Text('操作记录')
+        .fontSize(34)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
 
       Text('查看关键业务流转记录')
         .fontSize(15)
@@ -152,33 +154,94 @@ struct OperationRecord {
   }
 
   @Builder
-  RecordListPanel() {
-    Column({ space: 10 }) {
-      this.MessageText()
+  FilterPanel() {
+    Column({ space: 12 }) {
+      Text('筛选条件')
+        .fontSize(22)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
 
-      Row() {
-        Text('最近记录')
-          .fontSize(22)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TextPrimary)
-          .layoutWeight(1)
-          .maxLines(1)
+      Column({ space: 12 }) {
+        this.FieldTitle('操作类型')
 
-        Button({ type: ButtonType.Circle, stateEffect: true }) {
-          SymbolGlyph($r('sys.symbol.arrow_clockwise'))
-            .fontSize(22)
-            .fontColor([AppColors.OnPrimary])
+        TextPicker({
+          range: OPERATION_ACTION_LABELS,
+          selected: this.selectedActionIndex
+        })
+          .height(126)
+          .width('100%')
+          .backgroundColor(AppColors.FieldBackground)
+          .borderRadius(18)
+          .onChange((value: string | string[], index: number | number[]) => {
+            this.applyActionPickerIndex(index);
+          })
+
+        this.FieldTitle('关键词')
+
+        TextInput({
+          placeholder: '输入设备编号、操作人或说明关键词',
+          text: this.keyword
+        })
+          .height(52)
+          .fontSize(15)
+          .backgroundColor(AppColors.FieldBackground)
+          .borderRadius(18)
+          .padding({ left: 16, right: 16 })
+          .border({ width: 1, color: AppColors.Border })
+          .onChange((value: string) => {
+            this.keyword = value;
+            this.message = '';
+          })
+
+        this.MessageText()
+
+        Button({ type: ButtonType.Capsule, stateEffect: !this.refreshing }) {
+          Row({ space: 6 }) {
+            SymbolGlyph($r('sys.symbol.magnifyingglass'))
+              .fontSize(17)
+              .fontColor([this.refreshing ? AppColors.TextSecondary : AppColors.OnPrimary])
+
+            Text(this.refreshing ? '查询中' : '查询记录')
+              .fontSize(15)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(this.refreshing ? AppColors.TextSecondary : AppColors.OnPrimary)
+              .maxLines(1)
+          }
+          .width('100%')
+          .justifyContent(FlexAlign.Center)
+          .alignItems(VerticalAlign.Center)
         }
-        .width(44)
-        .height(44)
-        .backgroundColor(this.refreshing ? AppColors.Disabled : AppColors.Primary)
+        .height(46)
+        .width('100%')
+        .backgroundColor(this.refreshing ? AppColors.FieldBackground : AppColors.Primary)
         .enabled(!this.refreshing)
         .onClick(() => {
           this.refreshRecords();
         })
       }
+      .padding({
+        left: 18,
+        right: 18,
+        top: 14,
+        bottom: 18
+      })
       .width('100%')
-      .alignItems(VerticalAlign.Center)
+      .backgroundColor(AppColors.Surface)
+      .borderRadius(24)
+    }
+    .alignItems(HorizontalAlign.Start)
+    .width('100%')
+  }
+
+  @Builder
+  RecordListPanel() {
+    Column({ space: 10 }) {
+      Text(this.hasActiveFilter() ? '筛选结果' : '最近记录')
+        .fontSize(22)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
 
       if (this.records.length === 0) {
         this.EmptyState()
@@ -341,18 +404,12 @@ struct OperationRecord {
   }
 
   @Builder
-  InfoButton(action: () => void) {
-    Button({ type: ButtonType.Circle, stateEffect: true }) {
-      SymbolGlyph($r('sys.symbol.info_circle'))
-        .fontSize(18)
-        .fontColor([AppColors.TextPrimary])
-    }
-    .width(28)
-    .height(28)
-    .backgroundColor(AppColors.Transparent)
-    .onClick(() => {
-      action();
-    })
+  FieldTitle(title: string) {
+    Text(title)
+      .fontSize(14)
+      .fontWeight(FontWeight.Medium)
+      .fontColor(AppColors.TextPrimary)
+      .maxLines(1)
   }
 
   @Builder
@@ -384,7 +441,7 @@ struct OperationRecord {
     }
 
     this.refreshing = true;
-    const response = await OperationRecordService.queryRecentRecordsRemoteFirst();
+    const response = await OperationRecordService.queryRecentRecordsRemoteFirst(this.createCurrentFilter());
     this.refreshing = false;
 
     if (!response.success) {
@@ -399,6 +456,36 @@ struct OperationRecord {
     this.totalRecords = data ? data.total : this.records.length;
     this.message = '';
     this.refreshStatus = '已刷新';
+  }
+
+  applyActionPickerIndex(index: number | number[]): void {
+    let selectedIndex = 0;
+    if (typeof index === 'number') {
+      selectedIndex = index;
+    } else if (index.length > 0) {
+      selectedIndex = index[0];
+    }
+
+    if (selectedIndex < 0) {
+      selectedIndex = 0;
+    }
+    if (selectedIndex >= OPERATION_ACTION_VALUES.length) {
+      selectedIndex = OPERATION_ACTION_VALUES.length - 1;
+    }
+
+    this.selectedActionIndex = selectedIndex;
+    this.message = '';
+  }
+
+  createCurrentFilter(): OperationRecordQueryFilter {
+    return {
+      action: OPERATION_ACTION_VALUES[this.selectedActionIndex],
+      keyword: this.keyword.trim()
+    };
+  }
+
+  hasActiveFilter(): boolean {
+    return OPERATION_ACTION_VALUES[this.selectedActionIndex].length > 0 || this.keyword.trim().length > 0;
   }
 
   getRecordCountText(): string {

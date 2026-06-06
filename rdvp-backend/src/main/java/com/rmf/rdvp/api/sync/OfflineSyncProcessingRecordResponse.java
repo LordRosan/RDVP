@@ -2,9 +2,9 @@ package com.rmf.rdvp.api.sync;
 
 import java.time.OffsetDateTime;
 
-import com.rmf.rdvp.sync.OfflineSyncAuditRecord;
+import com.rmf.rdvp.sync.OfflineSyncProcessingRecord;
 
-public record OfflineSyncAuditRecordResponse(
+public record OfflineSyncProcessingRecordResponse(
         String batchId,
         String clientBatchId,
         String batchStatus,
@@ -20,8 +20,8 @@ public record OfflineSyncAuditRecordResponse(
         String submittedAt,
         String processedAt) {
 
-    public static OfflineSyncAuditRecordResponse from(OfflineSyncAuditRecord record) {
-        return new OfflineSyncAuditRecordResponse(
+    public static OfflineSyncProcessingRecordResponse from(OfflineSyncProcessingRecord record) {
+        return new OfflineSyncProcessingRecordResponse(
                 record.batchId(),
                 record.clientBatchId(),
                 record.batchStatus().name(),

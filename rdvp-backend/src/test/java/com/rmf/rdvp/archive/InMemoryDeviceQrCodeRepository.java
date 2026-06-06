@@ -54,6 +54,15 @@ public class InMemoryDeviceQrCodeRepository implements DeviceQrCodeRepository {
         return Optional.ofNullable(qrCodesByLookupKey.get(key(deviceId, version, nonce)));
     }
 
+    @Override
+    public Optional<DeviceQrCode> findLatestActiveByDeviceId(String deviceId) {
+        return qrCodesByLookupKey.values().stream()
+                .filter(qrCode -> qrCode.deviceId().equals(deviceId))
+                .filter(qrCode -> "ACTIVE".equals(qrCode.status()))
+                .filter(qrCode -> qrCode.expiresAt() == null || qrCode.expiresAt().isAfter(OffsetDateTime.now()))
+                .max((left, right) -> Integer.compare(left.version(), right.version()));
+    }
+
     private static String key(String deviceId, int version, String nonce) {
         return "%s:%d:%s".formatted(deviceId, version, nonce);
     }

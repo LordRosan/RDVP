@@ -5,6 +5,7 @@ export enum OperationRecordType {
   AuthorizationDenied = 'AUTHORIZATION_DENIED',
   OfflineSync = 'OFFLINE_SYNC',
   DeviceVerification = 'DEVICE_VERIFICATION',
+  DeviceQrCodeExport = 'DEVICE_QRCODE_EXPORT',
   DeviceChangeRequest = 'DEVICE_CHANGE_REQUEST',
   FaultReport = 'FAULT_REPORT',
   RepairTaskAccept = 'REPAIR_TASK_ACCEPT',
@@ -32,4 +33,9 @@ export interface OperationRecordSummary {
 export interface OperationRecordListResult {
   items: OperationRecordSummary[];
   total: number;
+}
+
+export interface OperationRecordQueryFilter {
+  action: string;
+  keyword: string;
 }

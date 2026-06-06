@@ -1,5 +1,4 @@
 import { AppColors } from '../../styles/AppTheme';
-import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { DeviceArchiveChangeRequestStatus } from '../../models/DeviceArchiveChangeModels';
 import { DeviceStatus, DeviceSummary } from '../../models/DeviceModels';
@@ -12,26 +11,6 @@ import { DeviceService } from '../../services/DeviceService';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
-
-const DEVICE_ARCHIVE_DELETE_INFO_SECTIONS: InfoDialogSection[] = [
-  {
-    title: '删除申请',
-    items: [
-      {
-        label: '适用场景',
-        description: '仅在设备退役、撤场、误建档或档案确需撤销时提交删除申请，提交后进入管理员审核'
-      },
-      {
-        label: '二次确认',
-        description: '提交前需要校验当前账号密码和随机验证码，降低误操作和账号被冒用时的删除风险'
-      },
-      {
-        label: '删除锁定',
-        description: '同一设备连续五次密码错误后，十二小时内不可再次提交删除申请，其他业务操作不受影响'
-      }
-    ]
-  }
-];
 
 @Entry
 @Component
@@ -59,15 +38,6 @@ struct DeviceArchiveDelete {
   @State confirmCaptcha: string = '';
   @State confirmCaptchaCode: string = DeviceArchiveDeleteGuardService.createCaptcha();
   @State confirmMessage: string = '';
-  private deleteInfoDialogController: CustomDialogController = new CustomDialogController({
-    builder: InfoDialog({
-      title: '设备档案删除说明',
-      sections: DEVICE_ARCHIVE_DELETE_INFO_SECTIONS
-    }),
-    autoCancel: true,
-    alignment: DialogAlignment.Center,
-    customStyle: true
-  });
 
   aboutToAppear(): void {
     if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveDeviceDelete)) {
@@ -156,19 +126,12 @@ struct DeviceArchiveDelete {
   @Builder
   ModeHeader() {
     Column({ space: 6 }) {
-      Row({ space: 6 }) {
-        Text('设备档案删除')
-          .fontSize(34)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TextPrimary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-        this.InfoButton(() => {
-          this.deleteInfoDialogController.open();
-        })
-      }
-      .alignItems(VerticalAlign.Center)
+      Text('设备档案删除')
+        .fontSize(34)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
 
       Text('提交设备档案删除审核申请')
         .fontSize(15)
@@ -577,21 +540,6 @@ struct DeviceArchiveDelete {
     .backgroundColor(AppColors.FieldBackground)
     .border({ width: 1, color: AppColors.Border })
     .enabled(!this.submitting)
-    .onClick(() => {
-      action();
-    })
-  }
-
-  @Builder
-  InfoButton(action: () => void) {
-    Button({ type: ButtonType.Circle, stateEffect: true }) {
-      SymbolGlyph($r('sys.symbol.info_circle'))
-        .fontSize(18)
-        .fontColor([AppColors.TextPrimary])
-    }
-    .width(28)
-    .height(28)
-    .backgroundColor(AppColors.Transparent)
     .onClick(() => {
       action();
     })

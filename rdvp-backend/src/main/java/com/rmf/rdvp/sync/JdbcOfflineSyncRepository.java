@@ -80,11 +80,11 @@ public class JdbcOfflineSyncRepository implements OfflineSyncRepository {
     }
 
     @Override
-    public OfflineSyncAuditPage listAuditRecords(int page, int pageSize) {
+    public OfflineSyncProcessingPage listProcessingRecords(int page, int pageSize) {
         int normalizedPage = Math.max(page, 1);
         int normalizedPageSize = Math.max(pageSize, 1);
         long total = countAuditRecords();
-        List<OfflineSyncAuditRecord> items = jdbcTemplate.query(
+        List<OfflineSyncProcessingRecord> items = jdbcTemplate.query(
                 """
                         SELECT r.batch_id,
                                b.client_batch_id,
@@ -109,8 +109,8 @@ public class JdbcOfflineSyncRepository implements OfflineSyncRepository {
                 new MapSqlParameterSource()
                         .addValue("limit", normalizedPageSize)
                         .addValue("offset", (normalizedPage - 1) * normalizedPageSize),
-                this::mapAuditRecord);
-        return new OfflineSyncAuditPage(items, total);
+                this::mapProcessingRecord);
+        return new OfflineSyncProcessingPage(items, total);
     }
 
     @Override
@@ -227,8 +227,8 @@ public class JdbcOfflineSyncRepository implements OfflineSyncRepository {
         return total == null ? 0L : total;
     }
 
-    private OfflineSyncAuditRecord mapAuditRecord(ResultSet resultSet, int rowNumber) throws SQLException {
-        return new OfflineSyncAuditRecord(
+    private OfflineSyncProcessingRecord mapProcessingRecord(ResultSet resultSet, int rowNumber) throws SQLException {
+        return new OfflineSyncProcessingRecord(
                 resultSet.getString("batch_id"),
                 resultSet.getString("client_batch_id"),
                 OfflineSyncBatchStatus.valueOf(resultSet.getString("batch_status")),

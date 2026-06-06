@@ -1,5 +1,4 @@
 import { AppColors } from '../../styles/AppTheme';
-import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { FaultSeverity } from '../../models/FaultModels';
 import { PermissionCode } from '../../models/PermissionModels';
@@ -15,26 +14,6 @@ import { FaultReportService } from '../../services/FaultReportService';
 import { LocationService, LocationResolutionResult } from '../../services/LocationService';
 import { RepairTaskService } from '../../services/RepairTaskService';
 import { AuthGuard } from '../../utils/AuthGuard';
-
-const AVAILABLE_TASK_INFO_SECTIONS: InfoDialogSection[] = [
-  {
-    title: '附近故障',
-    items: [
-      {
-        label: '服务范围',
-        description: '按当前位置、服务半径和系统判定的维修负载筛选可接取任务，减少无效响应和跨区处理'
-      },
-      {
-        label: '接取',
-        description: '维修人员主动接取后承担处理责任，任务进入我的维修页面继续跟进'
-      },
-      {
-        label: '负载状态',
-        description: '系统根据进行中的维修任务数判定空闲、低负载或忙碌状态，并据此限制刷新范围和接取能力'
-      }
-    ]
-  }
-];
 
 const RADIUS_PICKER_OPTIONS: string[] = [
   '1 km',
@@ -82,15 +61,6 @@ struct AvailableRepairTask {
   @State taskItems: AvailableRepairTaskSummary[] = [];
   @State refreshing: boolean = false;
   @State acceptingTaskId: string = '';
-  private availableTaskInfoDialogController: CustomDialogController = new CustomDialogController({
-    builder: InfoDialog({
-      title: '附近故障说明',
-      sections: AVAILABLE_TASK_INFO_SECTIONS
-    }),
-    autoCancel: true,
-    alignment: DialogAlignment.Center,
-    customStyle: true
-  });
 
   aboutToAppear(): void {
     if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.OpsRepairTaskAccept)) {
@@ -168,19 +138,12 @@ struct AvailableRepairTask {
   @Builder
   ModeHeader() {
     Column({ space: 6 }) {
-      Row({ space: 6 }) {
-        Text('附近故障')
-          .fontSize(34)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TextPrimary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-        this.InfoButton(() => {
-          this.showAvailableTaskInfoDialog();
-        })
-      }
-      .alignItems(VerticalAlign.Center)
+      Text('附近故障')
+        .fontSize(34)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
 
       Text('查看可接取维修任务')
         .fontSize(15)
@@ -591,21 +554,6 @@ struct AvailableRepairTask {
   }
 
   @Builder
-  InfoButton(action: () => void) {
-    Button({ type: ButtonType.Circle, stateEffect: true }) {
-      SymbolGlyph($r('sys.symbol.info_circle'))
-        .fontSize(18)
-        .fontColor([AppColors.TextPrimary])
-    }
-    .width(28)
-    .height(28)
-    .backgroundColor(AppColors.Transparent)
-    .onClick(() => {
-      action();
-    })
-  }
-
-  @Builder
   CardDivider() {
     Divider()
       .height(1)
@@ -983,10 +931,6 @@ struct AvailableRepairTask {
     return this.taskItems.find((item: AvailableRepairTaskSummary) => {
       return item.id === taskId;
     });
-  }
-
-  showAvailableTaskInfoDialog(): void {
-    this.availableTaskInfoDialogController.open();
   }
 
   backToWorkbench(): void {

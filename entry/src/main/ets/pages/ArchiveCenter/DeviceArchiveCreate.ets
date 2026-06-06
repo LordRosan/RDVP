@@ -1,5 +1,4 @@
 import { AppColors } from '../../styles/AppTheme';
-import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { DeviceArchiveChangeRequestStatus } from '../../models/DeviceArchiveChangeModels';
 import { PermissionCode } from '../../models/PermissionModels';
@@ -12,22 +11,6 @@ import { DeviceArchiveChangeService } from '../../services/DeviceArchiveChangeSe
 import { DeviceService } from '../../services/DeviceService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
-
-const DEVICE_ARCHIVE_CREATE_INFO_SECTIONS: InfoDialogSection[] = [
-  {
-    title: '添加设备档案',
-    items: [
-      {
-        label: '建档申请',
-        description: '填写新设备的基础档案信息，提交后进入待审核状态，审核通过后才写入正式档案'
-      },
-      {
-        label: '设备编号',
-        description: '用于唯一定位设备，应按统一编号规则填写，不能与已有档案或待审核申请重复'
-      }
-    ]
-  }
-];
 
 @Entry
 @Component
@@ -45,15 +28,6 @@ struct DeviceArchiveCreate {
   @State fieldCount: number = 0;
   @State requestStatus: DeviceArchiveChangeRequestStatus = DeviceArchiveChangeRequestStatus.Draft;
   @State submitting: boolean = false;
-  private createInfoDialogController: CustomDialogController = new CustomDialogController({
-    builder: InfoDialog({
-      title: '添加设备档案说明',
-      sections: DEVICE_ARCHIVE_CREATE_INFO_SECTIONS
-    }),
-    autoCancel: true,
-    alignment: DialogAlignment.Center,
-    customStyle: true
-  });
 
   aboutToAppear(): void {
     AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveDeviceCreate);
@@ -120,19 +94,12 @@ struct DeviceArchiveCreate {
   @Builder
   ModeHeader() {
     Column({ space: 6 }) {
-      Row({ space: 6 }) {
-        Text('添加设备档案')
-          .fontSize(34)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TextPrimary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-        this.InfoButton(() => {
-          this.createInfoDialogController.open();
-        })
-      }
-      .alignItems(VerticalAlign.Center)
+      Text('添加设备档案')
+        .fontSize(34)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
 
       Text('提交新设备建档审核申请')
         .fontSize(15)
@@ -349,21 +316,6 @@ struct DeviceArchiveCreate {
     .width('100%')
     .backgroundColor(enabled ? AppColors.Primary : AppColors.Disabled)
     .enabled(enabled)
-    .onClick(() => {
-      action();
-    })
-  }
-
-  @Builder
-  InfoButton(action: () => void) {
-    Button({ type: ButtonType.Circle, stateEffect: true }) {
-      SymbolGlyph($r('sys.symbol.info_circle'))
-        .fontSize(18)
-        .fontColor([AppColors.TextPrimary])
-    }
-    .width(28)
-    .height(28)
-    .backgroundColor(AppColors.Transparent)
     .onClick(() => {
       action();
     })

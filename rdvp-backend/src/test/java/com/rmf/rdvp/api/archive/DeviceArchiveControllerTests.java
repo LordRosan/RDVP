@@ -1,5 +1,6 @@
 package com.rmf.rdvp.api.archive;
 
+import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -161,6 +162,74 @@ class DeviceArchiveControllerTests {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("QR_CODE_INVALID"));
+    }
+
+    @Test
+    void exportsDeviceQrCodeAfterPasswordVerification() throws Exception {
+        String token = login("deviceadmin", "password");
+
+        mockMvc.perform(post("/api/v1/devices/{deviceId}/qrcode-export", "device-local-0001")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "password": "password"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.deviceCode").value("RDVP-DEVICE-0001"))
+                .andExpect(jsonPath("$.data.fileName").value("RDVP-DEVICE-0001.png"))
+                .andExpect(jsonPath("$.data.qrImageBase64").isString())
+                .andExpect(jsonPath("$.data.qrContentDigest").isString())
+                .andExpect(jsonPath("$.data.qrContent").doesNotExist());
+
+        String auditorToken = login("auditor", "password");
+        mockMvc.perform(get("/api/v1/audit-logs?action=DEVICE_QRCODE_EXPORT&keyword=RDVP-DEVICE-0001")
+                        .header("Authorization", "Bearer " + auditorToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[*].status").value(hasItem("SUCCESS")))
+                .andExpect(jsonPath("$.data.items[*].targetNo").value(hasItem("RDVP-DEVICE-0001")))
+                .andExpect(jsonPath("$.data.items[*].actorName").value(hasItem("设备管理员")));
+
+        mockMvc.perform(get("/api/v1/audit-logs?action=DEVICE_QRCODE_EXPORT&keyword=RDVP-DEVICE-9999")
+                        .header("Authorization", "Bearer " + auditorToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0));
+    }
+
+    @Test
+    void protectsDeviceQrCodeExportByPermission() throws Exception {
+        String token = login("readonly", "password");
+
+        mockMvc.perform(post("/api/v1/devices/{deviceId}/qrcode-export", "device-local-0001")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "password": "password"
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("FORBIDDEN"));
+    }
+
+    @Test
+    void rejectsDeviceQrCodeExportWhenPasswordIsInvalid() throws Exception {
+        String token = login("deviceadmin", "password");
+
+        mockMvc.perform(post("/api/v1/devices/{deviceId}/qrcode-export", "device-local-0001")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "password": "wrong-password"
+                                }
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
     }
 
     @Test

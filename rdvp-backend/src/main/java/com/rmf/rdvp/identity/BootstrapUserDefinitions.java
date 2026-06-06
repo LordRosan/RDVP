@@ -24,6 +24,7 @@ final class BootstrapUserDefinitions {
                         PermissionCode.ARCHIVE_DEVICE_READ,
                         PermissionCode.ARCHIVE_DEVICE_CREATE,
                         PermissionCode.ARCHIVE_DEVICE_DELETE,
+                        PermissionCode.ARCHIVE_QRCODE_EXPORT,
                         PermissionCode.MGMT_ARCHIVE_CHANGE_REVIEW),
                 create(
                         passwordEncoder,

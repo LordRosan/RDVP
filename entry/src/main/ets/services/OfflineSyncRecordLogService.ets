@@ -1,28 +1,28 @@
 import { AppColors } from '../styles/AppTheme';
 import { ApiResponse } from '../models/ApiModels';
 import {
-  OfflineSyncAuditListResult,
-  OfflineSyncAuditRecordSummary,
-  OfflineSyncAuditRecordStatus
-} from '../models/OfflineSyncAuditModels';
+  OfflineSyncRecordLogListResult,
+  OfflineSyncRecordLogStatus,
+  OfflineSyncRecordLogSummary
+} from '../models/OfflineSyncRecordLogModels';
 import { ApiClient } from './ApiClient';
 import { DeviceService } from './DeviceService';
 
-const DEFAULT_SYNC_AUDIT_PAGE_SIZE = 50;
+const DEFAULT_SYNC_RECORD_LOG_PAGE_SIZE = 50;
 
 interface ApiListResult<T> {
   items: T[];
   total: number;
 }
 
-export class OfflineSyncAuditService {
-  static async queryRecentRecordsRemoteFirst(): Promise<ApiResponse<OfflineSyncAuditListResult>> {
+export class OfflineSyncRecordLogService {
+  static async queryRecentRecordsRemoteFirst(): Promise<ApiResponse<OfflineSyncRecordLogListResult>> {
     if (!ApiClient.isConfigured()) {
-      return ApiClient.createServiceUnavailableResponse<OfflineSyncAuditListResult>();
+      return ApiClient.createServiceUnavailableResponse<OfflineSyncRecordLogListResult>();
     }
 
-    const response = await ApiClient.request<ApiListResult<OfflineSyncAuditRecordSummary>>(
-      `/api/v1/sync/offline-records/audit?page=1&pageSize=${DEFAULT_SYNC_AUDIT_PAGE_SIZE}`,
+    const response = await ApiClient.request<ApiListResult<OfflineSyncRecordLogSummary>>(
+      `/api/v1/sync/offline-records/processing-records?page=1&pageSize=${DEFAULT_SYNC_RECORD_LOG_PAGE_SIZE}`,
       'GET',
       true
     );
@@ -68,9 +68,9 @@ export class OfflineSyncAuditService {
 
   static formatStatus(status: string): string {
     switch (status) {
-      case OfflineSyncAuditRecordStatus.Succeeded:
+      case OfflineSyncRecordLogStatus.Succeeded:
         return '已同步';
-      case OfflineSyncAuditRecordStatus.Failed:
+      case OfflineSyncRecordLogStatus.Failed:
         return '同步失败';
       default:
         return '-';
@@ -79,9 +79,9 @@ export class OfflineSyncAuditService {
 
   static getStatusTone(status: string): string {
     switch (status) {
-      case OfflineSyncAuditRecordStatus.Succeeded:
+      case OfflineSyncRecordLogStatus.Succeeded:
         return AppColors.Success;
-      case OfflineSyncAuditRecordStatus.Failed:
+      case OfflineSyncRecordLogStatus.Failed:
         return AppColors.Danger;
       default:
         return AppColors.TextSecondary;

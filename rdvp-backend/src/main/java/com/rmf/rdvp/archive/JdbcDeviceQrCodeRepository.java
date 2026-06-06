@@ -36,6 +36,23 @@ public class JdbcDeviceQrCodeRepository implements DeviceQrCodeRepository {
         return results.stream().findFirst();
     }
 
+    @Override
+    public Optional<DeviceQrCode> findLatestActiveByDeviceId(String deviceId) {
+        List<DeviceQrCode> results = jdbcTemplate.query(
+                """
+                        SELECT id, device_id, version, nonce, signature_hash, status, expires_at
+                        FROM device_qrcodes
+                        WHERE device_id = :deviceId
+                          AND status = 'ACTIVE'
+                          AND (expires_at IS NULL OR expires_at > NOW())
+                        ORDER BY version DESC, issued_at DESC, created_at DESC
+                        LIMIT 1
+                        """,
+                Map.of("deviceId", deviceId),
+                this::mapDeviceQrCode);
+        return results.stream().findFirst();
+    }
+
     private DeviceQrCode mapDeviceQrCode(ResultSet resultSet, int rowNumber) throws SQLException {
         return new DeviceQrCode(
                 resultSet.getString("id"),

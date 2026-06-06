@@ -307,19 +307,19 @@ class OfflineSyncControllerTests {
     }
 
     @Test
-    void listsOfflineSyncAuditRecordsForAuditor() throws Exception {
+    void listsOfflineSyncProcessingRecordsForAuditor() throws Exception {
         String operatorToken = login("fieldoperator", "password");
         String auditorToken = login("auditor", "password");
 
-        syncFaultReportBatch(operatorToken, "batch-audit-001", "record-audit-001", "RDVP-DEVICE-0001")
+        syncFaultReportBatch(operatorToken, "batch-record-001", "record-log-001", "RDVP-DEVICE-0001")
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/api/v1/sync/offline-records/audit?page=1&pageSize=10")
+        mockMvc.perform(get("/api/v1/sync/offline-records/processing-records?page=1&pageSize=10")
                         .header("Authorization", "Bearer " + auditorToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1))
-                .andExpect(jsonPath("$.data.items[0].clientBatchId").value("batch-audit-001"))
-                .andExpect(jsonPath("$.data.items[0].clientRecordId").value("record-audit-001"))
+                .andExpect(jsonPath("$.data.items[0].clientBatchId").value("batch-record-001"))
+                .andExpect(jsonPath("$.data.items[0].clientRecordId").value("record-log-001"))
                 .andExpect(jsonPath("$.data.items[0].recordType").value("FAULT_REPORT_CREATE"))
                 .andExpect(jsonPath("$.data.items[0].status").value("SUCCEEDED"))
                 .andExpect(jsonPath("$.data.items[0].createdOfflineAt").value("2026-06-04T08:00:00Z"))
@@ -328,10 +328,10 @@ class OfflineSyncControllerTests {
     }
 
     @Test
-    void protectsOfflineSyncAuditEndpoint() throws Exception {
+    void protectsOfflineSyncProcessingRecordEndpoint() throws Exception {
         String readonlyToken = login("readonly", "password");
 
-        mockMvc.perform(get("/api/v1/sync/offline-records/audit")
+        mockMvc.perform(get("/api/v1/sync/offline-records/processing-records")
                         .header("Authorization", "Bearer " + readonlyToken))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("FORBIDDEN"));

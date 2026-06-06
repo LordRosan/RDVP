@@ -61,7 +61,19 @@ struct Workbench {
       return;
     }
 
-    await OfflineSyncProcessorService.syncReadyItems(OfflineSyncService.getAutoSyncBatchLimit());
+    try {
+      const result = await OfflineSyncProcessorService.syncReadyItems(OfflineSyncService.getAutoSyncBatchLimit());
+      OfflineSyncService.recordAutoSyncResult(result);
+    } catch (err) {
+      OfflineSyncService.recordAutoSyncResult({
+        processedCount: 0,
+        syncedCount: 0,
+        failedCount: 1,
+        skippedCount: 0,
+        message: '自动同步执行失败',
+        itemResults: []
+      });
+    }
   }
 
   build() {

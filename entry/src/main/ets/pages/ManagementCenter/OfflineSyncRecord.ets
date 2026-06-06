@@ -1,16 +1,16 @@
 import { AppColors } from '../../styles/AppTheme';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
-import { OfflineSyncAuditRecordSummary } from '../../models/OfflineSyncAuditModels';
+import { OfflineSyncRecordLogSummary } from '../../models/OfflineSyncRecordLogModels';
 import { PermissionCode } from '../../models/PermissionModels';
 import { ApiClient } from '../../services/ApiClient';
-import { OfflineSyncAuditService } from '../../services/OfflineSyncAuditService';
+import { OfflineSyncRecordLogService } from '../../services/OfflineSyncRecordLogService';
 import { AuthGuard } from '../../utils/AuthGuard';
 
 @Entry
 @Component
-struct OfflineSyncAudit {
+struct OfflineSyncRecord {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
-  @State records: OfflineSyncAuditRecordSummary[] = [];
+  @State records: OfflineSyncRecordLogSummary[] = [];
   @State totalRecords: number = 0;
   @State message: string = '';
   @State refreshStatus: string = '未刷新';
@@ -97,14 +97,14 @@ struct OfflineSyncAudit {
   @Builder
   ModeHeader() {
     Column({ space: 6 }) {
-      Text('同步审计')
+      Text('同步处理记录')
         .fontSize(34)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      Text('查看离线内容同步记录与处理结果')
+      Text('在线查看离线内容提交后的服务端处理结果')
         .fontSize(15)
         .fontColor(AppColors.TextSecondary)
         .maxLines(1)
@@ -151,9 +151,9 @@ struct OfflineSyncAudit {
         this.EmptyState()
       } else {
         Column({ space: 12 }) {
-          ForEach(this.records, (item: OfflineSyncAuditRecordSummary) => {
+          ForEach(this.records, (item: OfflineSyncRecordLogSummary) => {
             this.RecordItem(item)
-          }, (item: OfflineSyncAuditRecordSummary) => `${item.clientBatchId}-${item.clientRecordId}`)
+          }, (item: OfflineSyncRecordLogSummary) => `${item.clientBatchId}-${item.clientRecordId}`)
         }
         .width('100%')
       }
@@ -175,7 +175,7 @@ struct OfflineSyncAudit {
       .borderRadius(32)
       .backgroundColor(AppColors.PrimarySurface)
 
-      Text('暂无同步审计记录')
+      Text('暂无同步处理记录')
         .fontSize(18)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
@@ -194,7 +194,7 @@ struct OfflineSyncAudit {
   }
 
   @Builder
-  RecordItem(item: OfflineSyncAuditRecordSummary) {
+  RecordItem(item: OfflineSyncRecordLogSummary) {
     Column({ space: 10 }) {
       Row({ space: 12 }) {
         Stack() {
@@ -205,10 +205,10 @@ struct OfflineSyncAudit {
         .width(44)
         .height(44)
         .borderRadius(22)
-        .backgroundColor(OfflineSyncAuditService.getStatusTone(item.status))
+        .backgroundColor(OfflineSyncRecordLogService.getStatusTone(item.status))
 
         Column({ space: 4 }) {
-          Text(OfflineSyncAuditService.formatRecordType(item.recordType))
+          Text(OfflineSyncRecordLogService.formatRecordType(item.recordType))
             .fontSize(17)
             .fontWeight(FontWeight.Bold)
             .fontColor(AppColors.TextPrimary)
@@ -224,9 +224,9 @@ struct OfflineSyncAudit {
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
 
-        Text(OfflineSyncAuditService.formatStatus(item.status))
+        Text(OfflineSyncRecordLogService.formatStatus(item.status))
           .fontSize(13)
-          .fontColor(OfflineSyncAuditService.getStatusTone(item.status))
+          .fontColor(OfflineSyncRecordLogService.getStatusTone(item.status))
           .fontWeight(FontWeight.Medium)
           .maxLines(1)
       }
@@ -235,9 +235,9 @@ struct OfflineSyncAudit {
 
       this.CompactInfoRow('批次编号', item.clientBatchId, AppColors.TextSecondary)
       this.CompactInfoRow('操作人', item.operatorName.length > 0 ? item.operatorName : item.userId, AppColors.TextSecondary)
-      this.CompactInfoRow('发起时间', OfflineSyncAuditService.formatTime(item.createdOfflineAt), AppColors.TextSecondary)
-      this.CompactInfoRow('提交时间', OfflineSyncAuditService.formatTime(item.submittedAt), AppColors.TextSecondary)
-      this.CompactInfoRow('处理时间', OfflineSyncAuditService.formatTime(item.processedAt === undefined ? '' : item.processedAt),
+      this.CompactInfoRow('发起时间', OfflineSyncRecordLogService.formatTime(item.createdOfflineAt), AppColors.TextSecondary)
+      this.CompactInfoRow('提交时间', OfflineSyncRecordLogService.formatTime(item.submittedAt), AppColors.TextSecondary)
+      this.CompactInfoRow('处理时间', OfflineSyncRecordLogService.formatTime(item.processedAt === undefined ? '' : item.processedAt),
         AppColors.TextSecondary)
       if (item.serverRecordId !== undefined && item.serverRecordId.length > 0) {
         this.CompactInfoRow('后端记录', item.serverRecordId, AppColors.TextSecondary)
@@ -343,12 +343,12 @@ struct OfflineSyncAudit {
     }
 
     this.refreshing = true;
-    const response = await OfflineSyncAuditService.queryRecentRecordsRemoteFirst();
+    const response = await OfflineSyncRecordLogService.queryRecentRecordsRemoteFirst();
     this.refreshing = false;
 
     if (!response.success) {
       const error = response.error;
-      this.message = error ? error.message : '同步审计刷新失败';
+      this.message = error ? error.message : '同步处理记录刷新失败';
       this.refreshStatus = '刷新失败';
       return;
     }

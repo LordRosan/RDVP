@@ -49,6 +49,10 @@ export interface OfflineSyncSummary {
   logThrottleEnabled: boolean;
   recoveryReadyAt?: string;
   latestUpdatedAt?: string;
+  latestAutoSyncAt?: string;
+  latestAutoSyncMessage?: string;
+  latestAutoSyncSyncedCount?: number;
+  latestAutoSyncFailedCount?: number;
 }
 
 export interface OfflineSyncRuntimeState {
@@ -59,6 +63,10 @@ export interface OfflineSyncRuntimeState {
   onlineRecoveryReadyAt?: string;
   lastTransitionAt?: string;
   lastTransitionReason?: string;
+  latestAutoSyncAt?: string;
+  latestAutoSyncMessage?: string;
+  latestAutoSyncSyncedCount?: number;
+  latestAutoSyncFailedCount?: number;
 }
 
 export interface OfflineSyncSettings {
@@ -146,6 +154,18 @@ export interface OfflineSyncExecutionResult {
   failedCount: number;
   skippedCount: number;
   message: string;
+  itemResults: OfflineSyncExecutionItemResult[];
+}
+
+export interface OfflineSyncExecutionItemResult {
+  itemId: string;
+  operationType: string;
+  payloadSummary: string;
+  success: boolean;
+  statusLabel: string;
+  serverRecordId?: string;
+  errorCode?: string;
+  errorMessage?: string;
 }
 
 export interface OfflineSyncRecordRequest {

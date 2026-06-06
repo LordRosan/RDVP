@@ -182,9 +182,9 @@ export class WorkbenchService {
         tone: AppColors.Primary
       });
       actions.push({
-        id: WorkbenchActionId.OfflineSyncAudit,
-        title: '同步审计',
-        summary: '查看离线同步记录',
+        id: WorkbenchActionId.OfflineSyncRecord,
+        title: '同步处理记录',
+        summary: '在线查看同步处理留痕',
         tone: AppColors.Primary
       });
     }
@@ -193,7 +193,7 @@ export class WorkbenchService {
   }
 
   static getStatusItems(): WorkbenchStatusItem[] {
-    return [
+    const items: WorkbenchStatusItem[] = [
       {
         id: 'network',
         name: '服务模式',
@@ -213,6 +213,17 @@ export class WorkbenchService {
         tone: OfflineSyncService.getStatusTone()
       }
     ];
+
+    if (OfflineSyncService.isAutoSyncEnabled() || OfflineSyncService.getLatestAutoSyncLabel() !== '暂无记录') {
+      items.push({
+        id: 'autoSync',
+        name: '最近自动同步',
+        value: OfflineSyncService.getLatestAutoSyncLabel(),
+        tone: OfflineSyncService.getLatestAutoSyncTone()
+      });
+    }
+
+    return items;
   }
 
   static getPendingChangeCount(): number {

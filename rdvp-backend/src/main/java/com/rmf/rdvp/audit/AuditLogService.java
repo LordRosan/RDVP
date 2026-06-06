@@ -19,6 +19,7 @@ public class AuditLogService {
     private static final int MAX_PAGE_SIZE = 100;
     private static final int MAX_PAGE_NUMBER = 10_000;
     private static final int MAX_TARGET_TEXT_LENGTH = 128;
+    private static final int MAX_QUERY_KEYWORD_LENGTH = 128;
     private static final int MAX_DESCRIPTION_LENGTH = 500;
 
     private final AuditLogRepository auditLogRepository;
@@ -80,9 +81,10 @@ public class AuditLogService {
         record(action, targetId, targetNo, actorId, actorName, AuditStatus.FAILED, description);
     }
 
-    public AuditLogPage list(String action, int page, int pageSize) {
+    public AuditLogPage list(String action, String keyword, int page, int pageSize) {
         return auditLogRepository.list(new AuditLogQuery(
                 parseAction(action),
+                normalizeQueryKeyword(keyword),
                 normalizePage(page),
                 normalizePageSize(pageSize)));
     }
@@ -133,6 +135,19 @@ public class AuditLogService {
         }
 
         return Math.min(pageSize, MAX_PAGE_SIZE);
+    }
+
+    private String normalizeQueryKeyword(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return null;
+        }
+
+        String normalized = keyword.trim();
+        if (normalized.length() > MAX_QUERY_KEYWORD_LENGTH) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "keyword is too long.");
+        }
+
+        return normalized;
     }
 
     private String normalizeOptionalText(String value, int maxLength) {

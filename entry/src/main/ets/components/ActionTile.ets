@@ -95,7 +95,7 @@ export struct ActionTile {
       SymbolGlyph($r('sys.symbol.checkmark_shield'))
         .fontSize(23)
         .fontColor([AppColors.OnPrimary])
-    } else if (this.action.id === WorkbenchActionId.OfflineSyncAudit) {
+    } else if (this.action.id === WorkbenchActionId.OfflineSyncRecord) {
       SymbolGlyph($r('sys.symbol.arrow_clockwise'))
         .fontSize(23)
         .fontColor([AppColors.OnPrimary])

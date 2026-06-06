@@ -2,6 +2,7 @@ import { AppColors } from '../styles/AppTheme';
 import { ApiResponse } from '../models/ApiModels';
 import {
   OperationRecordListResult,
+  OperationRecordQueryFilter,
   OperationRecordSummary,
   OperationRecordStatus,
   OperationRecordType
@@ -28,11 +29,11 @@ interface ApiListResult<T> {
 }
 
 export class OperationRecordService {
-  static queryRecentRecords(): ApiResponse<OperationRecordListResult> {
+  static queryRecentRecords(filter?: OperationRecordQueryFilter): ApiResponse<OperationRecordListResult> {
     if (!ApiClient.isConfigured()) {
       return {
         success: true,
-        data: LocalOperationRecordRepository.queryRecentRecords(),
+        data: OperationRecordService.applyLocalFilter(LocalOperationRecordRepository.queryRecentRecords(), filter),
         requestId: 'local-operation-records',
         timestamp: new Date().toISOString()
       };
@@ -41,18 +42,19 @@ export class OperationRecordService {
     return ApiClient.createServiceUnavailableResponse<OperationRecordListResult>();
   }
 
-  static async queryRecentRecordsRemoteFirst(): Promise<ApiResponse<OperationRecordListResult>> {
+  static async queryRecentRecordsRemoteFirst(filter?: OperationRecordQueryFilter): Promise<ApiResponse<OperationRecordListResult>> {
     if (!ApiClient.isConfigured()) {
       return {
         success: true,
-        data: LocalOperationRecordRepository.queryRecentRecords(),
+        data: OperationRecordService.applyLocalFilter(LocalOperationRecordRepository.queryRecentRecords(), filter),
         requestId: 'local-operation-records',
         timestamp: new Date().toISOString()
       };
     }
 
+    const query = OperationRecordService.buildQueryString(filter);
     const response = await ApiClient.request<ApiListResult<OperationRecordApiSummary>>(
-      `/api/v1/audit-logs?page=1&pageSize=${DEFAULT_AUDIT_LOG_PAGE_SIZE}`,
+      `/api/v1/audit-logs?page=1&pageSize=${DEFAULT_AUDIT_LOG_PAGE_SIZE}${query}`,
       'GET',
       true
     );
@@ -79,6 +81,57 @@ export class OperationRecordService {
     };
   }
 
+  private static buildQueryString(filter?: OperationRecordQueryFilter): string {
+    if (filter === undefined) {
+      return '';
+    }
+
+    const params: string[] = [];
+    const action = filter.action.trim();
+    const keyword = filter.keyword.trim();
+    if (action.length > 0) {
+      params.push(`action=${encodeURIComponent(action)}`);
+    }
+    if (keyword.length > 0) {
+      params.push(`keyword=${encodeURIComponent(keyword)}`);
+    }
+
+    return params.length === 0 ? '' : `&${params.join('&')}`;
+  }
+
+  private static applyLocalFilter(
+    result: OperationRecordListResult,
+    filter?: OperationRecordQueryFilter
+  ): OperationRecordListResult {
+    if (filter === undefined || (filter.action.trim().length === 0 && filter.keyword.trim().length === 0)) {
+      return result;
+    }
+
+    const action = filter.action.trim();
+    const keyword = filter.keyword.trim().toLowerCase();
+    const items = result.items.filter((item: OperationRecordSummary): boolean => {
+      const matchesAction = action.length === 0 || OperationRecordService.resolveApiAction(item) === action;
+      const matchesKeyword = keyword.length === 0 ||
+        item.targetNo.toLowerCase().includes(keyword) ||
+        item.operatorName.toLowerCase().includes(keyword) ||
+        item.description.toLowerCase().includes(keyword);
+      return matchesAction && matchesKeyword;
+    });
+
+    return {
+      items,
+      total: items.length
+    };
+  }
+
+  private static resolveApiAction(item: OperationRecordSummary): string {
+    if (item.title === '档案审核') {
+      return 'DEVICE_CHANGE_REVIEW';
+    }
+
+    return `${item.type}`;
+  }
+
   static formatRecordType(type: OperationRecordType): string {
     switch (type) {
       case OperationRecordType.AuthLogin:
@@ -93,6 +146,8 @@ export class OperationRecordService {
         return '离线同步';
       case OperationRecordType.DeviceVerification:
         return '设备核验';
+      case OperationRecordType.DeviceQrCodeExport:
+        return '二维码导出';
       case OperationRecordType.DeviceChangeRequest:
         return '档案变更';
       case OperationRecordType.FaultReport:
@@ -164,6 +219,8 @@ export class OperationRecordService {
         return OperationRecordType.OfflineSync;
       case 'DEVICE_VERIFICATION':
         return OperationRecordType.DeviceVerification;
+      case 'DEVICE_QRCODE_EXPORT':
+        return OperationRecordType.DeviceQrCodeExport;
       case 'DEVICE_CHANGE_REQUEST':
       case 'DEVICE_CHANGE_REVIEW':
         return OperationRecordType.DeviceChangeRequest;
@@ -212,6 +269,8 @@ export class OperationRecordService {
         return '完成设备档案变更审核';
       case 'DEVICE_VERIFICATION':
         return '提交设备核验记录';
+      case 'DEVICE_QRCODE_EXPORT':
+        return '导出设备二维码';
       case 'FAULT_REPORT':
         return '提交设备报修信息';
       case 'REPAIR_TASK_ACCEPT':
@@ -248,6 +307,8 @@ export class OperationRecordService {
         return '提交复检记录';
       case 'Submitted device verification record.':
         return '提交设备核验记录';
+      case 'Exported device QR code.':
+        return '导出设备二维码';
       case 'Submitted device archive update request.':
         return '提交设备档案变更申请';
       case 'Submitted device archive create request.':

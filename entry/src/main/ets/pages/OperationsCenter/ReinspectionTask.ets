@@ -1,5 +1,4 @@
 import { AppColors } from '../../styles/AppTheme';
-import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import {
   ReinspectionResult, ReinspectionTaskSummary
@@ -9,22 +8,6 @@ import { ApiClient } from '../../services/ApiClient';
 import { ReinspectionService } from '../../services/ReinspectionService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
-
-const REINSPECTION_INFO_SECTIONS: InfoDialogSection[] = [
-  {
-    title: '复检任务',
-    items: [
-      {
-        label: '适用范围',
-        description: '高等级故障维修后需要复检确认，防止设备在风险未消除前恢复正常状态'
-      },
-      {
-        label: '复检结论',
-        description: '复检通过后可进入关闭流程；复检不通过时应重新进入维修处理流程'
-      }
-    ]
-  }
-];
 
 @Entry
 @Component
@@ -43,15 +26,6 @@ struct ReinspectionTask {
   @State submittedReinspectionTaskId: string = '';
   @State refreshing: boolean = false;
   @State submitting: boolean = false;
-  private reinspectionInfoDialogController: CustomDialogController = new CustomDialogController({
-    builder: InfoDialog({
-      title: '复检任务说明',
-      sections: REINSPECTION_INFO_SECTIONS
-    }),
-    autoCancel: true,
-    alignment: DialogAlignment.Center,
-    customStyle: true
-  });
 
   aboutToAppear(): void {
     if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.OpsReinspectionCreate)) {
@@ -129,19 +103,12 @@ struct ReinspectionTask {
   @Builder
   ModeHeader() {
     Column({ space: 6 }) {
-      Row({ space: 6 }) {
-        Text('复检任务')
-          .fontSize(34)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TextPrimary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-        this.InfoButton(() => {
-          this.reinspectionInfoDialogController.open();
-        })
-      }
-      .alignItems(VerticalAlign.Center)
+      Text('复检任务')
+        .fontSize(34)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
 
       Text('确认高等级故障维修结果')
         .fontSize(15)
@@ -610,21 +577,6 @@ struct ReinspectionTask {
     .width('100%')
     .backgroundColor(enabled ? AppColors.Primary : AppColors.Disabled)
     .enabled(enabled)
-    .onClick(() => {
-      action();
-    })
-  }
-
-  @Builder
-  InfoButton(action: () => void) {
-    Button({ type: ButtonType.Circle, stateEffect: true }) {
-      SymbolGlyph($r('sys.symbol.info_circle'))
-        .fontSize(18)
-        .fontColor([AppColors.TextPrimary])
-    }
-    .width(28)
-    .height(28)
-    .backgroundColor(AppColors.Transparent)
     .onClick(() => {
       action();
     })

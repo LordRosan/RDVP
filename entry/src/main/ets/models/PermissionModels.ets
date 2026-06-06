@@ -2,6 +2,7 @@ export enum PermissionCode {
   ArchiveDeviceRead = 'ARCHIVE_DEVICE_READ',
   ArchiveDeviceCreate = 'ARCHIVE_DEVICE_CREATE',
   ArchiveDeviceDelete = 'ARCHIVE_DEVICE_DELETE',
+  ArchiveQrCodeExport = 'ARCHIVE_QRCODE_EXPORT',
   ArchiveChangeRequestCreate = 'ARCHIVE_CHANGE_REQUEST_CREATE',
   OpsDeviceVerify = 'OPS_DEVICE_VERIFY',
   OpsFaultReportCreate = 'OPS_FAULT_REPORT_CREATE',
@@ -16,6 +17,7 @@ export const ArchiveCenterPermissions: string[] = [
   PermissionCode.ArchiveDeviceRead,
   PermissionCode.ArchiveDeviceCreate,
   PermissionCode.ArchiveDeviceDelete,
+  PermissionCode.ArchiveQrCodeExport,
   PermissionCode.ArchiveChangeRequestCreate
 ];
 
@@ -36,6 +38,7 @@ export const AllPermissionCodes: string[] = [
   PermissionCode.ArchiveDeviceRead,
   PermissionCode.ArchiveDeviceCreate,
   PermissionCode.ArchiveDeviceDelete,
+  PermissionCode.ArchiveQrCodeExport,
   PermissionCode.ArchiveChangeRequestCreate,
   PermissionCode.OpsDeviceVerify,
   PermissionCode.OpsFaultReportCreate,

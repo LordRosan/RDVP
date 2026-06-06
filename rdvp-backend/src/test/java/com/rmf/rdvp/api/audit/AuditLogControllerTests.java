@@ -393,6 +393,16 @@ class AuditLogControllerTests {
                 .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"));
     }
 
+    @Test
+    void rejectsOverlongAuditKeywordFilter() throws Exception {
+        String auditorToken = login("auditor", "password");
+
+        mockMvc.perform(get("/api/v1/audit-logs?keyword=" + "a".repeat(129))
+                        .header("Authorization", "Bearer " + auditorToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"));
+    }
+
     private String createFaultReport(String token) throws Exception {
         return createFaultReport(
                 token,

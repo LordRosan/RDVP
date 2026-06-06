@@ -259,6 +259,7 @@ export class AuthService {
           PermissionCode.ArchiveDeviceRead,
           PermissionCode.ArchiveDeviceCreate,
           PermissionCode.ArchiveDeviceDelete,
+          PermissionCode.ArchiveQrCodeExport,
           PermissionCode.MgmtArchiveChangeReview
         ]
       };

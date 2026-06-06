@@ -1,5 +1,4 @@
 import { AppColors } from '../../styles/AppTheme';
-import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { FaultSeverity, FaultType } from '../../models/FaultModels';
 import { PermissionCode } from '../../models/PermissionModels';
@@ -10,44 +9,6 @@ import { DeviceVerificationService } from '../../services/DeviceVerificationServ
 import { FaultReportService } from '../../services/FaultReportService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
-
-const VERIFICATION_INFO_SECTIONS: InfoDialogSection[] = [
-  {
-    title: '设备核验与报修',
-    items: [
-      {
-        label: '现场记录',
-        description: '记录设备当前运行、环境、外观和核验依据，形成可追溯的现场处理记录'
-      }
-    ]
-  },
-  {
-    title: '核验结果',
-    items: [
-      {
-        label: '正常',
-        description: '关键功能、状态指标和现场环境未见异常，设备可按原业务流程继续运行'
-      },
-      {
-        label: '异常',
-        description: '发现偏离预期的状态、现象或风险信号时，必须同步补充报修信息'
-      },
-      {
-        label: '不可用',
-        description: '设备无法完成基本业务能力或存在明显安全风险时，必须同步进入维修流程'
-      }
-    ]
-  },
-  {
-    title: '联动报修',
-    items: [
-      {
-        label: '联动提交',
-        description: '异常或不可用核验会与报修信息一次提交，避免只记录异常而未进入维修处理'
-      }
-    ]
-  }
-];
 
 @Entry
 @Component
@@ -68,15 +29,6 @@ struct DeviceVerification {
   @State latestReportNo: string = '-';
   @State submitting: boolean = false;
   @State submitted: boolean = false;
-  private verificationInfoDialogController: CustomDialogController = new CustomDialogController({
-    builder: InfoDialog({
-      title: '设备核验与报修说明',
-      sections: VERIFICATION_INFO_SECTIONS
-    }),
-    autoCancel: true,
-    alignment: DialogAlignment.Center,
-    customStyle: true
-  });
 
   aboutToAppear(): void {
     AuthGuard.requirePermission(this.getUIContext(), PermissionCode.OpsDeviceVerify);
@@ -149,19 +101,12 @@ struct DeviceVerification {
   @Builder
   ModeHeader() {
     Column({ space: 6 }) {
-      Row({ space: 6 }) {
-        Text('设备核验与报修')
-          .fontSize(34)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TextPrimary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-        this.InfoButton(() => {
-          this.showVerificationInfoDialog();
-        })
-      }
-      .alignItems(VerticalAlign.Center)
+      Text('设备核验与报修')
+        .fontSize(34)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
 
       Text('记录设备现场状态，异常时同步进入维修流程')
         .fontSize(15)
@@ -725,21 +670,6 @@ struct DeviceVerification {
   }
 
   @Builder
-  InfoButton(action: () => void) {
-    Button({ type: ButtonType.Circle, stateEffect: true }) {
-      SymbolGlyph($r('sys.symbol.info_circle'))
-        .fontSize(18)
-        .fontColor([AppColors.TextPrimary])
-    }
-    .width(28)
-    .height(28)
-    .backgroundColor(AppColors.Transparent)
-    .onClick(() => {
-      action();
-    })
-  }
-
-  @Builder
   StatusPanel() {
     Column({ space: 10 }) {
       Text('提交状态')
@@ -902,10 +832,6 @@ struct DeviceVerification {
       default:
         return AppColors.TextSecondary;
     }
-  }
-
-  showVerificationInfoDialog(): void {
-    this.verificationInfoDialogController.open();
   }
 
   requiresFaultReport(): boolean {

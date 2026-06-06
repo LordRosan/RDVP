@@ -41,14 +41,14 @@ public class InMemoryOfflineSyncRepository implements OfflineSyncRepository {
     }
 
     @Override
-    public OfflineSyncAuditPage listAuditRecords(int page, int pageSize) {
+    public OfflineSyncProcessingPage listProcessingRecords(int page, int pageSize) {
         int normalizedPage = Math.max(page, 1);
         int normalizedPageSize = Math.max(pageSize, 1);
-        List<OfflineSyncAuditRecord> auditRecords = records.stream()
+        List<OfflineSyncProcessingRecord> processingRecords = records.stream()
                 .sorted(Comparator.comparing(StoredRecord::createdAt).reversed())
                 .map(record -> {
                     StoredBatch batch = findStoredBatch(record.batchId());
-                    return new OfflineSyncAuditRecord(
+                    return new OfflineSyncProcessingRecord(
                             record.batchId(),
                             batch == null ? "" : batch.clientBatchId(),
                             batch == null ? OfflineSyncBatchStatus.FAILED : batch.status(),
@@ -65,9 +65,9 @@ public class InMemoryOfflineSyncRepository implements OfflineSyncRepository {
                             record.createdAt());
                 })
                 .toList();
-        int fromIndex = Math.min((normalizedPage - 1) * normalizedPageSize, auditRecords.size());
-        int toIndex = Math.min(fromIndex + normalizedPageSize, auditRecords.size());
-        return new OfflineSyncAuditPage(auditRecords.subList(fromIndex, toIndex), auditRecords.size());
+        int fromIndex = Math.min((normalizedPage - 1) * normalizedPageSize, processingRecords.size());
+        int toIndex = Math.min(fromIndex + normalizedPageSize, processingRecords.size());
+        return new OfflineSyncProcessingPage(processingRecords.subList(fromIndex, toIndex), processingRecords.size());
     }
 
     @Override

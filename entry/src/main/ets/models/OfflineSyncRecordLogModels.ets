@@ -1,9 +1,9 @@
-export enum OfflineSyncAuditRecordStatus {
+export enum OfflineSyncRecordLogStatus {
   Succeeded = 'SUCCEEDED',
   Failed = 'FAILED'
 }
 
-export interface OfflineSyncAuditRecordSummary {
+export interface OfflineSyncRecordLogSummary {
   batchId: string;
   clientBatchId: string;
   batchStatus: string;
@@ -20,7 +20,7 @@ export interface OfflineSyncAuditRecordSummary {
   processedAt?: string;
 }
 
-export interface OfflineSyncAuditListResult {
-  items: OfflineSyncAuditRecordSummary[];
+export interface OfflineSyncRecordLogListResult {
+  items: OfflineSyncRecordLogSummary[];
   total: number;
 }

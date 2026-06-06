@@ -19,6 +19,6 @@
     "pages/OperationsCenter/ReinspectionTask",
     "pages/ManagementCenter/DeviceArchiveReview",
     "pages/ManagementCenter/OperationRecord",
-    "pages/ManagementCenter/OfflineSyncAudit"
+    "pages/ManagementCenter/OfflineSyncRecord"
   ]
 }

@@ -27,10 +27,11 @@ public class AuditLogController {
     @PreAuthorize("hasAuthority('MGMT_AUDIT_LOG_READ')")
     public ResponseEntity<ApiResponse<AuditLogListResponse>> list(
             @RequestParam(required = false) String action,
+            @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int pageSize,
             HttpServletRequest request) {
-        var result = auditLogService.list(action, page, pageSize);
+        var result = auditLogService.list(action, keyword, page, pageSize);
         return ResponseEntity.ok(ApiResponse.success(AuditLogListResponse.from(result), RequestIds.resolve(request)));
     }
 }

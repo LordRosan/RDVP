@@ -8,7 +8,7 @@ public interface OfflineSyncRepository {
 
     Optional<OfflineSyncStoredRecord> findRecord(String userId, String clientRecordId);
 
-    OfflineSyncAuditPage listAuditRecords(int page, int pageSize);
+    OfflineSyncProcessingPage listProcessingRecords(int page, int pageSize);
 
     void saveBatch(OfflineSyncBatchCreate batch);
 }

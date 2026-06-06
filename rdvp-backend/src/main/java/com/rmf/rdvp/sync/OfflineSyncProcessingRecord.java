@@ -2,7 +2,7 @@ package com.rmf.rdvp.sync;
 
 import java.time.OffsetDateTime;
 
-public record OfflineSyncAuditRecord(
+public record OfflineSyncProcessingRecord(
         String batchId,
         String clientBatchId,
         OfflineSyncBatchStatus batchStatus,

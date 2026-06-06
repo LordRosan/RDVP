@@ -2,6 +2,7 @@ package com.rmf.rdvp.audit;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.springframework.context.annotation.Profile;
@@ -31,6 +32,7 @@ public class InMemoryAuditLogRepository implements AuditLogRepository {
     public AuditLogPage list(AuditLogQuery query) {
         List<AuditLogRecord> filtered = records.stream()
                 .filter(record -> query.action() == null || record.action() == query.action())
+                .filter(record -> query.keyword() == null || containsKeyword(record, query.keyword()))
                 .sorted(Comparator.comparing(AuditLogRecord::occurredAt).reversed())
                 .toList();
         int offset = Math.max(0, (query.page() - 1) * query.pageSize());
@@ -44,5 +46,17 @@ public class InMemoryAuditLogRepository implements AuditLogRepository {
 
     private String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value;
+    }
+
+    private boolean containsKeyword(AuditLogRecord record, String keyword) {
+        String normalizedKeyword = keyword.toLowerCase(Locale.ROOT);
+        return contains(record.targetId(), normalizedKeyword)
+                || contains(record.targetNo(), normalizedKeyword)
+                || contains(record.actorName(), normalizedKeyword)
+                || contains(record.description(), normalizedKeyword);
+    }
+
+    private boolean contains(String value, String normalizedKeyword) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(normalizedKeyword);
     }
 }

@@ -88,6 +88,17 @@ public class JdbcAuditLogRepository implements AuditLogRepository {
             conditions.add("action = :action");
             parameters.addValue("action", query.action().name());
         }
+        if (query.keyword() != null) {
+            conditions.add("""
+                    (
+                        target_id ILIKE :keyword ESCAPE '\\'
+                        OR target_no ILIKE :keyword ESCAPE '\\'
+                        OR actor_name ILIKE :keyword ESCAPE '\\'
+                        OR description ILIKE :keyword ESCAPE '\\'
+                    )
+                    """);
+            parameters.addValue("keyword", "%" + escapeLikeKeyword(query.keyword()) + "%");
+        }
 
         return conditions.isEmpty() ? "" : " WHERE " + String.join(" AND ", conditions);
     }
@@ -107,5 +118,11 @@ public class JdbcAuditLogRepository implements AuditLogRepository {
 
     private String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value;
+    }
+
+    private String escapeLikeKeyword(String value) {
+        return value.replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
     }
 }

@@ -1,5 +1,4 @@
 import { AppColors } from '../../styles/AppTheme';
-import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { FaultSeverity } from '../../models/FaultModels';
 import { PermissionCode } from '../../models/PermissionModels';
@@ -10,39 +9,6 @@ import { FaultReportService } from '../../services/FaultReportService';
 import { RepairTaskService } from '../../services/RepairTaskService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
-
-const MY_REPAIR_TASK_INFO_SECTIONS: InfoDialogSection[] = [
-  {
-    title: '我的维修',
-    items: [
-      {
-        label: '任务',
-        description: '集中查看已接取且需要继续处理的维修任务，保持责任人与任务进度一致'
-      },
-      {
-        label: '报告',
-        description: '在维修完成、临时恢复或无法解决时填写处理记录，支撑复检、归档和审计'
-      }
-    ]
-  },
-  {
-    title: '维修结果',
-    items: [
-      {
-        label: RepairTaskService.formatRepairReportResult(RepairReportResult.Repaired),
-        description: '故障已消除并完成必要验证，设备可进入正常运行或后续复检流程'
-      },
-      {
-        label: RepairTaskService.formatRepairReportResult(RepairReportResult.TemporaryRestored),
-        description: '通过临时措施恢复有限运行能力，仍需标记遗留风险并安排后续处理'
-      },
-      {
-        label: RepairTaskService.formatRepairReportResult(RepairReportResult.Unresolved),
-        description: '当前处理未能消除故障，应说明阻塞原因，并升级、转派或补充资源'
-      }
-    ]
-  }
-];
 
 @Entry
 @Component
@@ -62,15 +28,6 @@ struct MyRepairTask {
   @State submittedRepairTaskId: string = '';
   @State refreshing: boolean = false;
   @State submitting: boolean = false;
-  private myRepairTaskInfoDialogController: CustomDialogController = new CustomDialogController({
-    builder: InfoDialog({
-      title: '维修任务说明',
-      sections: MY_REPAIR_TASK_INFO_SECTIONS
-    }),
-    autoCancel: true,
-    alignment: DialogAlignment.Center,
-    customStyle: true
-  });
 
   aboutToAppear(): void {
     if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.OpsRepairReportCreate)) {
@@ -148,19 +105,12 @@ struct MyRepairTask {
   @Builder
   ModeHeader() {
     Column({ space: 6 }) {
-      Row({ space: 6 }) {
-        Text('我的维修')
-          .fontSize(34)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TextPrimary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-        this.InfoButton(() => {
-          this.showMyRepairTaskInfoDialog();
-        })
-      }
-      .alignItems(VerticalAlign.Center)
+      Text('我的维修')
+        .fontSize(34)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
 
       Text('处理已接取任务')
         .fontSize(15)
@@ -683,21 +633,6 @@ struct MyRepairTask {
   }
 
   @Builder
-  InfoButton(action: () => void) {
-    Button({ type: ButtonType.Circle, stateEffect: true }) {
-      SymbolGlyph($r('sys.symbol.info_circle'))
-        .fontSize(18)
-        .fontColor([AppColors.TextPrimary])
-    }
-    .width(28)
-    .height(28)
-    .backgroundColor(AppColors.Transparent)
-    .onClick(() => {
-      action();
-    })
-  }
-
-  @Builder
   CardDivider() {
     Divider()
       .height(1)
@@ -831,10 +766,6 @@ struct MyRepairTask {
       default:
         return AppColors.TextSecondary;
     }
-  }
-
-  showMyRepairTaskInfoDialog(): void {
-    this.myRepairTaskInfoDialogController.open();
   }
 
   showRepairedAtPicker(): void {

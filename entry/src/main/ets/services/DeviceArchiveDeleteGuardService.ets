@@ -3,6 +3,7 @@ import { DeviceService } from './DeviceService';
 import { ApiResponse } from '../models/ApiModels';
 
 const DELETE_LOCK_STORAGE_KEY = 'rdvp_archive_delete_locks';
+const QR_EXPORT_LOCK_STORAGE_KEY = 'rdvp_archive_qrcode_export_locks';
 const MAX_PASSWORD_FAILURES = 5;
 const DELETE_LOCK_DURATION_MS = 12 * 60 * 60 * 1000;
 
@@ -33,13 +34,27 @@ export class DeviceArchiveDeleteGuardService {
   }
 
   static isDeleteLocked(deviceCode: string): boolean {
-    const record = DeviceArchiveDeleteGuardService.findRecord(deviceCode);
+    const record = DeviceArchiveDeleteGuardService.findRecord(DELETE_LOCK_STORAGE_KEY, deviceCode);
     if (record === undefined) {
       return false;
     }
 
     if (!DeviceArchiveDeleteGuardService.isLocked(record)) {
-      DeviceArchiveDeleteGuardService.clearRecord(deviceCode);
+      DeviceArchiveDeleteGuardService.clearRecord(DELETE_LOCK_STORAGE_KEY, deviceCode);
+      return false;
+    }
+
+    return true;
+  }
+
+  static isQrExportLocked(deviceCode: string): boolean {
+    const record = DeviceArchiveDeleteGuardService.findRecord(QR_EXPORT_LOCK_STORAGE_KEY, deviceCode);
+    if (record === undefined) {
+      return false;
+    }
+
+    if (!DeviceArchiveDeleteGuardService.isLocked(record)) {
+      DeviceArchiveDeleteGuardService.clearRecord(QR_EXPORT_LOCK_STORAGE_KEY, deviceCode);
       return false;
     }
 
@@ -47,12 +62,21 @@ export class DeviceArchiveDeleteGuardService {
   }
 
   static getDeleteLockMessage(deviceCode: string): string {
-    const record = DeviceArchiveDeleteGuardService.findRecord(deviceCode);
+    const record = DeviceArchiveDeleteGuardService.findRecord(DELETE_LOCK_STORAGE_KEY, deviceCode);
     if (record === undefined || !DeviceArchiveDeleteGuardService.isLocked(record)) {
       return '当前设备可提交删除申请';
     }
 
     return `删除功能已锁定，${DeviceArchiveDeleteGuardService.formatDateTime(record.lockedUntil)} 后可再次尝试`;
+  }
+
+  static getQrExportLockMessage(deviceCode: string): string {
+    const record = DeviceArchiveDeleteGuardService.findRecord(QR_EXPORT_LOCK_STORAGE_KEY, deviceCode);
+    if (record === undefined || !DeviceArchiveDeleteGuardService.isLocked(record)) {
+      return '当前设备可导出二维码';
+    }
+
+    return `二维码导出已锁定，${DeviceArchiveDeleteGuardService.formatDateTime(record.lockedUntil)} 后可再次尝试`;
   }
 
   static async verifyConfirmation(
@@ -90,7 +114,7 @@ export class DeviceArchiveDeleteGuardService {
 
     const response = await AuthService.verifyCurrentUserPasswordRemoteFirst(form.password);
     if (response.success && response.data === true) {
-      DeviceArchiveDeleteGuardService.clearRecord(normalizedDeviceCode);
+      DeviceArchiveDeleteGuardService.clearRecord(DELETE_LOCK_STORAGE_KEY, normalizedDeviceCode);
       return {
         verified: true,
         message: ''
@@ -98,7 +122,7 @@ export class DeviceArchiveDeleteGuardService {
     }
 
     if (DeviceArchiveDeleteGuardService.isPasswordIncorrectResponse(response)) {
-      const record = DeviceArchiveDeleteGuardService.registerPasswordFailure(normalizedDeviceCode);
+      const record = DeviceArchiveDeleteGuardService.registerPasswordFailure(DELETE_LOCK_STORAGE_KEY, normalizedDeviceCode);
       if (DeviceArchiveDeleteGuardService.isLocked(record)) {
         return {
           verified: false,
@@ -121,7 +145,7 @@ export class DeviceArchiveDeleteGuardService {
     };
   }
 
-  private static isPasswordIncorrectResponse(response: ApiResponse<boolean>): boolean {
+  static isPasswordIncorrectResponse(response: ApiResponse<boolean>): boolean {
     if (response.success) {
       return response.data !== true;
     }
@@ -134,9 +158,32 @@ export class DeviceArchiveDeleteGuardService {
     return errorCode === 'INVALID_CREDENTIALS' || errorCode === 'LOGIN_FAILED';
   }
 
-  private static registerPasswordFailure(deviceCode: string): DeviceArchiveDeleteLockRecord {
+  static registerQrExportPasswordFailure(deviceCode: string): DeviceArchiveDeleteConfirmationResult {
     const normalizedDeviceCode = DeviceService.normalizeDeviceCode(deviceCode);
-    const records = DeviceArchiveDeleteGuardService.readRecords();
+    const record = DeviceArchiveDeleteGuardService.registerPasswordFailure(QR_EXPORT_LOCK_STORAGE_KEY, normalizedDeviceCode);
+    if (DeviceArchiveDeleteGuardService.isLocked(record)) {
+      return {
+        verified: false,
+        message: DeviceArchiveDeleteGuardService.getQrExportLockMessage(normalizedDeviceCode),
+        lockedUntil: record.lockedUntil,
+        failedPasswordAttempts: record.failedPasswordAttempts
+      };
+    }
+
+    return {
+      verified: false,
+      message: `密码错误，还可尝试${MAX_PASSWORD_FAILURES - record.failedPasswordAttempts}次`,
+      failedPasswordAttempts: record.failedPasswordAttempts
+    };
+  }
+
+  static clearQrExportLock(deviceCode: string): void {
+    DeviceArchiveDeleteGuardService.clearRecord(QR_EXPORT_LOCK_STORAGE_KEY, deviceCode);
+  }
+
+  private static registerPasswordFailure(storageKey: string, deviceCode: string): DeviceArchiveDeleteLockRecord {
+    const normalizedDeviceCode = DeviceService.normalizeDeviceCode(deviceCode);
+    const records = DeviceArchiveDeleteGuardService.readRecords(storageKey);
     const existingIndex = records.findIndex((item: DeviceArchiveDeleteLockRecord) => {
       return item.deviceCode === normalizedDeviceCode;
     });
@@ -155,27 +202,27 @@ export class DeviceArchiveDeleteGuardService {
       records.push(record);
     }
 
-    DeviceArchiveDeleteGuardService.writeRecords(records);
+    DeviceArchiveDeleteGuardService.writeRecords(storageKey, records);
     return record;
   }
 
-  private static clearRecord(deviceCode: string): void {
+  private static clearRecord(storageKey: string, deviceCode: string): void {
     const normalizedDeviceCode = DeviceService.normalizeDeviceCode(deviceCode);
-    const records = DeviceArchiveDeleteGuardService.readRecords().filter((item: DeviceArchiveDeleteLockRecord) => {
+    const records = DeviceArchiveDeleteGuardService.readRecords(storageKey).filter((item: DeviceArchiveDeleteLockRecord) => {
       return item.deviceCode !== normalizedDeviceCode;
     });
-    DeviceArchiveDeleteGuardService.writeRecords(records);
+    DeviceArchiveDeleteGuardService.writeRecords(storageKey, records);
   }
 
-  private static findRecord(deviceCode: string): DeviceArchiveDeleteLockRecord | undefined {
+  private static findRecord(storageKey: string, deviceCode: string): DeviceArchiveDeleteLockRecord | undefined {
     const normalizedDeviceCode = DeviceService.normalizeDeviceCode(deviceCode);
-    return DeviceArchiveDeleteGuardService.readRecords().find((item: DeviceArchiveDeleteLockRecord) => {
+    return DeviceArchiveDeleteGuardService.readRecords(storageKey).find((item: DeviceArchiveDeleteLockRecord) => {
       return item.deviceCode === normalizedDeviceCode;
     });
   }
 
   private static getLockedUntil(deviceCode: string): string | undefined {
-    const record = DeviceArchiveDeleteGuardService.findRecord(deviceCode);
+    const record = DeviceArchiveDeleteGuardService.findRecord(DELETE_LOCK_STORAGE_KEY, deviceCode);
     if (record === undefined || record.lockedUntil.length === 0) {
       return undefined;
     }
@@ -187,10 +234,10 @@ export class DeviceArchiveDeleteGuardService {
     return record.lockedUntil.length > 0 && Date.parse(record.lockedUntil) > Date.now();
   }
 
-  private static readRecords(): DeviceArchiveDeleteLockRecord[] {
+  private static readRecords(storageKey: string): DeviceArchiveDeleteLockRecord[] {
     try {
-      PersistentStorage.persistProp<string>(DELETE_LOCK_STORAGE_KEY, '');
-      const text = AppStorage.get<string>(DELETE_LOCK_STORAGE_KEY);
+      PersistentStorage.persistProp<string>(storageKey, '');
+      const text = AppStorage.get<string>(storageKey);
       if (text === undefined || text.length === 0) {
         return [];
       }
@@ -204,9 +251,9 @@ export class DeviceArchiveDeleteGuardService {
     }
   }
 
-  private static writeRecords(records: DeviceArchiveDeleteLockRecord[]): void {
+  private static writeRecords(storageKey: string, records: DeviceArchiveDeleteLockRecord[]): void {
     try {
-      AppStorage.setOrCreate<string>(DELETE_LOCK_STORAGE_KEY, JSON.stringify(records));
+      AppStorage.setOrCreate<string>(storageKey, JSON.stringify(records));
     } catch (err) {
     }
   }

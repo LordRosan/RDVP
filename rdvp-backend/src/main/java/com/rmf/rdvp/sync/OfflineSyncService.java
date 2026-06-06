@@ -121,9 +121,9 @@ public class OfflineSyncService {
         return new OfflineSyncBatchResult(clientBatchId, status, List.copyOf(results));
     }
 
-    public OfflineSyncAuditPage listAuditRecords(int page, int pageSize, AuthenticatedUser operator) {
+    public OfflineSyncProcessingPage listProcessingRecords(int page, int pageSize, AuthenticatedUser operator) {
         requirePermission(operator, PermissionCode.MGMT_AUDIT_LOG_READ);
-        return offlineSyncRepository.listAuditRecords(
+        return offlineSyncRepository.listProcessingRecords(
                 normalizeAuditPage(page),
                 normalizeAuditPageSize(pageSize));
     }

@@ -1,5 +1,4 @@
 import { AppColors } from '../../styles/AppTheme';
-import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import {
   DeviceArchiveChangeFieldDiff,
@@ -12,26 +11,6 @@ import { ApiClient } from '../../services/ApiClient';
 import { DeviceArchiveReviewService } from '../../services/DeviceArchiveReviewService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
-
-const DEVICE_ARCHIVE_REVIEW_INFO_SECTIONS: InfoDialogSection[] = [
-  {
-    title: '变更审核',
-    items: [
-      {
-        label: '审核对象',
-        description: '处理待审核的设备档案修改、添加和删除申请，审核前应核对设备编号、申请原因和字段差异'
-      },
-      {
-        label: '通过',
-        description: '确认申请依据充分且内容正确后提交通过结果，由后端统一应用档案变更'
-      },
-      {
-        label: '驳回',
-        description: '发现申请依据不足、字段不准确或存在风险时提交驳回结果，并填写可追溯的审核意见'
-      }
-    ]
-  }
-];
 
 @Entry
 @Component
@@ -49,15 +28,6 @@ struct DeviceArchiveReview {
   @State refreshStatus: string = '未刷新';
   @State refreshing: boolean = false;
   @State submitting: boolean = false;
-  private reviewInfoDialogController: CustomDialogController = new CustomDialogController({
-    builder: InfoDialog({
-      title: '变更审核说明',
-      sections: DEVICE_ARCHIVE_REVIEW_INFO_SECTIONS
-    }),
-    autoCancel: true,
-    alignment: DialogAlignment.Center,
-    customStyle: true
-  });
 
   aboutToAppear(): void {
     if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.MgmtArchiveChangeReview)) {
@@ -135,19 +105,12 @@ struct DeviceArchiveReview {
   @Builder
   ModeHeader() {
     Column({ space: 6 }) {
-      Row({ space: 6 }) {
-        Text('变更审核')
-          .fontSize(34)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TextPrimary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-        this.InfoButton(() => {
-          this.reviewInfoDialogController.open();
-        })
-      }
-      .alignItems(VerticalAlign.Center)
+      Text('变更审核')
+        .fontSize(34)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
 
       Text('审核待处理设备档案申请')
         .fontSize(15)
@@ -692,21 +655,6 @@ struct DeviceArchiveReview {
     .width('100%')
     .backgroundColor(enabled ? AppColors.Primary : AppColors.Disabled)
     .enabled(enabled)
-    .onClick(() => {
-      action();
-    })
-  }
-
-  @Builder
-  InfoButton(action: () => void) {
-    Button({ type: ButtonType.Circle, stateEffect: true }) {
-      SymbolGlyph($r('sys.symbol.info_circle'))
-        .fontSize(18)
-        .fontColor([AppColors.TextPrimary])
-    }
-    .width(28)
-    .height(28)
-    .backgroundColor(AppColors.Transparent)
     .onClick(() => {
       action();
     })

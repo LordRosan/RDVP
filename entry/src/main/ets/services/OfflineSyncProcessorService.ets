@@ -3,6 +3,7 @@ import { DeviceArchiveChangeRequestStatus } from '../models/DeviceArchiveChangeM
 import {
   OfflineSyncBatchRequest,
   OfflineSyncBatchResult,
+  OfflineSyncExecutionItemResult,
   OfflineSyncExecutionResult,
   OfflineSyncItem,
   OfflineSyncOperationType,
@@ -30,7 +31,8 @@ export class OfflineSyncProcessorService {
         syncedCount: 0,
         failedCount: 0,
         skippedCount: 0,
-        message: '同步任务正在执行'
+        message: '同步任务正在执行',
+        itemResults: []
       };
     }
 
@@ -40,7 +42,8 @@ export class OfflineSyncProcessorService {
         syncedCount: 0,
         failedCount: 0,
         skippedCount: 0,
-        message: '当前未连接后端服务'
+        message: '当前未连接后端服务',
+        itemResults: []
       };
     }
 
@@ -51,7 +54,8 @@ export class OfflineSyncProcessorService {
         syncedCount: 0,
         failedCount: 0,
         skippedCount: 0,
-        message: '暂无可同步项目'
+        message: '暂无可同步项目',
+        itemResults: []
       };
     }
 
@@ -59,6 +63,7 @@ export class OfflineSyncProcessorService {
     let syncedCount = 0;
     let failedCount = 0;
     let skippedCount = 0;
+    const itemResults: OfflineSyncExecutionItemResult[] = [];
 
     try {
       const validItems: OfflineSyncItem[] = [];
@@ -72,6 +77,14 @@ export class OfflineSyncProcessorService {
             '离线同步内容无法解析',
             `${ApiErrorCode.OfflineSyncRecordInvalid}`
           );
+          itemResults.push(OfflineSyncProcessorService.createItemResult(
+            item,
+            false,
+            '内容解析失败',
+            undefined,
+            `${ApiErrorCode.OfflineSyncRecordInvalid}`,
+            '离线同步内容无法解析'
+          ));
           failedCount += 1;
           return;
         }
@@ -87,7 +100,8 @@ export class OfflineSyncProcessorService {
           syncedCount,
           failedCount,
           skippedCount,
-          message: OfflineSyncProcessorService.createResultMessage(items.length, syncedCount, failedCount, skippedCount)
+          message: OfflineSyncProcessorService.createResultMessage(items.length, syncedCount, failedCount, skippedCount),
+          itemResults
         };
       }
 
@@ -102,6 +116,14 @@ export class OfflineSyncProcessorService {
             OfflineSyncProcessorService.releaseLocalArchiveLockIfNeeded(item);
             OfflineSyncService.markFailedPermanently(item.id, message, errorCode);
           }
+          itemResults.push(OfflineSyncProcessorService.createItemResult(
+            item,
+            false,
+            '同步失败',
+            undefined,
+            errorCode,
+            message
+          ));
           failedCount += 1;
         });
       } else {
@@ -110,6 +132,14 @@ export class OfflineSyncProcessorService {
           const result = resultMap.get(item.id);
           if (result === undefined) {
             OfflineSyncService.markFailed(item.id, '后端未返回该离线记录的同步结果', `${ApiErrorCode.InternalError}`);
+            itemResults.push(OfflineSyncProcessorService.createItemResult(
+              item,
+              false,
+              '同步结果缺失',
+              undefined,
+              `${ApiErrorCode.InternalError}`,
+              '后端未返回该离线记录的同步结果'
+            ));
             failedCount += 1;
             return;
           }
@@ -117,6 +147,14 @@ export class OfflineSyncProcessorService {
           if (result.success) {
             OfflineSyncProcessorService.applySuccessfulLocalArchiveSync(item, result);
             OfflineSyncService.markSynced(item.id);
+            itemResults.push(OfflineSyncProcessorService.createItemResult(
+              item,
+              true,
+              '已同步',
+              result.serverRecordId,
+              undefined,
+              undefined
+            ));
             syncedCount += 1;
             return;
           }
@@ -129,6 +167,14 @@ export class OfflineSyncProcessorService {
             OfflineSyncProcessorService.releaseLocalArchiveLockIfNeeded(item);
             OfflineSyncService.markFailedPermanently(item.id, errorMessage, errorCode);
           }
+          itemResults.push(OfflineSyncProcessorService.createItemResult(
+            item,
+            false,
+            OfflineSyncProcessorService.shouldRetryRecord(result) ? '等待重试' : '同步失败',
+            result.serverRecordId,
+            errorCode,
+            errorMessage
+          ));
           failedCount += 1;
         });
       }
@@ -141,7 +187,28 @@ export class OfflineSyncProcessorService {
       syncedCount,
       failedCount,
       skippedCount,
-      message: OfflineSyncProcessorService.createResultMessage(items.length, syncedCount, failedCount, skippedCount)
+      message: OfflineSyncProcessorService.createResultMessage(items.length, syncedCount, failedCount, skippedCount),
+      itemResults
+    };
+  }
+
+  private static createItemResult(
+    item: OfflineSyncItem,
+    success: boolean,
+    statusLabel: string,
+    serverRecordId: string | undefined,
+    errorCode: string | undefined,
+    errorMessage: string | undefined
+  ): OfflineSyncExecutionItemResult {
+    return {
+      itemId: item.id,
+      operationType: item.operationType,
+      payloadSummary: item.payloadSummary,
+      success,
+      statusLabel,
+      serverRecordId,
+      errorCode,
+      errorMessage
     };
   }
 

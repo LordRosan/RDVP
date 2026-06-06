@@ -2,7 +2,6 @@ import { AppColors } from '../../styles/AppTheme';
 import { abilityAccessCtrl } from '@kit.AbilityKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { detectBarcode, scanBarcode, scanCore } from '@kit.ScanKit';
-import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import { PermissionCode } from '../../models/PermissionModels';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { DeviceQueryMode, DeviceSummary } from '../../models/DeviceModels';
@@ -10,26 +9,6 @@ import { ApiClient } from '../../services/ApiClient';
 import { DeviceService } from '../../services/DeviceService';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
 import { AuthGuard } from '../../utils/AuthGuard';
-
-const DEVICE_ARCHIVE_QUERY_INFO_SECTIONS: InfoDialogSection[] = [
-  {
-    title: '查询设备档案',
-    items: [
-      {
-        label: '设备编号',
-        description: '使用系统内唯一编号查询设备档案，适合已知编号或现场记录明确的场景'
-      },
-      {
-        label: '二维码',
-        description: '通过扫描或上传二维码解析设备标识和防伪信息，用于快速定位设备档案'
-      },
-      {
-        label: '档案详情',
-        description: '查询成功后进入设备档案详情，再根据档案状态决定是否发起变更申请'
-      }
-    ]
-  }
-];
 
 @Entry
 @Component
@@ -43,15 +22,6 @@ struct DeviceArchiveQuery {
   @State qrQueryMessage: string = '';
   @State normalizedDeviceCode: string = '-';
   @State querying: boolean = false;
-  private queryInfoDialogController: CustomDialogController = new CustomDialogController({
-    builder: InfoDialog({
-      title: '查询设备档案说明',
-      sections: DEVICE_ARCHIVE_QUERY_INFO_SECTIONS
-    }),
-    autoCancel: true,
-    alignment: DialogAlignment.Center,
-    customStyle: true
-  });
 
   aboutToAppear(): void {
     AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveDeviceRead);
@@ -125,19 +95,12 @@ struct DeviceArchiveQuery {
   ModeHeader() {
     Row({ space: 16 }) {
       Column({ space: 6 }) {
-        Row({ space: 6 }) {
-          Text('查询设备档案')
-            .fontSize(34)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(AppColors.TextPrimary)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-          this.InfoButton(() => {
-            this.showQueryInfoDialog();
-          })
-        }
-        .alignItems(VerticalAlign.Center)
+        Text('查询设备档案')
+          .fontSize(34)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(AppColors.TextPrimary)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
 
         Text(this.getModeSubtitle())
           .fontSize(15)
@@ -422,21 +385,6 @@ struct DeviceArchiveQuery {
     .width('100%')
     .backgroundColor(enabled ? AppColors.Primary : AppColors.Disabled)
     .enabled(enabled)
-    .onClick(() => {
-      action();
-    })
-  }
-
-  @Builder
-  InfoButton(action: () => void) {
-    Button({ type: ButtonType.Circle, stateEffect: true }) {
-      SymbolGlyph($r('sys.symbol.info_circle'))
-        .fontSize(18)
-        .fontColor([AppColors.TextPrimary])
-    }
-    .width(28)
-    .height(28)
-    .backgroundColor(AppColors.Transparent)
     .onClick(() => {
       action();
     })
@@ -754,10 +702,6 @@ struct DeviceArchiveQuery {
     }
 
     return `****${signature.substring(signature.length - 8)}`;
-  }
-
-  showQueryInfoDialog(): void {
-    this.queryInfoDialogController.open();
   }
 
   openDeviceArchiveDetail(device: DeviceSummary): void {

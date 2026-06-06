@@ -1,12 +1,14 @@
 import {
   OfflineSyncItem,
   OfflineSyncItemStatus,
+  OfflineSyncExecutionResult,
   OfflineSyncOperationType,
   OfflineSyncRuntimeState,
   OfflineSyncSettings,
   OfflineSyncSummary,
   OfflineSyncTransitionPreparation
 } from '../models/OfflineSyncModels';
+import { ApiErrorCode } from '../models/ApiModels';
 import { AppColors } from '../styles/AppTheme';
 import { SessionStore } from '../stores/SessionStore';
 import { WorkbenchRefreshStore } from '../stores/WorkbenchRefreshStore';
@@ -27,6 +29,7 @@ const MAX_AUTO_SYNC_BATCH_LIMIT = 5;
 
 interface ArchiveOfflineSyncPayload {
   deviceCode: string;
+  localRequestId?: string;
 }
 
 export class OfflineSyncService {
@@ -201,6 +204,56 @@ export class OfflineSyncService {
     return true;
   }
 
+  static retryFailedItem(id: string): boolean {
+    OfflineSyncService.ensureInitialized();
+    const normalizedId = id.trim();
+    let retried = false;
+    const now = new Date().toISOString();
+    const nextItems: OfflineSyncItem[] = [];
+
+    OfflineSyncService.items.forEach((item: OfflineSyncItem) => {
+      if (item.id !== normalizedId) {
+        nextItems.push(item);
+        return;
+      }
+
+      if (item.status !== OfflineSyncItemStatus.Failed ||
+        !OfflineSyncService.isRetryableFailure(item) ||
+        !OfflineSyncService.canRestoreProvisionalArchiveLock(item)) {
+        nextItems.push(item);
+        return;
+      }
+
+      OfflineSyncService.restoreProvisionalArchiveLock(item);
+      retried = true;
+      nextItems.push({
+        id: item.id,
+        operationType: item.operationType,
+        payloadSummary: item.payloadSummary,
+        payloadJson: item.payloadJson,
+        operatorName: item.operatorName,
+        status: OfflineSyncItemStatus.Pending,
+        createdAt: item.createdAt,
+        updatedAt: now,
+        retryCount: 0,
+        nextRetryAt: undefined,
+        conflictKey: item.conflictKey,
+        serverVersion: item.serverVersion,
+        lastErrorCode: item.lastErrorCode,
+        lastError: item.lastError
+      });
+    });
+
+    if (!retried) {
+      return false;
+    }
+
+    OfflineSyncService.items = nextItems;
+    OfflineSyncService.persistItems();
+    WorkbenchRefreshStore.notifyChanged();
+    return true;
+  }
+
   static getPendingCount(): number {
     return OfflineSyncService.getSummary().pendingCount;
   }
@@ -222,11 +275,65 @@ export class OfflineSyncService {
       autoSyncBatchLimit: OfflineSyncService.normalizeAutoSyncBatchLimit(batchLimit),
       onlineRecoveryReadyAt: OfflineSyncService.runtimeState.onlineRecoveryReadyAt,
       lastTransitionAt: OfflineSyncService.runtimeState.lastTransitionAt,
-      lastTransitionReason: OfflineSyncService.runtimeState.lastTransitionReason
+      lastTransitionReason: OfflineSyncService.runtimeState.lastTransitionReason,
+      latestAutoSyncAt: OfflineSyncService.runtimeState.latestAutoSyncAt,
+      latestAutoSyncMessage: OfflineSyncService.runtimeState.latestAutoSyncMessage,
+      latestAutoSyncSyncedCount: OfflineSyncService.runtimeState.latestAutoSyncSyncedCount,
+      latestAutoSyncFailedCount: OfflineSyncService.runtimeState.latestAutoSyncFailedCount
     };
     OfflineSyncService.persistRuntimeState();
     WorkbenchRefreshStore.notifyChanged();
     return OfflineSyncService.getSettings();
+  }
+
+  static recordAutoSyncResult(result: OfflineSyncExecutionResult): void {
+    OfflineSyncService.ensureInitialized();
+    if (result.processedCount <= 0 && result.syncedCount <= 0 && result.failedCount <= 0) {
+      return;
+    }
+
+    OfflineSyncService.runtimeState = {
+      networkPaused: OfflineSyncService.runtimeState.networkPaused,
+      logThrottleEnabled: OfflineSyncService.runtimeState.logThrottleEnabled,
+      autoSyncEnabled: OfflineSyncService.runtimeState.autoSyncEnabled,
+      autoSyncBatchLimit: OfflineSyncService.runtimeState.autoSyncBatchLimit,
+      onlineRecoveryReadyAt: OfflineSyncService.runtimeState.onlineRecoveryReadyAt,
+      lastTransitionAt: OfflineSyncService.runtimeState.lastTransitionAt,
+      lastTransitionReason: OfflineSyncService.runtimeState.lastTransitionReason,
+      latestAutoSyncAt: new Date().toISOString(),
+      latestAutoSyncMessage: result.message,
+      latestAutoSyncSyncedCount: result.syncedCount,
+      latestAutoSyncFailedCount: result.failedCount
+    };
+    OfflineSyncService.persistRuntimeState();
+    WorkbenchRefreshStore.notifyChanged();
+  }
+
+  static getLatestAutoSyncLabel(): string {
+    OfflineSyncService.ensureInitialized();
+    if (OfflineSyncService.runtimeState.latestAutoSyncAt === undefined ||
+      OfflineSyncService.runtimeState.latestAutoSyncAt.length === 0) {
+      return '暂无记录';
+    }
+
+    const syncedCount = OfflineSyncService.normalizeCount(OfflineSyncService.runtimeState.latestAutoSyncSyncedCount);
+    const failedCount = OfflineSyncService.normalizeCount(OfflineSyncService.runtimeState.latestAutoSyncFailedCount);
+    if (failedCount > 0) {
+      return `失败${failedCount}项`;
+    }
+
+    return `成功${syncedCount}项`;
+  }
+
+  static getLatestAutoSyncTone(): string {
+    OfflineSyncService.ensureInitialized();
+    if (OfflineSyncService.runtimeState.latestAutoSyncAt === undefined ||
+      OfflineSyncService.runtimeState.latestAutoSyncAt.length === 0) {
+      return AppColors.TextSecondary;
+    }
+
+    return OfflineSyncService.normalizeCount(OfflineSyncService.runtimeState.latestAutoSyncFailedCount) > 0 ?
+      AppColors.Danger : AppColors.Success;
   }
 
   static isAutoSyncEnabled(): boolean {
@@ -280,7 +387,11 @@ export class OfflineSyncService {
       networkPaused: OfflineSyncService.runtimeState.networkPaused,
       logThrottleEnabled: OfflineSyncService.runtimeState.logThrottleEnabled,
       recoveryReadyAt: OfflineSyncService.runtimeState.onlineRecoveryReadyAt,
-      latestUpdatedAt: latestUpdatedAt.length === 0 ? undefined : latestUpdatedAt
+      latestUpdatedAt: latestUpdatedAt.length === 0 ? undefined : latestUpdatedAt,
+      latestAutoSyncAt: OfflineSyncService.runtimeState.latestAutoSyncAt,
+      latestAutoSyncMessage: OfflineSyncService.runtimeState.latestAutoSyncMessage,
+      latestAutoSyncSyncedCount: OfflineSyncService.runtimeState.latestAutoSyncSyncedCount,
+      latestAutoSyncFailedCount: OfflineSyncService.runtimeState.latestAutoSyncFailedCount
     };
   }
 
@@ -350,7 +461,11 @@ export class OfflineSyncService {
       autoSyncEnabled: OfflineSyncService.runtimeState.autoSyncEnabled,
       autoSyncBatchLimit: OfflineSyncService.runtimeState.autoSyncBatchLimit,
       lastTransitionAt: new Date().toISOString(),
-      lastTransitionReason: reason
+      lastTransitionReason: reason,
+      latestAutoSyncAt: OfflineSyncService.runtimeState.latestAutoSyncAt,
+      latestAutoSyncMessage: OfflineSyncService.runtimeState.latestAutoSyncMessage,
+      latestAutoSyncSyncedCount: OfflineSyncService.runtimeState.latestAutoSyncSyncedCount,
+      latestAutoSyncFailedCount: OfflineSyncService.runtimeState.latestAutoSyncFailedCount
     };
     OfflineSyncService.persistItems();
     OfflineSyncService.persistRuntimeState();
@@ -381,7 +496,11 @@ export class OfflineSyncService {
       autoSyncBatchLimit: OfflineSyncService.runtimeState.autoSyncBatchLimit,
       onlineRecoveryReadyAt: readyAt,
       lastTransitionAt: new Date().toISOString(),
-      lastTransitionReason: reason
+      lastTransitionReason: reason,
+      latestAutoSyncAt: OfflineSyncService.runtimeState.latestAutoSyncAt,
+      latestAutoSyncMessage: OfflineSyncService.runtimeState.latestAutoSyncMessage,
+      latestAutoSyncSyncedCount: OfflineSyncService.runtimeState.latestAutoSyncSyncedCount,
+      latestAutoSyncFailedCount: OfflineSyncService.runtimeState.latestAutoSyncFailedCount
     };
     OfflineSyncService.persistRuntimeState();
     WorkbenchRefreshStore.notifyChanged();
@@ -545,7 +664,11 @@ export class OfflineSyncService {
         autoSyncBatchLimit: OfflineSyncService.normalizeAutoSyncBatchLimit(runtimeState.autoSyncBatchLimit),
         onlineRecoveryReadyAt: runtimeState.onlineRecoveryReadyAt,
         lastTransitionAt: runtimeState.lastTransitionAt,
-        lastTransitionReason: runtimeState.lastTransitionReason
+        lastTransitionReason: runtimeState.lastTransitionReason,
+        latestAutoSyncAt: runtimeState.latestAutoSyncAt,
+        latestAutoSyncMessage: runtimeState.latestAutoSyncMessage,
+        latestAutoSyncSyncedCount: OfflineSyncService.normalizeCount(runtimeState.latestAutoSyncSyncedCount),
+        latestAutoSyncFailedCount: OfflineSyncService.normalizeCount(runtimeState.latestAutoSyncFailedCount)
       };
     } catch (err) {
       return OfflineSyncService.createDefaultRuntimeState();
@@ -618,6 +741,14 @@ export class OfflineSyncService {
     return Math.min(MAX_AUTO_SYNC_BATCH_LIMIT, Math.floor(value));
   }
 
+  private static normalizeCount(value: number | undefined): number {
+    if (value === undefined || value !== value || value < 0) {
+      return 0;
+    }
+
+    return Math.floor(value);
+  }
+
   private static copyItem(item: OfflineSyncItem): OfflineSyncItem {
     return {
       id: item.id,
@@ -684,6 +815,43 @@ export class OfflineSyncService {
     DeviceArchiveFlowStore.releaseCurrentDeviceChangeLockByCode(deviceCode);
   }
 
+  private static canRestoreProvisionalArchiveLock(item: OfflineSyncItem): boolean {
+    if (item.operationType !== OfflineSyncOperationType.DeviceArchiveUpdateRequestCreate &&
+      item.operationType !== OfflineSyncOperationType.DeviceArchiveDeleteRequestCreate) {
+      return true;
+    }
+
+    const deviceCode = OfflineSyncService.readArchivePayloadDeviceCode(item.payloadJson);
+    if (deviceCode.length === 0) {
+      return false;
+    }
+
+    const currentDevice = LocalDeviceArchiveRepository.findByCode(deviceCode);
+    if (currentDevice === undefined || currentDevice.changeState === undefined ||
+      currentDevice.changeState.locked !== true) {
+      return true;
+    }
+
+    return currentDevice.changeState.pendingRequestId === OfflineSyncService.readArchivePayloadRequestId(item.payloadJson, item.id);
+  }
+
+  private static restoreProvisionalArchiveLock(item: OfflineSyncItem): void {
+    if (item.operationType !== OfflineSyncOperationType.DeviceArchiveUpdateRequestCreate &&
+      item.operationType !== OfflineSyncOperationType.DeviceArchiveDeleteRequestCreate) {
+      return;
+    }
+
+    const deviceCode = OfflineSyncService.readArchivePayloadDeviceCode(item.payloadJson);
+    if (deviceCode.length === 0) {
+      return;
+    }
+
+    LocalDeviceArchiveRepository.markChangePending(
+      deviceCode,
+      OfflineSyncService.readArchivePayloadRequestId(item.payloadJson, item.id)
+    );
+  }
+
   private static readArchivePayloadDeviceCode(payloadJson: string): string {
     try {
       const payload = JSON.parse(payloadJson) as ArchiveOfflineSyncPayload;
@@ -691,5 +859,22 @@ export class OfflineSyncService {
     } catch (err) {
       return '';
     }
+  }
+
+  private static readArchivePayloadRequestId(payloadJson: string, fallback: string): string {
+    try {
+      const payload = JSON.parse(payloadJson) as ArchiveOfflineSyncPayload;
+      const requestId = payload.localRequestId === undefined ? '' : payload.localRequestId.trim();
+      return requestId.length === 0 ? fallback : requestId;
+    } catch (err) {
+      return fallback;
+    }
+  }
+
+  private static isRetryableFailure(item: OfflineSyncItem): boolean {
+    const errorCode = item.lastErrorCode === undefined ? '' : item.lastErrorCode.trim();
+    return errorCode === ApiErrorCode.InternalError ||
+      errorCode === ApiErrorCode.ServiceUnavailable ||
+      errorCode === ApiErrorCode.RateLimited;
   }
 }

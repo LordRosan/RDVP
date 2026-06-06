@@ -1,5 +1,4 @@
 import { AppColors } from '../../styles/AppTheme';
-import { InfoDialog, InfoDialogSection } from '../../components/InfoDialog';
 import {
   DeviceArchiveChangeBaseline,
   DeviceArchiveChangeDraft,
@@ -14,43 +13,6 @@ import { DeviceService } from '../../services/DeviceService';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
-
-const DEVICE_CHANGE_INFO_SECTIONS: InfoDialogSection[] = [
-  {
-    title: '变更申请',
-    items: [
-      {
-        label: '提交申请',
-        description: '填写需要修正的设备档案字段和变更原因，形成待审核申请'
-      },
-      {
-        label: '审核生效',
-        description: '申请通过管理员审核后才会写入正式设备档案，避免误改和越权修改'
-      }
-    ]
-  },
-  {
-    title: '变更内容',
-    items: [
-      {
-        label: '设备名称',
-        description: '用于识别设备业务含义，名称应清晰、稳定，避免临时描述'
-      },
-      {
-        label: '设备型号',
-        description: '记录设备规格或版本信息，便于后续维修、备件和兼容性判断'
-      },
-      {
-        label: '生产厂商',
-        description: '记录设备来源方或制造方，便于追溯质量、保修和技术支持责任'
-      },
-      {
-        label: '设备位置',
-        description: '记录设备当前部署位置，应能支持现场定位和运维派发'
-      }
-    ]
-  }
-];
 
 @Entry
 @Component
@@ -71,15 +33,6 @@ struct DeviceArchiveChange {
   @State submitting: boolean = false;
   private currentDeviceId: string = '';
   private baseline?: DeviceArchiveChangeBaseline = undefined;
-  private changeInfoDialogController: CustomDialogController = new CustomDialogController({
-    builder: InfoDialog({
-      title: '设备档案变更说明',
-      sections: DEVICE_CHANGE_INFO_SECTIONS
-    }),
-    autoCancel: true,
-    alignment: DialogAlignment.Center,
-    customStyle: true
-  });
 
   aboutToAppear(): void {
     if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveChangeRequestCreate)) {
@@ -156,19 +109,12 @@ struct DeviceArchiveChange {
   @Builder
   ModeHeader() {
     Column({ space: 6 }) {
-      Row({ space: 6 }) {
-        Text('设备档案变更')
-          .fontSize(34)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TextPrimary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-        this.InfoButton(() => {
-          this.showChangeInfoDialog();
-        })
-      }
-      .alignItems(VerticalAlign.Center)
+      Text('设备档案变更')
+        .fontSize(34)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
 
       Text('提交设备档案修改申请')
         .fontSize(15)
@@ -477,21 +423,6 @@ struct DeviceArchiveChange {
   }
 
   @Builder
-  InfoButton(action: () => void) {
-    Button({ type: ButtonType.Circle, stateEffect: true }) {
-      SymbolGlyph($r('sys.symbol.info_circle'))
-        .fontSize(18)
-        .fontColor([AppColors.TextPrimary])
-    }
-    .width(28)
-    .height(28)
-    .backgroundColor(AppColors.Transparent)
-    .onClick(() => {
-      action();
-    })
-  }
-
-  @Builder
   StatusPanel() {
     Column({ space: 10 }) {
       Text('提交状态')
@@ -633,10 +564,6 @@ struct DeviceArchiveChange {
     }
 
     return '提交申请';
-  }
-
-  showChangeInfoDialog(): void {
-    this.changeInfoDialogController.open();
   }
 
   loadArchiveContext(): void {

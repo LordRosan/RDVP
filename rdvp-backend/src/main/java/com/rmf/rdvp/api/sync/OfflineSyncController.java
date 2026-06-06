@@ -49,14 +49,14 @@ public class OfflineSyncController {
         return ResponseEntity.ok(ApiResponse.success(OfflineSyncBatchResponse.from(result), RequestIds.resolve(request)));
     }
 
-    @GetMapping("/offline-records/audit")
+    @GetMapping("/offline-records/processing-records")
     @PreAuthorize("hasAuthority('MGMT_AUDIT_LOG_READ')")
-    public ResponseEntity<ApiResponse<OfflineSyncAuditListResponse>> listAuditRecords(
+    public ResponseEntity<ApiResponse<OfflineSyncProcessingListResponse>> listProcessingRecords(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int pageSize,
             @AuthenticationPrincipal AuthenticatedUser user,
             HttpServletRequest request) {
-        var result = offlineSyncService.listAuditRecords(page, pageSize, user);
-        return ResponseEntity.ok(ApiResponse.success(OfflineSyncAuditListResponse.from(result), RequestIds.resolve(request)));
+        var result = offlineSyncService.listProcessingRecords(page, pageSize, user);
+        return ResponseEntity.ok(ApiResponse.success(OfflineSyncProcessingListResponse.from(result), RequestIds.resolve(request)));
     }
 }

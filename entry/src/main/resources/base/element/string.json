@@ -23,6 +23,10 @@
     {
       "name": "location_permission_reason",
       "value": "用于按当前位置筛选附近维修任务"
+    },
+    {
+      "name": "media_write_permission_reason",
+      "value": "用于保存设备二维码到相册"
     }
   ]
 }
