@@ -213,9 +213,9 @@ export class OfflineSyncProcessorService {
     }
 
     if (failedCount === 0 && skippedCount === 0) {
-      return `已同步${syncedCount}项`;
+      return `已同步提交${syncedCount}项`;
     }
 
-    return `已处理${processedCount}项，同步成功${syncedCount}项，失败${failedCount}项`;
+    return `已处理${processedCount}项，已同步提交${syncedCount}项，失败${failedCount}项`;
   }
 }

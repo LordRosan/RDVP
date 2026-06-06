@@ -1,6 +1,7 @@
 export enum WorkbenchActionId {
   ArchiveCenter = 'ARCHIVE_CENTER',
   OperationsCenter = 'OPERATIONS_CENTER',
+  SyncCenter = 'SYNC_CENTER',
   ManagementCenter = 'MANAGEMENT_CENTER',
   DeviceQuery = 'DEVICE_QUERY',
   DeviceArchiveCreate = 'DEVICE_ARCHIVE_CREATE',

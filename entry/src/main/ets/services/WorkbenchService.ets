@@ -64,9 +64,9 @@ export class WorkbenchService {
 
     metrics.push({
       id: 'offlineDrafts',
-      label: '待同步草稿',
+      label: '待同步内容',
       value: `${summary.offlineDrafts}`,
-      status: '离线同步',
+      status: '同步队列',
       tone: summary.offlineDrafts > 0 ? AppColors.Warning : AppColors.Primary
     });
 
@@ -93,6 +93,13 @@ export class WorkbenchService {
         tone: AppColors.Primary
       });
     }
+
+    actions.push({
+      id: WorkbenchActionId.SyncCenter,
+      title: '同步中心',
+      summary: '管理离线内容与同步策略',
+      tone: OfflineSyncService.getPendingCount() > 0 ? AppColors.Warning : AppColors.Primary
+    });
 
     if (WorkbenchService.canAccessManagementCenter()) {
       actions.push({

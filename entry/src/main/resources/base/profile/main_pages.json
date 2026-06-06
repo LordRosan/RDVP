@@ -6,6 +6,7 @@
     "pages/PersonalCenter/ApplicationSettings",
     "pages/ArchiveCenter/ArchiveCenter",
     "pages/OperationsCenter/OperationsCenter",
+    "pages/SyncCenter/SyncCenter",
     "pages/ManagementCenter/ManagementCenter",
     "pages/ArchiveCenter/DeviceArchiveQuery",
     "pages/ArchiveCenter/DeviceArchiveCreate",

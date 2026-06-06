@@ -4,6 +4,7 @@ import { MetricTile } from '../components/MetricTile';
 import { WorkbenchAction, WorkbenchActionId, WorkbenchMetric, WorkbenchStatusItem } from '../models/WorkbenchModels';
 import { CurrentUserSnapshot } from '../models/SessionModels';
 import { OfflineSyncProcessorService } from '../services/OfflineSyncProcessorService';
+import { OfflineSyncService } from '../services/OfflineSyncService';
 import { WorkbenchService } from '../services/WorkbenchService';
 import { SessionStore } from '../stores/SessionStore';
 
@@ -37,7 +38,7 @@ struct Workbench {
 
   refreshWorkbenchState(): void {
     this.applyWorkbenchState();
-    OfflineSyncProcessorService.syncReadyItems().then(() => {
+    this.runAutoSyncIfEnabled().then(() => {
       return WorkbenchService.refreshSummaryRemoteFirst();
     }).then(() => {
       this.applyWorkbenchState();
@@ -53,6 +54,14 @@ struct Workbench {
     this.actions = WorkbenchService.getActions();
     this.statusItems = WorkbenchService.getStatusItems();
     this.currentUser = SessionStore.getCurrentUser();
+  }
+
+  async runAutoSyncIfEnabled(): Promise<void> {
+    if (!OfflineSyncService.isAutoSyncEnabled()) {
+      return;
+    }
+
+    await OfflineSyncProcessorService.syncReadyItems(OfflineSyncService.getAutoSyncBatchLimit());
   }
 
   build() {
@@ -301,6 +310,16 @@ struct Workbench {
         this.getUIContext().getRouter().pushUrl({ url: 'pages/OperationsCenter/OperationsCenter' });
       } catch (err) {
         this.actionMessage = '运维中心不可用';
+        this.actionMessageTargetId = `${action.id}`;
+      }
+      return;
+    }
+
+    if (action.id === WorkbenchActionId.SyncCenter) {
+      try {
+        this.getUIContext().getRouter().pushUrl({ url: 'pages/SyncCenter/SyncCenter' });
+      } catch (err) {
+        this.actionMessage = '同步中心不可用';
         this.actionMessageTargetId = `${action.id}`;
       }
       return;

@@ -262,7 +262,7 @@ GET /api/v1/workbench/summary
 | `availableRepairTasks` | 当前处于待接取状态的故障数量 |
 | `activeRepairTasks` | 当前登录维修人员已接取且未提交维修报告的任务数量 |
 | `pendingReinspections` | 当前处于待复检状态的故障数量 |
-| `offlineDrafts` | 当前登录用户待同步的离线草稿数量 |
+| `offlineDrafts` | 当前登录用户待同步的离线内容数量 |
 
 ## 6. 设备接口
 
@@ -894,7 +894,7 @@ GET /api/v1/attachments/{attachmentId}/content
 
 ## 15. 离线同步接口
 
-### 15.1 批量同步离线草稿
+### 15.1 批量同步离线内容
 
 ```text
 POST /api/v1/sync/offline-records

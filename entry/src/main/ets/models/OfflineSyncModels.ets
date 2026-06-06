@@ -32,6 +32,8 @@ export interface OfflineSyncSummary {
   syncingCount: number;
   failedCount: number;
   readyToSyncCount: number;
+  autoSyncEnabled: boolean;
+  autoSyncBatchLimit: number;
   waitingForNetworkStability: boolean;
   networkPaused: boolean;
   logThrottleEnabled: boolean;
@@ -42,9 +44,16 @@ export interface OfflineSyncSummary {
 export interface OfflineSyncRuntimeState {
   networkPaused: boolean;
   logThrottleEnabled: boolean;
+  autoSyncEnabled: boolean;
+  autoSyncBatchLimit: number;
   onlineRecoveryReadyAt?: string;
   lastTransitionAt?: string;
   lastTransitionReason?: string;
+}
+
+export interface OfflineSyncSettings {
+  autoSyncEnabled: boolean;
+  autoSyncBatchLimit: number;
 }
 
 export interface OfflineSyncTransitionPreparation {

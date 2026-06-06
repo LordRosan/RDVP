@@ -2,6 +2,7 @@ import {
   OfflineSyncItem,
   OfflineSyncItemStatus,
   OfflineSyncRuntimeState,
+  OfflineSyncSettings,
   OfflineSyncSummary,
   OfflineSyncTransitionPreparation
 } from '../models/OfflineSyncModels';
@@ -17,6 +18,9 @@ const ONLINE_STABILITY_DELAY_MS = 1500;
 const TRANSITION_DEBOUNCE_MS = 1000;
 const MAX_SYNC_RETRY_COUNT = 3;
 const BASE_RETRY_DELAY_MS = 2000;
+const DEFAULT_AUTO_SYNC_BATCH_LIMIT = 5;
+const MIN_AUTO_SYNC_BATCH_LIMIT = 1;
+const MAX_AUTO_SYNC_BATCH_LIMIT = 5;
 
 export class OfflineSyncService {
   private static initialized: boolean = false;
@@ -115,8 +119,71 @@ export class OfflineSyncService {
     WorkbenchRefreshStore.notifyChanged();
   }
 
+  static getItems(): OfflineSyncItem[] {
+    OfflineSyncService.ensureInitialized();
+    return OfflineSyncService.items.map((item: OfflineSyncItem): OfflineSyncItem => {
+      return OfflineSyncService.copyItem(item);
+    });
+  }
+
+  static withdrawPendingItem(id: string): boolean {
+    OfflineSyncService.ensureInitialized();
+    const normalizedId = id.trim();
+    let removed = false;
+    const nextItems: OfflineSyncItem[] = [];
+    OfflineSyncService.items.forEach((item: OfflineSyncItem) => {
+      if (item.id === normalizedId && item.status === OfflineSyncItemStatus.Pending) {
+        removed = true;
+        return;
+      }
+
+      nextItems.push(item);
+    });
+
+    if (!removed) {
+      return false;
+    }
+
+    OfflineSyncService.items = nextItems;
+    OfflineSyncService.persistItems();
+    WorkbenchRefreshStore.notifyChanged();
+    return true;
+  }
+
   static getPendingCount(): number {
     return OfflineSyncService.getSummary().pendingCount;
+  }
+
+  static getSettings(): OfflineSyncSettings {
+    OfflineSyncService.ensureInitialized();
+    return {
+      autoSyncEnabled: OfflineSyncService.runtimeState.autoSyncEnabled,
+      autoSyncBatchLimit: OfflineSyncService.runtimeState.autoSyncBatchLimit
+    };
+  }
+
+  static setAutoSyncSettings(enabled: boolean, batchLimit: number): OfflineSyncSettings {
+    OfflineSyncService.ensureInitialized();
+    OfflineSyncService.runtimeState = {
+      networkPaused: OfflineSyncService.runtimeState.networkPaused,
+      logThrottleEnabled: OfflineSyncService.runtimeState.logThrottleEnabled,
+      autoSyncEnabled: enabled,
+      autoSyncBatchLimit: OfflineSyncService.normalizeAutoSyncBatchLimit(batchLimit),
+      onlineRecoveryReadyAt: OfflineSyncService.runtimeState.onlineRecoveryReadyAt,
+      lastTransitionAt: OfflineSyncService.runtimeState.lastTransitionAt,
+      lastTransitionReason: OfflineSyncService.runtimeState.lastTransitionReason
+    };
+    OfflineSyncService.persistRuntimeState();
+    WorkbenchRefreshStore.notifyChanged();
+    return OfflineSyncService.getSettings();
+  }
+
+  static isAutoSyncEnabled(): boolean {
+    return OfflineSyncService.getSettings().autoSyncEnabled;
+  }
+
+  static getAutoSyncBatchLimit(): number {
+    return OfflineSyncService.getSettings().autoSyncBatchLimit;
   }
 
   static getSummary(): OfflineSyncSummary {
@@ -156,6 +223,8 @@ export class OfflineSyncService {
       syncingCount,
       failedCount,
       readyToSyncCount,
+      autoSyncEnabled: OfflineSyncService.runtimeState.autoSyncEnabled,
+      autoSyncBatchLimit: OfflineSyncService.runtimeState.autoSyncBatchLimit,
       waitingForNetworkStability: OfflineSyncService.isWaitingForNetworkStability(),
       networkPaused: OfflineSyncService.runtimeState.networkPaused,
       logThrottleEnabled: OfflineSyncService.runtimeState.logThrottleEnabled,
@@ -227,6 +296,8 @@ export class OfflineSyncService {
     OfflineSyncService.runtimeState = {
       networkPaused: true,
       logThrottleEnabled: true,
+      autoSyncEnabled: OfflineSyncService.runtimeState.autoSyncEnabled,
+      autoSyncBatchLimit: OfflineSyncService.runtimeState.autoSyncBatchLimit,
       lastTransitionAt: new Date().toISOString(),
       lastTransitionReason: reason
     };
@@ -255,6 +326,8 @@ export class OfflineSyncService {
     OfflineSyncService.runtimeState = {
       networkPaused: false,
       logThrottleEnabled: false,
+      autoSyncEnabled: OfflineSyncService.runtimeState.autoSyncEnabled,
+      autoSyncBatchLimit: OfflineSyncService.runtimeState.autoSyncBatchLimit,
       onlineRecoveryReadyAt: readyAt,
       lastTransitionAt: new Date().toISOString(),
       lastTransitionReason: reason
@@ -409,6 +482,8 @@ export class OfflineSyncService {
       return {
         networkPaused: runtimeState.networkPaused === true,
         logThrottleEnabled: runtimeState.logThrottleEnabled === true,
+        autoSyncEnabled: runtimeState.autoSyncEnabled === true,
+        autoSyncBatchLimit: OfflineSyncService.normalizeAutoSyncBatchLimit(runtimeState.autoSyncBatchLimit),
         onlineRecoveryReadyAt: runtimeState.onlineRecoveryReadyAt,
         lastTransitionAt: runtimeState.lastTransitionAt,
         lastTransitionReason: runtimeState.lastTransitionReason
@@ -421,7 +496,9 @@ export class OfflineSyncService {
   private static createDefaultRuntimeState(): OfflineSyncRuntimeState {
     return {
       networkPaused: false,
-      logThrottleEnabled: false
+      logThrottleEnabled: false,
+      autoSyncEnabled: false,
+      autoSyncBatchLimit: DEFAULT_AUTO_SYNC_BATCH_LIMIT
     };
   }
 
@@ -472,6 +549,32 @@ export class OfflineSyncService {
   private static getRetryDelayMs(retryCount: number): number {
     const normalizedRetryCount = Math.max(1, retryCount);
     return BASE_RETRY_DELAY_MS * Math.pow(2, normalizedRetryCount - 1);
+  }
+
+  private static normalizeAutoSyncBatchLimit(value: number | undefined): number {
+    if (value === undefined || value !== value || value < MIN_AUTO_SYNC_BATCH_LIMIT) {
+      return DEFAULT_AUTO_SYNC_BATCH_LIMIT;
+    }
+
+    return Math.min(MAX_AUTO_SYNC_BATCH_LIMIT, Math.floor(value));
+  }
+
+  private static copyItem(item: OfflineSyncItem): OfflineSyncItem {
+    return {
+      id: item.id,
+      operationType: item.operationType,
+      payloadSummary: item.payloadSummary,
+      payloadJson: item.payloadJson,
+      operatorName: item.operatorName,
+      status: item.status,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+      retryCount: item.retryCount,
+      nextRetryAt: item.nextRetryAt,
+      conflictKey: item.conflictKey,
+      serverVersion: item.serverVersion,
+      lastError: item.lastError
+    };
   }
 
   private static copyItemWithStatus(item: OfflineSyncItem, status: OfflineSyncItemStatus, error: string): OfflineSyncItem {

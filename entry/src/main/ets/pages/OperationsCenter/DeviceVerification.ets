@@ -834,7 +834,9 @@ struct DeviceVerification {
 
     const recordId = response.data ? response.data.id : '';
     if (DeviceVerificationService.isOfflineSyncQueuedResponse(response)) {
-      this.message = recordId.length > 0 ? `核验记录已在本地提交，待在线同步：${recordId}` : '核验记录已在本地提交，待在线同步';
+      this.message = recordId.length > 0 ?
+        `核验记录已保存至本地同步队列，恢复在线并同步成功后将提交至后端处理：${recordId}` :
+        '核验记录已保存至本地同步队列，恢复在线并同步成功后将提交至后端处理';
     } else {
       this.message = recordId.length > 0 ? `核验记录已提交：${recordId}` : '核验记录已提交';
     }
@@ -875,7 +877,7 @@ struct DeviceVerification {
     const reportNo = response.data ? response.data.faultReport.reportNo : '';
     this.latestReportNo = reportNo.length > 0 ? reportNo : '-';
     this.message = DeviceVerificationService.isOfflineSyncQueuedFaultReportResponse(response) ?
-      '设备核验与报修已在本地提交，待在线同步' : '设备核验与报修已提交';
+      '设备核验与报修已保存至本地同步队列，恢复在线并同步成功后将提交至后端处理' : '设备核验与报修已提交';
     this.messageTone = AppColors.Success;
     this.submitted = true;
   }

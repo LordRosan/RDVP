@@ -59,6 +59,10 @@ export struct ActionTile {
       SymbolGlyph($r('sys.symbol.wrench_and_screwdriver'))
         .fontSize(23)
         .fontColor([AppColors.OnPrimary])
+    } else if (this.action.id === WorkbenchActionId.SyncCenter) {
+      SymbolGlyph($r('sys.symbol.arrow_clockwise'))
+        .fontSize(23)
+        .fontColor([AppColors.OnPrimary])
     } else if (this.action.id === WorkbenchActionId.ManagementCenter) {
       SymbolGlyph($r('sys.symbol.checkmark_shield'))
         .fontSize(23)
