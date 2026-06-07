@@ -1,4 +1,5 @@
-import { Filter, FilterParams, FilterResult, FilterType } from '@kit.ArkUI';
+import { Filter, FilterType } from '@kit.ArkUI';
+import type { FilterParams, FilterResult } from '@kit.ArkUI';
 import { AppColors } from '../../styles/AppTheme';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { OfflineSyncRecordLogSummary } from '../../models/OfflineSyncRecordLogModels';
@@ -412,9 +413,10 @@ struct OfflineSyncRecord {
   }
 
   createFilterParams(name: string, options: string[]): FilterParams {
-    const params = new FilterParams();
-    params.name = name;
-    params.options = options;
+    const params: FilterParams = {
+      name: name,
+      options: options
+    };
     return params;
   }
 
