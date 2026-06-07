@@ -30,6 +30,8 @@ const QUEUE_OPERATION_FILTER_VALUES: string[] = [
   'DEVICE_ARCHIVE_UPDATE_REQUEST_CREATE',
   'DEVICE_ARCHIVE_DELETE_REQUEST_CREATE'
 ];
+const RESULT_STATUS_FILTER_OPTIONS: string[] = ['全部结果', '同步成功', '同步异常'];
+const RESULT_STATUS_FILTER_VALUES: string[] = ['ALL', 'SUCCESS', 'FAILED'];
 
 @Entry
 @Component
@@ -52,6 +54,8 @@ struct SyncCenter {
   @State queueActionMessageItemId: string = '';
   @State queueKeyword: string = '';
   @State lastSyncItemResults: OfflineSyncExecutionItemResult[] = [];
+  @State resultStatusFilterIndex: number = 0;
+  @State resultOperationFilterIndex: number = 0;
   @StorageLink('rdvp_workbench_refresh_revision') workbenchRefreshRevision: number = 0;
 
   aboutToAppear(): void {
@@ -586,6 +590,7 @@ struct SyncCenter {
           .border({ width: 1, color: AppColors.Divider })
           .onClick(() => {
             this.lastSyncItemResults = [];
+            this.resetResultFilters();
           })
         }
         .alignItems(VerticalAlign.Center)
@@ -593,15 +598,84 @@ struct SyncCenter {
       .width('100%')
       .alignItems(VerticalAlign.Center)
 
+      this.ResultFilterPanel()
+
       Column({ space: 10 }) {
-        ForEach(this.lastSyncItemResults, (item: OfflineSyncExecutionItemResult) => {
-          this.LastSyncResultItem(item)
-        }, (item: OfflineSyncExecutionItemResult) => `${item.itemId}-${item.statusLabel}`)
+        if (this.getFilteredLastSyncItemResults().length === 0) {
+          this.ResultFilterEmptyState()
+        } else {
+          ForEach(this.getFilteredLastSyncItemResults(), (item: OfflineSyncExecutionItemResult) => {
+            this.LastSyncResultItem(item)
+          }, (item: OfflineSyncExecutionItemResult) => `${item.itemId}-${item.statusLabel}`)
+        }
       }
       .width('100%')
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
+  }
+
+  @Builder
+  ResultFilterPanel() {
+    Column({ space: 10 }) {
+      Row() {
+        Text(this.getResultFilterSummaryText())
+          .fontSize(13)
+          .fontColor(AppColors.TextSecondary)
+          .layoutWeight(1)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+        Button({ type: ButtonType.Capsule, stateEffect: true }) {
+          Text('重置')
+            .fontSize(13)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(AppColors.TextPrimary)
+            .maxLines(1)
+        }
+        .height(34)
+        .width(72)
+        .backgroundColor(AppColors.FieldBackground)
+        .border({ width: 1, color: AppColors.Border })
+        .enabled(this.hasActiveResultFilter())
+        .onClick(() => {
+          this.resetResultFilters();
+        })
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+
+      Filter({
+        multiFilters: this.getResultFilterParams(),
+        onFilterChanged: (filterResults: FilterResult[]) => {
+          this.applyResultFilterResults(filterResults);
+        },
+        filterType: FilterType.MULTI_LINE_FILTER
+      }) {
+        Blank()
+          .height(0)
+      }
+    }
+    .padding(14)
+    .width('100%')
+    .backgroundColor(AppColors.Surface)
+    .borderRadius(16)
+    .border({ width: 1, color: AppColors.Divider })
+  }
+
+  @Builder
+  ResultFilterEmptyState() {
+    Column({ space: 8 }) {
+      Text('当前筛选下暂无同步结果')
+        .fontSize(15)
+        .fontColor(AppColors.TextSecondary)
+    }
+    .height(92)
+    .width('100%')
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+    .backgroundColor(AppColors.Surface)
+    .borderRadius(24)
   }
 
   @Builder
@@ -1084,10 +1158,12 @@ struct SyncCenter {
       const result = await OfflineSyncProcessorService.syncReadyItems(MANUAL_SYNC_BATCH_LIMIT);
       this.message = result.message;
       this.messageTone = result.failedCount > 0 ? AppColors.Danger : AppColors.Primary;
+      this.resetResultFilters();
       this.lastSyncItemResults = result.itemResults;
     } catch (err) {
       this.message = '同步执行失败';
       this.messageTone = AppColors.Danger;
+      this.resetResultFilters();
       this.lastSyncItemResults = [];
     } finally {
       try {
@@ -1207,6 +1283,29 @@ struct SyncCenter {
     ];
   }
 
+  applyResultFilterResults(filterResults: FilterResult[]): void {
+    if (filterResults.length === 0) {
+      this.resultStatusFilterIndex = 0;
+      this.resultOperationFilterIndex = 0;
+      return;
+    }
+
+    filterResults.forEach((item: FilterResult) => {
+      if (item.name === '结果状态') {
+        this.resultStatusFilterIndex = this.normalizePickerIndex(item.index, RESULT_STATUS_FILTER_OPTIONS.length);
+      } else if (item.name === '业务类型') {
+        this.resultOperationFilterIndex = this.normalizePickerIndex(item.index, QUEUE_OPERATION_FILTER_OPTIONS.length);
+      }
+    });
+  }
+
+  getResultFilterParams(): FilterParams[] {
+    return [
+      this.createFilterParams('结果状态', RESULT_STATUS_FILTER_OPTIONS),
+      this.createFilterParams('业务类型', QUEUE_OPERATION_FILTER_OPTIONS)
+    ];
+  }
+
   createFilterParams(name: string, options: string[]): FilterParams {
     const params = new FilterParams();
     params.name = name;
@@ -1221,9 +1320,18 @@ struct SyncCenter {
     this.clearQueueActionMessage();
   }
 
+  resetResultFilters(): void {
+    this.resultStatusFilterIndex = 0;
+    this.resultOperationFilterIndex = 0;
+  }
+
   hasActiveQueueFilter(): boolean {
     return this.queueStatusFilterIndex !== 0 || this.queueOperationFilterIndex !== 0 ||
       this.queueKeyword.trim().length > 0;
+  }
+
+  hasActiveResultFilter(): boolean {
+    return this.resultStatusFilterIndex !== 0 || this.resultOperationFilterIndex !== 0;
   }
 
   getFilteredItems(): OfflineSyncItem[] {
@@ -1231,6 +1339,16 @@ struct SyncCenter {
     this.items.forEach((item: OfflineSyncItem) => {
       if (this.matchesQueueStatusFilter(item) && this.matchesQueueOperationFilter(item) &&
         this.matchesQueueKeywordFilter(item)) {
+        filteredItems.push(item);
+      }
+    });
+    return filteredItems;
+  }
+
+  getFilteredLastSyncItemResults(): OfflineSyncExecutionItemResult[] {
+    const filteredItems: OfflineSyncExecutionItemResult[] = [];
+    this.lastSyncItemResults.forEach((item: OfflineSyncExecutionItemResult) => {
+      if (this.matchesResultStatusFilter(item) && this.matchesResultOperationFilter(item)) {
         filteredItems.push(item);
       }
     });
@@ -1264,8 +1382,24 @@ struct SyncCenter {
       this.getOptionalText(item.serverVersion).toLowerCase().indexOf(keyword) >= 0;
   }
 
+  matchesResultStatusFilter(item: OfflineSyncExecutionItemResult): boolean {
+    const statusValue = RESULT_STATUS_FILTER_VALUES[this.resultStatusFilterIndex];
+    return statusValue === 'ALL' ||
+      (statusValue === 'SUCCESS' && item.success) ||
+      (statusValue === 'FAILED' && !item.success);
+  }
+
+  matchesResultOperationFilter(item: OfflineSyncExecutionItemResult): boolean {
+    const operationValue = QUEUE_OPERATION_FILTER_VALUES[this.resultOperationFilterIndex];
+    return operationValue === 'ALL' || item.operationType === operationValue;
+  }
+
   getQueueFilterSummaryText(): string {
     return `显示 ${this.getFilteredItems().length}/${this.items.length} 项`;
+  }
+
+  getResultFilterSummaryText(): string {
+    return `显示 ${this.getFilteredLastSyncItemResults().length}/${this.lastSyncItemResults.length} 项`;
   }
 
   getAutoSyncPolicyText(): string {
