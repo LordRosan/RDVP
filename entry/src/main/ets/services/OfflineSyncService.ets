@@ -26,6 +26,8 @@ const BASE_RETRY_DELAY_MS = 2000;
 const DEFAULT_AUTO_SYNC_BATCH_LIMIT = 5;
 const MIN_AUTO_SYNC_BATCH_LIMIT = 1;
 const MAX_AUTO_SYNC_BATCH_LIMIT = 5;
+const MAX_SYNC_BATCH_RECORDS = 20;
+const INVALID_CREATED_AT_SORT_WEIGHT = 9007199254740991;
 
 interface ArchiveOfflineSyncPayload {
   deviceCode: string;
@@ -518,16 +520,20 @@ export class OfflineSyncService {
     const now = Date.now();
     const items: OfflineSyncItem[] = [];
     OfflineSyncService.items.forEach((item: OfflineSyncItem) => {
-      if (items.length >= limit) {
-        return;
-      }
-
       if (item.status === OfflineSyncItemStatus.Pending && OfflineSyncService.isRetryReady(item, now)) {
         items.push(item);
       }
     });
 
-    return items;
+    return items.sort((left: OfflineSyncItem, right: OfflineSyncItem) => {
+      const leftTime = OfflineSyncService.resolveCreatedAtTimestamp(left);
+      const rightTime = OfflineSyncService.resolveCreatedAtTimestamp(right);
+      if (leftTime !== rightTime) {
+        return leftTime - rightTime;
+      }
+
+      return left.id.localeCompare(right.id);
+    }).slice(0, OfflineSyncService.normalizeSyncLimit(limit));
   }
 
   private static updateItemStatus(
@@ -739,6 +745,19 @@ export class OfflineSyncService {
     }
 
     return Math.min(MAX_AUTO_SYNC_BATCH_LIMIT, Math.floor(value));
+  }
+
+  private static normalizeSyncLimit(value: number): number {
+    if (value !== value || value < 1) {
+      return DEFAULT_AUTO_SYNC_BATCH_LIMIT;
+    }
+
+    return Math.min(MAX_SYNC_BATCH_RECORDS, Math.max(1, Math.floor(value)));
+  }
+
+  private static resolveCreatedAtTimestamp(item: OfflineSyncItem): number {
+    const timestamp = Date.parse(item.createdAt);
+    return timestamp === timestamp ? timestamp : INVALID_CREATED_AT_SORT_WEIGHT;
   }
 
   private static normalizeCount(value: number | undefined): number {
