@@ -70,7 +70,7 @@ RDVP/
 ```powershell
 cd rdvp-backend
 docker compose up -d postgres
-.\mvnw.cmd spring-boot:run
+.\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
 模拟器访问电脑本机服务时，通常应填写电脑在局域网中的地址，例如：

@@ -19,6 +19,16 @@ class RdvpRuntimeConfigurationValidatorTests {
     }
 
     @Test
+    void rejectsMissingProfileWithDefaultSensitiveConfiguration() {
+        RdvpRuntimeProperties properties = new RdvpRuntimeProperties();
+        MockEnvironment environment = new MockEnvironment();
+
+        assertThatThrownBy(() -> new RdvpRuntimeConfigurationValidator(environment, properties).run(null))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("RDVP_BOOTSTRAP_PASSWORD");
+    }
+
+    @Test
     void rejectsProductionProfileWithDefaultBootstrapPassword() {
         RdvpRuntimeProperties properties = new RdvpRuntimeProperties();
         properties.getQrCode().setSigningSecret("prod-qr-signing-secret");
@@ -43,12 +53,27 @@ class RdvpRuntimeConfigurationValidatorTests {
     }
 
     @Test
+    void rejectsProductionProfileWithDefaultDatasourcePassword() {
+        RdvpRuntimeProperties properties = new RdvpRuntimeProperties();
+        properties.getBootstrapUsers().setDefaultPassword("prod-bootstrap-password");
+        properties.getQrCode().setSigningSecret("prod-qr-signing-secret");
+        MockEnvironment environment = new MockEnvironment();
+        environment.setActiveProfiles("prod");
+        environment.setProperty("spring.datasource.password", "rdvp_dev_password");
+
+        assertThatThrownBy(() -> new RdvpRuntimeConfigurationValidator(environment, properties).run(null))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("RDVP_DATASOURCE_PASSWORD");
+    }
+
+    @Test
     void allowsProductionProfileWithOverriddenSecrets() {
         RdvpRuntimeProperties properties = new RdvpRuntimeProperties();
         properties.getBootstrapUsers().setDefaultPassword("prod-bootstrap-password");
         properties.getQrCode().setSigningSecret("prod-qr-signing-secret");
         MockEnvironment environment = new MockEnvironment();
         environment.setActiveProfiles("prod");
+        environment.setProperty("spring.datasource.password", "prod-datasource-password");
 
         assertThatCode(() -> new RdvpRuntimeConfigurationValidator(environment, properties).run(null))
                 .doesNotThrowAnyException();

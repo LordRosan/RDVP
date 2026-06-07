@@ -32,8 +32,10 @@ docker compose up -d postgres
 启动后端服务：
 
 ```powershell
-.\mvnw.cmd spring-boot:run
+.\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=local
 ```
+
+未显式启用本地 profile 时，服务会拒绝使用默认引导密码和默认二维码签名密钥启动。部署环境应使用非本地 profile，并通过环境变量配置独立的 `RDVP_BOOTSTRAP_PASSWORD` 和 `RDVP_QR_SIGNING_SECRET`。
 
 健康检查：
 
