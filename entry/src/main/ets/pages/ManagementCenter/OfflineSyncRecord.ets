@@ -1,3 +1,4 @@
+import { Filter, FilterParams, FilterResult, FilterType } from '@kit.ArkUI';
 import { AppColors } from '../../styles/AppTheme';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { OfflineSyncRecordLogSummary } from '../../models/OfflineSyncRecordLogModels';
@@ -6,15 +7,25 @@ import { ApiClient } from '../../services/ApiClient';
 import { OfflineSyncRecordLogService } from '../../services/OfflineSyncRecordLogService';
 import { AuthGuard } from '../../utils/AuthGuard';
 
+const SYNC_RECORD_STATUS_FILTER_OPTIONS: string[] = ['全部状态', '已同步', '同步失败'];
+const SYNC_RECORD_STATUS_FILTER_VALUES: string[] = ['', 'SUCCEEDED', 'FAILED'];
+const SYNC_RECORD_TYPE_FILTER_OPTIONS: string[] = ['全部类型', '设备核验与报修', '设备核验', '故障报告', '档案新增申请', '档案变更申请', '档案删除申请'];
+const SYNC_RECORD_TYPE_FILTER_VALUES: string[] = ['', 'DEVICE_VERIFICATION_FAULT_REPORT_CREATE',
+  'DEVICE_VERIFICATION_CREATE', 'FAULT_REPORT_CREATE', 'DEVICE_ARCHIVE_CREATE_REQUEST_CREATE',
+  'DEVICE_ARCHIVE_UPDATE_REQUEST_CREATE', 'DEVICE_ARCHIVE_DELETE_REQUEST_CREATE'];
+
 @Entry
 @Component
 struct OfflineSyncRecord {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
+  @State allRecords: OfflineSyncRecordLogSummary[] = [];
   @State records: OfflineSyncRecordLogSummary[] = [];
   @State totalRecords: number = 0;
   @State message: string = '';
   @State refreshStatus: string = '未刷新';
   @State refreshing: boolean = false;
+  @State statusFilterIndex: number = 0;
+  @State typeFilterIndex: number = 0;
 
   aboutToAppear(): void {
     if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.MgmtAuditLogRead)) {
@@ -146,6 +157,17 @@ struct OfflineSyncRecord {
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
+
+      Filter({
+        multiFilters: this.getRecordFilterParams(),
+        onFilterChanged: (filterResults: FilterResult[]) => {
+          this.applyRecordFilterResults(filterResults);
+        },
+        filterType: FilterType.MULTI_LINE_FILTER
+      }) {
+        Blank()
+          .height(0)
+      }
 
       if (this.records.length === 0) {
         this.EmptyState()
@@ -354,10 +376,58 @@ struct OfflineSyncRecord {
     }
 
     const data = response.data;
-    this.records = data ? data.items : [];
-    this.totalRecords = data ? data.total : this.records.length;
+    this.allRecords = data ? data.items : [];
+    this.totalRecords = data ? data.total : this.allRecords.length;
+    this.applyRecordFilters();
     this.message = '';
     this.refreshStatus = '已刷新';
+  }
+
+  applyRecordFilterResults(filterResults: FilterResult[]): void {
+    filterResults.forEach((item: FilterResult) => {
+      if (item.name === '同步状态') {
+        this.statusFilterIndex = this.normalizeFilterIndex(item.index, SYNC_RECORD_STATUS_FILTER_VALUES.length);
+      } else if (item.name === '业务类型') {
+        this.typeFilterIndex = this.normalizeFilterIndex(item.index, SYNC_RECORD_TYPE_FILTER_VALUES.length);
+      }
+    });
+    this.applyRecordFilters();
+  }
+
+  applyRecordFilters(): void {
+    const statusValue = SYNC_RECORD_STATUS_FILTER_VALUES[this.statusFilterIndex];
+    const typeValue = SYNC_RECORD_TYPE_FILTER_VALUES[this.typeFilterIndex];
+    this.records = this.allRecords.filter((item: OfflineSyncRecordLogSummary) => {
+      const matchesStatus = statusValue.length === 0 || item.status === statusValue;
+      const matchesType = typeValue.length === 0 || item.recordType === typeValue;
+      return matchesStatus && matchesType;
+    });
+  }
+
+  getRecordFilterParams(): FilterParams[] {
+    return [
+      this.createFilterParams('同步状态', SYNC_RECORD_STATUS_FILTER_OPTIONS),
+      this.createFilterParams('业务类型', SYNC_RECORD_TYPE_FILTER_OPTIONS)
+    ];
+  }
+
+  createFilterParams(name: string, options: string[]): FilterParams {
+    const params = new FilterParams();
+    params.name = name;
+    params.options = options;
+    return params;
+  }
+
+  normalizeFilterIndex(index: number, length: number): number {
+    if (index !== index || index < 0) {
+      return 0;
+    }
+
+    if (index >= length) {
+      return length - 1;
+    }
+
+    return Math.floor(index);
   }
 
   getRecordCountText(): string {

@@ -1,3 +1,4 @@
+import { Filter, FilterParams, FilterResult, FilterType } from '@kit.ArkUI';
 import { AppColors } from '../../styles/AppTheme';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import {
@@ -12,11 +13,17 @@ import { DeviceArchiveReviewService } from '../../services/DeviceArchiveReviewSe
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 
+const REVIEW_TYPE_FILTER_OPTIONS: string[] = ['全部类型', '档案变更', '新增档案', '删除档案'];
+const REVIEW_TYPE_FILTER_VALUES: string[] = ['', `${DeviceArchiveReviewRequestType.Update}`,
+  `${DeviceArchiveReviewRequestType.Create}`, `${DeviceArchiveReviewRequestType.Delete}`];
+
 @Entry
 @Component
 struct DeviceArchiveReview {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
+  @State allRequests: DeviceArchiveReviewItem[] = [];
   @State requests: DeviceArchiveReviewItem[] = [];
+  @State requestTypeFilterIndex: number = 0;
   @State selectedRequestId: string = '';
   @State reviewDecision: string = '';
   @State reviewedAt: string = '';
@@ -151,6 +158,17 @@ struct DeviceArchiveReview {
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
+
+      Filter({
+        multiFilters: this.getRequestFilterParams(),
+        onFilterChanged: (filterResults: FilterResult[]) => {
+          this.applyRequestFilterResults(filterResults);
+        },
+        filterType: FilterType.MULTI_LINE_FILTER
+      }) {
+        Blank()
+          .height(0)
+      }
 
       if (this.requests.length === 0) {
         this.EmptyState()
@@ -691,7 +709,8 @@ struct DeviceArchiveReview {
       return;
     }
 
-    this.requests = response.data === undefined ? [] : response.data.items;
+    this.allRequests = response.data === undefined ? [] : response.data.items;
+    this.applyRequestFilters();
     if (this.selectedRequestId.length > 0 && !this.hasRequest(this.selectedRequestId)) {
       this.clearReviewForm();
     }
@@ -712,6 +731,47 @@ struct DeviceArchiveReview {
     this.reviewedAt = '';
     this.message = '';
     this.messageTone = AppColors.Danger;
+  }
+
+  applyRequestFilterResults(filterResults: FilterResult[]): void {
+    const result = filterResults.find((item: FilterResult) => {
+      return item.name === '申请类型';
+    });
+    this.requestTypeFilterIndex = result === undefined ? 0 :
+      this.normalizeFilterIndex(result.index, REVIEW_TYPE_FILTER_VALUES.length);
+    this.applyRequestFilters();
+  }
+
+  applyRequestFilters(): void {
+    const typeValue = REVIEW_TYPE_FILTER_VALUES[this.requestTypeFilterIndex];
+    this.requests = this.allRequests.filter((item: DeviceArchiveReviewItem) => {
+      return typeValue.length === 0 || item.type === typeValue;
+    });
+  }
+
+  getRequestFilterParams(): FilterParams[] {
+    return [
+      this.createFilterParams('申请类型', REVIEW_TYPE_FILTER_OPTIONS)
+    ];
+  }
+
+  createFilterParams(name: string, options: string[]): FilterParams {
+    const params = new FilterParams();
+    params.name = name;
+    params.options = options;
+    return params;
+  }
+
+  normalizeFilterIndex(index: number, length: number): number {
+    if (index !== index || index < 0) {
+      return 0;
+    }
+
+    if (index >= length) {
+      return length - 1;
+    }
+
+    return Math.floor(index);
   }
 
   async submitReview(): Promise<void> {

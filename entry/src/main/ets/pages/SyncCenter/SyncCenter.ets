@@ -1,3 +1,4 @@
+import { Filter, FilterParams, FilterResult, FilterType } from '@kit.ArkUI';
 import { AppColors } from '../../styles/AppTheme';
 import {
   OfflineSyncExecutionItemResult,
@@ -14,8 +15,9 @@ import { OfflineSyncService } from '../../services/OfflineSyncService';
 import { WorkbenchService } from '../../services/WorkbenchService';
 import { SessionStore } from '../../stores/SessionStore';
 
-const AUTO_SYNC_LIMIT_OPTIONS: string[] = ['1 项', '2 项', '3 项', '4 项', '5 项'];
 const MANUAL_SYNC_BATCH_LIMIT = 5;
+const AUTO_SYNC_LIMIT_MIN = 1;
+const AUTO_SYNC_LIMIT_MAX = 5;
 const QUEUE_STATUS_FILTER_OPTIONS: string[] = ['全部状态', '待同步', '同步中', '已同步', '同步失败'];
 const QUEUE_STATUS_FILTER_VALUES: string[] = ['ALL', 'PENDING', 'SYNCING', 'SYNCED', 'FAILED'];
 const QUEUE_OPERATION_FILTER_OPTIONS: string[] = ['全部类型', '设备核验与报修', '设备核验', '故障报告', '档案新增申请', '档案变更申请', '档案删除申请'];
@@ -484,21 +486,16 @@ struct SyncCenter {
       .width('100%')
       .alignItems(VerticalAlign.Center)
 
-      Row({ space: 10 }) {
-        this.QueueFilterPicker(
-          QUEUE_STATUS_FILTER_OPTIONS,
-          this.queueStatusFilterIndex,
-          (index: number) => {
-            this.applyQueueStatusFilterIndex(index);
-          })
-        this.QueueFilterPicker(
-          QUEUE_OPERATION_FILTER_OPTIONS,
-          this.queueOperationFilterIndex,
-          (index: number) => {
-            this.applyQueueOperationFilterIndex(index);
-          })
+      Filter({
+        multiFilters: this.getQueueFilterParams(),
+        onFilterChanged: (filterResults: FilterResult[]) => {
+          this.applyQueueFilterResults(filterResults);
+        },
+        filterType: FilterType.MULTI_LINE_FILTER
+      }) {
+        Blank()
+          .height(0)
       }
-      .width('100%')
 
       TextInput({
         placeholder: '按设备编号、操作人、错误码或说明搜索',
@@ -520,27 +517,6 @@ struct SyncCenter {
     .backgroundColor(AppColors.Surface)
     .borderRadius(16)
     .border({ width: 1, color: AppColors.Divider })
-  }
-
-  @Builder
-  QueueFilterPicker(range: string[], selected: number, action: (index: number) => void) {
-    TextPicker({
-      range,
-      selected
-    })
-      .height(92)
-      .layoutWeight(1)
-      .backgroundColor(AppColors.FieldBackground)
-      .borderRadius(14)
-      .onChange((value: string | string[], index: number | number[]) => {
-        let selectedIndex = 0;
-        if (typeof index === 'number') {
-          selectedIndex = index;
-        } else if (index.length > 0) {
-          selectedIndex = index[0];
-        }
-        action(selectedIndex);
-      })
   }
 
   @Builder
@@ -716,26 +692,43 @@ struct SyncCenter {
 
   @Builder
   AutoSyncLimitPicker() {
-    Column({ space: 8 }) {
-      TextPicker({
-        range: AUTO_SYNC_LIMIT_OPTIONS,
-        selected: this.getAutoSyncLimitPickerIndex()
+    Column({ space: 12 }) {
+      Row() {
+        Text('自动同步上限')
+          .fontSize(14)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppColors.TextPrimary)
+          .layoutWeight(1)
+          .maxLines(1)
+
+        Text(`${this.settings.autoSyncBatchLimit}项`)
+          .fontSize(18)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(AppColors.Primary)
+          .maxLines(1)
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+
+      Slider({
+        value: this.settings.autoSyncBatchLimit,
+        min: AUTO_SYNC_LIMIT_MIN,
+        max: AUTO_SYNC_LIMIT_MAX,
+        step: 1,
+        style: SliderStyle.OutSet
       })
-        .height(126)
         .width('100%')
-        .backgroundColor(AppColors.FieldBackground)
-        .borderRadius(18)
-        .onChange((value: string | string[], index: number | number[]) => {
-          this.applyAutoSyncLimitPickerIndex(index);
+        .onChange((value: number) => {
+          this.applyAutoSyncLimitValue(value);
         })
 
-      Text(`当前选择：${this.settings.autoSyncBatchLimit}项`)
+      Text('恢复在线后，自动同步只会按该上限分批提交待同步内容。')
         .fontSize(13)
-        .fontColor(AppColors.Primary)
-        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextSecondary)
+        .lineHeight(18)
         .width('100%')
-        .textAlign(TextAlign.Center)
-        .maxLines(1)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .width('100%')
     .padding({
@@ -1189,14 +1182,36 @@ struct SyncCenter {
     this.withdrawItem(item.id);
   }
 
-  applyQueueStatusFilterIndex(index: number): void {
-    this.queueStatusFilterIndex = this.normalizePickerIndex(index, QUEUE_STATUS_FILTER_OPTIONS.length);
+  applyQueueFilterResults(filterResults: FilterResult[]): void {
+    if (filterResults.length === 0) {
+      this.queueStatusFilterIndex = 0;
+      this.queueOperationFilterIndex = 0;
+      this.clearQueueActionMessage();
+      return;
+    }
+
+    filterResults.forEach((item: FilterResult) => {
+      if (item.name === '同步状态') {
+        this.queueStatusFilterIndex = this.normalizePickerIndex(item.index, QUEUE_STATUS_FILTER_OPTIONS.length);
+      } else if (item.name === '业务类型') {
+        this.queueOperationFilterIndex = this.normalizePickerIndex(item.index, QUEUE_OPERATION_FILTER_OPTIONS.length);
+      }
+    });
     this.clearQueueActionMessage();
   }
 
-  applyQueueOperationFilterIndex(index: number): void {
-    this.queueOperationFilterIndex = this.normalizePickerIndex(index, QUEUE_OPERATION_FILTER_OPTIONS.length);
-    this.clearQueueActionMessage();
+  getQueueFilterParams(): FilterParams[] {
+    return [
+      this.createFilterParams('同步状态', QUEUE_STATUS_FILTER_OPTIONS),
+      this.createFilterParams('业务类型', QUEUE_OPERATION_FILTER_OPTIONS)
+    ];
+  }
+
+  createFilterParams(name: string, options: string[]): FilterParams {
+    const params = new FilterParams();
+    params.name = name;
+    params.options = options;
+    return params;
   }
 
   resetQueueFilters(): void {
@@ -1297,28 +1312,9 @@ struct SyncCenter {
     return this.settings.autoSyncEnabled === autoSync;
   }
 
-  applyAutoSyncLimitPickerIndex(index: number | number[]): void {
-    let selectedIndex = 0;
-    if (typeof index === 'number') {
-      selectedIndex = index;
-    } else if (index.length > 0) {
-      selectedIndex = index[0];
-    }
-
-    this.updateAutoSyncLimit(selectedIndex + 1);
-  }
-
-  getAutoSyncLimitPickerIndex(): number {
-    const index = this.settings.autoSyncBatchLimit - 1;
-    if (index < 0) {
-      return 0;
-    }
-
-    if (index >= AUTO_SYNC_LIMIT_OPTIONS.length) {
-      return AUTO_SYNC_LIMIT_OPTIONS.length - 1;
-    }
-
-    return index;
+  applyAutoSyncLimitValue(value: number): void {
+    const normalizedValue = Math.max(AUTO_SYNC_LIMIT_MIN, Math.min(AUTO_SYNC_LIMIT_MAX, Math.round(value)));
+    this.updateAutoSyncLimit(normalizedValue);
   }
 
   getManualSyncSensitiveCount(): number {

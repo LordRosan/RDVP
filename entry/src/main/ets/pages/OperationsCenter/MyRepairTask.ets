@@ -1,8 +1,9 @@
+import { Filter, FilterParams, FilterResult, FilterType } from '@kit.ArkUI';
 import { AppColors } from '../../styles/AppTheme';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { FaultSeverity } from '../../models/FaultModels';
 import { PermissionCode } from '../../models/PermissionModels';
-import { MyRepairTaskSummary, RepairReportResult } from '../../models/RepairTaskModels';
+import { MyRepairTaskSummary, RepairReportResult, RepairTaskStatus } from '../../models/RepairTaskModels';
 import { ApiClient } from '../../services/ApiClient';
 import { DeviceService } from '../../services/DeviceService';
 import { FaultReportService } from '../../services/FaultReportService';
@@ -10,11 +11,21 @@ import { RepairTaskService } from '../../services/RepairTaskService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 
+const MY_REPAIR_STATUS_FILTER_OPTIONS: string[] = ['全部状态', '已接取', '处理中', '报告已提交'];
+const MY_REPAIR_STATUS_FILTER_VALUES: string[] = ['', `${RepairTaskStatus.Accepted}`, `${RepairTaskStatus.Processing}`,
+  `${RepairTaskStatus.ReportSubmitted}`];
+const MY_REPAIR_SEVERITY_FILTER_OPTIONS: string[] = ['全部等级', '紧急', '严重', '一般', '轻微'];
+const MY_REPAIR_SEVERITY_FILTER_VALUES: string[] = ['', `${FaultSeverity.Emergency}`, `${FaultSeverity.Severe}`,
+  `${FaultSeverity.General}`, `${FaultSeverity.Minor}`];
+
 @Entry
 @Component
 struct MyRepairTask {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
+  @State allTaskItems: MyRepairTaskSummary[] = [];
   @State taskItems: MyRepairTaskSummary[] = [];
+  @State statusFilterIndex: number = 0;
+  @State severityFilterIndex: number = 0;
   @State taskId: string = '';
   @State reportResult: string = '';
   @State repairedAt: string = '';
@@ -154,6 +165,17 @@ struct MyRepairTask {
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
+
+      Filter({
+        multiFilters: this.getTaskFilterParams(),
+        onFilterChanged: (filterResults: FilterResult[]) => {
+          this.applyTaskFilterResults(filterResults);
+        },
+        filterType: FilterType.MULTI_LINE_FILTER
+      }) {
+        Blank()
+          .height(0)
+      }
 
       if (this.taskItems.length === 0) {
         this.EmptyTaskState()
@@ -660,7 +682,8 @@ struct MyRepairTask {
     }
 
     const data = response.data;
-    this.taskItems = data ? data.items : [];
+    this.allTaskItems = data ? data.items : [];
+    this.applyTaskFilters();
     this.refreshStatus = '已刷新';
     this.taskMessage = '';
   }
@@ -696,10 +719,58 @@ struct MyRepairTask {
     this.reportMessage = reportNo.length > 0 ? `维修报告已提交：${reportNo}` : '维修报告已提交';
     this.reportMessageTone = AppColors.Success;
     this.submittedRepairTaskId = this.normalizedTaskId;
-    this.taskItems = this.taskItems.filter((item: MyRepairTaskSummary) => {
+    this.allTaskItems = this.allTaskItems.filter((item: MyRepairTaskSummary) => {
       return item.taskNo !== this.normalizedTaskId && item.id !== this.normalizedTaskId;
     });
+    this.applyTaskFilters();
     this.refreshStatus = '已更新';
+  }
+
+  applyTaskFilterResults(filterResults: FilterResult[]): void {
+    filterResults.forEach((item: FilterResult) => {
+      if (item.name === '维修状态') {
+        this.statusFilterIndex = this.normalizeFilterIndex(item.index, MY_REPAIR_STATUS_FILTER_VALUES.length);
+      } else if (item.name === '故障等级') {
+        this.severityFilterIndex = this.normalizeFilterIndex(item.index, MY_REPAIR_SEVERITY_FILTER_VALUES.length);
+      }
+    });
+    this.applyTaskFilters();
+  }
+
+  applyTaskFilters(): void {
+    const statusValue = MY_REPAIR_STATUS_FILTER_VALUES[this.statusFilterIndex];
+    const severityValue = MY_REPAIR_SEVERITY_FILTER_VALUES[this.severityFilterIndex];
+    this.taskItems = this.allTaskItems.filter((item: MyRepairTaskSummary) => {
+      const matchesStatus = statusValue.length === 0 || item.status === statusValue;
+      const matchesSeverity = severityValue.length === 0 || item.severity === severityValue;
+      return matchesStatus && matchesSeverity;
+    });
+  }
+
+  getTaskFilterParams(): FilterParams[] {
+    return [
+      this.createFilterParams('维修状态', MY_REPAIR_STATUS_FILTER_OPTIONS),
+      this.createFilterParams('故障等级', MY_REPAIR_SEVERITY_FILTER_OPTIONS)
+    ];
+  }
+
+  createFilterParams(name: string, options: string[]): FilterParams {
+    const params = new FilterParams();
+    params.name = name;
+    params.options = options;
+    return params;
+  }
+
+  normalizeFilterIndex(index: number, length: number): number {
+    if (index !== index || index < 0) {
+      return 0;
+    }
+
+    if (index >= length) {
+      return length - 1;
+    }
+
+    return Math.floor(index);
   }
 
   getSubmitButtonLabel(): string {

@@ -15,28 +15,6 @@ import { LocationService, LocationResolutionResult } from '../../services/Locati
 import { RepairTaskService } from '../../services/RepairTaskService';
 import { AuthGuard } from '../../utils/AuthGuard';
 
-const RADIUS_PICKER_OPTIONS: string[] = [
-  '1 km',
-  '2 km',
-  '3 km',
-  '4 km',
-  '5 km',
-  '6 km',
-  '7 km',
-  '8 km',
-  '9 km',
-  '10 km',
-  '11 km',
-  '12 km',
-  '13 km',
-  '14 km',
-  '15 km',
-  '16 km',
-  '17 km',
-  '18 km',
-  '19 km',
-  '20 km'
-];
 const REFRESH_TIMEOUT_MS = 5000;
 
 @Entry
@@ -190,16 +168,33 @@ struct AvailableRepairTask {
   RadiusPicker() {
     Column({ space: 8 }) {
       if (this.workloadSnapshot.canAccept) {
-        TextPicker({
-          range: this.getRadiusPickerOptions(),
-          selected: this.getRadiusPickerSelectedIndex()
+        Row() {
+          Text('接取半径')
+            .fontSize(14)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(AppColors.TextPrimary)
+            .layoutWeight(1)
+            .maxLines(1)
+
+          Text(this.getCurrentRadiusText())
+            .fontSize(18)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(AppColors.Primary)
+            .maxLines(1)
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+
+        Slider({
+          value: this.radiusKm,
+          min: 1,
+          max: this.workloadSnapshot.maxRadiusKm,
+          step: 1,
+          style: SliderStyle.OutSet
         })
-          .height(126)
           .width('100%')
-          .backgroundColor(AppColors.FieldBackground)
-          .borderRadius(18)
-          .onChange((value: string | string[], index: number | number[]) => {
-            this.applyRadiusPickerIndex(index);
+          .onChange((value: number) => {
+            this.applyRadiusSliderValue(value);
           })
       } else {
         Row({ space: 8 }) {
@@ -221,7 +216,7 @@ struct AvailableRepairTask {
         .borderRadius(18)
       }
 
-      Text(`当前选择：${this.getCurrentRadiusText()}`)
+      Text(`可用范围：${this.getAvailableRadiusText()}`)
         .fontSize(13)
         .fontColor(this.workloadSnapshot.canAccept ? AppColors.Primary : AppColors.Danger)
         .fontWeight(FontWeight.Medium)
@@ -789,15 +784,9 @@ struct AvailableRepairTask {
     return this.message.length > 0 && this.messageTone === AppColors.Danger;
   }
 
-  applyRadiusPickerIndex(index: number | number[]): void {
-    let selectedIndex = 0;
-    if (typeof index === 'number') {
-      selectedIndex = index;
-    } else if (index.length > 0) {
-      selectedIndex = index[0];
-    }
-
-    this.radiusKm = Math.min(selectedIndex + 1, this.workloadSnapshot.maxRadiusKm);
+  applyRadiusSliderValue(value: number): void {
+    const normalizedValue = Math.max(1, Math.min(this.workloadSnapshot.maxRadiusKm, Math.round(value)));
+    this.radiusKm = normalizedValue;
     this.message = '';
     this.messageTone = AppColors.Danger;
     this.taskListMessage = '';
@@ -816,18 +805,6 @@ struct AvailableRepairTask {
     if (this.radiusKm < 1) {
       this.radiusKm = 1;
     }
-  }
-
-  getRadiusPickerOptions(): string[] {
-    return RADIUS_PICKER_OPTIONS.slice(0, this.workloadSnapshot.maxRadiusKm);
-  }
-
-  getRadiusPickerSelectedIndex(): number {
-    if (!this.workloadSnapshot.canAccept) {
-      return 0;
-    }
-
-    return Math.max(0, Math.min(this.radiusKm, this.workloadSnapshot.maxRadiusKm) - 1);
   }
 
   getCurrentRadiusText(): string {

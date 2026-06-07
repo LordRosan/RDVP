@@ -1,3 +1,4 @@
+import { Filter, FilterParams, FilterResult, FilterType } from '@kit.ArkUI';
 import { AppColors } from '../../styles/AppTheme';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { OperationRecordQueryFilter, OperationRecordSummary } from '../../models/OperationRecordModels';
@@ -163,19 +164,16 @@ struct OperationRecord {
         .maxLines(1)
 
       Column({ space: 12 }) {
-        this.FieldTitle('操作类型')
-
-        TextPicker({
-          range: OPERATION_ACTION_LABELS,
-          selected: this.selectedActionIndex
-        })
-          .height(126)
-          .width('100%')
-          .backgroundColor(AppColors.FieldBackground)
-          .borderRadius(18)
-          .onChange((value: string | string[], index: number | number[]) => {
-            this.applyActionPickerIndex(index);
-          })
+        Filter({
+          multiFilters: this.getOperationFilterParams(),
+          onFilterChanged: (filterResults: FilterResult[]) => {
+            this.applyOperationFilterResults(filterResults);
+          },
+          filterType: FilterType.MULTI_LINE_FILTER
+        }) {
+          Blank()
+            .height(0)
+        }
 
         this.FieldTitle('关键词')
 
@@ -458,23 +456,47 @@ struct OperationRecord {
     this.refreshStatus = '已刷新';
   }
 
-  applyActionPickerIndex(index: number | number[]): void {
-    let selectedIndex = 0;
-    if (typeof index === 'number') {
-      selectedIndex = index;
-    } else if (index.length > 0) {
-      selectedIndex = index[0];
+  applyOperationFilterResults(filterResults: FilterResult[]): void {
+    if (filterResults.length === 0) {
+      this.selectedActionIndex = 0;
+      this.message = '';
+      return;
     }
 
-    if (selectedIndex < 0) {
-      selectedIndex = 0;
-    }
-    if (selectedIndex >= OPERATION_ACTION_VALUES.length) {
-      selectedIndex = OPERATION_ACTION_VALUES.length - 1;
+    const actionResult = filterResults.find((item: FilterResult) => {
+      return item.name === '操作类型';
+    });
+    if (actionResult === undefined) {
+      return;
     }
 
-    this.selectedActionIndex = selectedIndex;
+    this.selectedActionIndex = this.normalizeFilterIndex(actionResult.index, OPERATION_ACTION_VALUES.length);
     this.message = '';
+  }
+
+  getOperationFilterParams(): FilterParams[] {
+    return [
+      this.createFilterParams('操作类型', OPERATION_ACTION_LABELS)
+    ];
+  }
+
+  createFilterParams(name: string, options: string[]): FilterParams {
+    const params = new FilterParams();
+    params.name = name;
+    params.options = options;
+    return params;
+  }
+
+  normalizeFilterIndex(index: number, length: number): number {
+    if (index !== index || index < 0) {
+      return 0;
+    }
+
+    if (index >= length) {
+      return length - 1;
+    }
+
+    return Math.floor(index);
   }
 
   createCurrentFilter(): OperationRecordQueryFilter {

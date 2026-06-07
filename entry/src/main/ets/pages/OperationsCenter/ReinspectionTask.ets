@@ -1,7 +1,9 @@
+import { Filter, FilterParams, FilterResult, FilterType } from '@kit.ArkUI';
 import { AppColors } from '../../styles/AppTheme';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
+import { FaultSeverity } from '../../models/FaultModels';
 import {
-  ReinspectionResult, ReinspectionTaskSummary
+  ReinspectionResult, ReinspectionTaskStatus, ReinspectionTaskSummary
 } from '../../models/ReinspectionModels';
 import { PermissionCode } from '../../models/PermissionModels';
 import { ApiClient } from '../../services/ApiClient';
@@ -9,11 +11,21 @@ import { ReinspectionService } from '../../services/ReinspectionService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 
+const REINSPECTION_STATUS_FILTER_OPTIONS: string[] = ['全部状态', '待复检', '已完成'];
+const REINSPECTION_STATUS_FILTER_VALUES: string[] = ['', `${ReinspectionTaskStatus.Pending}`,
+  `${ReinspectionTaskStatus.Completed}`];
+const REINSPECTION_SEVERITY_FILTER_OPTIONS: string[] = ['全部等级', '紧急', '严重', '一般', '轻微'];
+const REINSPECTION_SEVERITY_FILTER_VALUES: string[] = ['', `${FaultSeverity.Emergency}`, `${FaultSeverity.Severe}`,
+  `${FaultSeverity.General}`, `${FaultSeverity.Minor}`];
+
 @Entry
 @Component
 struct ReinspectionTask {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
+  @State allTaskItems: ReinspectionTaskSummary[] = [];
   @State taskItems: ReinspectionTaskSummary[] = [];
+  @State statusFilterIndex: number = 0;
+  @State severityFilterIndex: number = 0;
   @State taskId: string = '';
   @State result: string = '';
   @State reinspectedAt: string = '';
@@ -152,6 +164,17 @@ struct ReinspectionTask {
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
+
+      Filter({
+        multiFilters: this.getTaskFilterParams(),
+        onFilterChanged: (filterResults: FilterResult[]) => {
+          this.applyTaskFilterResults(filterResults);
+        },
+        filterType: FilterType.MULTI_LINE_FILTER
+      }) {
+        Blank()
+          .height(0)
+      }
 
       if (this.taskItems.length === 0) {
         this.EmptyTaskState()
@@ -610,7 +633,8 @@ struct ReinspectionTask {
     }
 
     const data = response.data;
-    this.taskItems = data ? data.items : [];
+    this.allTaskItems = data ? data.items : [];
+    this.applyTaskFilters();
     this.refreshStatus = '已刷新';
     this.taskMessage = '';
   }
@@ -645,10 +669,58 @@ struct ReinspectionTask {
     this.recordMessage = recordNo.length > 0 ? `复检记录已提交：${recordNo}` : '复检记录已提交';
     this.recordMessageTone = AppColors.Success;
     this.submittedReinspectionTaskId = this.normalizedTaskId;
-    this.taskItems = this.taskItems.filter((item: ReinspectionTaskSummary) => {
+    this.allTaskItems = this.allTaskItems.filter((item: ReinspectionTaskSummary) => {
       return item.taskNo !== this.normalizedTaskId && item.id !== this.normalizedTaskId;
     });
+    this.applyTaskFilters();
     this.refreshStatus = '已更新';
+  }
+
+  applyTaskFilterResults(filterResults: FilterResult[]): void {
+    filterResults.forEach((item: FilterResult) => {
+      if (item.name === '复检状态') {
+        this.statusFilterIndex = this.normalizeFilterIndex(item.index, REINSPECTION_STATUS_FILTER_VALUES.length);
+      } else if (item.name === '故障等级') {
+        this.severityFilterIndex = this.normalizeFilterIndex(item.index, REINSPECTION_SEVERITY_FILTER_VALUES.length);
+      }
+    });
+    this.applyTaskFilters();
+  }
+
+  applyTaskFilters(): void {
+    const statusValue = REINSPECTION_STATUS_FILTER_VALUES[this.statusFilterIndex];
+    const severityValue = REINSPECTION_SEVERITY_FILTER_VALUES[this.severityFilterIndex];
+    this.taskItems = this.allTaskItems.filter((item: ReinspectionTaskSummary) => {
+      const matchesStatus = statusValue.length === 0 || item.status === statusValue;
+      const matchesSeverity = severityValue.length === 0 || item.severity === severityValue;
+      return matchesStatus && matchesSeverity;
+    });
+  }
+
+  getTaskFilterParams(): FilterParams[] {
+    return [
+      this.createFilterParams('复检状态', REINSPECTION_STATUS_FILTER_OPTIONS),
+      this.createFilterParams('故障等级', REINSPECTION_SEVERITY_FILTER_OPTIONS)
+    ];
+  }
+
+  createFilterParams(name: string, options: string[]): FilterParams {
+    const params = new FilterParams();
+    params.name = name;
+    params.options = options;
+    return params;
+  }
+
+  normalizeFilterIndex(index: number, length: number): number {
+    if (index !== index || index < 0) {
+      return 0;
+    }
+
+    if (index >= length) {
+      return length - 1;
+    }
+
+    return Math.floor(index);
   }
 
   getSubmitButtonLabel(): string {
