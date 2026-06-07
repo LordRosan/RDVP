@@ -21,6 +21,7 @@ public class AuthenticationService {
 
     private static final Duration ACCESS_TOKEN_TTL = Duration.ofDays(7);
     private static final Duration PASSWORD_VERIFICATION_LOCK_DURATION = Duration.ofHours(12);
+    private static final Duration SENSITIVE_OPERATION_VERIFICATION_TTL = Duration.ofMinutes(5);
     private static final int MAX_PASSWORD_VERIFICATION_FAILURES = 5;
 
     private final UserAccountRepository userStore;
@@ -107,7 +108,10 @@ public class AuthenticationService {
                 .filter(user -> passwordEncoder.matches(password, user.passwordHash()))
                 .isPresent();
         if (verified) {
-            passwordVerificationAttemptStore.clear(authenticatedUser.id());
+            passwordVerificationAttemptStore.markVerified(
+                    authenticatedUser.id(),
+                    now,
+                    SENSITIVE_OPERATION_VERIFICATION_TTL);
             auditLogService.recordSuccess(
                     AuditAction.AUTH_PASSWORD_VERIFY,
                     authenticatedUser.id(),
@@ -127,6 +131,14 @@ public class AuthenticationService {
         return false;
     }
 
+    public void requireRecentPasswordVerification(AuthenticatedUser authenticatedUser) {
+        if (authenticatedUser == null || !hasRecentPasswordVerification(authenticatedUser.id(), Instant.now())) {
+            throw new BusinessException(
+                    ErrorCode.SENSITIVE_OPERATION_VERIFICATION_REQUIRED,
+                    "Recent password verification is required before submitting this sensitive operation.");
+        }
+    }
+
     public void logout(String token) {
         tokenSessionStore.remove(token);
     }
@@ -144,6 +156,15 @@ public class AuthenticationService {
 
         passwordVerificationAttemptStore.clear(userId);
         return false;
+    }
+
+    private boolean hasRecentPasswordVerification(String userId, Instant now) {
+        Optional<PasswordVerificationAttempt> optionalAttempt = passwordVerificationAttemptStore.find(userId);
+        if (optionalAttempt.isEmpty() || optionalAttempt.get().verifiedUntil() == null) {
+            return false;
+        }
+
+        return optionalAttempt.get().verifiedUntil().isAfter(now);
     }
 
     private void registerPasswordVerificationFailure(String userId, Instant now) {

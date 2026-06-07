@@ -10,6 +10,11 @@ public interface PasswordVerificationAttemptStore {
 
     void clear(String userId);
 
+    PasswordVerificationAttempt markVerified(
+            String userId,
+            Instant now,
+            Duration verificationTtl);
+
     PasswordVerificationAttempt registerFailure(
             String userId,
             Instant now,

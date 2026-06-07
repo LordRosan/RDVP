@@ -23,6 +23,7 @@ import com.rmf.rdvp.archive.DeviceChangeRequestType;
 import com.rmf.rdvp.archive.DeviceChangeValue;
 import com.rmf.rdvp.domain.common.BusinessException;
 import com.rmf.rdvp.domain.common.ErrorCode;
+import com.rmf.rdvp.identity.AuthenticationService;
 import com.rmf.rdvp.identity.AuthenticatedUser;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -33,9 +34,13 @@ import jakarta.validation.Valid;
 public class DeviceChangeRequestController {
 
     private final DeviceChangeRequestService changeRequestService;
+    private final AuthenticationService authenticationService;
 
-    public DeviceChangeRequestController(DeviceChangeRequestService changeRequestService) {
+    public DeviceChangeRequestController(
+            DeviceChangeRequestService changeRequestService,
+            AuthenticationService authenticationService) {
         this.changeRequestService = changeRequestService;
+        this.authenticationService = authenticationService;
     }
 
     @PostMapping
@@ -44,8 +49,13 @@ public class DeviceChangeRequestController {
             @Valid @RequestBody CreateDeviceChangeRequest requestBody,
             @AuthenticationPrincipal AuthenticatedUser user,
             HttpServletRequest request) {
+        DeviceChangeRequestType requestType = parseType(requestBody.type());
+        if (requestType == DeviceChangeRequestType.DELETE) {
+            authenticationService.requireRecentPasswordVerification(user);
+        }
+
         var created = changeRequestService.create(
-                parseType(requestBody.type()),
+                requestType,
                 requestBody.deviceId(),
                 requestBody.deviceCode(),
                 requestBody.reason(),

@@ -10,6 +10,10 @@ public enum ErrorCode {
             "PASSWORD_VERIFICATION_LOCKED",
             HttpStatus.TOO_MANY_REQUESTS,
             "Password verification is temporarily locked."),
+    SENSITIVE_OPERATION_VERIFICATION_REQUIRED(
+            "SENSITIVE_OPERATION_VERIFICATION_REQUIRED",
+            HttpStatus.FORBIDDEN,
+            "Recent password verification is required for this sensitive operation."),
     FORBIDDEN("FORBIDDEN", HttpStatus.FORBIDDEN, "Permission is denied."),
     NOT_FOUND("NOT_FOUND", HttpStatus.NOT_FOUND, "Resource was not found."),
     CONFLICT("CONFLICT", HttpStatus.CONFLICT, "Resource state conflict."),

@@ -26,6 +26,18 @@ public class InMemoryPasswordVerificationAttemptStore implements PasswordVerific
     }
 
     @Override
+    public PasswordVerificationAttempt markVerified(String userId, Instant now, Duration verificationTtl) {
+        PasswordVerificationAttempt attempt = new PasswordVerificationAttempt(
+                userId,
+                0,
+                null,
+                now.plus(verificationTtl),
+                now);
+        attempts.put(userId, attempt);
+        return attempt;
+    }
+
+    @Override
     public PasswordVerificationAttempt registerFailure(
             String userId,
             Instant now,
@@ -34,7 +46,7 @@ public class InMemoryPasswordVerificationAttemptStore implements PasswordVerific
         return attempts.compute(userId, (key, current) -> {
             int failedCount = current == null ? 1 : current.failedCount() + 1;
             Instant lockedUntil = failedCount >= maxFailureCount ? now.plus(lockDuration) : null;
-            return new PasswordVerificationAttempt(userId, failedCount, lockedUntil, now);
+            return new PasswordVerificationAttempt(userId, failedCount, lockedUntil, null, now);
         });
     }
 }

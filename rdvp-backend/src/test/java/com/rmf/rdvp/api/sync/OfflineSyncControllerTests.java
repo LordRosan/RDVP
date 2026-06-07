@@ -227,6 +227,7 @@ class OfflineSyncControllerTests {
     @Test
     void synchronizesDeviceArchiveDeleteRequest() throws Exception {
         String token = login("deviceadmin", "password");
+        verifyPassword(token, "password");
 
         String response = syncBatch(
                         token,
@@ -245,6 +246,19 @@ class OfflineSyncControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.changeState.locked").value(true))
                 .andExpect(jsonPath("$.data.changeState.pendingRequestId").value(requestId));
+    }
+
+    @Test
+    void rejectsDeviceArchiveDeleteSyncWithoutRecentPasswordVerification() throws Exception {
+        String token = login("deviceadmin", "password");
+
+        syncBatch(
+                        token,
+                        validArchiveDeleteRequestBatch("batch-archive-delete-locked-001", "record-archive-delete-locked-001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("FAILED"))
+                .andExpect(jsonPath("$.data.results[0].success").value(false))
+                .andExpect(jsonPath("$.data.results[0].errorCode").value("SENSITIVE_OPERATION_VERIFICATION_REQUIRED"));
     }
 
     @Test
@@ -636,5 +650,18 @@ class OfflineSyncControllerTests {
 
         JsonNode root = objectMapper.readTree(response);
         return root.path("data").path("accessToken").asText();
+    }
+
+    private void verifyPassword(String token, String password) throws Exception {
+        mockMvc.perform(post("/api/v1/auth/password-verification")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "password": "%s"
+                                }
+                                """.formatted(password)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.verified").value(true));
     }
 }

@@ -33,6 +33,7 @@ import com.rmf.rdvp.audit.AuditAction;
 import com.rmf.rdvp.audit.AuditLogService;
 import com.rmf.rdvp.domain.common.BusinessException;
 import com.rmf.rdvp.domain.common.ErrorCode;
+import com.rmf.rdvp.identity.AuthenticationService;
 import com.rmf.rdvp.identity.AuthenticatedUser;
 import com.rmf.rdvp.identity.PermissionCode;
 import com.rmf.rdvp.operations.DeviceVerificationFaultReportResult;
@@ -58,6 +59,7 @@ public class OfflineSyncService {
     private final DeviceArchiveService archiveService;
     private final DeviceChangeRequestService changeRequestService;
     private final OperationsService operationsService;
+    private final AuthenticationService authenticationService;
     private final AuditLogService auditLogService;
     private final ObjectMapper objectMapper;
 
@@ -67,6 +69,7 @@ public class OfflineSyncService {
             DeviceArchiveService archiveService,
             DeviceChangeRequestService changeRequestService,
             OperationsService operationsService,
+            AuthenticationService authenticationService,
             AuditLogService auditLogService,
             ObjectMapper objectMapper) {
         this.offlineSyncRepository = offlineSyncRepository;
@@ -74,6 +77,7 @@ public class OfflineSyncService {
         this.archiveService = archiveService;
         this.changeRequestService = changeRequestService;
         this.operationsService = operationsService;
+        this.authenticationService = authenticationService;
         this.auditLogService = auditLogService;
         this.objectMapper = objectMapper;
     }
@@ -267,6 +271,7 @@ public class OfflineSyncService {
             OfflineSyncRecordInput record,
             AuthenticatedUser operator) throws JsonProcessingException {
         requirePermission(operator, PermissionCode.ARCHIVE_DEVICE_DELETE);
+        authenticationService.requireRecentPasswordVerification(operator);
         DeviceArchiveDeleteRequestPayload payload = readPayload(record.payload(), DeviceArchiveDeleteRequestPayload.class);
         DeviceChangeRequest created = changeRequestService.create(
                 DeviceChangeRequestType.DELETE,

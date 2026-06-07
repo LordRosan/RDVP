@@ -26,7 +26,7 @@ public class JdbcPasswordVerificationAttemptStore implements PasswordVerificatio
     public Optional<PasswordVerificationAttempt> find(String userId) {
         var attempts = jdbcTemplate.query(
                 """
-                        SELECT user_id, failed_count, locked_until, updated_at
+                        SELECT user_id, failed_count, locked_until, verified_until, updated_at
                         FROM password_verification_attempts
                         WHERE user_id = :userId
                         """,
@@ -37,6 +37,9 @@ public class JdbcPasswordVerificationAttemptStore implements PasswordVerificatio
                         resultSet.getObject("locked_until", OffsetDateTime.class) == null
                                 ? null
                                 : resultSet.getObject("locked_until", OffsetDateTime.class).toInstant(),
+                        resultSet.getObject("verified_until", OffsetDateTime.class) == null
+                                ? null
+                                : resultSet.getObject("verified_until", OffsetDateTime.class).toInstant(),
                         resultSet.getObject("updated_at", OffsetDateTime.class).toInstant()));
         return attempts.stream().findFirst();
     }
@@ -46,6 +49,48 @@ public class JdbcPasswordVerificationAttemptStore implements PasswordVerificatio
         jdbcTemplate.update(
                 "DELETE FROM password_verification_attempts WHERE user_id = :userId",
                 Map.of("userId", userId));
+    }
+
+    @Override
+    public PasswordVerificationAttempt markVerified(String userId, Instant now, Duration verificationTtl) {
+        OffsetDateTime updatedAt = OffsetDateTime.ofInstant(now, ZoneOffset.UTC);
+        OffsetDateTime verifiedUntil = OffsetDateTime.ofInstant(now.plus(verificationTtl), ZoneOffset.UTC);
+        return jdbcTemplate.queryForObject(
+                """
+                        INSERT INTO password_verification_attempts (
+                            user_id,
+                            failed_count,
+                            locked_until,
+                            verified_until,
+                            updated_at
+                        ) VALUES (
+                            :userId,
+                            0,
+                            NULL,
+                            :verifiedUntil,
+                            :updatedAt
+                        )
+                        ON CONFLICT (user_id) DO UPDATE SET
+                            failed_count = 0,
+                            locked_until = NULL,
+                            verified_until = :verifiedUntil,
+                            updated_at = :updatedAt
+                        RETURNING user_id, failed_count, locked_until, verified_until, updated_at
+                        """,
+                new MapSqlParameterSource()
+                        .addValue("userId", userId)
+                        .addValue("verifiedUntil", verifiedUntil)
+                        .addValue("updatedAt", updatedAt),
+                (resultSet, rowNumber) -> new PasswordVerificationAttempt(
+                        resultSet.getString("user_id"),
+                        resultSet.getInt("failed_count"),
+                        resultSet.getObject("locked_until", OffsetDateTime.class) == null
+                                ? null
+                                : resultSet.getObject("locked_until", OffsetDateTime.class).toInstant(),
+                        resultSet.getObject("verified_until", OffsetDateTime.class) == null
+                                ? null
+                                : resultSet.getObject("verified_until", OffsetDateTime.class).toInstant(),
+                        resultSet.getObject("updated_at", OffsetDateTime.class).toInstant()));
     }
 
     @Override
@@ -62,11 +107,13 @@ public class JdbcPasswordVerificationAttemptStore implements PasswordVerificatio
                             user_id,
                             failed_count,
                             locked_until,
+                            verified_until,
                             updated_at
                         ) VALUES (
                             :userId,
                             1,
                             CASE WHEN :maxFailureCount <= 1 THEN :lockUntil ELSE NULL END,
+                            NULL,
                             :updatedAt
                         )
                         ON CONFLICT (user_id) DO UPDATE SET
@@ -76,8 +123,9 @@ public class JdbcPasswordVerificationAttemptStore implements PasswordVerificatio
                                 THEN :lockUntil
                                 ELSE NULL
                             END,
+                            verified_until = NULL,
                             updated_at = :updatedAt
-                        RETURNING user_id, failed_count, locked_until, updated_at
+                        RETURNING user_id, failed_count, locked_until, verified_until, updated_at
                         """,
                 new MapSqlParameterSource()
                         .addValue("userId", userId)
@@ -90,6 +138,9 @@ public class JdbcPasswordVerificationAttemptStore implements PasswordVerificatio
                         resultSet.getObject("locked_until", OffsetDateTime.class) == null
                                 ? null
                                 : resultSet.getObject("locked_until", OffsetDateTime.class).toInstant(),
+                        resultSet.getObject("verified_until", OffsetDateTime.class) == null
+                                ? null
+                                : resultSet.getObject("verified_until", OffsetDateTime.class).toInstant(),
                         resultSet.getObject("updated_at", OffsetDateTime.class).toInstant()));
     }
 }

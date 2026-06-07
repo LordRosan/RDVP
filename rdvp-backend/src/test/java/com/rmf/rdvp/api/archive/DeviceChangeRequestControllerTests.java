@@ -197,6 +197,7 @@ class DeviceChangeRequestControllerTests {
     @Test
     void deletesDeviceArchiveOnlyAfterDeleteRequestApproval() throws Exception {
         String token = login("deviceadmin", "password");
+        verifyPassword(token, "password");
         String requestId = createArchiveDeleteRequest(token, "device-local-0001");
 
         mockMvc.perform(get("/api/v1/devices/device-local-0001")
@@ -222,6 +223,24 @@ class DeviceChangeRequestControllerTests {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("DEVICE_NOT_FOUND"));
+    }
+
+    @Test
+    void rejectsDeleteRequestWithoutRecentPasswordVerification() throws Exception {
+        String token = login("deviceadmin", "password");
+
+        mockMvc.perform(post("/api/v1/device-change-requests")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "type": "DELETE",
+                                  "deviceId": "device-local-0001",
+                                  "reason": "设备退役。"
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("SENSITIVE_OPERATION_VERIFICATION_REQUIRED"));
     }
 
     @Test
@@ -411,5 +430,18 @@ class DeviceChangeRequestControllerTests {
 
         JsonNode root = objectMapper.readTree(response);
         return root.path("data").path("accessToken").asText();
+    }
+
+    private void verifyPassword(String token, String password) throws Exception {
+        mockMvc.perform(post("/api/v1/auth/password-verification")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "password": "%s"
+                                }
+                                """.formatted(password)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.verified").value(true));
     }
 }
