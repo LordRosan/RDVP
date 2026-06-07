@@ -53,6 +53,7 @@ export interface OfflineSyncSummary {
   latestAutoSyncMessage?: string;
   latestAutoSyncSyncedCount?: number;
   latestAutoSyncFailedCount?: number;
+  latestAutoSyncSkippedCount?: number;
 }
 
 export interface OfflineSyncRuntimeState {
@@ -67,6 +68,7 @@ export interface OfflineSyncRuntimeState {
   latestAutoSyncMessage?: string;
   latestAutoSyncSyncedCount?: number;
   latestAutoSyncFailedCount?: number;
+  latestAutoSyncSkippedCount?: number;
 }
 
 export interface OfflineSyncSettings {

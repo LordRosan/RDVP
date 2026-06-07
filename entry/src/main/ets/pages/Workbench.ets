@@ -62,7 +62,10 @@ struct Workbench {
     }
 
     try {
-      const result = await OfflineSyncProcessorService.syncReadyItems(OfflineSyncService.getAutoSyncBatchLimit());
+      const result = await OfflineSyncProcessorService.syncReadyItems(
+        OfflineSyncService.getAutoSyncBatchLimit(),
+        false
+      );
       OfflineSyncService.recordAutoSyncResult(result);
     } catch (err) {
       OfflineSyncService.recordAutoSyncResult({

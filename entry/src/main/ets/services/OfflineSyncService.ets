@@ -281,7 +281,8 @@ export class OfflineSyncService {
       latestAutoSyncAt: OfflineSyncService.runtimeState.latestAutoSyncAt,
       latestAutoSyncMessage: OfflineSyncService.runtimeState.latestAutoSyncMessage,
       latestAutoSyncSyncedCount: OfflineSyncService.runtimeState.latestAutoSyncSyncedCount,
-      latestAutoSyncFailedCount: OfflineSyncService.runtimeState.latestAutoSyncFailedCount
+      latestAutoSyncFailedCount: OfflineSyncService.runtimeState.latestAutoSyncFailedCount,
+      latestAutoSyncSkippedCount: OfflineSyncService.runtimeState.latestAutoSyncSkippedCount
     };
     OfflineSyncService.persistRuntimeState();
     WorkbenchRefreshStore.notifyChanged();
@@ -290,7 +291,7 @@ export class OfflineSyncService {
 
   static recordAutoSyncResult(result: OfflineSyncExecutionResult): void {
     OfflineSyncService.ensureInitialized();
-    if (result.processedCount <= 0 && result.syncedCount <= 0 && result.failedCount <= 0) {
+    if (result.processedCount <= 0 && result.syncedCount <= 0 && result.failedCount <= 0 && result.skippedCount <= 0) {
       return;
     }
 
@@ -305,7 +306,8 @@ export class OfflineSyncService {
       latestAutoSyncAt: new Date().toISOString(),
       latestAutoSyncMessage: result.message,
       latestAutoSyncSyncedCount: result.syncedCount,
-      latestAutoSyncFailedCount: result.failedCount
+      latestAutoSyncFailedCount: result.failedCount,
+      latestAutoSyncSkippedCount: result.skippedCount
     };
     OfflineSyncService.persistRuntimeState();
     WorkbenchRefreshStore.notifyChanged();
@@ -320,8 +322,13 @@ export class OfflineSyncService {
 
     const syncedCount = OfflineSyncService.normalizeCount(OfflineSyncService.runtimeState.latestAutoSyncSyncedCount);
     const failedCount = OfflineSyncService.normalizeCount(OfflineSyncService.runtimeState.latestAutoSyncFailedCount);
+    const skippedCount = OfflineSyncService.normalizeCount(OfflineSyncService.runtimeState.latestAutoSyncSkippedCount);
     if (failedCount > 0) {
       return `失败${failedCount}项`;
+    }
+
+    if (skippedCount > 0) {
+      return syncedCount > 0 ? `成功${syncedCount}项，跳过${skippedCount}项` : `跳过${skippedCount}项`;
     }
 
     return `成功${syncedCount}项`;
@@ -334,8 +341,12 @@ export class OfflineSyncService {
       return AppColors.TextSecondary;
     }
 
-    return OfflineSyncService.normalizeCount(OfflineSyncService.runtimeState.latestAutoSyncFailedCount) > 0 ?
-      AppColors.Danger : AppColors.Success;
+    if (OfflineSyncService.normalizeCount(OfflineSyncService.runtimeState.latestAutoSyncFailedCount) > 0) {
+      return AppColors.Danger;
+    }
+
+    return OfflineSyncService.normalizeCount(OfflineSyncService.runtimeState.latestAutoSyncSkippedCount) > 0 ?
+      AppColors.Warning : AppColors.Success;
   }
 
   static isAutoSyncEnabled(): boolean {
@@ -393,7 +404,8 @@ export class OfflineSyncService {
       latestAutoSyncAt: OfflineSyncService.runtimeState.latestAutoSyncAt,
       latestAutoSyncMessage: OfflineSyncService.runtimeState.latestAutoSyncMessage,
       latestAutoSyncSyncedCount: OfflineSyncService.runtimeState.latestAutoSyncSyncedCount,
-      latestAutoSyncFailedCount: OfflineSyncService.runtimeState.latestAutoSyncFailedCount
+      latestAutoSyncFailedCount: OfflineSyncService.runtimeState.latestAutoSyncFailedCount,
+      latestAutoSyncSkippedCount: OfflineSyncService.runtimeState.latestAutoSyncSkippedCount
     };
   }
 
@@ -467,7 +479,8 @@ export class OfflineSyncService {
       latestAutoSyncAt: OfflineSyncService.runtimeState.latestAutoSyncAt,
       latestAutoSyncMessage: OfflineSyncService.runtimeState.latestAutoSyncMessage,
       latestAutoSyncSyncedCount: OfflineSyncService.runtimeState.latestAutoSyncSyncedCount,
-      latestAutoSyncFailedCount: OfflineSyncService.runtimeState.latestAutoSyncFailedCount
+      latestAutoSyncFailedCount: OfflineSyncService.runtimeState.latestAutoSyncFailedCount,
+      latestAutoSyncSkippedCount: OfflineSyncService.runtimeState.latestAutoSyncSkippedCount
     };
     OfflineSyncService.persistItems();
     OfflineSyncService.persistRuntimeState();
@@ -502,7 +515,8 @@ export class OfflineSyncService {
       latestAutoSyncAt: OfflineSyncService.runtimeState.latestAutoSyncAt,
       latestAutoSyncMessage: OfflineSyncService.runtimeState.latestAutoSyncMessage,
       latestAutoSyncSyncedCount: OfflineSyncService.runtimeState.latestAutoSyncSyncedCount,
-      latestAutoSyncFailedCount: OfflineSyncService.runtimeState.latestAutoSyncFailedCount
+      latestAutoSyncFailedCount: OfflineSyncService.runtimeState.latestAutoSyncFailedCount,
+      latestAutoSyncSkippedCount: OfflineSyncService.runtimeState.latestAutoSyncSkippedCount
     };
     OfflineSyncService.persistRuntimeState();
     WorkbenchRefreshStore.notifyChanged();
@@ -514,15 +528,22 @@ export class OfflineSyncService {
     };
   }
 
-  static getReadyPendingItems(limit: number): OfflineSyncItem[] {
+  static getReadyPendingItems(limit: number, includePasswordVerificationRequiredItems: boolean = true): OfflineSyncItem[] {
     OfflineSyncService.ensureInitialized();
 
     const now = Date.now();
     const items: OfflineSyncItem[] = [];
     OfflineSyncService.items.forEach((item: OfflineSyncItem) => {
-      if (item.status === OfflineSyncItemStatus.Pending && OfflineSyncService.isRetryReady(item, now)) {
-        items.push(item);
+      if (item.status !== OfflineSyncItemStatus.Pending || !OfflineSyncService.isRetryReady(item, now)) {
+        return;
       }
+
+      if (!includePasswordVerificationRequiredItems &&
+        OfflineSyncService.isPasswordVerificationRequiredOperation(item.operationType)) {
+        return;
+      }
+
+      items.push(item);
     });
 
     return items.sort((left: OfflineSyncItem, right: OfflineSyncItem) => {
@@ -534,6 +555,25 @@ export class OfflineSyncService {
 
       return left.id.localeCompare(right.id);
     }).slice(0, OfflineSyncService.normalizeSyncLimit(limit));
+  }
+
+  static getReadyPasswordVerificationRequiredCount(): number {
+    OfflineSyncService.ensureInitialized();
+
+    const now = Date.now();
+    let count = 0;
+    OfflineSyncService.items.forEach((item: OfflineSyncItem) => {
+      if (item.status === OfflineSyncItemStatus.Pending &&
+        OfflineSyncService.isRetryReady(item, now) &&
+        OfflineSyncService.isPasswordVerificationRequiredOperation(item.operationType)) {
+        count += 1;
+      }
+    });
+    return count;
+  }
+
+  static isPasswordVerificationRequiredOperation(operationType: string): boolean {
+    return operationType === OfflineSyncOperationType.DeviceArchiveDeleteRequestCreate;
   }
 
   private static updateItemStatus(
@@ -674,7 +714,8 @@ export class OfflineSyncService {
         latestAutoSyncAt: runtimeState.latestAutoSyncAt,
         latestAutoSyncMessage: runtimeState.latestAutoSyncMessage,
         latestAutoSyncSyncedCount: OfflineSyncService.normalizeCount(runtimeState.latestAutoSyncSyncedCount),
-        latestAutoSyncFailedCount: OfflineSyncService.normalizeCount(runtimeState.latestAutoSyncFailedCount)
+        latestAutoSyncFailedCount: OfflineSyncService.normalizeCount(runtimeState.latestAutoSyncFailedCount),
+        latestAutoSyncSkippedCount: OfflineSyncService.normalizeCount(runtimeState.latestAutoSyncSkippedCount)
       };
     } catch (err) {
       return OfflineSyncService.createDefaultRuntimeState();

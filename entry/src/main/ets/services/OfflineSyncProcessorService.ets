@@ -24,7 +24,10 @@ interface ArchiveOfflineSyncPayload {
 export class OfflineSyncProcessorService {
   private static syncInProgress: boolean = false;
 
-  static async syncReadyItems(limit: number = DEFAULT_SYNC_BATCH_LIMIT): Promise<OfflineSyncExecutionResult> {
+  static async syncReadyItems(
+    limit: number = DEFAULT_SYNC_BATCH_LIMIT,
+    includePasswordVerificationRequiredItems: boolean = true
+  ): Promise<OfflineSyncExecutionResult> {
     if (OfflineSyncProcessorService.syncInProgress) {
       return {
         processedCount: 0,
@@ -47,14 +50,24 @@ export class OfflineSyncProcessorService {
       };
     }
 
-    const items = OfflineSyncService.getReadyPendingItems(OfflineSyncProcessorService.normalizeLimit(limit));
+    const skippedPasswordVerificationRequiredCount = includePasswordVerificationRequiredItems ? 0 :
+      OfflineSyncService.getReadyPasswordVerificationRequiredCount();
+    const items = OfflineSyncService.getReadyPendingItems(
+      OfflineSyncProcessorService.normalizeLimit(limit),
+      includePasswordVerificationRequiredItems
+    );
     if (items.length === 0) {
       return {
-        processedCount: 0,
+        processedCount: skippedPasswordVerificationRequiredCount,
         syncedCount: 0,
         failedCount: 0,
-        skippedCount: 0,
-        message: '暂无可同步项目',
+        skippedCount: skippedPasswordVerificationRequiredCount,
+        message: OfflineSyncProcessorService.createResultMessage(
+          skippedPasswordVerificationRequiredCount,
+          0,
+          0,
+          skippedPasswordVerificationRequiredCount
+        ),
         itemResults: []
       };
     }
@@ -96,11 +109,16 @@ export class OfflineSyncProcessorService {
 
       if (records.length === 0) {
         return {
-          processedCount: items.length,
+          processedCount: items.length + skippedPasswordVerificationRequiredCount,
           syncedCount,
           failedCount,
-          skippedCount,
-          message: OfflineSyncProcessorService.createResultMessage(items.length, syncedCount, failedCount, skippedCount),
+          skippedCount: skippedCount + skippedPasswordVerificationRequiredCount,
+          message: OfflineSyncProcessorService.createResultMessage(
+            items.length + skippedPasswordVerificationRequiredCount,
+            syncedCount,
+            failedCount,
+            skippedCount + skippedPasswordVerificationRequiredCount
+          ),
           itemResults
         };
       }
@@ -183,11 +201,16 @@ export class OfflineSyncProcessorService {
     }
 
     return {
-      processedCount: items.length,
+      processedCount: items.length + skippedPasswordVerificationRequiredCount,
       syncedCount,
       failedCount,
-      skippedCount,
-      message: OfflineSyncProcessorService.createResultMessage(items.length, syncedCount, failedCount, skippedCount),
+      skippedCount: skippedCount + skippedPasswordVerificationRequiredCount,
+      message: OfflineSyncProcessorService.createResultMessage(
+        items.length + skippedPasswordVerificationRequiredCount,
+        syncedCount,
+        failedCount,
+        skippedCount + skippedPasswordVerificationRequiredCount
+      ),
       itemResults
     };
   }
@@ -349,6 +372,14 @@ export class OfflineSyncProcessorService {
       return `已同步提交${syncedCount}项`;
     }
 
-    return `已处理${processedCount}项，已同步提交${syncedCount}项，失败${failedCount}项`;
+    if (failedCount === 0 && syncedCount === 0 && skippedCount > 0) {
+      return `已跳过${skippedCount}项需密码验证的档案删除申请，请前往同步中心手动处理`;
+    }
+
+    if (failedCount === 0 && skippedCount > 0) {
+      return `已同步提交${syncedCount}项，跳过${skippedCount}项需密码验证的档案删除申请`;
+    }
+
+    return `已处理${processedCount}项，已同步提交${syncedCount}项，失败${failedCount}项，跳过${skippedCount}项`;
   }
 }

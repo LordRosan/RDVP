@@ -11,6 +11,7 @@ import {
 } from '../../models/OfflineSyncModels';
 import { PermissionCode } from '../../models/PermissionModels';
 import { ApiClient } from '../../services/ApiClient';
+import { AuthService } from '../../services/AuthService';
 import { OfflineSyncProcessorService } from '../../services/OfflineSyncProcessorService';
 import { OfflineSyncService } from '../../services/OfflineSyncService';
 import { WorkbenchService } from '../../services/WorkbenchService';
@@ -48,6 +49,8 @@ struct SyncCenter {
   @State manualSyncPreviewItems: OfflineSyncItem[] = [];
   @State manualSyncConfirmMessage: string = '';
   @State manualSyncConfirmMessageTone: string = AppColors.Warning;
+  @State manualSyncPassword: string = '';
+  @State manualSyncConfirmSubmitting: boolean = false;
   @State queueStatusFilterIndex: number = 0;
   @State queueOperationFilterIndex: number = 0;
   @State queueActionMessage: string = '';
@@ -232,7 +235,7 @@ struct SyncCenter {
         .width('100%')
 
         if (this.settings.autoSyncEnabled) {
-          Text('恢复在线模式后将按批次自动同步，已进入同步流程的内容不可手动撤回。')
+          Text('恢复在线模式后将按批次自动同步；档案删除申请需手动验证密码后同步。')
             .fontSize(13)
             .fontColor(AppColors.Warning)
             .lineHeight(18)
@@ -797,7 +800,7 @@ struct SyncCenter {
           this.applyAutoSyncLimitValue(value);
         })
 
-      Text('恢复在线后，自动同步只会按该上限分批提交待同步内容。')
+      Text('恢复在线后，自动同步按该上限分批提交；需密码验证的删除申请会保留待手动处理。')
         .fontSize(13)
         .fontColor(AppColors.TextSecondary)
         .lineHeight(18)
@@ -840,7 +843,7 @@ struct SyncCenter {
           .width(40)
           .height(40)
           .backgroundColor(AppColors.PageBackground)
-          .enabled(!this.syncing)
+          .enabled(!this.isManualSyncBusy())
           .onClick(() => {
             this.closeManualSyncConfirm();
           })
@@ -868,6 +871,10 @@ struct SyncCenter {
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .width('100%')
 
+        if (this.getManualSyncPasswordRequiredCount() > 0) {
+          this.ManualSyncPasswordField()
+        }
+
         Row({ space: 10 }) {
           Column() {
             this.ConfirmSecondaryButton('取消', () => {
@@ -878,7 +885,7 @@ struct SyncCenter {
 
           Column({ space: 8 }) {
             this.ManualSyncConfirmMessageText()
-            this.ConfirmPrimaryButton(this.syncing ? '同步中' : '确认同步', () => {
+            this.ConfirmPrimaryButton(this.isManualSyncBusy() ? '同步中' : '确认同步', () => {
               this.confirmManualSync();
             })
           }
@@ -905,6 +912,38 @@ struct SyncCenter {
   }
 
   @Builder
+  ManualSyncPasswordField() {
+    Column({ space: 8 }) {
+      Text(`本批包含${this.getManualSyncPasswordRequiredCount()}项档案删除申请，需验证当前账号密码`)
+        .fontSize(13)
+        .fontColor(AppColors.Warning)
+        .lineHeight(18)
+        .width('100%')
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+      TextInput({
+        placeholder: '请输入当前账号密码',
+        text: this.manualSyncPassword
+      })
+        .type(InputType.Password)
+        .height(48)
+        .fontSize(15)
+        .backgroundColor(AppColors.FieldBackground)
+        .borderRadius(14)
+        .padding({ left: 14, right: 14 })
+        .border({ width: 1, color: AppColors.Border })
+        .onChange((value: string) => {
+          this.manualSyncPassword = value;
+          if (this.manualSyncConfirmMessageTone === AppColors.Danger) {
+            this.manualSyncConfirmMessage = '';
+          }
+        })
+    }
+    .width('100%')
+  }
+
+  @Builder
   ManualSyncConfirmMessageText() {
     if (this.manualSyncConfirmMessage.length > 0) {
       Text(this.manualSyncConfirmMessage)
@@ -919,7 +958,7 @@ struct SyncCenter {
 
   @Builder
   ConfirmPrimaryButton(label: string, action: () => void) {
-    Button({ type: ButtonType.Capsule, stateEffect: !this.syncing }) {
+    Button({ type: ButtonType.Capsule, stateEffect: !this.isManualSyncBusy() }) {
       Text(label)
         .fontSize(16)
         .fontWeight(FontWeight.Medium)
@@ -928,8 +967,8 @@ struct SyncCenter {
     }
     .height(52)
     .width('100%')
-    .backgroundColor(this.syncing ? AppColors.Disabled : AppColors.Primary)
-    .enabled(!this.syncing)
+    .backgroundColor(this.isManualSyncBusy() ? AppColors.Disabled : AppColors.Primary)
+    .enabled(!this.isManualSyncBusy())
     .onClick(() => {
       action();
     })
@@ -937,7 +976,7 @@ struct SyncCenter {
 
   @Builder
   ConfirmSecondaryButton(label: string, action: () => void) {
-    Button({ type: ButtonType.Capsule, stateEffect: !this.syncing }) {
+    Button({ type: ButtonType.Capsule, stateEffect: !this.isManualSyncBusy() }) {
       Text(label)
         .fontSize(16)
         .fontWeight(FontWeight.Medium)
@@ -948,7 +987,7 @@ struct SyncCenter {
     .width('100%')
     .backgroundColor(AppColors.FieldBackground)
     .border({ width: 1, color: AppColors.Border })
-    .enabled(!this.syncing)
+    .enabled(!this.isManualSyncBusy())
     .onClick(() => {
       action();
     })
@@ -1100,23 +1139,30 @@ struct SyncCenter {
     }
 
     this.manualSyncPreviewItems = readyItems;
-    this.manualSyncConfirmMessage = this.getManualSyncSensitiveCount() > 0 ?
-      '本批包含档案类敏感操作，提交后将进入后端审核或冲突检测。' : '';
+    this.manualSyncPassword = '';
+    this.manualSyncConfirmMessage = this.getManualSyncPasswordRequiredCount() > 0 ?
+      '本批包含档案删除申请，需验证当前账号密码后同步。' :
+      (this.getManualSyncSensitiveCount() > 0 ? '本批包含档案类敏感操作，提交后将进入后端审核或冲突检测。' : '');
     this.manualSyncConfirmMessageTone = AppColors.Warning;
     this.manualSyncConfirmVisible = true;
   }
 
   closeManualSyncConfirm(): void {
-    if (this.syncing) {
+    if (this.isManualSyncBusy()) {
       return;
     }
 
     this.manualSyncConfirmVisible = false;
     this.manualSyncPreviewItems = [];
     this.manualSyncConfirmMessage = '';
+    this.manualSyncPassword = '';
   }
 
   async confirmManualSync(): Promise<void> {
+    if (this.isManualSyncBusy()) {
+      return;
+    }
+
     if (!this.canManualSync()) {
       this.manualSyncConfirmMessage = '当前无可提交内容或未连接后端服务';
       this.manualSyncConfirmMessageTone = AppColors.Danger;
@@ -1124,10 +1170,32 @@ struct SyncCenter {
       return;
     }
 
-    this.manualSyncConfirmVisible = false;
-    this.manualSyncPreviewItems = [];
-    this.manualSyncConfirmMessage = '';
-    await this.submitManualSync();
+    this.manualSyncConfirmSubmitting = true;
+    try {
+      if (this.getManualSyncPasswordRequiredCount() > 0) {
+        if (this.manualSyncPassword.length === 0) {
+          this.manualSyncConfirmMessage = '请输入当前账号密码后再同步档案删除申请';
+          this.manualSyncConfirmMessageTone = AppColors.Danger;
+          return;
+        }
+
+        const verification = await AuthService.verifyCurrentUserPasswordRemoteFirst(this.manualSyncPassword);
+        if (!verification.success || verification.data !== true) {
+          this.manualSyncConfirmMessage = verification.error === undefined ?
+            '密码验证失败，请重新输入' : verification.error.message;
+          this.manualSyncConfirmMessageTone = AppColors.Danger;
+          return;
+        }
+      }
+
+      this.manualSyncConfirmVisible = false;
+      this.manualSyncPreviewItems = [];
+      this.manualSyncConfirmMessage = '';
+      this.manualSyncPassword = '';
+      await this.submitManualSync();
+    } finally {
+      this.manualSyncConfirmSubmitting = false;
+    }
   }
 
   selectAutoSync(enabled: boolean): void {
@@ -1216,6 +1284,10 @@ struct SyncCenter {
 
   canManualSync(): boolean {
     return !this.settings.autoSyncEnabled && !this.syncing && this.summary.readyToSyncCount > 0 && ApiClient.isConfigured();
+  }
+
+  isManualSyncBusy(): boolean {
+    return this.syncing || this.manualSyncConfirmSubmitting;
   }
 
   canWithdraw(item: OfflineSyncItem): boolean {
@@ -1463,7 +1535,21 @@ struct SyncCenter {
     return count;
   }
 
+  getManualSyncPasswordRequiredCount(): number {
+    let count = 0;
+    this.manualSyncPreviewItems.forEach((item: OfflineSyncItem) => {
+      if (OfflineSyncService.isPasswordVerificationRequiredOperation(item.operationType)) {
+        count += 1;
+      }
+    });
+    return count;
+  }
+
   getManualSyncConfirmHint(): string {
+    if (this.getManualSyncPasswordRequiredCount() > 0) {
+      return '确认后本批内容会提交到后端。档案删除申请属于敏感操作，必须先完成当前账号密码验证；审核通过前不会直接删除设备档案。';
+    }
+
     if (this.getManualSyncSensitiveCount() > 0) {
       return '确认后本批内容会提交到后端。档案新增、变更、删除不会直接生效，需通过审核；若后端检测到冻结、锁定、删除或版本冲突，将标记为冲突无效。';
     }
@@ -1541,6 +1627,10 @@ struct SyncCenter {
 
   getBusinessStatusText(item: OfflineSyncItem): string {
     if (item.status === OfflineSyncItemStatus.Pending) {
+      if (OfflineSyncService.isPasswordVerificationRequiredOperation(item.operationType)) {
+        return '已保存至本地，档案删除申请需在同步中心手动验证密码并提交；同步成功并通过审核后才会生效。';
+      }
+
       if (this.isArchiveSyncOperation(item.operationType)) {
         return '已保存至本地，尚未提交至后端；同步成功并通过审核后才会生效。';
       }
