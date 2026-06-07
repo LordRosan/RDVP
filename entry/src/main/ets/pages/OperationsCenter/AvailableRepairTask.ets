@@ -1,6 +1,7 @@
+import { Filter, FilterParams, FilterResult, FilterType } from '@kit.ArkUI';
 import { AppColors } from '../../styles/AppTheme';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
-import { FaultSeverity } from '../../models/FaultModels';
+import { FaultSeverity, FaultType } from '../../models/FaultModels';
 import { PermissionCode } from '../../models/PermissionModels';
 import {
   AvailableRepairTaskQuery,
@@ -16,6 +17,13 @@ import { RepairTaskService } from '../../services/RepairTaskService';
 import { AuthGuard } from '../../utils/AuthGuard';
 
 const REFRESH_TIMEOUT_MS = 5000;
+const AVAILABLE_TASK_TYPE_FILTER_OPTIONS: string[] = ['全部类型', '运行异常', '部件损坏', '通信故障', '逻辑故障', '能源故障', '外部因素', '其他'];
+const AVAILABLE_TASK_TYPE_FILTER_VALUES: string[] = ['', `${FaultType.OperationAbnormal}`, `${FaultType.HardwareDamage}`,
+  `${FaultType.CommunicationFault}`, `${FaultType.LogicFault}`, `${FaultType.EnergyFault}`, `${FaultType.ExternalFactor}`,
+  `${FaultType.Other}`];
+const AVAILABLE_TASK_SEVERITY_FILTER_OPTIONS: string[] = ['全部等级', '紧急', '严重', '一般', '轻微'];
+const AVAILABLE_TASK_SEVERITY_FILTER_VALUES: string[] = ['', `${FaultSeverity.Emergency}`, `${FaultSeverity.Severe}`,
+  `${FaultSeverity.General}`, `${FaultSeverity.Minor}`];
 
 @Entry
 @Component
@@ -36,9 +44,12 @@ struct AvailableRepairTask {
   @State hasCurrentLocation: boolean = false;
   @State currentLongitude: number = 0;
   @State currentLatitude: number = 0;
+  @State allTaskItems: AvailableRepairTaskSummary[] = [];
   @State taskItems: AvailableRepairTaskSummary[] = [];
   @State refreshing: boolean = false;
   @State acceptingTaskId: string = '';
+  @State faultTypeFilterIndex: number = 0;
+  @State severityFilterIndex: number = 0;
 
   aboutToAppear(): void {
     if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.OpsRepairTaskAccept)) {
@@ -296,6 +307,17 @@ struct AvailableRepairTask {
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
+
+      Filter({
+        multiFilters: this.getTaskFilterParams(),
+        onFilterChanged: (filterResults: FilterResult[]) => {
+          this.applyTaskFilterResults(filterResults);
+        },
+        filterType: FilterType.MULTI_LINE_FILTER
+      }) {
+        Blank()
+          .height(0)
+      }
 
       if (this.taskItems.length === 0) {
         this.EmptyTaskState()
@@ -617,6 +639,7 @@ struct AvailableRepairTask {
 
       this.applyWorkloadSnapshot(workloadResponse.data);
       if (!this.workloadSnapshot.canAccept) {
+        this.allTaskItems = [];
         this.taskItems = [];
         this.message = this.workloadSnapshot.message;
         this.messageTone = AppColors.Danger;
@@ -655,7 +678,8 @@ struct AvailableRepairTask {
       if (data?.workload !== undefined) {
         this.applyWorkloadSnapshot(data.workload);
       }
-      this.taskItems = data ? data.items : [];
+      this.allTaskItems = data ? data.items : [];
+      this.applyTaskFilters();
       this.refreshStatus = '已刷新';
       if (locationMessage.length > 0) {
         this.message = locationMessage;
@@ -733,9 +757,10 @@ struct AvailableRepairTask {
         return;
       }
 
-      this.taskItems = this.taskItems.filter((item: AvailableRepairTaskSummary) => {
+      this.allTaskItems = this.allTaskItems.filter((item: AvailableRepairTaskSummary) => {
         return item.id !== taskId;
       });
+      this.applyTaskFilters();
       this.refreshStatus = '已接取';
       this.acceptActionMessage = '';
       this.acceptActionTaskId = '';
@@ -790,6 +815,53 @@ struct AvailableRepairTask {
     this.message = '';
     this.messageTone = AppColors.Danger;
     this.taskListMessage = '';
+  }
+
+  applyTaskFilterResults(filterResults: FilterResult[]): void {
+    filterResults.forEach((item: FilterResult) => {
+      if (item.name === '故障类型') {
+        this.faultTypeFilterIndex = this.normalizeFilterIndex(item.index, AVAILABLE_TASK_TYPE_FILTER_VALUES.length);
+      } else if (item.name === '故障等级') {
+        this.severityFilterIndex = this.normalizeFilterIndex(item.index, AVAILABLE_TASK_SEVERITY_FILTER_VALUES.length);
+      }
+    });
+    this.applyTaskFilters();
+  }
+
+  applyTaskFilters(): void {
+    const typeValue = AVAILABLE_TASK_TYPE_FILTER_VALUES[this.faultTypeFilterIndex];
+    const severityValue = AVAILABLE_TASK_SEVERITY_FILTER_VALUES[this.severityFilterIndex];
+    this.taskItems = this.allTaskItems.filter((item: AvailableRepairTaskSummary) => {
+      const matchesType = typeValue.length === 0 || item.faultType === typeValue;
+      const matchesSeverity = severityValue.length === 0 || item.severity === severityValue;
+      return matchesType && matchesSeverity;
+    });
+  }
+
+  getTaskFilterParams(): FilterParams[] {
+    return [
+      this.createFilterParams('故障类型', AVAILABLE_TASK_TYPE_FILTER_OPTIONS),
+      this.createFilterParams('故障等级', AVAILABLE_TASK_SEVERITY_FILTER_OPTIONS)
+    ];
+  }
+
+  createFilterParams(name: string, options: string[]): FilterParams {
+    const params = new FilterParams();
+    params.name = name;
+    params.options = options;
+    return params;
+  }
+
+  normalizeFilterIndex(index: number, length: number): number {
+    if (index !== index || index < 0) {
+      return 0;
+    }
+
+    if (index >= length) {
+      return length - 1;
+    }
+
+    return Math.floor(index);
   }
 
   applyWorkloadSnapshot(workloadSnapshot: RepairerWorkloadSnapshot): void {
