@@ -16,6 +16,7 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -77,6 +78,7 @@ public class OfflineSyncService {
         this.objectMapper = objectMapper;
     }
 
+    @Transactional
     public OfflineSyncBatchResult synchronize(
             String clientBatchId,
             List<OfflineSyncRecordInput> records,

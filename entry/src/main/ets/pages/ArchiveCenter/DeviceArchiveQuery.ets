@@ -24,7 +24,9 @@ struct DeviceArchiveQuery {
   @State querying: boolean = false;
 
   aboutToAppear(): void {
-    AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveDeviceRead);
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveDeviceRead)) {
+      return;
+    }
   }
 
   build() {

@@ -30,7 +30,9 @@ struct DeviceArchiveCreate {
   @State submitting: boolean = false;
 
   aboutToAppear(): void {
-    AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveDeviceCreate);
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveDeviceCreate)) {
+      return;
+    }
   }
 
   build() {

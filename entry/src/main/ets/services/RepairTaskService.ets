@@ -82,6 +82,13 @@ interface RepairReportApiResult {
   createdAt: string;
 }
 
+interface AvailableRepairTaskApiListResult {
+  radiusKm: number;
+  workload?: RepairerWorkloadSnapshot;
+  items: AvailableRepairTaskApiSummary[];
+  total: number;
+}
+
 interface ApiListResult<T> {
   items: T[];
   total: number;
@@ -292,7 +299,7 @@ export class RepairTaskService {
 
     const locationQuery = query.longitude !== undefined && query.latitude !== undefined ?
       `&longitude=${query.longitude}&latitude=${query.latitude}` : '';
-    const response = await ApiClient.request<ApiListResult<AvailableRepairTaskApiSummary>>(
+    const response = await ApiClient.request<AvailableRepairTaskApiListResult>(
       `/api/v1/repair-tasks/available?radiusKm=${radiusKm}${locationQuery}`,
       'GET',
       true
@@ -310,12 +317,12 @@ export class RepairTaskService {
     return {
       success: true,
       data: {
-        radiusKm,
+        radiusKm: response.data === undefined ? radiusKm : response.data.radiusKm,
         items: response.data === undefined ? [] : response.data.items.map((item: AvailableRepairTaskApiSummary): AvailableRepairTaskSummary => {
           return RepairTaskService.mapAvailableTask(item);
         }),
         total: response.data === undefined ? 0 : response.data.total,
-        workload
+        workload: response.data === undefined || response.data.workload === undefined ? workload : response.data.workload
       },
       requestId: response.requestId,
       timestamp: response.timestamp

@@ -31,7 +31,9 @@ struct DeviceVerification {
   @State submitted: boolean = false;
 
   aboutToAppear(): void {
-    AuthGuard.requirePermission(this.getUIContext(), PermissionCode.OpsDeviceVerify);
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.OpsDeviceVerify)) {
+      return;
+    }
   }
 
   build() {
