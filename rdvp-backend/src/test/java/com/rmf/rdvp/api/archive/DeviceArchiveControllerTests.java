@@ -233,6 +233,37 @@ class DeviceArchiveControllerTests {
     }
 
     @Test
+    void locksDeviceQrCodeExportPasswordVerificationAfterConsecutiveFailures() throws Exception {
+        String token = login("admin", "password");
+
+        for (int index = 0; index < 5; index++) {
+            mockMvc.perform(post("/api/v1/devices/{deviceId}/qrcode-export", "device-local-0001")
+                            .header("Authorization", "Bearer " + token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "password": "wrong-password"
+                                    }
+                                    """))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
+        }
+
+        mockMvc.perform(post("/api/v1/devices/{deviceId}/qrcode-export", "device-local-0001")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "password": "password"
+                                }
+                                """))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("PASSWORD_VERIFICATION_LOCKED"));
+    }
+
+    @Test
     void createsDeviceVerificationRecordAndUpdatesArchiveTimestamp() throws Exception {
         String token = login("fieldoperator", "password");
 
