@@ -66,7 +66,7 @@ public class DeviceArchiveController {
     }
 
     @PostMapping("/devices/{deviceId}/qrcode-export")
-    @PreAuthorize("hasAuthority('ARCHIVE_QRCODE_EXPORT')")
+    @PreAuthorize("hasAuthority('ARCHIVE_DEVICE_READ') and hasAuthority('ARCHIVE_QRCODE_EXPORT')")
     public ResponseEntity<ApiResponse<DeviceQrCodeExportResponse>> exportQrCode(
             @PathVariable String deviceId,
             @Valid @RequestBody DeviceQrCodeExportRequest requestBody,
