@@ -49,7 +49,7 @@ interface ApiListResult<T> {
 
 export class ReinspectionService {
   static queryPendingTasks(): ApiResponse<ReinspectionTaskListResult> {
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return {
         success: true,
         data: LocalReinspectionRepository.queryPendingTasks(),
@@ -62,13 +62,17 @@ export class ReinspectionService {
   }
 
   static async queryPendingTasksRemoteFirst(): Promise<ApiResponse<ReinspectionTaskListResult>> {
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return {
         success: true,
         data: LocalReinspectionRepository.queryPendingTasks(),
         requestId: 'local-reinspection-tasks',
         timestamp: new Date().toISOString()
       };
+    }
+
+    if (!ApiClient.isConfigured()) {
+      return ApiClient.createServiceUnavailableResponse<ReinspectionTaskListResult>();
     }
 
     const response = await ApiClient.request<ApiListResult<ReinspectionTaskApiSummary>>(
@@ -154,7 +158,7 @@ export class ReinspectionService {
       };
     }
 
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return ReinspectionService.createLocalRecordResponse(form);
     }
 
@@ -173,8 +177,12 @@ export class ReinspectionService {
       };
     }
 
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return ReinspectionService.createLocalRecordResponse(form);
+    }
+
+    if (!ApiClient.isConfigured()) {
+      return ApiClient.createServiceUnavailableResponse<ReinspectionRecord>();
     }
 
     const taskId = encodeURIComponent(form.taskId.trim());

@@ -14,7 +14,6 @@ import {
 import { OperationRecordType } from '../models/OperationRecordModels';
 import { ApiClient } from './ApiClient';
 import { DeviceService } from './DeviceService';
-import { LocalDeviceChangeRequestRepository } from './LocalDeviceChangeRequestRepository';
 import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
 import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
 import { OfflineSyncService } from './OfflineSyncService';
@@ -171,7 +170,7 @@ export class DeviceArchiveChangeService {
       };
     }
 
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return DeviceArchiveChangeService.createLocalQueuedChangeRequestResponse(form, validation.normalizedDeviceCode ?
         validation.normalizedDeviceCode : DeviceService.normalizeDeviceCode(form.deviceCode));
     }
@@ -194,9 +193,13 @@ export class DeviceArchiveChangeService {
       };
     }
 
-    if (!ApiClient.isConfigured()) {
-      return DeviceArchiveChangeService.createLocalChangeRequestResponse(form, validation.normalizedDeviceCode ?
+    if (ApiClient.isOfflineMode()) {
+      return DeviceArchiveChangeService.createLocalQueuedChangeRequestResponse(form, validation.normalizedDeviceCode ?
         validation.normalizedDeviceCode : DeviceService.normalizeDeviceCode(form.deviceCode));
+    }
+
+    if (!ApiClient.isConfigured()) {
+      return ApiClient.createServiceUnavailableResponse<DeviceArchiveChangeRequestRecord>();
     }
 
     if (form.deviceId === undefined || form.deviceId.trim().length === 0 || form.baseline === undefined) {
@@ -213,11 +216,6 @@ export class DeviceArchiveChangeService {
       DeviceArchiveChangeService.buildCreateRequestBody(form));
 
     if (!response.success) {
-      if (response.error !== undefined && response.error.code === 'SERVICE_UNAVAILABLE') {
-        return DeviceArchiveChangeService.createLocalQueuedChangeRequestResponse(form, validation.normalizedDeviceCode ?
-          validation.normalizedDeviceCode : DeviceService.normalizeDeviceCode(form.deviceCode));
-      }
-
       return {
         success: false,
         error: response.error,
@@ -319,34 +317,6 @@ export class DeviceArchiveChangeService {
     }
 
     return DeviceArchiveChangeService.hasFieldChanged(baseline, field, value);
-  }
-
-  private static createLocalChangeRequestResponse(form: DeviceArchiveChangeRequestForm,
-    normalizedDeviceCode: string): ApiResponse<DeviceArchiveChangeRequestRecord> {
-    const submittedAt = new Date().toISOString();
-    const requestId = `DCR-LOCAL-${submittedAt.replace(/[-:.TZ]/g, '').substring(0, 14)}`;
-    const operatorName = SessionStore.getCurrentOperatorName();
-    LocalDeviceArchiveRepository.markChangePending(normalizedDeviceCode, requestId);
-    const record: DeviceArchiveChangeRequestRecord = {
-      id: requestId,
-      deviceCode: normalizedDeviceCode,
-      deviceName: form.deviceName.trim(),
-      model: form.model.trim(),
-      manufacturer: form.manufacturer.trim(),
-      locationAddress: form.locationAddress.trim(),
-      reason: form.reason.trim(),
-      status: DeviceArchiveChangeRequestStatus.PendingReview,
-      submittedAt
-    };
-    LocalDeviceChangeRequestRepository.appendFromSubmission(form, record, operatorName);
-    LocalOperationRecordRepository.append(OperationRecordType.DeviceChangeRequest, '提交档案变更', normalizedDeviceCode,
-      '设备档案变更进入待审核状态', operatorName);
-    return {
-      success: true,
-      data: record,
-      requestId: 'local-device-change-request',
-      timestamp: submittedAt
-    };
   }
 
   private static createLocalQueuedChangeRequestResponse(form: DeviceArchiveChangeRequestForm,

@@ -320,6 +320,7 @@ public class DeviceChangeRequestService {
             case UPDATE -> {
                 DeviceArchive currentDevice = archiveRepository.findById(request.deviceId())
                         .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
+                verifyApprovalBaseline(currentDevice, request.changes());
                 DeviceArchiveUpdate archiveUpdate = buildArchiveUpdate(currentDevice, request.changes(), reviewer.id(), reviewedAt);
                 OffsetDateTime freezeUntil = reviewedAt.plus(CHANGE_FREEZE_DURATION);
                 boolean reviewed = changeRequestRepository.applyApprovedReview(
@@ -376,6 +377,18 @@ public class DeviceChangeRequestService {
                 if (!reviewed) {
                     throw new BusinessException(ErrorCode.CHANGE_REQUEST_ALREADY_REVIEWED);
                 }
+            }
+        }
+    }
+
+    private void verifyApprovalBaseline(DeviceArchive currentDevice, Map<String, DeviceChangeValue> changes) {
+        for (Map.Entry<String, DeviceChangeValue> entry : changes.entrySet()) {
+            String field = normalizeSupportedField(entry.getKey());
+            DeviceChangeValue value = requireChangeValue(entry.getValue());
+            String expectedOldValue = normalizeText(value.oldValue());
+            String currentValue = currentFieldValue(currentDevice, field);
+            if (!expectedOldValue.equals(currentValue)) {
+                throw new BusinessException(ErrorCode.CONFLICT, "Archive baseline changed before approval.");
             }
         }
     }

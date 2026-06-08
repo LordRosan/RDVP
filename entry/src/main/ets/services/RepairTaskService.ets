@@ -153,21 +153,29 @@ export class RepairTaskService {
   }
 
   static getCurrentWorkloadSnapshot(): RepairerWorkloadSnapshot {
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return RepairTaskService.createWorkloadSnapshot(LocalRepairTaskRepository.getActiveMyTaskCount());
+    }
+
+    if (!ApiClient.isConfigured()) {
+      return RepairTaskService.createUnavailableWorkloadSnapshot();
     }
 
     return RepairTaskService.createWorkloadSnapshot(0);
   }
 
   static async getCurrentWorkloadSnapshotRemoteFirst(): Promise<ApiResponse<RepairerWorkloadSnapshot>> {
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return {
         success: true,
         data: RepairTaskService.createWorkloadSnapshot(LocalRepairTaskRepository.getActiveMyTaskCount()),
         requestId: 'local-repairer-workload',
         timestamp: new Date().toISOString()
       };
+    }
+
+    if (!ApiClient.isConfigured()) {
+      return ApiClient.createServiceUnavailableResponse<RepairerWorkloadSnapshot>();
     }
 
     const response = await RepairTaskService.queryMyRepairTasksRemoteFirst();
@@ -253,7 +261,7 @@ export class RepairTaskService {
       };
     }
 
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return RepairTaskService.createLocalAvailableTasksResponse(validation.normalizedRadiusKm ?
         validation.normalizedRadiusKm : RepairTaskService.normalizeRadiusKm(query.radiusKm), workload);
     }
@@ -293,8 +301,12 @@ export class RepairTaskService {
 
     const radiusKm = validation.normalizedRadiusKm ?
       validation.normalizedRadiusKm : RepairTaskService.normalizeRadiusKm(query.radiusKm);
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return RepairTaskService.createLocalAvailableTasksResponse(radiusKm, workload);
+    }
+
+    if (!ApiClient.isConfigured()) {
+      return ApiClient.createServiceUnavailableResponse<AvailableRepairTaskListResult>();
     }
 
     const locationQuery = query.longitude !== undefined && query.latitude !== undefined ?
@@ -341,7 +353,7 @@ export class RepairTaskService {
       };
     }
 
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return RepairTaskService.createLocalAcceptTaskResponse(taskId);
     }
 
@@ -387,8 +399,12 @@ export class RepairTaskService {
       };
     }
 
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return RepairTaskService.createLocalAcceptTaskResponse(taskId, workloadResponse.data);
+    }
+
+    if (!ApiClient.isConfigured()) {
+      return ApiClient.createServiceUnavailableResponse<RepairTaskAcceptResult>();
     }
 
     const requestBody: RepairTaskAcceptRequestBody = {};
@@ -439,7 +455,7 @@ export class RepairTaskService {
   }
 
   static queryMyRepairTasks(): ApiResponse<MyRepairTaskListResult> {
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return RepairTaskService.createLocalMyTasksResponse();
     }
 
@@ -447,8 +463,12 @@ export class RepairTaskService {
   }
 
   static async queryMyRepairTasksRemoteFirst(): Promise<ApiResponse<MyRepairTaskListResult>> {
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return RepairTaskService.createLocalMyTasksResponse();
+    }
+
+    if (!ApiClient.isConfigured()) {
+      return ApiClient.createServiceUnavailableResponse<MyRepairTaskListResult>();
     }
 
     const response = await ApiClient.request<ApiListResult<MyRepairTaskApiSummary>>('/api/v1/repair-tasks/my', 'GET', true);
@@ -553,7 +573,7 @@ export class RepairTaskService {
       };
     }
 
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return RepairTaskService.createLocalRepairReportResponse(form);
     }
 
@@ -572,8 +592,12 @@ export class RepairTaskService {
       };
     }
 
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return RepairTaskService.createLocalRepairReportResponse(form);
+    }
+
+    if (!ApiClient.isConfigured()) {
+      return ApiClient.createServiceUnavailableResponse<RepairReportRecord>();
     }
 
     const taskId = encodeURIComponent(form.taskId.trim());
@@ -685,6 +709,18 @@ export class RepairTaskService {
       default:
         return AppColors.TextSecondary;
     }
+  }
+
+  private static createUnavailableWorkloadSnapshot(): RepairerWorkloadSnapshot {
+    return {
+      status: RepairerWorkloadStatus.Offline,
+      activeTaskCount: 0,
+      maxActiveTaskCount: MAX_ACTIVE_REPAIR_TASK_COUNT,
+      maxRadiusKm: 0,
+      recommendedRadiusKm: 0,
+      message: '在线模式下请先配置后端服务地址，再刷新维修任务。',
+      canAccept: false
+    };
   }
 
   static formatTaskStatus(status: RepairTaskStatus): string {

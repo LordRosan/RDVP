@@ -1,4 +1,4 @@
-import { ApiError, ApiErrorCode, ApiResponse } from '../models/ApiModels';
+import { ApiError, ApiResponse } from '../models/ApiModels';
 import {
   FaultReportForm,
   FaultReportRecord,
@@ -117,7 +117,7 @@ export class FaultReportService {
       };
     }
 
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return FaultReportService.createLocalQueuedFaultReportResponse(form);
     }
 
@@ -136,18 +136,15 @@ export class FaultReportService {
       };
     }
 
+    if (ApiClient.isOfflineMode()) {
+      return FaultReportService.createLocalQueuedFaultReportResponse(form);
+    }
+
     if (!ApiClient.isConfigured()) {
-      return FaultReportService.createLocalQueuedFaultReportResponse(form);
+      return ApiClient.createServiceUnavailableResponse<FaultReportRecord>();
     }
 
-    const response = await FaultReportService.submitFaultReportToBackend(form);
-    if (!response.success &&
-      response.error !== undefined &&
-      response.error.code === ApiErrorCode.ServiceUnavailable) {
-      return FaultReportService.createLocalQueuedFaultReportResponse(form);
-    }
-
-    return response;
+    return FaultReportService.submitFaultReportToBackend(form);
   }
 
   static async submitQueuedFaultReport(payloadJson: string): Promise<ApiResponse<FaultReportRecord>> {

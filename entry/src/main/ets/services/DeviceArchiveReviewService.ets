@@ -40,7 +40,7 @@ interface DeviceArchiveReviewApiItem {
 
 export class DeviceArchiveReviewService {
   static async listPendingReviewsRemoteFirst(): Promise<ApiResponse<DeviceArchiveReviewListResult>> {
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       const items = LocalDeviceChangeRequestRepository.listPending();
       return {
         success: true,
@@ -51,6 +51,10 @@ export class DeviceArchiveReviewService {
         requestId: 'local-device-change-review-list',
         timestamp: new Date().toISOString()
       };
+    }
+
+    if (!ApiClient.isConfigured()) {
+      return ApiClient.createServiceUnavailableResponse<DeviceArchiveReviewListResult>();
     }
 
     const response = await ApiClient.request<ApiListResult<DeviceArchiveReviewApiItem>>(
@@ -115,7 +119,7 @@ export class DeviceArchiveReviewService {
       };
     }
 
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       const result = LocalDeviceChangeRequestRepository.review(form.requestId, form.decision, form.reviewComment,
         form.reviewedAt);
       if (result === undefined) {
@@ -134,6 +138,10 @@ export class DeviceArchiveReviewService {
         requestId: 'local-device-change-review',
         timestamp: new Date().toISOString()
       };
+    }
+
+    if (!ApiClient.isConfigured()) {
+      return ApiClient.createServiceUnavailableResponse<DeviceArchiveReviewResult>();
     }
 
     return ApiClient.request<DeviceArchiveReviewResult>(

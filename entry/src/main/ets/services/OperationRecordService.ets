@@ -30,7 +30,7 @@ interface ApiListResult<T> {
 
 export class OperationRecordService {
   static queryRecentRecords(filter?: OperationRecordQueryFilter): ApiResponse<OperationRecordListResult> {
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return {
         success: true,
         data: OperationRecordService.applyLocalFilter(LocalOperationRecordRepository.queryRecentRecords(), filter),
@@ -43,13 +43,17 @@ export class OperationRecordService {
   }
 
   static async queryRecentRecordsRemoteFirst(filter?: OperationRecordQueryFilter): Promise<ApiResponse<OperationRecordListResult>> {
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return {
         success: true,
         data: OperationRecordService.applyLocalFilter(LocalOperationRecordRepository.queryRecentRecords(), filter),
         requestId: 'local-operation-records',
         timestamp: new Date().toISOString()
       };
+    }
+
+    if (!ApiClient.isConfigured()) {
+      return ApiClient.createServiceUnavailableResponse<OperationRecordListResult>();
     }
 
     const query = OperationRecordService.buildQueryString(filter);

@@ -3,6 +3,7 @@ import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { DeviceStatus, DeviceSummary } from '../../models/DeviceModels';
 import { PermissionCode } from '../../models/PermissionModels';
 import { DeviceArchiveDeleteGuardService } from '../../services/DeviceArchiveDeleteGuardService';
+import { ApiClient } from '../../services/ApiClient';
 import {
   DeviceQrCodeExportResult,
   DeviceQrCodeExportService
@@ -83,7 +84,7 @@ struct DeviceArchiveDetail {
     this.canDeleteArchive = SessionStore.hasPermission(PermissionCode.ArchiveDeviceDelete) &&
       !DeviceService.isArchiveChangeLocked(device) &&
       !DeviceArchiveDeleteGuardService.isDeleteLocked(device.deviceCode);
-    this.canExportQrCode = SessionStore.hasPermission(PermissionCode.ArchiveQrCodeExport);
+    this.canExportQrCode = SessionStore.hasPermission(PermissionCode.ArchiveQrCodeExport) && ApiClient.isConfigured();
     this.detailMessage = '';
     this.detailMessageTone = AppColors.Danger;
     this.changeActionMessage = '';
@@ -748,6 +749,12 @@ struct DeviceArchiveDetail {
   openQrExportDialog(): void {
     if (!SessionStore.hasPermission(PermissionCode.ArchiveQrCodeExport)) {
       this.detailMessage = '当前账号无权导出设备二维码';
+      this.detailMessageTone = AppColors.Danger;
+      return;
+    }
+
+    if (!ApiClient.isConfigured()) {
+      this.detailMessage = '当前模式下无法导出设备二维码，请先切换至在线模式并配置后端服务地址';
       this.detailMessageTone = AppColors.Danger;
       return;
     }

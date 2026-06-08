@@ -140,6 +140,49 @@ class OperationsControllerTests {
     }
 
     @Test
+    void rejectsFaultReportWhenOnlyOneCoordinateIsProvided() throws Exception {
+        String operatorToken = login("fieldoperator", "password");
+
+        mockMvc.perform(post("/api/v1/fault-reports")
+                        .header("Authorization", "Bearer " + operatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "deviceCode": "RDVP-DEVICE-0001",
+                                  "faultType": "COMMUNICATION_FAULT",
+                                  "severity": "GENERAL",
+                                  "occurredAt": "2026-05-29T04:10:00Z",
+                                  "description": "Communication link is unstable.",
+                                  "longitude": 114.1694
+                                }
+                                """))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.error.code").value("FAULT_REPORT_INVALID"));
+    }
+
+    @Test
+    void rejectsFaultReportWhenCoordinateIsOutOfRange() throws Exception {
+        String operatorToken = login("fieldoperator", "password");
+
+        mockMvc.perform(post("/api/v1/fault-reports")
+                        .header("Authorization", "Bearer " + operatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "deviceCode": "RDVP-DEVICE-0001",
+                                  "faultType": "COMMUNICATION_FAULT",
+                                  "severity": "GENERAL",
+                                  "occurredAt": "2026-05-29T04:10:00Z",
+                                  "description": "Communication link is unstable.",
+                                  "longitude": 181.0000,
+                                  "latitude": 22.3193
+                                }
+                                """))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.error.code").value("FAULT_REPORT_INVALID"));
+    }
+
+    @Test
     void filtersAvailableRepairTasksByProvidedLocation() throws Exception {
         String operatorToken = login("fieldoperator", "password");
         String maintainerToken = login("maintainer", "password");
@@ -263,6 +306,57 @@ class OperationsControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items[0].faultReportId").value(faultId));
+    }
+
+    @Test
+    void rejectsVerificationFaultReportWhenOnlyOneCoordinateIsProvided() throws Exception {
+        String operatorToken = login("fieldoperator", "password");
+
+        mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records/fault-report", "device-local-0001")
+                        .header("Authorization", "Bearer " + operatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "result": "ABNORMAL",
+                                  "description": "现场核验发现设备通信异常。",
+                                  "remark": "坐标信息不完整，应拒绝提交。",
+                                  "verifiedAt": "2026-06-03T08:30:00Z",
+                                  "faultType": "COMMUNICATION_FAULT",
+                                  "severity": "GENERAL",
+                                  "occurredAt": "2026-06-03T08:20:00Z",
+                                  "faultDescription": "通信链路持续不稳定。",
+                                  "sceneCondition": "现场等待进一步排查。",
+                                  "longitude": 114.1694
+                                }
+                                """))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.error.code").value("FAULT_REPORT_INVALID"));
+    }
+
+    @Test
+    void rejectsVerificationFaultReportWhenCoordinateIsOutOfRange() throws Exception {
+        String operatorToken = login("fieldoperator", "password");
+
+        mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records/fault-report", "device-local-0001")
+                        .header("Authorization", "Bearer " + operatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "result": "ABNORMAL",
+                                  "description": "现场核验发现设备通信异常。",
+                                  "remark": "坐标越界，应拒绝提交。",
+                                  "verifiedAt": "2026-06-03T08:30:00Z",
+                                  "faultType": "COMMUNICATION_FAULT",
+                                  "severity": "GENERAL",
+                                  "occurredAt": "2026-06-03T08:20:00Z",
+                                  "faultDescription": "通信链路持续不稳定。",
+                                  "sceneCondition": "现场等待进一步排查。",
+                                  "longitude": 114.1694,
+                                  "latitude": -91.0000
+                                }
+                                """))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.error.code").value("FAULT_REPORT_INVALID"));
     }
 
     @Test

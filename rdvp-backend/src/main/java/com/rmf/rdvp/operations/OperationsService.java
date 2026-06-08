@@ -103,6 +103,23 @@ public class OperationsService {
         if (operationsRepository.hasActiveFaultForDevice(device.id())) {
             throw new BusinessException(ErrorCode.DEVICE_ACTIVE_FAULT_EXISTS);
         }
+        BigDecimal normalizedLongitude = normalizeCoordinate(
+                longitude,
+                "longitude",
+                BigDecimal.valueOf(-180),
+                BigDecimal.valueOf(180),
+                ErrorCode.FAULT_REPORT_INVALID);
+        BigDecimal normalizedLatitude = normalizeCoordinate(
+                latitude,
+                "latitude",
+                BigDecimal.valueOf(-90),
+                BigDecimal.valueOf(90),
+                ErrorCode.FAULT_REPORT_INVALID);
+        if ((normalizedLongitude == null) != (normalizedLatitude == null)) {
+            throw new BusinessException(
+                    ErrorCode.FAULT_REPORT_INVALID,
+                    "longitude and latitude must be provided together.");
+        }
 
         OffsetDateTime now = now();
         FaultReportCreate create = new FaultReportCreate(
@@ -115,8 +132,8 @@ public class OperationsService {
                 normalizeRequiredText(description, "description", 1000, ErrorCode.FAULT_REPORT_INVALID),
                 normalizeOptionalText(sceneCondition, 500, ErrorCode.FAULT_REPORT_INVALID),
                 parseDateTime(occurredAt, "occurredAt"),
-                longitude,
-                latitude,
+                normalizedLongitude,
+                normalizedLatitude,
                 now);
 
         try {
@@ -166,6 +183,23 @@ public class OperationsService {
             if (operationsRepository.hasActiveFaultForDevice(device.id())) {
                 throw new BusinessException(ErrorCode.DEVICE_ACTIVE_FAULT_EXISTS);
             }
+            BigDecimal normalizedLongitude = normalizeCoordinate(
+                    longitude,
+                    "longitude",
+                    BigDecimal.valueOf(-180),
+                    BigDecimal.valueOf(180),
+                    ErrorCode.FAULT_REPORT_INVALID);
+            BigDecimal normalizedLatitude = normalizeCoordinate(
+                    latitude,
+                    "latitude",
+                    BigDecimal.valueOf(-90),
+                    BigDecimal.valueOf(90),
+                    ErrorCode.FAULT_REPORT_INVALID);
+            if ((normalizedLongitude == null) != (normalizedLatitude == null)) {
+                throw new BusinessException(
+                        ErrorCode.FAULT_REPORT_INVALID,
+                        "longitude and latitude must be provided together.");
+            }
 
             OffsetDateTime normalizedVerifiedAt = parseDateTime(verifiedAt, "verifiedAt");
             OffsetDateTime now = now();
@@ -198,8 +232,8 @@ public class OperationsService {
                     normalizeRequiredText(faultDescription, "faultDescription", 1000, ErrorCode.FAULT_REPORT_INVALID),
                     normalizeOptionalText(sceneCondition, 500, ErrorCode.FAULT_REPORT_INVALID),
                     parseDateTime(occurredAt, "occurredAt"),
-                    longitude,
-                    latitude,
+                    normalizedLongitude,
+                    normalizedLatitude,
                     now);
 
             try {
@@ -667,12 +701,21 @@ public class OperationsService {
     }
 
     private BigDecimal normalizeCoordinate(BigDecimal value, String field, BigDecimal min, BigDecimal max) {
+        return normalizeCoordinate(value, field, min, max, ErrorCode.REPAIR_TASK_RADIUS_INVALID);
+    }
+
+    private BigDecimal normalizeCoordinate(
+            BigDecimal value,
+            String field,
+            BigDecimal min,
+            BigDecimal max,
+            ErrorCode errorCode) {
         if (value == null) {
             return null;
         }
 
         if (value.compareTo(min) < 0 || value.compareTo(max) > 0) {
-            throw new BusinessException(ErrorCode.REPAIR_TASK_RADIUS_INVALID, field + " is out of range.");
+            throw new BusinessException(errorCode, field + " is out of range.");
         }
 
         return value;

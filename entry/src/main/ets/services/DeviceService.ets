@@ -98,7 +98,7 @@ export class DeviceService {
       };
     }
 
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return DeviceService.queryLocalArchiveByCode(form.deviceCode);
     }
 
@@ -118,8 +118,12 @@ export class DeviceService {
       };
     }
 
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return DeviceService.queryLocalArchiveByCode(form.deviceCode);
+    }
+
+    if (!ApiClient.isConfigured()) {
+      return ApiClient.createServiceUnavailableResponse<DeviceSummary>();
     }
 
     const deviceCode = encodeURIComponent(DeviceService.normalizeDeviceCode(form.deviceCode));
@@ -139,7 +143,7 @@ export class DeviceService {
       };
     }
 
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return DeviceService.queryLocalArchiveByQrContent(form.qrContent);
     }
 
@@ -159,8 +163,12 @@ export class DeviceService {
       };
     }
 
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return DeviceService.queryLocalArchiveByQrContent(form.qrContent);
+    }
+
+    if (!ApiClient.isConfigured()) {
+      return ApiClient.createServiceUnavailableResponse<DeviceSummary>();
     }
 
     const response = await ApiClient.request<QrVerifyApiResult>('/api/v1/device-qrcodes/verify', 'POST', true,

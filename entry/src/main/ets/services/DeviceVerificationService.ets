@@ -1,4 +1,4 @@
-import { ApiErrorCode, ApiResponse } from '../models/ApiModels';
+import { ApiResponse } from '../models/ApiModels';
 import {
   DeviceVerificationFaultReportOfflineSyncPayload,
   DeviceVerificationOfflineSyncPayload,
@@ -141,7 +141,7 @@ export class DeviceVerificationService {
       };
     }
 
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return DeviceVerificationService.createLocalQueuedVerificationResponse(form);
     }
 
@@ -160,19 +160,16 @@ export class DeviceVerificationService {
       };
     }
 
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return DeviceVerificationService.createLocalQueuedVerificationResponse(form);
     }
 
-    const verifiedAt = new Date().toISOString();
-    const response = await DeviceVerificationService.submitVerificationToBackend(form, verifiedAt);
-    if (!response.success &&
-      response.error !== undefined &&
-      response.error.code === ApiErrorCode.ServiceUnavailable) {
-      return DeviceVerificationService.createLocalQueuedVerificationResponse(form, verifiedAt);
+    if (!ApiClient.isConfigured()) {
+      return ApiClient.createServiceUnavailableResponse<DeviceVerificationRecord>();
     }
 
-    return response;
+    const verifiedAt = new Date().toISOString();
+    return DeviceVerificationService.submitVerificationToBackend(form, verifiedAt);
   }
 
   static async submitVerificationWithFaultReportRemoteFirst(
@@ -189,19 +186,16 @@ export class DeviceVerificationService {
       };
     }
 
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       return DeviceVerificationService.createLocalQueuedVerificationFaultReportResponse(form);
     }
 
-    const verifiedAt = new Date().toISOString();
-    const response = await DeviceVerificationService.submitVerificationFaultReportToBackend(form, verifiedAt);
-    if (!response.success &&
-      response.error !== undefined &&
-      response.error.code === ApiErrorCode.ServiceUnavailable) {
-      return DeviceVerificationService.createLocalQueuedVerificationFaultReportResponse(form, verifiedAt);
+    if (!ApiClient.isConfigured()) {
+      return ApiClient.createServiceUnavailableResponse<DeviceVerificationFaultReportRecord>();
     }
 
-    return response;
+    const verifiedAt = new Date().toISOString();
+    return DeviceVerificationService.submitVerificationFaultReportToBackend(form, verifiedAt);
   }
 
   static async submitQueuedVerification(payloadJson: string): Promise<ApiResponse<DeviceVerificationRecord>> {

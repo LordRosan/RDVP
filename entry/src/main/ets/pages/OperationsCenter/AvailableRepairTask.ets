@@ -354,7 +354,7 @@ struct AvailableRepairTask {
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
-      Text('在线模式连接后可刷新附近故障')
+      Text(this.getEmptyTaskHint())
         .fontSize(13)
         .fontColor(AppColors.TextSecondary)
         .maxLines(1)
@@ -615,6 +615,16 @@ struct AvailableRepairTask {
       return;
     }
 
+    if (ApiClient.isOfflineMode()) {
+      this.refreshOfflineTasks();
+      return;
+    }
+
+    if (!ApiClient.isConfigured()) {
+      this.clearTaskListForUnavailableOnlineMode();
+      return;
+    }
+
     this.refreshing = true;
     this.refreshStatus = '刷新中';
     this.message = '';
@@ -699,6 +709,57 @@ struct AvailableRepairTask {
     } finally {
       this.refreshing = false;
     }
+  }
+
+  refreshOfflineTasks(): void {
+    this.message = '';
+    this.messageTone = AppColors.Danger;
+    this.taskListMessage = '';
+    this.acceptActionMessage = '';
+    this.acceptActionTaskId = '';
+    this.locationStatus = '本地模式';
+    this.locationStatusTone = AppColors.TextSecondary;
+    this.hasCurrentLocation = false;
+
+    const workload = RepairTaskService.getCurrentWorkloadSnapshot();
+    this.applyWorkloadSnapshot(workload);
+    if (!this.workloadSnapshot.canAccept) {
+      this.allTaskItems = [];
+      this.taskItems = [];
+      this.message = this.workloadSnapshot.message;
+      this.messageTone = AppColors.Danger;
+      this.refreshStatus = '不可接取';
+      return;
+    }
+
+    const response = RepairTaskService.queryAvailableRepairTasks({ radiusKm: this.radiusKm }, this.workloadSnapshot);
+    if (!response.success || response.data === undefined) {
+      const error = response.error;
+      this.message = error ? error.message : '本地附近故障加载失败';
+      this.messageTone = AppColors.Danger;
+      this.refreshStatus = '加载失败';
+      return;
+    }
+
+    this.allTaskItems = response.data.items;
+    this.applyTaskFilters();
+    this.refreshStatus = '本地已加载';
+    this.message = '当前为离线模式，仅展示本地可接取任务；恢复在线后请通过同步中心处理待同步记录。';
+    this.messageTone = AppColors.Warning;
+  }
+
+  clearTaskListForUnavailableOnlineMode(): void {
+    this.allTaskItems = [];
+    this.taskItems = [];
+    this.message = '在线模式下请先配置后端服务地址，再刷新附近故障。';
+    this.messageTone = AppColors.Danger;
+    this.taskListMessage = '';
+    this.acceptActionMessage = '';
+    this.acceptActionTaskId = '';
+    this.refreshStatus = '服务未配置';
+    this.locationStatus = '未定位';
+    this.locationStatusTone = AppColors.TextSecondary;
+    this.hasCurrentLocation = false;
   }
 
   async acceptTask(taskId: string): Promise<void> {
@@ -923,6 +984,18 @@ struct AvailableRepairTask {
 
   formatDistance(item: AvailableRepairTaskSummary): string {
     return item.distanceKm === undefined ? '待定位' : `${item.distanceKm.toFixed(1)} km`;
+  }
+
+  getEmptyTaskHint(): string {
+    if (ApiClient.isOfflineMode()) {
+      return '离线模式下暂无本地可接取任务';
+    }
+
+    if (!ApiClient.isConfigured()) {
+      return '请先配置后端服务地址';
+    }
+
+    return '可手动刷新附近故障任务';
   }
 
   withRefreshTimeout<T>(request: Promise<ApiResponse<T>>, timeoutMessage: string): Promise<ApiResponse<T>> {

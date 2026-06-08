@@ -6,6 +6,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.HashSet;
 import java.util.List;
@@ -342,6 +343,9 @@ public class OfflineSyncService {
                     record.createdOfflineAt().withOffsetSameInstant(ZoneOffset.UTC)));
         }
 
+        normalizedRecords.sort(Comparator
+                .comparing(OfflineSyncRecordInput::createdOfflineAt)
+                .thenComparing(OfflineSyncRecordInput::clientRecordId));
         return List.copyOf(normalizedRecords);
     }
 

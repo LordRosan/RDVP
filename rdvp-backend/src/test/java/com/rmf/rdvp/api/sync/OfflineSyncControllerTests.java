@@ -274,6 +274,20 @@ class OfflineSyncControllerTests {
     }
 
     @Test
+    void processesSameBatchRecordsByOfflineCreationTime() throws Exception {
+        String token = login("fieldoperator", "password");
+
+        syncBatch(token, outOfOrderConflictingArchiveUpdateRequestBatch())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PARTIALLY_FAILED"))
+                .andExpect(jsonPath("$.data.results[0].clientRecordId").value("record-archive-order-early"))
+                .andExpect(jsonPath("$.data.results[0].success").value(true))
+                .andExpect(jsonPath("$.data.results[1].clientRecordId").value("record-archive-order-late"))
+                .andExpect(jsonPath("$.data.results[1].success").value(false))
+                .andExpect(jsonPath("$.data.results[1].errorCode").value("DEVICE_CHANGE_LOCKED"));
+    }
+
+    @Test
     void returnsPartialFailureForMixedBatch() throws Exception {
         String operatorToken = login("fieldoperator", "password");
 
@@ -585,6 +599,50 @@ class OfflineSyncControllerTests {
                             "field": "model",
                             "oldValue": "CP-A100",
                             "newValue": "CP-A101"
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+                """;
+    }
+
+    private String outOfOrderConflictingArchiveUpdateRequestBatch() {
+        return """
+                {
+                  "clientBatchId": "batch-archive-update-order-001",
+                  "records": [
+                    {
+                      "clientRecordId": "record-archive-order-late",
+                      "recordType": "DEVICE_ARCHIVE_UPDATE_REQUEST_CREATE",
+                      "createdOfflineAt": "2026-06-04T08:02:00Z",
+                      "payload": {
+                        "deviceId": "device-local-0001",
+                        "deviceCode": "RDVP-DEVICE-0001",
+                        "reason": "较晚发生的离线档案修正。",
+                        "changes": [
+                          {
+                            "field": "model",
+                            "oldValue": "CP-A100",
+                            "newValue": "CP-A101"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "clientRecordId": "record-archive-order-early",
+                      "recordType": "DEVICE_ARCHIVE_UPDATE_REQUEST_CREATE",
+                      "createdOfflineAt": "2026-06-04T08:00:00Z",
+                      "payload": {
+                        "deviceId": "device-local-0001",
+                        "deviceCode": "RDVP-DEVICE-0001",
+                        "reason": "较早发生的离线档案修正。",
+                        "changes": [
+                          {
+                            "field": "name",
+                            "oldValue": "冷却泵A-01",
+                            "newValue": "冷却泵A-02"
                           }
                         ]
                       }

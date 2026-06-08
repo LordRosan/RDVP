@@ -243,7 +243,7 @@ export class WorkbenchService {
   }
 
   static async refreshSummaryRemoteFirst(): Promise<ApiResponse<WorkbenchSummary>> {
-    if (!ApiClient.isConfigured()) {
+    if (ApiClient.isOfflineMode()) {
       const localSummary = WorkbenchService.createLocalSummary();
       WorkbenchService.updateCachedSummary(localSummary);
       return {
@@ -252,6 +252,12 @@ export class WorkbenchService {
         requestId: 'local-workbench-summary',
         timestamp: new Date().toISOString()
       };
+    }
+
+    if (!ApiClient.isConfigured()) {
+      const emptySummary = WorkbenchService.createEmptySummary();
+      WorkbenchService.updateCachedSummary(emptySummary);
+      return ApiClient.createServiceUnavailableResponse<WorkbenchSummary>();
     }
 
     const response = await ApiClient.request<WorkbenchSummary>('/api/v1/workbench/summary', 'GET', true);
@@ -293,12 +299,12 @@ export class WorkbenchService {
   }
 
   private static getSummary(): WorkbenchSummary {
-    if (ApiClient.isConfigured()) {
-      return WorkbenchService.cachedSummary === undefined ?
-        WorkbenchService.createEmptySummary() : WorkbenchService.cachedSummary;
+    if (ApiClient.isOfflineMode()) {
+      return WorkbenchService.createLocalSummary();
     }
 
-    return WorkbenchService.createLocalSummary();
+    return WorkbenchService.cachedSummary === undefined ?
+      WorkbenchService.createEmptySummary() : WorkbenchService.cachedSummary;
   }
 
   private static createLocalSummary(): WorkbenchSummary {
