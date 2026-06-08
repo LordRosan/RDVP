@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.rmf.rdvp.api.common.ApiResponse;
 import com.rmf.rdvp.api.common.RequestIds;
 import com.rmf.rdvp.archive.DeviceArchiveService;
+import com.rmf.rdvp.audit.AuditAction;
+import com.rmf.rdvp.audit.AuditLogService;
 import com.rmf.rdvp.domain.common.BusinessException;
 import com.rmf.rdvp.domain.common.ErrorCode;
 import com.rmf.rdvp.identity.AuthenticatedUser;
@@ -28,10 +30,15 @@ public class DeviceArchiveController {
 
     private final DeviceArchiveService archiveService;
     private final AuthenticationService authenticationService;
+    private final AuditLogService auditLogService;
 
-    public DeviceArchiveController(DeviceArchiveService archiveService, AuthenticationService authenticationService) {
+    public DeviceArchiveController(
+            DeviceArchiveService archiveService,
+            AuthenticationService authenticationService,
+            AuditLogService auditLogService) {
         this.archiveService = archiveService;
         this.authenticationService = authenticationService;
+        this.auditLogService = auditLogService;
     }
 
     @GetMapping("/devices/by-code/{deviceCode}")
@@ -66,7 +73,16 @@ public class DeviceArchiveController {
             Authentication authentication,
             HttpServletRequest request) {
         AuthenticatedUser operator = requireUser(authentication);
-        if (!authenticationService.verifyPassword(operator, requestBody.password())) {
+        boolean verified;
+        try {
+            verified = authenticationService.verifyPassword(operator, requestBody.password());
+        } catch (BusinessException exception) {
+            recordQrCodeExportVerificationFailure(deviceId, operator, exception.getErrorCode());
+            throw exception;
+        }
+
+        if (!verified) {
+            recordQrCodeExportVerificationFailure(deviceId, operator, ErrorCode.INVALID_CREDENTIALS);
             throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
         }
 
@@ -80,5 +96,18 @@ public class DeviceArchiveController {
         }
 
         return user;
+    }
+
+    private void recordQrCodeExportVerificationFailure(
+            String deviceId,
+            AuthenticatedUser operator,
+            ErrorCode errorCode) {
+        String target = deviceId == null ? "" : deviceId.trim();
+        auditLogService.recordFailure(
+                AuditAction.DEVICE_QRCODE_EXPORT,
+                target,
+                target,
+                operator,
+                "设备二维码导出失败：%s。".formatted(errorCode.code()));
     }
 }

@@ -1,6 +1,7 @@
 package com.rmf.rdvp.api.archive;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -319,6 +320,15 @@ class DeviceChangeRequestControllerTests {
                                 """))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("SENSITIVE_OPERATION_VERIFICATION_REQUIRED"));
+
+        String auditorToken = login("auditor", "password");
+        mockMvc.perform(get("/api/v1/audit-logs?action=DEVICE_CHANGE_REQUEST&keyword=device-local-0001")
+                        .header("Authorization", "Bearer " + auditorToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[*].status").value(hasItem("FAILED")))
+                .andExpect(jsonPath("$.data.items[*].targetId").value(hasItem("device-local-0001")))
+                .andExpect(jsonPath("$.data.items[*].description")
+                        .value(hasItem("设备档案删除申请提交失败：SENSITIVE_OPERATION_VERIFICATION_REQUIRED。")));
     }
 
     @Test

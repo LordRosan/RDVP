@@ -230,6 +230,14 @@ class DeviceArchiveControllerTests {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
+
+        String auditorToken = login("auditor", "password");
+        mockMvc.perform(get("/api/v1/audit-logs?action=DEVICE_QRCODE_EXPORT&keyword=device-local-0001")
+                        .header("Authorization", "Bearer " + auditorToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[*].status").value(hasItem("FAILED")))
+                .andExpect(jsonPath("$.data.items[*].targetId").value(hasItem("device-local-0001")))
+                .andExpect(jsonPath("$.data.items[*].actorName").value(hasItem("设备管理员")));
     }
 
     @Test

@@ -21,6 +21,8 @@ import com.rmf.rdvp.archive.DeviceChangeRequestService;
 import com.rmf.rdvp.archive.DeviceChangeReviewDecision;
 import com.rmf.rdvp.archive.DeviceChangeRequestType;
 import com.rmf.rdvp.archive.DeviceChangeValue;
+import com.rmf.rdvp.audit.AuditAction;
+import com.rmf.rdvp.audit.AuditLogService;
 import com.rmf.rdvp.domain.common.BusinessException;
 import com.rmf.rdvp.domain.common.ErrorCode;
 import com.rmf.rdvp.identity.AuthenticationService;
@@ -35,12 +37,15 @@ public class DeviceChangeRequestController {
 
     private final DeviceChangeRequestService changeRequestService;
     private final AuthenticationService authenticationService;
+    private final AuditLogService auditLogService;
 
     public DeviceChangeRequestController(
             DeviceChangeRequestService changeRequestService,
-            AuthenticationService authenticationService) {
+            AuthenticationService authenticationService,
+            AuditLogService auditLogService) {
         this.changeRequestService = changeRequestService;
         this.authenticationService = authenticationService;
+        this.auditLogService = auditLogService;
     }
 
     @PostMapping
@@ -51,7 +56,12 @@ public class DeviceChangeRequestController {
             HttpServletRequest request) {
         DeviceChangeRequestType requestType = parseType(requestBody.type());
         if (requestType == DeviceChangeRequestType.DELETE) {
-            authenticationService.requireRecentPasswordVerification(user);
+            try {
+                authenticationService.requireRecentPasswordVerification(user);
+            } catch (BusinessException exception) {
+                recordDeleteRequestVerificationFailure(requestBody.deviceId(), requestBody.deviceCode(), user, exception);
+                throw exception;
+            }
         }
 
         var created = changeRequestService.create(
@@ -128,5 +138,28 @@ public class DeviceChangeRequestController {
         } catch (RuntimeException exception) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "decision is invalid.");
         }
+    }
+
+    private void recordDeleteRequestVerificationFailure(
+            String deviceId,
+            String deviceCode,
+            AuthenticatedUser user,
+            BusinessException exception) {
+        String targetId = normalizeAuditText(deviceId);
+        String targetNo = normalizeAuditText(deviceCode);
+        if (targetNo.isBlank()) {
+            targetNo = targetId;
+        }
+
+        auditLogService.recordFailure(
+                AuditAction.DEVICE_CHANGE_REQUEST,
+                targetId,
+                targetNo,
+                user,
+                "设备档案删除申请提交失败：%s。".formatted(exception.getErrorCode().code()));
+    }
+
+    private String normalizeAuditText(String value) {
+        return value == null ? "" : value.trim();
     }
 }
