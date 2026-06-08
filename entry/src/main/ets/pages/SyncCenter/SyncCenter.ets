@@ -1688,6 +1688,10 @@ struct SyncCenter {
       return '冲突无效';
     }
 
+    if (this.isInvalidRecordError(item)) {
+      return '内容无效';
+    }
+
     if (this.isRetryableError(item)) {
       return item.status === OfflineSyncItemStatus.Failed ? '重试受限' : '可重试';
     }
@@ -1701,6 +1705,10 @@ struct SyncCenter {
     }
 
     if (this.isConflictError(item)) {
+      return AppColors.Danger;
+    }
+
+    if (this.isInvalidRecordError(item)) {
       return AppColors.Danger;
     }
 
@@ -1718,6 +1726,10 @@ struct SyncCenter {
 
     if (this.isConflictError(item)) {
       return '该内容未进入审核流程，请核对最新档案或业务状态后重新发起';
+    }
+
+    if (this.isInvalidRecordError(item)) {
+      return '请校准设备时间或核对离线内容后重新提交；此类记录不会进入审核流程';
     }
 
     if (this.isRetryableError(item)) {
@@ -1754,6 +1766,14 @@ struct SyncCenter {
       errorCode === 'DEVICE_ARCHIVE_DELETE_BLOCKED' ||
       errorCode === 'DEVICE_ACTIVE_FAULT_EXISTS' ||
       errorCode === 'DEVICE_NOT_FOUND';
+  }
+
+  isInvalidRecordError(item: OfflineSyncItem): boolean {
+    const errorCode = this.getErrorCode(item);
+    return errorCode === 'OFFLINE_SYNC_RECORD_INVALID' ||
+      errorCode === 'OFFLINE_SYNC_BATCH_INVALID' ||
+      errorCode === 'VALIDATION_FAILED' ||
+      errorCode === 'BAD_REQUEST';
   }
 
   getErrorCode(item: OfflineSyncItem): string {

@@ -16,6 +16,7 @@ import { OfflineSyncService } from './OfflineSyncService';
 import { DeviceArchiveFlowStore } from '../stores/DeviceArchiveFlowStore';
 
 const DEFAULT_SYNC_BATCH_LIMIT = 5;
+const MAX_CREATED_OFFLINE_FUTURE_SKEW_MS = 5 * 60 * 1000;
 
 interface ArchiveOfflineSyncPayload {
   deviceCode: string;
@@ -82,6 +83,26 @@ export class OfflineSyncProcessorService {
       const validItems: OfflineSyncItem[] = [];
       const records: OfflineSyncRecordRequest[] = [];
       items.forEach((item: OfflineSyncItem) => {
+        const createdAtMessage = OfflineSyncProcessorService.validateCreatedOfflineAt(item.createdAt);
+        if (createdAtMessage.length > 0) {
+          OfflineSyncProcessorService.releaseLocalArchiveLockIfNeeded(item);
+          OfflineSyncService.markFailedPermanently(
+            item.id,
+            createdAtMessage,
+            `${ApiErrorCode.OfflineSyncRecordInvalid}`
+          );
+          itemResults.push(OfflineSyncProcessorService.createItemResult(
+            item,
+            false,
+            '时间无效',
+            undefined,
+            `${ApiErrorCode.OfflineSyncRecordInvalid}`,
+            createdAtMessage
+          ));
+          failedCount += 1;
+          return;
+        }
+
         const record = OfflineSyncProcessorService.toRecordRequest(item);
         if (record === undefined) {
           OfflineSyncProcessorService.releaseLocalArchiveLockIfNeeded(item);
@@ -233,6 +254,19 @@ export class OfflineSyncProcessorService {
       errorCode,
       errorMessage
     };
+  }
+
+  private static validateCreatedOfflineAt(createdAt: string): string {
+    const timestamp = Date.parse(createdAt);
+    if (Number.isNaN(timestamp)) {
+      return '离线记录发起时间无效，请撤回后重新提交';
+    }
+
+    if (timestamp > Date.now() + MAX_CREATED_OFFLINE_FUTURE_SKEW_MS) {
+      return '离线记录发起时间晚于当前时间，请校准设备时间后重新提交';
+    }
+
+    return '';
   }
 
   private static async submitBatch(records: OfflineSyncRecordRequest[]): Promise<ApiResponse<OfflineSyncBatchResult>> {
