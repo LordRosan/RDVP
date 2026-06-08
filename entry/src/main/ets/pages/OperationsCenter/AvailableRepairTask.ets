@@ -712,40 +712,54 @@ struct AvailableRepairTask {
   }
 
   refreshOfflineTasks(): void {
-    this.message = '';
-    this.messageTone = AppColors.Danger;
-    this.taskListMessage = '';
-    this.acceptActionMessage = '';
-    this.acceptActionTaskId = '';
-    this.locationStatus = '本地模式';
-    this.locationStatusTone = AppColors.TextSecondary;
-    this.hasCurrentLocation = false;
+    try {
+      this.message = '';
+      this.messageTone = AppColors.Danger;
+      this.taskListMessage = '';
+      this.acceptActionMessage = '';
+      this.acceptActionTaskId = '';
+      this.locationStatus = '本地模式';
+      this.locationStatusTone = AppColors.TextSecondary;
+      this.hasCurrentLocation = false;
 
-    const workload = RepairTaskService.getCurrentWorkloadSnapshot();
-    this.applyWorkloadSnapshot(workload);
-    if (!this.workloadSnapshot.canAccept) {
+      const workload = RepairTaskService.getCurrentWorkloadSnapshot();
+      this.applyWorkloadSnapshot(workload);
+      if (!this.workloadSnapshot.canAccept) {
+        this.allTaskItems = [];
+        this.taskItems = [];
+        this.message = this.workloadSnapshot.message;
+        this.messageTone = AppColors.Danger;
+        this.refreshStatus = '不可接取';
+        return;
+      }
+
+      const response = RepairTaskService.queryAvailableRepairTasks({ radiusKm: this.radiusKm }, this.workloadSnapshot);
+      if (!response.success || response.data === undefined) {
+        const error = response.error;
+        this.message = error ? error.message : '本地附近故障加载失败';
+        this.messageTone = AppColors.Danger;
+        this.refreshStatus = '加载失败';
+        return;
+      }
+
+      this.allTaskItems = response.data.items;
+      this.applyTaskFilters();
+      this.refreshStatus = '本地已加载';
+      this.message = '当前为离线模式，仅展示本地可接取任务；恢复在线后请通过同步中心处理待同步记录。';
+      this.messageTone = AppColors.Warning;
+    } catch (err) {
       this.allTaskItems = [];
       this.taskItems = [];
-      this.message = this.workloadSnapshot.message;
+      this.message = '离线任务加载失败，请返回后重试';
       this.messageTone = AppColors.Danger;
-      this.refreshStatus = '不可接取';
-      return;
-    }
-
-    const response = RepairTaskService.queryAvailableRepairTasks({ radiusKm: this.radiusKm }, this.workloadSnapshot);
-    if (!response.success || response.data === undefined) {
-      const error = response.error;
-      this.message = error ? error.message : '本地附近故障加载失败';
-      this.messageTone = AppColors.Danger;
+      this.taskListMessage = '';
+      this.acceptActionMessage = '';
+      this.acceptActionTaskId = '';
       this.refreshStatus = '加载失败';
-      return;
+      this.locationStatus = '本地模式';
+      this.locationStatusTone = AppColors.TextSecondary;
+      this.hasCurrentLocation = false;
     }
-
-    this.allTaskItems = response.data.items;
-    this.applyTaskFilters();
-    this.refreshStatus = '本地已加载';
-    this.message = '当前为离线模式，仅展示本地可接取任务；恢复在线后请通过同步中心处理待同步记录。';
-    this.messageTone = AppColors.Warning;
   }
 
   clearTaskListForUnavailableOnlineMode(): void {

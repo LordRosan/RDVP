@@ -148,7 +148,6 @@ export class ApiClient {
 
     ApiClient.serviceMode = mode;
     ApiClient.persistServiceMode(mode);
-    SessionStore.clearSession();
     WorkbenchRefreshStore.notifyChanged();
   }
 
