@@ -8,7 +8,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -85,9 +85,9 @@ public class GlobalExceptionHandler {
                 null);
     }
 
-    @ExceptionHandler(AuthorizationDeniedException.class)
+    @ExceptionHandler(AccessDeniedException.class)
     ResponseEntity<ApiResponse<Void>> handleAuthorizationDenied(
-            AuthorizationDeniedException exception,
+            AccessDeniedException exception,
             HttpServletRequest request) {
         securityAuditService.recordAccessDenied(request);
         return build(

@@ -180,7 +180,7 @@ struct PersonalCenter {
 
       this.InfoRow('角色权限', this.currentUser.roleName, AppColors.TextSecondary)
       this.InfoRow('连接状态', formatConnectionStatus(this.currentUser.online),
-        this.currentUser.online ? AppColors.Success : AppColors.Danger)
+        this.getCurrentConnectionTone())
     }
     .padding(18)
     .width('100%')
@@ -642,6 +642,14 @@ struct PersonalCenter {
 
   getSelectedRuntimeStatusTone(): string {
     return this.isOnlineSelected() ? AppColors.Success : AppColors.Warning;
+  }
+
+  getCurrentConnectionTone(): string {
+    if (!this.currentUser.authenticated) {
+      return AppColors.Danger;
+    }
+
+    return this.currentUser.online ? AppColors.Success : AppColors.Warning;
   }
 
   getSelectedServiceMode(): ServiceMode {

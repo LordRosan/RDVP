@@ -5,6 +5,7 @@ export interface CurrentUserSnapshot {
   roleName: string;
   username?: string;
   expiresAt?: string;
+  authenticated: boolean;
   online: boolean;
 }
 

@@ -59,6 +59,7 @@ export class DeviceQrCodeExportService {
       return DeviceQrCodeExportService.createFailureResponse('二维码图片数据无效');
     }
 
+    let tempFilePath = '';
     try {
       const mediaWriteGranted = await DeviceQrCodeExportService.requestMediaWritePermission(context);
       if (!mediaWriteGranted) {
@@ -67,6 +68,7 @@ export class DeviceQrCodeExportService {
 
       const fileName = DeviceQrCodeExportService.normalizeFileName(result.fileName, result.deviceCode);
       const filePath = `${context.cacheDir}/${fileName}`;
+      tempFilePath = filePath;
       const base64 = new util.Base64Helper();
       const bytes = base64.decodeSync(result.qrImageBase64.trim());
       const file = fileIo.openSync(filePath, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC);
@@ -96,6 +98,8 @@ export class DeviceQrCodeExportService {
       };
     } catch (err) {
       return DeviceQrCodeExportService.createFailureResponse('二维码保存失败，请检查相册写入权限');
+    } finally {
+      DeviceQrCodeExportService.deleteTempFile(tempFilePath);
     }
   }
 
@@ -143,6 +147,17 @@ export class DeviceQrCodeExportService {
       },
       timestamp: new Date().toISOString()
     };
+  }
+
+  private static deleteTempFile(filePath: string): void {
+    if (filePath.length === 0) {
+      return;
+    }
+
+    try {
+      fileIo.unlinkSync(filePath);
+    } catch (err) {
+    }
   }
 
   private static async requestMediaWritePermission(context: common.Context): Promise<boolean> {

@@ -54,20 +54,22 @@ export class SessionStore {
         roleName: SessionStore.formatRoleNames(session.user.roles),
         username: session.user.username,
         expiresAt: session.expiresAt,
-        online: true
+        authenticated: true,
+        online: session.serviceMode === ServiceMode.Online
       };
     }
 
     return {
       displayName: '未登录用户',
       roleName: '权限未加载',
+      authenticated: false,
       online: false
     };
   }
 
   static getCurrentOperatorName(): string {
     const currentUser = SessionStore.getCurrentUser();
-    if (!currentUser.online) {
+    if (!currentUser.authenticated) {
       return '未登录用户';
     }
 
