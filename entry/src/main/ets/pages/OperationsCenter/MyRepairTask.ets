@@ -174,19 +174,16 @@ struct MyRepairTask {
         },
         filterType: FilterType.MULTI_LINE_FILTER
       }) {
-        Blank()
-          .height(0)
-      }
-
-      if (this.taskItems.length === 0) {
-        this.EmptyTaskState()
-      } else {
-        Column({ space: 12 }) {
-          ForEach(this.taskItems, (item: MyRepairTaskSummary) => {
-            this.TaskItem(item)
-          }, (item: MyRepairTaskSummary) => item.id)
+        if (this.taskItems.length === 0) {
+          this.EmptyTaskState()
+        } else {
+          Column({ space: 12 }) {
+            ForEach(this.taskItems, (item: MyRepairTaskSummary) => {
+              this.TaskItem(item)
+            }, (item: MyRepairTaskSummary) => item.id)
+          }
+          .width('100%')
         }
-        .width('100%')
       }
     }
     .alignItems(HorizontalAlign.Start)

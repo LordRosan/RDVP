@@ -167,19 +167,16 @@ struct DeviceArchiveReview {
         },
         filterType: FilterType.MULTI_LINE_FILTER
       }) {
-        Blank()
-          .height(0)
-      }
-
-      if (this.requests.length === 0) {
-        this.EmptyState()
-      } else {
-        Column({ space: 12 }) {
-          ForEach(this.requests, (item: DeviceArchiveReviewItem) => {
-            this.RequestItem(item)
-          }, (item: DeviceArchiveReviewItem) => item.id)
+        if (this.requests.length === 0) {
+          this.EmptyState()
+        } else {
+          Column({ space: 12 }) {
+            ForEach(this.requests, (item: DeviceArchiveReviewItem) => {
+              this.RequestItem(item)
+            }, (item: DeviceArchiveReviewItem) => item.id)
+          }
+          .width('100%')
         }
-        .width('100%')
       }
     }
     .width('100%')

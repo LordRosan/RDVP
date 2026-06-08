@@ -308,31 +308,7 @@ struct SyncCenter {
 
       this.QueuePanelMessageText()
       this.QueueFilterPanel()
-
-      if (this.items.length === 0) {
-        Column({ space: 8 }) {
-          Text('暂无同步内容')
-            .fontSize(15)
-            .fontColor(AppColors.TextSecondary)
-        }
-        .height(92)
-        .width('100%')
-        .justifyContent(FlexAlign.Center)
-        .alignItems(HorizontalAlign.Center)
-        .backgroundColor(AppColors.Surface)
-        .borderRadius(24)
-      } else {
-        if (this.getFilteredItems().length === 0) {
-          this.FilterEmptyState()
-        } else {
-        Column({ space: 10 }) {
-          ForEach(this.getFilteredItems(), (item: OfflineSyncItem) => {
-            this.QueueItem(item)
-          }, (item: OfflineSyncItem) => `${item.id}-${item.status}-${item.updatedAt}`)
-        }
-        .width('100%')
-        }
-      }
+      this.FilteredQueueListPanel()
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
@@ -494,17 +470,6 @@ struct SyncCenter {
       .width('100%')
       .alignItems(VerticalAlign.Center)
 
-      Filter({
-        multiFilters: this.getQueueFilterParams(),
-        onFilterChanged: (filterResults: FilterResult[]) => {
-          this.applyQueueFilterResults(filterResults);
-        },
-        filterType: FilterType.MULTI_LINE_FILTER
-      }) {
-        Blank()
-          .height(0)
-      }
-
       TextInput({
         placeholder: '按设备编号、操作人、错误码或说明搜索',
         text: this.queueKeyword
@@ -525,6 +490,42 @@ struct SyncCenter {
     .backgroundColor(AppColors.Surface)
     .borderRadius(16)
     .border({ width: 1, color: AppColors.Divider })
+  }
+
+  @Builder
+  FilteredQueueListPanel() {
+    Filter({
+      multiFilters: this.getQueueFilterParams(),
+      onFilterChanged: (filterResults: FilterResult[]) => {
+        this.applyQueueFilterResults(filterResults);
+      },
+      filterType: FilterType.MULTI_LINE_FILTER
+    }) {
+      if (this.items.length === 0) {
+        Column({ space: 8 }) {
+          Text('暂无同步内容')
+            .fontSize(15)
+            .fontColor(AppColors.TextSecondary)
+        }
+        .height(92)
+        .width('100%')
+        .justifyContent(FlexAlign.Center)
+        .alignItems(HorizontalAlign.Center)
+        .backgroundColor(AppColors.Surface)
+        .borderRadius(24)
+      } else {
+        if (this.getFilteredItems().length === 0) {
+          this.FilterEmptyState()
+        } else {
+          Column({ space: 10 }) {
+            ForEach(this.getFilteredItems(), (item: OfflineSyncItem) => {
+              this.QueueItem(item)
+            }, (item: OfflineSyncItem) => `${item.id}-${item.status}-${item.updatedAt}`)
+          }
+          .width('100%')
+        }
+      }
+    }
   }
 
   @Builder
@@ -603,17 +604,7 @@ struct SyncCenter {
       .alignItems(VerticalAlign.Center)
 
       this.ResultFilterPanel()
-
-      Column({ space: 10 }) {
-        if (this.getFilteredLastSyncItemResults().length === 0) {
-          this.ResultFilterEmptyState()
-        } else {
-          ForEach(this.getFilteredLastSyncItemResults(), (item: OfflineSyncExecutionItemResult) => {
-            this.LastSyncResultItem(item)
-          }, (item: OfflineSyncExecutionItemResult) => `${item.itemId}-${item.statusLabel}`)
-        }
-      }
-      .width('100%')
+      this.FilteredLastSyncResultListPanel()
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
@@ -648,23 +639,33 @@ struct SyncCenter {
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
-
-      Filter({
-        multiFilters: this.getResultFilterParams(),
-        onFilterChanged: (filterResults: FilterResult[]) => {
-          this.applyResultFilterResults(filterResults);
-        },
-        filterType: FilterType.MULTI_LINE_FILTER
-      }) {
-        Blank()
-          .height(0)
-      }
     }
     .padding(14)
     .width('100%')
     .backgroundColor(AppColors.Surface)
     .borderRadius(16)
     .border({ width: 1, color: AppColors.Divider })
+  }
+
+  @Builder
+  FilteredLastSyncResultListPanel() {
+    Filter({
+      multiFilters: this.getResultFilterParams(),
+      onFilterChanged: (filterResults: FilterResult[]) => {
+        this.applyResultFilterResults(filterResults);
+      },
+      filterType: FilterType.MULTI_LINE_FILTER
+    }) {
+      Column({ space: 10 }) {
+        if (this.getFilteredLastSyncItemResults().length === 0) {
+          this.ResultFilterEmptyState()
+        } else {
+          ForEach(this.getFilteredLastSyncItemResults(), (item: OfflineSyncExecutionItemResult) => {
+            this.LastSyncResultItem(item)
+          }, (item: OfflineSyncExecutionItemResult) => `${item.itemId}-${item.statusLabel}`)
+        }
+      }
+    }
   }
 
   @Builder

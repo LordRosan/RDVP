@@ -74,7 +74,7 @@ struct OperationRecord {
         Column({ space: 18 }) {
           this.ModeHeader()
           this.FilterPanel()
-          this.RecordListPanel()
+          this.FilteredRecordListPanel()
           this.StatusPanel()
         }
         .alignItems(HorizontalAlign.Start)
@@ -165,17 +165,6 @@ struct OperationRecord {
         .maxLines(1)
 
       Column({ space: 12 }) {
-        Filter({
-          multiFilters: this.getOperationFilterParams(),
-          onFilterChanged: (filterResults: FilterResult[]) => {
-            this.applyOperationFilterResults(filterResults);
-          },
-          filterType: FilterType.MULTI_LINE_FILTER
-        }) {
-          Blank()
-            .height(0)
-        }
-
         this.FieldTitle('关键词')
 
         TextInput({
@@ -231,6 +220,19 @@ struct OperationRecord {
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
+  }
+
+  @Builder
+  FilteredRecordListPanel() {
+    Filter({
+      multiFilters: this.getOperationFilterParams(),
+      onFilterChanged: (filterResults: FilterResult[]) => {
+        this.applyOperationFilterResults(filterResults);
+      },
+      filterType: FilterType.MULTI_LINE_FILTER
+    }) {
+      this.RecordListPanel()
+    }
   }
 
   @Builder

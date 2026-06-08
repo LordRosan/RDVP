@@ -173,19 +173,16 @@ struct ReinspectionTask {
         },
         filterType: FilterType.MULTI_LINE_FILTER
       }) {
-        Blank()
-          .height(0)
-      }
-
-      if (this.taskItems.length === 0) {
-        this.EmptyTaskState()
-      } else {
-        Column({ space: 12 }) {
-          ForEach(this.taskItems, (item: ReinspectionTaskSummary) => {
-            this.TaskItem(item)
-          }, (item: ReinspectionTaskSummary) => item.id)
+        if (this.taskItems.length === 0) {
+          this.EmptyTaskState()
+        } else {
+          Column({ space: 12 }) {
+            ForEach(this.taskItems, (item: ReinspectionTaskSummary) => {
+              this.TaskItem(item)
+            }, (item: ReinspectionTaskSummary) => item.id)
+          }
+          .width('100%')
         }
-        .width('100%')
       }
     }
     .alignItems(HorizontalAlign.Start)

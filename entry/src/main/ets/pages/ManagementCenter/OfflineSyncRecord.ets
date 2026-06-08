@@ -166,19 +166,16 @@ struct OfflineSyncRecord {
         },
         filterType: FilterType.MULTI_LINE_FILTER
       }) {
-        Blank()
-          .height(0)
-      }
-
-      if (this.records.length === 0) {
-        this.EmptyState()
-      } else {
-        Column({ space: 12 }) {
-          ForEach(this.records, (item: OfflineSyncRecordLogSummary) => {
-            this.RecordItem(item)
-          }, (item: OfflineSyncRecordLogSummary) => `${item.clientBatchId}-${item.clientRecordId}`)
+        if (this.records.length === 0) {
+          this.EmptyState()
+        } else {
+          Column({ space: 12 }) {
+            ForEach(this.records, (item: OfflineSyncRecordLogSummary) => {
+              this.RecordItem(item)
+            }, (item: OfflineSyncRecordLogSummary) => `${item.clientBatchId}-${item.clientRecordId}`)
+          }
+          .width('100%')
         }
-        .width('100%')
       }
     }
     .width('100%')
