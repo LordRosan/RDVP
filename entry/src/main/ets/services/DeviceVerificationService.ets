@@ -21,6 +21,7 @@ import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
 import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
 import { LocalRepairTaskRepository } from './LocalRepairTaskRepository';
 import { OfflineSyncService } from './OfflineSyncService';
+import { SecureRandomService } from './SecureRandomService';
 import { SessionStore } from '../stores/SessionStore';
 
 const MAX_DESCRIPTION_LENGTH = 500;
@@ -430,7 +431,7 @@ export class DeviceVerificationService {
     const normalizedSubmittedAt = submittedAt === undefined || submittedAt.length === 0 ? new Date().toISOString() : submittedAt;
     const deviceCode = DeviceService.normalizeDeviceCode(form.deviceCode);
     const record: DeviceVerificationRecord = {
-      id: `DVR-LOCAL-${normalizedSubmittedAt.replace(/[-:.TZ]/g, '').substring(0, 14)}-${Math.floor(Math.random() * 1000000)}`,
+      id: `DVR-LOCAL-${normalizedSubmittedAt.replace(/[-:.TZ]/g, '').substring(0, 14)}-${SecureRandomService.createNumericSuffix(6)}`,
       deviceCode,
       result: form.result,
       description: form.description.trim(),

@@ -13,6 +13,7 @@ import {
 import { ApiClient } from './ApiClient';
 import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
 import { OfflineSyncService } from './OfflineSyncService';
+import { SecureRandomService } from './SecureRandomService';
 import { DeviceArchiveFlowStore } from '../stores/DeviceArchiveFlowStore';
 
 const DEFAULT_SYNC_BATCH_LIMIT = 5;
@@ -389,7 +390,7 @@ export class OfflineSyncProcessorService {
   }
 
   private static createClientBatchId(): string {
-    return `offline-batch-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+    return `offline-batch-${Date.now()}-${SecureRandomService.createNumericSuffix(6)}`;
   }
 
   private static createResultMessage(

@@ -17,6 +17,7 @@ import { DeviceService } from './DeviceService';
 import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
 import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
 import { OfflineSyncService } from './OfflineSyncService';
+import { SecureRandomService } from './SecureRandomService';
 import { SessionStore } from '../stores/SessionStore';
 
 interface DeviceArchiveChangeApiResult {
@@ -347,7 +348,7 @@ export class DeviceArchiveChangeService {
     }
 
     const submittedAt = new Date().toISOString();
-    const requestId = `DCR-OFFLINE-${submittedAt.replace(/[-:.TZ]/g, '').substring(0, 14)}-${Math.floor(Math.random() * 1000000)}`;
+    const requestId = `DCR-OFFLINE-${submittedAt.replace(/[-:.TZ]/g, '').substring(0, 14)}-${SecureRandomService.createNumericSuffix(6)}`;
     const operatorName = SessionStore.getCurrentOperatorName();
     const payload = DeviceArchiveChangeService.createOfflineSyncPayload(form, normalizedDeviceCode, requestId, submittedAt);
     LocalDeviceArchiveRepository.markChangePending(normalizedDeviceCode, requestId);

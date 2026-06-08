@@ -1,5 +1,6 @@
 import { AuthService } from './AuthService';
 import { DeviceService } from './DeviceService';
+import { SecureRandomService } from './SecureRandomService';
 import { ApiResponse } from '../models/ApiModels';
 
 const DELETE_LOCK_STORAGE_KEY = 'rdvp_archive_delete_locks';
@@ -29,8 +30,7 @@ interface DeviceArchiveDeleteLockRecord {
 
 export class DeviceArchiveDeleteGuardService {
   static createCaptcha(): string {
-    const value = Math.floor(Math.random() * 900000) + 100000;
-    return `${value}`;
+    return SecureRandomService.createSixDigitCode();
   }
 
   static isDeleteLocked(deviceCode: string): boolean {

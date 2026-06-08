@@ -14,6 +14,7 @@ import { SessionStore } from '../stores/SessionStore';
 import { WorkbenchRefreshStore } from '../stores/WorkbenchRefreshStore';
 import { DeviceArchiveFlowStore } from '../stores/DeviceArchiveFlowStore';
 import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
+import { SecureRandomService } from './SecureRandomService';
 
 const OFFLINE_SYNC_QUEUE_STORAGE_KEY = 'rdvp_offline_sync_queue';
 const OFFLINE_SYNC_RUNTIME_STORAGE_KEY = 'rdvp_offline_sync_runtime';
@@ -857,7 +858,7 @@ export class OfflineSyncService {
   }
 
   private static createItemId(): string {
-    return `offline-sync-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+    return `offline-sync-${Date.now()}-${SecureRandomService.createNumericSuffix(6)}`;
   }
 
   private static releaseProvisionalArchiveLock(item: OfflineSyncItem): void {

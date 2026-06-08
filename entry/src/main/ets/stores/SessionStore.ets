@@ -2,6 +2,7 @@ import { AuthSession, RoleCode } from '../models/AuthModels';
 import { AllPermissionCodes } from '../models/PermissionModels';
 import { ServiceMode } from '../models/ServiceModeModels';
 import { CurrentUserSnapshot, SessionState } from '../models/SessionModels';
+import { SecureSessionStorageService } from '../services/SecureSessionStorageService';
 import { WorkbenchRefreshStore } from './WorkbenchRefreshStore';
 
 const SESSION_STORAGE_KEY = 'rdvp_auth_session';
@@ -147,14 +148,16 @@ export class SessionStore {
     SessionStore.initialized = true;
 
     try {
-      PersistentStorage.persistProp<string>(SESSION_STORAGE_KEY, '');
-      const sessionText = AppStorage.get<string>(SESSION_STORAGE_KEY);
+      const secureSessionText = SecureSessionStorageService.loadSessionText();
+      const sessionText = secureSessionText === undefined ? SessionStore.loadLegacySessionText() : secureSessionText;
+      SessionStore.clearLegacySessionText();
       const session = SessionStore.parseSession(sessionText);
       if (session !== undefined && !SessionStore.isSessionExpired(session)) {
         SessionStore.sessionState = {
           authenticated: true,
           session
         };
+        SessionStore.persistSession(session);
         return;
       }
 
@@ -168,7 +171,25 @@ export class SessionStore {
 
   private static persistSession(session: AuthSession | undefined): void {
     try {
-      AppStorage.setOrCreate<string>(SESSION_STORAGE_KEY, session === undefined ? '' : JSON.stringify(session));
+      SecureSessionStorageService.saveSessionText(session === undefined ? '' : JSON.stringify(session));
+      SessionStore.clearLegacySessionText();
+    } catch (err) {
+    }
+  }
+
+  private static loadLegacySessionText(): string | undefined {
+    try {
+      PersistentStorage.persistProp<string>(SESSION_STORAGE_KEY, '');
+      return AppStorage.get<string>(SESSION_STORAGE_KEY);
+    } catch (err) {
+      return undefined;
+    }
+  }
+
+  private static clearLegacySessionText(): void {
+    try {
+      PersistentStorage.persistProp<string>(SESSION_STORAGE_KEY, '');
+      AppStorage.setOrCreate<string>(SESSION_STORAGE_KEY, '');
     } catch (err) {
     }
   }

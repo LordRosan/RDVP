@@ -4,6 +4,7 @@ import { ApiErrorCode, ApiRequestOptions, ApiResponse } from '../models/ApiModel
 import { ServiceMode, ServiceModeState } from '../models/ServiceModeModels';
 import { SessionStore } from '../stores/SessionStore';
 import { WorkbenchRefreshStore } from '../stores/WorkbenchRefreshStore';
+import { SecureRandomService } from './SecureRandomService';
 
 const DEFAULT_API_BASE_URL = '';
 const API_BASE_URL_STORAGE_KEY = 'rdvp_api_base_url';
@@ -252,7 +253,7 @@ export class ApiClient {
   }
 
   private static createRequestId(): string {
-    return `rdvp-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+    return `rdvp-${Date.now()}-${SecureRandomService.createNumericSuffix(6)}`;
   }
 
   private static toRequestMethod(method: string): http.RequestMethod {

@@ -18,6 +18,7 @@ import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
 import { LocalDeviceChangeRequestRepository } from './LocalDeviceChangeRequestRepository';
 import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
 import { OfflineSyncService } from './OfflineSyncService';
+import { SecureRandomService } from './SecureRandomService';
 import { SessionStore } from '../stores/SessionStore';
 
 interface DeviceArchiveLifecycleApiResult {
@@ -470,7 +471,7 @@ export class DeviceArchiveLifecycleService {
   }
 
   private static newOfflineRequestId(submittedAt: string): string {
-    return `DCR-OFFLINE-${submittedAt.replace(/[-:.TZ]/g, '').substring(0, 14)}-${Math.floor(Math.random() * 1000000)}`;
+    return `DCR-OFFLINE-${submittedAt.replace(/[-:.TZ]/g, '').substring(0, 14)}-${SecureRandomService.createNumericSuffix(6)}`;
   }
 
   static isOfflineSyncQueuedResponse(response: ApiResponse<DeviceArchiveChangeRequestRecord>): boolean {
