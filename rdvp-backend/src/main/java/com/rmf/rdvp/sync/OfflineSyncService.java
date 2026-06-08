@@ -3,6 +3,7 @@ package com.rmf.rdvp.sync;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -52,6 +53,7 @@ public class OfflineSyncService {
     private static final int DEFAULT_AUDIT_PAGE_SIZE = 20;
     private static final int MAX_AUDIT_PAGE_SIZE = 100;
     private static final int MAX_AUDIT_PAGE_NUMBER = 10_000;
+    private static final Duration MAX_CREATED_OFFLINE_FUTURE_SKEW = Duration.ofMinutes(5);
     private static final Pattern CLIENT_ID_PATTERN = Pattern.compile("^[A-Za-z0-9._-]{1,128}$");
     private static final String PAYLOAD_HASH_ALGORITHM = "SHA-256";
 
@@ -319,6 +321,7 @@ public class OfflineSyncService {
 
         Set<String> clientRecordIds = new HashSet<>();
         List<OfflineSyncRecordInput> normalizedRecords = new ArrayList<>();
+        OffsetDateTime receivedAt = now();
         for (OfflineSyncRecordInput record : records) {
             if (record == null) {
                 throw new BusinessException(ErrorCode.OFFLINE_SYNC_RECORD_INVALID, "record is required.");
@@ -336,11 +339,18 @@ public class OfflineSyncService {
                 throw new BusinessException(ErrorCode.OFFLINE_SYNC_RECORD_INVALID);
             }
 
+            OffsetDateTime createdOfflineAt = record.createdOfflineAt().withOffsetSameInstant(ZoneOffset.UTC);
+            if (createdOfflineAt.isAfter(receivedAt.plus(MAX_CREATED_OFFLINE_FUTURE_SKEW))) {
+                throw new BusinessException(
+                        ErrorCode.OFFLINE_SYNC_RECORD_INVALID,
+                        "createdOfflineAt must not be in the future.");
+            }
+
             normalizedRecords.add(new OfflineSyncRecordInput(
                     clientRecordId,
                     record.recordType(),
                     record.payload(),
-                    record.createdOfflineAt().withOffsetSameInstant(ZoneOffset.UTC)));
+                    createdOfflineAt));
         }
 
         normalizedRecords.sort(Comparator

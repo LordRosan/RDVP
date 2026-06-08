@@ -335,6 +335,15 @@ class OfflineSyncControllerTests {
     }
 
     @Test
+    void rejectsOfflineRecordCreatedInTheFuture() throws Exception {
+        String operatorToken = login("fieldoperator", "password");
+
+        syncBatch(operatorToken, futureCreatedOfflineAtBatch())
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.error.code").value("OFFLINE_SYNC_RECORD_INVALID"));
+    }
+
+    @Test
     void listsOfflineSyncProcessingRecordsForAuditor() throws Exception {
         String operatorToken = login("fieldoperator", "password");
         String auditorToken = login("auditor", "password");
@@ -429,6 +438,29 @@ class OfflineSyncControllerTests {
                   "clientBatchId": "%s"
                 }
                 """.formatted(deviceCode, recordId, batchId);
+    }
+
+    private String futureCreatedOfflineAtBatch() {
+        return """
+                {
+                  "clientBatchId": "batch-future-created-at-001",
+                  "records": [
+                    {
+                      "clientRecordId": "record-future-created-at-001",
+                      "recordType": "FAULT_REPORT_CREATE",
+                      "createdOfflineAt": "2099-06-04T08:00:00Z",
+                      "payload": {
+                        "deviceCode": "RDVP-DEVICE-0001",
+                        "faultType": "ENERGY_FAULT",
+                        "severity": "GENERAL",
+                        "occurredAt": "2026-06-04T07:50:00Z",
+                        "description": "Future timestamp must be rejected.",
+                        "sceneCondition": "Submitted after network recovery."
+                      }
+                    }
+                  ]
+                }
+                """;
     }
 
     private String validVerificationBatch(String batchId, String recordId, String deviceCode) {
