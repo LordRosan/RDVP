@@ -134,6 +134,42 @@ class DeviceChangeRequestControllerTests {
     }
 
     @Test
+    void rejectsDeleteApprovalWhenArchiveSnapshotChangedAfterRequestCreation() throws Exception {
+        String token = login("deviceadmin", "password");
+        verifyPassword(token, "password");
+        String requestId = createArchiveDeleteRequest(token, "device-local-0001");
+
+        archiveRepository.applyUpdate(
+                new DeviceArchiveUpdate(
+                        "device-local-0001",
+                        "冷却泵A-待删修正",
+                        "CP-1000",
+                        "北方设备",
+                        "一号厂房动力区",
+                        "usr-device-admin",
+                        OffsetDateTime.parse("2026-06-01T07:45:00Z")),
+                null);
+
+        mockMvc.perform(post("/api/v1/device-change-requests/{requestId}/review", requestId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "decision": "APPROVED",
+                                  "reviewedAt": "2026-06-01T10:00:00Z",
+                                  "reviewComment": "删除前档案已变更，应拒绝应用。"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("CONFLICT"));
+
+        mockMvc.perform(get("/api/v1/devices/device-local-0001")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.name").value("冷却泵A-待删修正"));
+    }
+
+    @Test
     void rejectsRepeatedChangeRequestReview() throws Exception {
         String applicantToken = login("fieldoperator", "password");
         String reviewerToken = login("deviceadmin", "password");

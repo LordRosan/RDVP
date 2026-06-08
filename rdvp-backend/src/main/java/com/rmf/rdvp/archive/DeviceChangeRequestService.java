@@ -358,6 +358,7 @@ public class DeviceChangeRequestService {
             case DELETE -> {
                 DeviceArchive currentDevice = archiveRepository.findById(request.deviceId())
                         .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
+                verifyApprovalBaseline(currentDevice, request.changes());
                 if (DELETE_BLOCKING_STATUSES.contains(currentDevice.status())
                         || changeRequestRepository.findActiveFreezeUntil(currentDevice.id(), reviewedAt).isPresent()) {
                     throw new BusinessException(ErrorCode.DEVICE_ARCHIVE_DELETE_BLOCKED);
