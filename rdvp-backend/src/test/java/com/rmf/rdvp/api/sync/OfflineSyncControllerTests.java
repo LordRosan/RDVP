@@ -335,12 +335,35 @@ class OfflineSyncControllerTests {
     }
 
     @Test
-    void rejectsOfflineRecordCreatedInTheFuture() throws Exception {
+    void returnsFailedBatchStatusForSingleFutureOfflineRecord() throws Exception {
         String operatorToken = login("fieldoperator", "password");
 
         syncBatch(operatorToken, futureCreatedOfflineAtBatch())
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.error.code").value("OFFLINE_SYNC_RECORD_INVALID"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("FAILED"))
+                .andExpect(jsonPath("$.data.results[0].success").value(false))
+                .andExpect(jsonPath("$.data.results[0].errorCode").value("OFFLINE_SYNC_RECORD_INVALID"));
+    }
+
+    @Test
+    void returnsPartialFailureWhenOnlyOneOfflineRecordHasFutureTimestamp() throws Exception {
+        String operatorToken = login("fieldoperator", "password");
+        String maintainerToken = login("maintainer", "password");
+
+        syncBatch(operatorToken, mixedValidAndFutureCreatedOfflineAtBatch())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PARTIALLY_FAILED"))
+                .andExpect(jsonPath("$.data.results[0].clientRecordId").value("record-valid-created-at-001"))
+                .andExpect(jsonPath("$.data.results[0].success").value(true))
+                .andExpect(jsonPath("$.data.results[1].clientRecordId").value("record-future-created-at-001"))
+                .andExpect(jsonPath("$.data.results[1].success").value(false))
+                .andExpect(jsonPath("$.data.results[1].errorCode").value("OFFLINE_SYNC_RECORD_INVALID"));
+
+        mockMvc.perform(get("/api/v1/repair-tasks/available?radiusKm=10")
+                        .header("Authorization", "Bearer " + maintainerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items[0].deviceCode").value("RDVP-DEVICE-0001"));
     }
 
     @Test
@@ -455,6 +478,42 @@ class OfflineSyncControllerTests {
                         "severity": "GENERAL",
                         "occurredAt": "2026-06-04T07:50:00Z",
                         "description": "Future timestamp must be rejected.",
+                        "sceneCondition": "Submitted after network recovery."
+                      }
+                    }
+                  ]
+                }
+                """;
+    }
+
+    private String mixedValidAndFutureCreatedOfflineAtBatch() {
+        return """
+                {
+                  "clientBatchId": "batch-mixed-future-created-at-001",
+                  "records": [
+                    {
+                      "clientRecordId": "record-valid-created-at-001",
+                      "recordType": "FAULT_REPORT_CREATE",
+                      "createdOfflineAt": "2026-06-04T08:00:00Z",
+                      "payload": {
+                        "deviceCode": "RDVP-DEVICE-0001",
+                        "faultType": "ENERGY_FAULT",
+                        "severity": "GENERAL",
+                        "occurredAt": "2026-06-04T07:50:00Z",
+                        "description": "Valid record must still be synchronized.",
+                        "sceneCondition": "Submitted after network recovery."
+                      }
+                    },
+                    {
+                      "clientRecordId": "record-future-created-at-001",
+                      "recordType": "FAULT_REPORT_CREATE",
+                      "createdOfflineAt": "2099-06-04T08:00:00Z",
+                      "payload": {
+                        "deviceCode": "RDVP-DEVICE-0002",
+                        "faultType": "ENERGY_FAULT",
+                        "severity": "GENERAL",
+                        "occurredAt": "2026-06-04T07:50:00Z",
+                        "description": "Future timestamp must fail only this record.",
                         "sceneCondition": "Submitted after network recovery."
                       }
                     }

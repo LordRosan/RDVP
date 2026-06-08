@@ -109,9 +109,12 @@ public class OfflineSyncService {
 
         for (OfflineSyncRecordInput record : records) {
             PreparedPayload preparedPayload = preparePayload(record);
-            OfflineSyncRecordResult result = preparedPayload.errorResult() == null
-                    ? resolveRecordResult(record, operator, preparedPayload)
-                    : preparedPayload.errorResult();
+            OfflineSyncRecordResult createdAtError = validateCreatedOfflineAt(record, now);
+            OfflineSyncRecordResult result = createdAtError != null
+                    ? createdAtError
+                    : preparedPayload.errorResult() == null
+                            ? resolveRecordResult(record, operator, preparedPayload)
+                            : preparedPayload.errorResult();
             results.add(result);
             creates.add(toCreate(record, preparedPayload, result, now));
         }
@@ -321,7 +324,6 @@ public class OfflineSyncService {
 
         Set<String> clientRecordIds = new HashSet<>();
         List<OfflineSyncRecordInput> normalizedRecords = new ArrayList<>();
-        OffsetDateTime receivedAt = now();
         for (OfflineSyncRecordInput record : records) {
             if (record == null) {
                 throw new BusinessException(ErrorCode.OFFLINE_SYNC_RECORD_INVALID, "record is required.");
@@ -340,12 +342,6 @@ public class OfflineSyncService {
             }
 
             OffsetDateTime createdOfflineAt = record.createdOfflineAt().withOffsetSameInstant(ZoneOffset.UTC);
-            if (createdOfflineAt.isAfter(receivedAt.plus(MAX_CREATED_OFFLINE_FUTURE_SKEW))) {
-                throw new BusinessException(
-                        ErrorCode.OFFLINE_SYNC_RECORD_INVALID,
-                        "createdOfflineAt must not be in the future.");
-            }
-
             normalizedRecords.add(new OfflineSyncRecordInput(
                     clientRecordId,
                     record.recordType(),
@@ -357,6 +353,20 @@ public class OfflineSyncService {
                 .comparing(OfflineSyncRecordInput::createdOfflineAt)
                 .thenComparing(OfflineSyncRecordInput::clientRecordId));
         return List.copyOf(normalizedRecords);
+    }
+
+    private OfflineSyncRecordResult validateCreatedOfflineAt(
+            OfflineSyncRecordInput record,
+            OffsetDateTime receivedAt) {
+        OffsetDateTime createdOfflineAt = record.createdOfflineAt().withOffsetSameInstant(ZoneOffset.UTC);
+        if (!createdOfflineAt.isAfter(receivedAt.plus(MAX_CREATED_OFFLINE_FUTURE_SKEW))) {
+            return null;
+        }
+
+        return failed(
+                record,
+                ErrorCode.OFFLINE_SYNC_RECORD_INVALID,
+                "createdOfflineAt must not be in the future.");
     }
 
     private String normalizeClientId(String value, String field, ErrorCode errorCode) {
