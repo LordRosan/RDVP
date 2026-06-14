@@ -87,7 +87,7 @@ class DeviceChangeRequestControllerTests {
                 .andExpect(jsonPath("$.data.id").value(requestId))
                 .andExpect(jsonPath("$.data.status").value("APPROVED"))
                 .andExpect(jsonPath("$.data.reviewedAt").value("2026-06-01T08:00:00Z"))
-                .andExpect(jsonPath("$.data.freezeUntil").value("2026-06-01T20:00:00Z"));
+                .andExpect(jsonPath("$.data.freezeUntil").value("2026-06-01T14:00:00Z"));
 
         mockMvc.perform(get("/api/v1/devices/device-local-0001")
                         .header("Authorization", "Bearer " + reviewerToken))

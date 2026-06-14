@@ -286,7 +286,7 @@ class AuditLogControllerTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "result": "UNAVAILABLE",
+                                  "result": "ABNORMAL",
                                   "description": "设备已不可用。",
                                   "remark": "",
                                   "verifiedAt": "2026-06-03T08:30:00Z",

@@ -24,7 +24,7 @@ import com.rmf.rdvp.identity.UserAccountRepository;
 @Service
 public class DeviceChangeRequestService {
 
-    private static final Duration CHANGE_FREEZE_DURATION = Duration.ofHours(12);
+    private static final Duration CHANGE_FREEZE_DURATION = Duration.ofHours(6);
     private static final int MAX_PAGE_NUMBER = 10_000;
     private static final int MAX_PAGE_SIZE = 100;
     private static final Pattern REQUEST_ID_PATTERN = Pattern.compile("^[A-Za-z0-9_-]{1,64}$");
@@ -96,6 +96,7 @@ public class DeviceChangeRequestService {
                 parsedStatus,
                 normalizedDeviceCode,
                 normalizedApplicantId,
+                null,
                 normalizePage(page),
                 normalizePageSize(pageSize)));
         return new DeviceChangeRequestPage(

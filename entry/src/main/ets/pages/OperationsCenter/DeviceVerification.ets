@@ -17,7 +17,6 @@ struct DeviceVerification {
   @State deviceCode: string = '';
   @State verificationResult: string = '';
   @State description: string = '';
-  @State remark: string = '';
   @State faultType: string = '';
   @State severity: string = '';
   @State occurredAt: string = '';
@@ -102,22 +101,14 @@ struct DeviceVerification {
 
   @Builder
   ModeHeader() {
-    Column({ space: 6 }) {
-      Text('设备核验与报修')
+      Text('核验与报修')
         .fontSize(34)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-      Text('记录设备现场状态，异常时同步进入维修流程')
-        .fontSize(15)
-        .fontColor(AppColors.TextSecondary)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
     .width('100%')
-    .alignItems(HorizontalAlign.Start)
+    .alignSelf(ItemAlign.Start)
     .padding({
       top: 0,
       bottom: 2
@@ -130,7 +121,6 @@ struct DeviceVerification {
       this.DeviceCodeField()
       this.ResultSelector()
       this.DescriptionField()
-      this.RemarkField()
       if (this.requiresFaultReport()) {
         this.FaultReportSection()
       }
@@ -195,7 +185,6 @@ struct DeviceVerification {
       Row({ space: 10 }) {
         this.ResultOption(VerificationResult.Normal, $r('sys.symbol.checkmark_circle'))
         this.ResultOption(VerificationResult.Abnormal, $r('sys.symbol.exclamationmark_shield_fill'))
-        this.ResultOption(VerificationResult.Unavailable, $r('sys.symbol.xmark_circle'))
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
@@ -265,42 +254,6 @@ struct DeviceVerification {
         .enabled(!this.submitting && !this.submitted)
         .onChange((value: string) => {
           this.description = value;
-          this.markFormChanged();
-        })
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-  }
-
-  @Builder
-  RemarkField() {
-    Column({ space: 10 }) {
-      this.FieldTitle('备注')
-
-      TextArea({
-        placeholder: '填写补充说明',
-        text: this.remark
-      })
-        .height(86)
-        .width('100%')
-        .fontSize(15)
-        .lineHeight(22)
-        .maxLength(300)
-        .backgroundColor(AppColors.FieldBackground)
-        .borderRadius(18)
-        .padding({
-          left: 14,
-          right: 14,
-          top: 12,
-          bottom: 12
-        })
-        .border({
-          width: 1,
-          color: AppColors.Border
-        })
-        .enabled(!this.submitting && !this.submitted)
-        .onChange((value: string) => {
-          this.remark = value;
           this.markFormChanged();
         })
     }
@@ -509,7 +462,7 @@ struct DeviceVerification {
   @Builder
   OccurredAtField() {
     Column({ space: 10 }) {
-      this.FieldTitle('发生时间')
+      this.FieldTitle('故障时间')
 
       Row({ space: 10 }) {
         SymbolGlyph($r('sys.symbol.calendar'))
@@ -590,10 +543,10 @@ struct DeviceVerification {
   @Builder
   SceneConditionField() {
     Column({ space: 10 }) {
-      this.FieldTitle('现场情况')
+      this.FieldTitle('备注')
 
       TextArea({
-        placeholder: '填写现场环境、临时处理措施或补充说明',
+        placeholder: '填写备注信息',
         text: this.sceneCondition
       })
         .height(96)
@@ -674,14 +627,14 @@ struct DeviceVerification {
   @Builder
   StatusPanel() {
     Column({ space: 10 }) {
-      Text('提交状态')
+      Text('提交摘要')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Column() {
-        StatusInfoRow({ label: '标准编号', value: this.normalizedDeviceCode, tone: AppColors.TextSecondary })
+        StatusInfoRow({ label: '标准设备编号', value: this.normalizedDeviceCode, tone: AppColors.TextSecondary })
         this.CardDivider()
         StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: AppColors.TextSecondary })
         this.CardDivider()
@@ -692,21 +645,21 @@ struct DeviceVerification {
         })
         this.CardDivider()
         StatusInfoRow({
-          label: '联动报修',
+          label: '是否报修',
           value: this.getFaultReportStatusText(),
           tone: this.getFaultReportStatusTone()
         })
         this.CardDivider()
         StatusInfoRow({
-          label: '报修编号',
+          label: '维修任务编号',
           value: this.latestReportNo,
           tone: AppColors.TextSecondary
         })
         this.CardDivider()
         StatusInfoRow({
-          label: '服务模式',
-          value: ApiClient.getRuntimeStatusLabel(),
-          tone: ApiClient.getRuntimeStatusTone()
+          label: '提交状态',
+          value: this.getSubmitStatusText(),
+          tone: this.getSubmitStatusTone()
         })
       }
       .width('100%')
@@ -754,8 +707,7 @@ struct DeviceVerification {
     const response = await DeviceVerificationService.submitVerificationRemoteFirst({
       deviceCode: this.deviceCode,
       result: this.verificationResult as VerificationResult,
-      description: this.description,
-      remark: this.remark
+      description: this.description
     });
     if (!response.success) {
       const error = response.error;
@@ -765,13 +717,7 @@ struct DeviceVerification {
     }
 
     const recordId = response.data ? response.data.id : '';
-    if (DeviceVerificationService.isOfflineSyncQueuedResponse(response)) {
-      this.message = recordId.length > 0 ?
-        `核验记录已保存至本地同步队列，恢复在线并同步成功后将提交至后端处理：${recordId}` :
-        '核验记录已保存至本地同步队列，恢复在线并同步成功后将提交至后端处理';
-    } else {
-      this.message = recordId.length > 0 ? `核验记录已提交：${recordId}` : '核验记录已提交';
-    }
+    this.message = recordId.length > 0 ? `核验记录已提交：${recordId}` : '核验记录已提交';
     this.messageTone = AppColors.Success;
     this.submitted = true;
   }
@@ -787,8 +733,7 @@ struct DeviceVerification {
       verification: {
         deviceCode: this.deviceCode,
         result: this.verificationResult as VerificationResult,
-        description: this.description,
-        remark: this.remark
+        description: this.description
       },
       faultReport: {
         deviceCode: this.deviceCode,
@@ -801,15 +746,14 @@ struct DeviceVerification {
     });
     if (!response.success) {
       const error = response.error;
-      this.message = error ? error.message : '设备核验与报修提交失败';
+      this.message = error ? error.message : '核验与报修提交失败';
       this.messageTone = AppColors.Danger;
       return;
     }
 
     const reportNo = response.data ? response.data.faultReport.reportNo : '';
     this.latestReportNo = reportNo.length > 0 ? reportNo : '-';
-    this.message = DeviceVerificationService.isOfflineSyncQueuedFaultReportResponse(response) ?
-      '设备核验与报修已保存至本地同步队列，恢复在线并同步成功后将提交至后端处理' : '设备核验与报修已提交';
+    this.message = '核验与报修已提交';
     this.messageTone = AppColors.Success;
     this.submitted = true;
   }
@@ -829,16 +773,13 @@ struct DeviceVerification {
         return AppColors.Success;
       case VerificationResult.Abnormal:
         return AppColors.Danger;
-      case VerificationResult.Unavailable:
-        return AppColors.TextSecondary;
       default:
         return AppColors.TextSecondary;
     }
   }
 
   requiresFaultReport(): boolean {
-    return this.verificationResult === `${VerificationResult.Abnormal}` ||
-      this.verificationResult === `${VerificationResult.Unavailable}`;
+    return this.verificationResult === `${VerificationResult.Abnormal}`;
   }
 
   getSubmitButtonLabel(): string {
@@ -855,14 +796,14 @@ struct DeviceVerification {
 
   getFaultReportStatusText(): string {
     if (!this.requiresFaultReport()) {
-      return '不需要';
+      return '否';
     }
 
     if (this.submitted) {
-      return '已提交';
+      return '是';
     }
 
-    return '需填写';
+    return '是';
   }
 
   getFaultReportStatusTone(): string {
@@ -871,6 +812,26 @@ struct DeviceVerification {
     }
 
     return this.submitted ? AppColors.Success : AppColors.Warning;
+  }
+
+  getSubmitStatusText(): string {
+    if (this.submitting) {
+      return '提交中';
+    }
+    if (this.submitted) {
+      return '已提交';
+    }
+    return '未提交';
+  }
+
+  getSubmitStatusTone(): string {
+    if (this.submitting) {
+      return AppColors.Warning;
+    }
+    if (this.submitted) {
+      return AppColors.Success;
+    }
+    return AppColors.TextSecondary;
   }
 
   getSeverityTone(severity: FaultSeverity): string {

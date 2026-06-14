@@ -1,7 +1,6 @@
 export enum WorkbenchActionId {
   ArchiveCenter = 'ARCHIVE_CENTER',
   OperationsCenter = 'OPERATIONS_CENTER',
-  SyncCenter = 'SYNC_CENTER',
   ManagementCenter = 'MANAGEMENT_CENTER',
   DeviceQuery = 'DEVICE_QUERY',
   DeviceArchiveCreate = 'DEVICE_ARCHIVE_CREATE',
@@ -11,13 +10,15 @@ export enum WorkbenchActionId {
   ReinspectionTask = 'REINSPECTION_TASK',
   DeviceChangeReview = 'DEVICE_CHANGE_REVIEW',
   OperationRecord = 'OPERATION_RECORD',
-  OfflineSyncRecord = 'OFFLINE_SYNC_RECORD'
+  ArchiveRecord = 'ARCHIVE_RECORD',
+  OperationsRecord = 'OPERATIONS_RECORD',
+  ReviewRecord = 'REVIEW_RECORD',
+  RecordCenter = 'RECORD_CENTER'
 }
 
 export interface WorkbenchAction {
   id: WorkbenchActionId;
   title: string;
-  summary: string;
   tone: string;
 }
 
@@ -41,5 +42,4 @@ export interface WorkbenchSummary {
   availableRepairTasks: number;
   activeRepairTasks: number;
   pendingReinspections: number;
-  offlineDrafts: number;
 }

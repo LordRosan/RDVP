@@ -45,8 +45,7 @@ class WorkbenchControllerTests {
                 .andExpect(jsonPath("$.data.pendingChangeRequests").value(0))
                 .andExpect(jsonPath("$.data.availableRepairTasks").value(1))
                 .andExpect(jsonPath("$.data.activeRepairTasks").value(0))
-                .andExpect(jsonPath("$.data.pendingReinspections").value(0))
-                .andExpect(jsonPath("$.data.offlineDrafts").value(0));
+                .andExpect(jsonPath("$.data.pendingReinspections").value(0));
     }
 
     @Test

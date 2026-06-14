@@ -98,22 +98,13 @@ struct ManagementCenter {
   @Builder
   ModeHeader() {
     Row({ space: 16 }) {
-      Column({ space: 6 }) {
         Text('管理中心')
           .fontSize(34)
           .fontWeight(FontWeight.Bold)
           .fontColor(AppColors.TextPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-        Text('处理审核事项并查看操作记录')
-          .fontSize(15)
-          .fontColor(AppColors.TextSecondary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      }
       .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start)
     }
     .width('100%')
     .alignItems(VerticalAlign.Center)
@@ -132,7 +123,7 @@ struct ManagementCenter {
       Column() {
         if (SessionStore.hasPermission(PermissionCode.MgmtArchiveChangeReview)) {
           StatusInfoRow({
-            label: '待审核变更',
+            label: '待审核档案变更',
             value: this.getPendingReviewText(),
             tone: AppColors.Primary
           })
@@ -140,17 +131,11 @@ struct ManagementCenter {
         }
         if (SessionStore.hasPermission(PermissionCode.MgmtAuditLogRead)) {
           StatusInfoRow({
-            label: '操作记录',
+            label: '记录中心',
             value: this.getOperationRecordText(),
             tone: AppColors.TextSecondary
           })
-          this.CardDivider()
         }
-        StatusInfoRow({
-          label: '服务模式',
-          value: ApiClient.getRuntimeStatusLabel(),
-          tone: ApiClient.getRuntimeStatusTone()
-        })
       }
       .width('100%')
       .backgroundColor(AppColors.Surface)
@@ -236,17 +221,12 @@ struct ManagementCenter {
     this.message = '';
     this.messageTargetId = '';
     if (action.id === WorkbenchActionId.DeviceChangeReview) {
-      this.openPage('pages/ManagementCenter/DeviceArchiveReview', '变更审核不可用');
+      this.openPage('pages/ManagementCenter/DeviceArchiveReview', '档案审核不可用');
       return;
     }
 
     if (action.id === WorkbenchActionId.OperationRecord) {
-      this.openPage('pages/ManagementCenter/OperationRecord', '操作记录不可用');
-      return;
-    }
-
-    if (action.id === WorkbenchActionId.OfflineSyncRecord) {
-      this.openPage('pages/ManagementCenter/OfflineSyncRecord', '同步处理记录不可用');
+      this.openPage('pages/RecordCenter/RecordCenter', '记录中心不可用');
       return;
     }
 
@@ -268,12 +248,8 @@ struct ManagementCenter {
       return `${WorkbenchActionId.DeviceChangeReview}`;
     }
 
-    if (url === 'pages/ManagementCenter/OperationRecord') {
+    if (url === 'pages/RecordCenter/RecordCenter') {
       return `${WorkbenchActionId.OperationRecord}`;
-    }
-
-    if (url === 'pages/ManagementCenter/OfflineSyncRecord') {
-      return `${WorkbenchActionId.OfflineSyncRecord}`;
     }
 
     return '';

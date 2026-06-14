@@ -66,6 +66,12 @@ struct DeviceArchiveDetail {
   loadArchiveContext(): void {
     const device = DeviceArchiveFlowStore.getCurrentDevice();
     if (device === undefined) {
+      const lastCode = DeviceArchiveFlowStore.getLastDeviceCode();
+      if (lastCode.length > 0) {
+        this.reloadDeviceByCode(lastCode);
+        return;
+      }
+
       this.hasDevice = false;
       this.canChangeArchive = false;
       this.canDeleteArchive = false;
@@ -84,7 +90,7 @@ struct DeviceArchiveDetail {
     this.canDeleteArchive = SessionStore.hasPermission(PermissionCode.ArchiveDeviceDelete) &&
       !DeviceService.isArchiveChangeLocked(device) &&
       !DeviceArchiveDeleteGuardService.isDeleteLocked(device.deviceCode);
-    this.canExportQrCode = SessionStore.hasPermission(PermissionCode.ArchiveQrCodeExport) && ApiClient.isConfigured();
+    this.canExportQrCode = SessionStore.hasPermission(PermissionCode.ArchiveQrCodeExport);
     this.detailMessage = '';
     this.detailMessageTone = AppColors.Danger;
     this.changeActionMessage = '';
@@ -186,22 +192,13 @@ struct DeviceArchiveDetail {
   @Builder
   ModeHeader() {
     Row({ space: 16 }) {
-      Column({ space: 6 }) {
-        Text('设备档案详情')
-          .fontSize(34)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TextPrimary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-        Text('查看设备档案与状态信息')
-          .fontSize(15)
-          .fontColor(AppColors.TextSecondary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      }
+      Text('设备档案详情')
+        .fontSize(34)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
       .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start)
 
       if (this.canExportQrCode && this.hasDevice) {
         this.QrExportButton()
@@ -300,7 +297,7 @@ struct DeviceArchiveDetail {
         })
         this.CardDivider()
         StatusInfoRow({
-          label: '变更状态',
+          label: '档案状态',
           value: DeviceService.formatArchiveChangeLockReason(this.device),
           tone: DeviceService.isArchiveChangeLocked(this.device) ? AppColors.Danger : AppColors.Success,
           valueMaxLines: 2,
@@ -753,8 +750,8 @@ struct DeviceArchiveDetail {
       return;
     }
 
-    if (!ApiClient.isConfigured()) {
-      this.detailMessage = '当前模式下无法导出设备二维码，请先切换至在线模式并配置后端服务地址';
+    if (ApiClient.getBaseUrl().length === 0) {
+      this.detailMessage = '后端服务地址未配置，无法导出设备二维码';
       this.detailMessageTone = AppColors.Danger;
       return;
     }
@@ -893,7 +890,7 @@ struct DeviceArchiveDetail {
 
   openChangePage(): void {
     if (!SessionStore.hasPermission(PermissionCode.ArchiveChangeRequestCreate)) {
-      this.changeActionMessage = '当前账号无权申请设备档案变更';
+      this.changeActionMessage = '当前账号无权申请修改设备档案';
       this.changeActionMessageTone = AppColors.Danger;
       return;
     }
@@ -907,7 +904,7 @@ struct DeviceArchiveDetail {
     try {
       this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveChange' });
     } catch (err) {
-      this.changeActionMessage = '设备档案变更不可用';
+      this.changeActionMessage = '修改设备档案不可用';
       this.changeActionMessageTone = AppColors.Danger;
     }
   }
@@ -934,7 +931,7 @@ struct DeviceArchiveDetail {
     try {
       this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveDelete' });
     } catch (err) {
-      this.deleteActionMessage = '设备档案删除不可用';
+      this.deleteActionMessage = '删除设备档案不可用';
       this.deleteActionMessageTone = AppColors.Danger;
     }
   }
@@ -954,6 +951,25 @@ struct DeviceArchiveDetail {
         this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
       } catch (toastErr) {
       }
+    }
+  }
+
+  async reloadDeviceByCode(deviceCode: string): Promise<void> {
+    this.detailMessage = '正在重新获取设备档案...';
+    this.detailMessageTone = AppColors.TextSecondary;
+    const response = await DeviceService.queryByCodeRemoteFirst({
+      deviceCode
+    });
+    if (response.success && response.data !== undefined) {
+      DeviceArchiveFlowStore.startFlow(response.data);
+      this.loadArchiveContext();
+    } else {
+      this.hasDevice = false;
+      this.canChangeArchive = false;
+      this.canDeleteArchive = false;
+      this.canExportQrCode = false;
+      this.detailMessage = '重新获取设备档案失败，请返回查询';
+      this.detailMessageTone = AppColors.Danger;
     }
   }
 }

@@ -320,6 +320,11 @@ public class JdbcDeviceChangeRequestRepository implements DeviceChangeRequestRep
             parameters.addValue("applicantId", query.applicantId());
         }
 
+        if (query.type() != null && !query.type().isBlank()) {
+            conditions.add("cr.request_type = :type");
+            parameters.addValue("type", query.type());
+        }
+
         if (conditions.isEmpty()) {
             return "";
         }

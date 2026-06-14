@@ -75,22 +75,6 @@ public enum ErrorCode {
             "REINSPECTION_REQUIRED",
             HttpStatus.UNPROCESSABLE_CONTENT,
             "Current fault is not pending reinspection."),
-    OFFLINE_SYNC_BATCH_INVALID(
-            "OFFLINE_SYNC_BATCH_INVALID",
-            HttpStatus.UNPROCESSABLE_CONTENT,
-            "Offline sync batch is invalid."),
-    OFFLINE_SYNC_RECORD_INVALID(
-            "OFFLINE_SYNC_RECORD_INVALID",
-            HttpStatus.UNPROCESSABLE_CONTENT,
-            "Offline sync record is invalid."),
-    OFFLINE_RECORD_DUPLICATED(
-            "OFFLINE_RECORD_DUPLICATED",
-            HttpStatus.CONFLICT,
-            "Offline sync record is duplicated."),
-    OFFLINE_RECORD_CONFLICT(
-            "OFFLINE_RECORD_CONFLICT",
-            HttpStatus.CONFLICT,
-            "Offline sync record conflicts with an existing record."),
     INTERNAL_ERROR("INTERNAL_ERROR", HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error.");
 
     private final String code;

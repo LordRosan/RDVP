@@ -1,7 +1,5 @@
-import { Filter, FilterType } from '@kit.ArkUI';
-import type { FilterParams, FilterResult } from '@kit.ArkUI';
+import { Filter, FilterParams, FilterResult, FilterType } from '@kit.ArkUI';
 import { AppColors } from '../../styles/AppTheme';
-import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { FaultSeverity, FaultType } from '../../models/FaultModels';
 import { PermissionCode } from '../../models/PermissionModels';
 import {
@@ -25,6 +23,8 @@ const AVAILABLE_TASK_TYPE_FILTER_VALUES: string[] = ['', `${FaultType.OperationA
 const AVAILABLE_TASK_SEVERITY_FILTER_OPTIONS: string[] = ['全部等级', '紧急', '严重', '一般', '轻微'];
 const AVAILABLE_TASK_SEVERITY_FILTER_VALUES: string[] = ['', `${FaultSeverity.Emergency}`, `${FaultSeverity.Severe}`,
   `${FaultSeverity.General}`, `${FaultSeverity.Minor}`];
+const TASK_TYPE_CHIP_OPTIONS: string[] = ['全部', '维修', '复检'];
+const TASK_TYPE_CHIP_VALUES: string[] = ['', 'REPAIR', 'REINSPECTION'];
 
 @Entry
 @Component
@@ -39,9 +39,6 @@ struct AvailableRepairTask {
   @State acceptActionMessage: string = '';
   @State acceptActionMessageTone: string = AppColors.Danger;
   @State acceptActionTaskId: string = '';
-  @State refreshStatus: string = '未刷新';
-  @State locationStatus: string = '未定位';
-  @State locationStatusTone: string = AppColors.TextSecondary;
   @State hasCurrentLocation: boolean = false;
   @State currentLongitude: number = 0;
   @State currentLatitude: number = 0;
@@ -51,6 +48,7 @@ struct AvailableRepairTask {
   @State acceptingTaskId: string = '';
   @State faultTypeFilterIndex: number = 0;
   @State severityFilterIndex: number = 0;
+  @State taskTypeFilterIndex: number = 0;
 
   aboutToAppear(): void {
     if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.OpsRepairTaskAccept)) {
@@ -69,7 +67,6 @@ struct AvailableRepairTask {
           this.ModeHeader()
           this.FilterPanel()
           this.TaskListPanel()
-          this.StatusPanel()
         }
         .alignItems(HorizontalAlign.Start)
         .justifyContent(FlexAlign.Start)
@@ -127,22 +124,14 @@ struct AvailableRepairTask {
 
   @Builder
   ModeHeader() {
-    Column({ space: 6 }) {
-      Text('附近故障')
+      Text('任务接取')
         .fontSize(34)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-      Text('查看可接取维修任务')
-        .fontSize(15)
-        .fontColor(AppColors.TextSecondary)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
     .width('100%')
-    .alignItems(HorizontalAlign.Start)
+    .alignSelf(ItemAlign.Start)
     .padding({
       top: 0,
       bottom: 2
@@ -152,10 +141,10 @@ struct AvailableRepairTask {
   @Builder
   FilterPanel() {
     Column({ space: 16 }) {
-      this.FieldTitle('查询范围')
+      this.FieldTitle('查询任务')
       this.RadiusPicker()
 
-      this.FieldTitle('负载状态')
+      this.FieldTitle('工作状态')
       this.WorkloadSnapshotPanel()
 
       this.MessageText()
@@ -314,21 +303,26 @@ struct AvailableRepairTask {
         onFilterChanged: (filterResults: FilterResult[]) => {
           this.applyTaskFilterResults(filterResults);
         },
-        filterType: FilterType.MULTI_LINE_FILTER
+        filterType: FilterType.LIST_FILTER
       }) {
-        if (this.taskItems.length === 0) {
-          this.EmptyTaskState()
-        } else {
-          Column({ space: 12 }) {
-            ForEach(this.taskItems, (item: AvailableRepairTaskSummary) => {
-              this.TaskItem(item)
-            }, (item: AvailableRepairTaskSummary) => item.id)
-          }
-          .width('100%')
-        }
+        this.TaskFilterResultList()
       }
     }
     .alignItems(HorizontalAlign.Start)
+    .width('100%')
+  }
+
+  @Builder
+  TaskFilterResultList() {
+    Column({ space: 12 }) {
+      if (this.taskItems.length === 0) {
+        this.EmptyTaskState()
+      } else {
+        ForEach(this.taskItems, (item: AvailableRepairTaskSummary) => {
+          this.TaskItem(item)
+        }, (item: AvailableRepairTaskSummary) => item.id)
+      }
+    }
     .width('100%')
   }
 
@@ -445,58 +439,6 @@ struct AvailableRepairTask {
   }
 
   @Builder
-  StatusPanel() {
-    Column({ space: 10 }) {
-      Text('查询状态')
-        .fontSize(22)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
-
-      Column() {
-        StatusInfoRow({
-          label: '可接取范围',
-          value: this.getAvailableRadiusText(),
-          tone: AppColors.TextSecondary
-        })
-        this.CardDivider()
-        StatusInfoRow({ label: '当前范围', value: this.getCurrentRadiusText(), tone: AppColors.Primary })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '负载状态',
-          value: RepairTaskService.formatWorkloadStatus(this.workloadSnapshot.status),
-          tone: RepairTaskService.getWorkloadStatusTone(this.workloadSnapshot.status)
-        })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '进行中任务',
-          value: `${this.workloadSnapshot.activeTaskCount}/${this.workloadSnapshot.maxActiveTaskCount}`,
-          tone: AppColors.TextSecondary
-        })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '定位状态',
-          value: this.locationStatus,
-          tone: this.locationStatusTone
-        })
-        this.CardDivider()
-        this.RefreshStatusRow()
-        this.CardDivider()
-        StatusInfoRow({
-          label: '服务模式',
-          value: ApiClient.getRuntimeStatusLabel(),
-          tone: ApiClient.getRuntimeStatusTone()
-        })
-      }
-      .width('100%')
-      .backgroundColor(AppColors.Surface)
-      .borderRadius(24)
-    }
-    .alignItems(HorizontalAlign.Start)
-    .width('100%')
-  }
-
-  @Builder
   FieldTitle(title: string) {
     Text(title)
       .fontSize(17)
@@ -568,52 +510,8 @@ struct AvailableRepairTask {
     })
   }
 
-  @Builder
-  CardDivider() {
-    Divider()
-      .height(1)
-      .backgroundColor(AppColors.Divider)
-      .margin({
-        left: 18,
-        right: 18
-      })
-  }
-
-  @Builder
-  RefreshStatusRow() {
-    Row() {
-      Text('刷新状态')
-        .fontSize(15)
-        .fontColor(AppColors.TextPrimary)
-        .fontWeight(FontWeight.Medium)
-        .layoutWeight(1)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-      Text(this.isFailureMessageVisible() ? '刷新失败' : this.refreshStatus)
-        .fontSize(15)
-        .fontColor(this.getRefreshStatusTone())
-        .fontWeight(FontWeight.Medium)
-        .textAlign(TextAlign.End)
-        .width('58%')
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
-    .height(54)
-    .padding({
-      left: 18,
-      right: 18
-    })
-    .width('100%')
-  }
-
   async refreshTasks(): Promise<void> {
     if (this.refreshing || this.acceptingTaskId.length > 0) {
-      return;
-    }
-
-    if (ApiClient.isOfflineMode()) {
-      this.refreshOfflineTasks();
       return;
     }
 
@@ -623,14 +521,11 @@ struct AvailableRepairTask {
     }
 
     this.refreshing = true;
-    this.refreshStatus = '刷新中';
     this.message = '';
     this.messageTone = AppColors.Danger;
     this.taskListMessage = '';
     this.acceptActionMessage = '';
     this.acceptActionTaskId = '';
-    this.locationStatus = ApiClient.isConfigured() ? '未定位' : '本地模式';
-    this.locationStatusTone = ApiClient.isConfigured() ? AppColors.TextSecondary : AppColors.TextSecondary;
     this.hasCurrentLocation = false;
     try {
       const workloadResponse = await this.withRefreshTimeout<RepairerWorkloadSnapshot>(
@@ -641,7 +536,6 @@ struct AvailableRepairTask {
         const error = workloadResponse.error;
         this.message = error ? error.message : '维修负载状态刷新失败';
         this.messageTone = AppColors.Danger;
-        this.refreshStatus = this.isRefreshTimeout(workloadResponse) ? '刷新超时' : '刷新失败';
         return;
       }
 
@@ -651,7 +545,6 @@ struct AvailableRepairTask {
         this.taskItems = [];
         this.message = this.workloadSnapshot.message;
         this.messageTone = AppColors.Danger;
-        this.refreshStatus = '不可接取';
         return;
       }
 
@@ -671,14 +564,13 @@ struct AvailableRepairTask {
 
       const response = await this.withRefreshTimeout(
         RepairTaskService.queryAvailableRepairTasksRemoteFirst(query, this.workloadSnapshot),
-        '附近故障刷新超时，请稍后手动刷新'
+        '任务刷新超时，请稍后手动刷新'
       );
 
       if (!response.success) {
         const error = response.error;
-        this.message = error ? error.message : '附近故障刷新失败';
+        this.message = error ? error.message : '任务刷新失败';
         this.messageTone = AppColors.Danger;
-        this.refreshStatus = this.isRefreshTimeout(response) ? '刷新超时' : '刷新失败';
         return;
       }
 
@@ -688,7 +580,6 @@ struct AvailableRepairTask {
       }
       this.allTaskItems = data ? data.items : [];
       this.applyTaskFilters();
-      this.refreshStatus = '已刷新';
       if (locationMessage.length > 0) {
         this.message = locationMessage;
         this.messageTone = AppColors.Warning;
@@ -700,76 +591,21 @@ struct AvailableRepairTask {
         this.messageTone = AppColors.Danger;
       }
     } catch (err) {
-      this.message = '附近故障刷新失败，请稍后手动刷新';
+      this.message = '任务刷新失败，请稍后手动刷新';
       this.messageTone = AppColors.Danger;
-      this.refreshStatus = '刷新失败';
     } finally {
       this.refreshing = false;
-    }
-  }
-
-  refreshOfflineTasks(): void {
-    try {
-      this.message = '';
-      this.messageTone = AppColors.Danger;
-      this.taskListMessage = '';
-      this.acceptActionMessage = '';
-      this.acceptActionTaskId = '';
-      this.locationStatus = '本地模式';
-      this.locationStatusTone = AppColors.TextSecondary;
-      this.hasCurrentLocation = false;
-
-      const workload = RepairTaskService.getCurrentWorkloadSnapshot();
-      this.applyWorkloadSnapshot(workload);
-      if (!this.workloadSnapshot.canAccept) {
-        this.allTaskItems = [];
-        this.taskItems = [];
-        this.message = this.workloadSnapshot.message;
-        this.messageTone = AppColors.Danger;
-        this.refreshStatus = '不可接取';
-        return;
-      }
-
-      const response = RepairTaskService.queryAvailableRepairTasks({ radiusKm: this.radiusKm }, this.workloadSnapshot);
-      if (!response.success || response.data === undefined) {
-        const error = response.error;
-        this.message = error ? error.message : '本地附近故障加载失败';
-        this.messageTone = AppColors.Danger;
-        this.refreshStatus = '加载失败';
-        return;
-      }
-
-      this.allTaskItems = response.data.items;
-      this.applyTaskFilters();
-      this.refreshStatus = '本地已加载';
-      this.message = '当前为离线模式，仅展示本地可接取任务；恢复在线后请通过同步中心处理待同步记录。';
-      this.messageTone = AppColors.Warning;
-    } catch (err) {
-      this.allTaskItems = [];
-      this.taskItems = [];
-      this.message = '离线任务加载失败，请返回后重试';
-      this.messageTone = AppColors.Danger;
-      this.taskListMessage = '';
-      this.acceptActionMessage = '';
-      this.acceptActionTaskId = '';
-      this.refreshStatus = '加载失败';
-      this.locationStatus = '本地模式';
-      this.locationStatusTone = AppColors.TextSecondary;
-      this.hasCurrentLocation = false;
     }
   }
 
   clearTaskListForUnavailableOnlineMode(): void {
     this.allTaskItems = [];
     this.taskItems = [];
-    this.message = '在线模式下请先配置后端服务地址，再刷新附近故障。';
+    this.message = '请先配置后端服务地址，再刷新任务。';
     this.messageTone = AppColors.Danger;
     this.taskListMessage = '';
     this.acceptActionMessage = '';
     this.acceptActionTaskId = '';
-    this.refreshStatus = '服务未配置';
-    this.locationStatus = '未定位';
-    this.locationStatusTone = AppColors.TextSecondary;
     this.hasCurrentLocation = false;
   }
 
@@ -812,7 +648,7 @@ struct AvailableRepairTask {
       }
 
       if (ApiClient.isConfigured() && !this.hasCurrentLocation) {
-        this.acceptActionMessage = '当前位置未确认，暂不可接取。请先刷新附近故障。';
+        this.acceptActionMessage = '当前位置未确认，暂不可接取。请先刷新任务。';
         this.acceptActionMessageTone = AppColors.Danger;
         return;
       }
@@ -834,10 +670,9 @@ struct AvailableRepairTask {
         return item.id !== taskId;
       });
       this.applyTaskFilters();
-      this.refreshStatus = '已接取';
       this.acceptActionMessage = '';
       this.acceptActionTaskId = '';
-      this.taskListMessage = '维修任务已接取，可在我的维修中处理';
+      this.taskListMessage = '维修任务已接取，可在维修任务中处理';
       this.taskListMessageTone = AppColors.Success;
       const nextWorkloadResponse = await RepairTaskService.getCurrentWorkloadSnapshotRemoteFirst();
       if (nextWorkloadResponse.success && nextWorkloadResponse.data !== undefined) {
@@ -866,22 +701,6 @@ struct AvailableRepairTask {
     }
   }
 
-  getRefreshStatusTone(): string {
-    if (this.isFailureMessageVisible()) {
-      return AppColors.Danger;
-    }
-
-    if (this.refreshStatus === '已刷新' || this.refreshStatus === '已接取') {
-      return AppColors.Success;
-    }
-
-    return AppColors.TextSecondary;
-  }
-
-  isFailureMessageVisible(): boolean {
-    return this.message.length > 0 && this.messageTone === AppColors.Danger;
-  }
-
   applyRadiusSliderValue(value: number): void {
     const normalizedValue = Math.max(1, Math.min(this.workloadSnapshot.maxRadiusKm, Math.round(value)));
     this.radiusKm = normalizedValue;
@@ -890,31 +709,36 @@ struct AvailableRepairTask {
     this.taskListMessage = '';
   }
 
+  applyTaskFilters(): void {
+    const typeValue = AVAILABLE_TASK_TYPE_FILTER_VALUES[this.faultTypeFilterIndex];
+    const severityValue = AVAILABLE_TASK_SEVERITY_FILTER_VALUES[this.severityFilterIndex];
+    const taskTypeValue = TASK_TYPE_CHIP_VALUES[this.taskTypeFilterIndex];
+    this.taskItems = this.allTaskItems.filter((item: AvailableRepairTaskSummary) => {
+      const matchesType = typeValue.length === 0 || item.faultType === typeValue;
+      const matchesSeverity = severityValue.length === 0 || item.severity === severityValue;
+      const matchesTaskType = taskTypeValue.length === 0 || item.taskType === taskTypeValue;
+      return matchesType && matchesSeverity && matchesTaskType;
+    });
+  }
+
   applyTaskFilterResults(filterResults: FilterResult[]): void {
     filterResults.forEach((item: FilterResult) => {
       if (item.name === '故障类型') {
         this.faultTypeFilterIndex = this.normalizeFilterIndex(item.index, AVAILABLE_TASK_TYPE_FILTER_VALUES.length);
       } else if (item.name === '故障等级') {
         this.severityFilterIndex = this.normalizeFilterIndex(item.index, AVAILABLE_TASK_SEVERITY_FILTER_VALUES.length);
+      } else if (item.name === '任务类型') {
+        this.taskTypeFilterIndex = this.normalizeFilterIndex(item.index, TASK_TYPE_CHIP_VALUES.length);
       }
     });
     this.applyTaskFilters();
   }
 
-  applyTaskFilters(): void {
-    const typeValue = AVAILABLE_TASK_TYPE_FILTER_VALUES[this.faultTypeFilterIndex];
-    const severityValue = AVAILABLE_TASK_SEVERITY_FILTER_VALUES[this.severityFilterIndex];
-    this.taskItems = this.allTaskItems.filter((item: AvailableRepairTaskSummary) => {
-      const matchesType = typeValue.length === 0 || item.faultType === typeValue;
-      const matchesSeverity = severityValue.length === 0 || item.severity === severityValue;
-      return matchesType && matchesSeverity;
-    });
-  }
-
   getTaskFilterParams(): FilterParams[] {
     return [
       this.createFilterParams('故障类型', AVAILABLE_TASK_TYPE_FILTER_OPTIONS),
-      this.createFilterParams('故障等级', AVAILABLE_TASK_SEVERITY_FILTER_OPTIONS)
+      this.createFilterParams('故障等级', AVAILABLE_TASK_SEVERITY_FILTER_OPTIONS),
+      this.createFilterParams('任务类型', TASK_TYPE_CHIP_OPTIONS)
     ];
   }
 
@@ -974,6 +798,10 @@ struct AvailableRepairTask {
       return $r('sys.symbol.exclamationmark_circle');
     }
 
+    if (this.workloadSnapshot.status === RepairerWorkloadStatus.MediumLoad) {
+      return $r('sys.symbol.exclamationmark_message');
+    }
+
     if (this.workloadSnapshot.status === RepairerWorkloadStatus.LowLoad) {
       return $r('sys.symbol.wrench_and_screwdriver');
     }
@@ -998,15 +826,11 @@ struct AvailableRepairTask {
   }
 
   getEmptyTaskHint(): string {
-    if (ApiClient.isOfflineMode()) {
-      return '离线模式下暂无本地可接取任务';
-    }
-
     if (!ApiClient.isConfigured()) {
       return '请先配置后端服务地址';
     }
 
-    return '可手动刷新附近故障任务';
+    return '可手动刷新任务';
   }
 
   withRefreshTimeout<T>(request: Promise<ApiResponse<T>>, timeoutMessage: string): Promise<ApiResponse<T>> {
@@ -1031,7 +855,7 @@ struct AvailableRepairTask {
           success: false,
           error: {
             code: 'REFRESH_FAILED',
-            message: '附近故障刷新失败，请稍后手动刷新'
+            message: '任务刷新失败，请稍后手动刷新'
           },
           timestamp: new Date().toISOString()
         });
@@ -1039,26 +863,16 @@ struct AvailableRepairTask {
     });
   }
 
-  isRefreshTimeout<T>(response: ApiResponse<T>): boolean {
-    return response.error !== undefined && `${response.error.code}` === 'REFRESH_TIMEOUT';
-  }
-
   async resolveCurrentLocation(): Promise<LocationResolutionResult> {
-    this.locationStatus = '定位中';
-    this.locationStatusTone = AppColors.TextSecondary;
     const result = await LocationService.resolveCurrentLocation(this.getUIContext().getHostContext());
     if (result.success && result.coordinates !== undefined) {
       this.hasCurrentLocation = true;
       this.currentLongitude = result.coordinates.longitude;
       this.currentLatitude = result.coordinates.latitude;
-      this.locationStatus = '已定位';
-      this.locationStatusTone = AppColors.Success;
       return result;
     }
 
     this.hasCurrentLocation = false;
-    this.locationStatus = '未定位';
-    this.locationStatusTone = AppColors.Warning;
     return result;
   }
 

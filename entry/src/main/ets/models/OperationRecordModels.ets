@@ -3,7 +3,6 @@ export enum OperationRecordType {
   AuthenticationFailed = 'AUTHENTICATION_FAILED',
   AuthPasswordVerify = 'AUTH_PASSWORD_VERIFY',
   AuthorizationDenied = 'AUTHORIZATION_DENIED',
-  OfflineSync = 'OFFLINE_SYNC',
   DeviceVerification = 'DEVICE_VERIFICATION',
   DeviceQrCodeExport = 'DEVICE_QRCODE_EXPORT',
   DeviceChangeRequest = 'DEVICE_CHANGE_REQUEST',

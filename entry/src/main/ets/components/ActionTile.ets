@@ -6,7 +6,6 @@ export struct ActionTile {
   action: WorkbenchAction = {
     id: WorkbenchActionId.ArchiveCenter,
     title: '',
-    summary: '',
     tone: AppColors.Primary
   };
 
@@ -20,17 +19,11 @@ export struct ActionTile {
       .borderRadius(21)
       .backgroundColor(this.action.tone)
 
-      Column({ space: 5 }) {
+      Column() {
         Text(this.action.title)
           .fontSize(16)
           .fontWeight(FontWeight.Medium)
           .fontColor(AppColors.TextPrimary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-        Text(this.action.summary)
-          .fontSize(12)
-          .fontColor(AppColors.TextSecondary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
@@ -39,7 +32,7 @@ export struct ActionTile {
     }
     .alignItems(VerticalAlign.Center)
     .padding(14)
-    .height(82)
+    .height(64)
     .width('100%')
     .backgroundColor(AppColors.Surface)
     .borderRadius(8)
@@ -57,10 +50,6 @@ export struct ActionTile {
         .fontColor([AppColors.OnPrimary])
     } else if (this.action.id === WorkbenchActionId.OperationsCenter) {
       SymbolGlyph($r('sys.symbol.wrench_and_screwdriver'))
-        .fontSize(23)
-        .fontColor([AppColors.OnPrimary])
-    } else if (this.action.id === WorkbenchActionId.SyncCenter) {
-      SymbolGlyph($r('sys.symbol.arrow_clockwise'))
         .fontSize(23)
         .fontColor([AppColors.OnPrimary])
     } else if (this.action.id === WorkbenchActionId.ManagementCenter) {
@@ -95,8 +84,8 @@ export struct ActionTile {
       SymbolGlyph($r('sys.symbol.checkmark_shield'))
         .fontSize(23)
         .fontColor([AppColors.OnPrimary])
-    } else if (this.action.id === WorkbenchActionId.OfflineSyncRecord) {
-      SymbolGlyph($r('sys.symbol.arrow_clockwise'))
+    } else if (this.action.id === WorkbenchActionId.OperationsRecord) {
+      SymbolGlyph($r('sys.symbol.clock'))
         .fontSize(23)
         .fontColor([AppColors.OnPrimary])
     } else {

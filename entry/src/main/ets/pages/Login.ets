@@ -1,7 +1,6 @@
 import { AppColors } from '../styles/AppTheme';
 import { AuthService } from '../services/AuthService';
 import { ApiClient } from '../services/ApiClient';
-import { ServiceMode } from '../models/ServiceModeModels';
 import { SessionStore } from '../stores/SessionStore';
 
 @Entry
@@ -9,12 +8,9 @@ import { SessionStore } from '../stores/SessionStore';
 struct Login {
   @State username: string = '';
   @State password: string = '';
-  @State selectedServiceMode: string = ApiClient.getServiceMode();
   @State apiBaseUrl: string = ApiClient.getBaseUrl();
   @State message: string = '';
   @State messageTone: string = AppColors.Danger;
-  @State serviceModeMessage: string = '';
-  @State serviceModeMessageTone: string = AppColors.Success;
   @State serviceAddressMessage: string = '';
   @State serviceAddressMessageTone: string = AppColors.Success;
   @State submitting: boolean = false;
@@ -27,7 +23,6 @@ struct Login {
     }
 
     this.apiBaseUrl = ApiClient.getBaseUrl();
-    this.selectedServiceMode = ApiClient.getServiceMode();
   }
 
   build() {
@@ -78,21 +73,12 @@ struct Login {
         .borderRadius(16)
         .backgroundColor(AppColors.Primary)
 
-        Column({ space: 4 }) {
           Text('RDVP')
             .fontSize(34)
             .fontWeight(FontWeight.Bold)
             .fontColor(AppColors.TextPrimary)
             .maxLines(1)
-
-          Text('远程设备核验与运维报告系统')
-            .fontSize(14)
-            .fontColor(AppColors.TextSecondary)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-        .layoutWeight(1)
-        .alignItems(HorizontalAlign.Start)
+            .layoutWeight(1)
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
@@ -104,20 +90,12 @@ struct Login {
   @Builder
   LoginPanel() {
     Column({ space: 18 }) {
-      Column({ space: 6 }) {
         Text('登录')
           .fontSize(28)
           .fontWeight(FontWeight.Bold)
           .fontColor(AppColors.TextPrimary)
           .maxLines(1)
-
-        Text('验证身份后进入业务工作台')
-          .fontSize(14)
-          .fontColor(AppColors.TextSecondary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      }
-      .alignItems(HorizontalAlign.Start)
+      .alignSelf(ItemAlign.Start)
       .width('100%')
 
       this.InputField('账号', '输入账号', false)
@@ -181,85 +159,43 @@ struct Login {
   @Builder
   ServiceConfigPanel() {
     Column({ space: 10 }) {
-      Row() {
-        Text('服务模式')
-          .fontSize(14)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(AppColors.TextPrimary)
-          .layoutWeight(1)
-          .maxLines(1)
+      Text('服务地址')
+        .fontSize(14)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
 
-        Text(this.getSelectedRuntimeStatusLabel())
-          .fontSize(13)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(this.getSelectedRuntimeStatusTone())
-          .maxLines(1)
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
-
-      this.ServiceModeMessageText()
-
-      Row({ space: 10 }) {
-        Column() {
-          this.OnlineServiceModeButton()
-        }
-        .layoutWeight(1)
-
-        Column() {
-          this.OfflineServiceModeButton()
-        }
-        .layoutWeight(1)
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
-
-      if (this.isOnlineSelected()) {
-        TextInput({
-          placeholder: 'http://192.168.x.x:8080',
-          text: this.apiBaseUrl
+      TextInput({
+        placeholder: 'http://192.168.x.x:8080',
+        text: this.apiBaseUrl
+      })
+        .height(50)
+        .fontSize(15)
+        .backgroundColor(AppColors.FieldBackground)
+        .borderRadius(18)
+        .padding({
+          left: 16,
+          right: 16
         })
-          .height(50)
-          .fontSize(15)
-          .backgroundColor(AppColors.FieldBackground)
-          .borderRadius(18)
-          .padding({
-            left: 16,
-            right: 16
-          })
-          .border({
-            width: 1,
-            color: AppColors.Border
-          })
-          .onChange((value: string) => {
-            this.apiBaseUrl = value;
-            this.message = '';
-            this.messageTone = AppColors.Danger;
-            this.serviceAddressMessage = '';
-          })
-
-        this.ServiceAddressMessageText()
-
-        this.ServiceButton('保存地址', $r('sys.symbol.checkmark_circle'), AppColors.Primary, AppColors.OnPrimary, () => {
-          this.saveApiBaseUrl();
+        .border({
+          width: 1,
+          color: AppColors.Border
         })
-      }
+        .onChange((value: string) => {
+          this.apiBaseUrl = value;
+          this.message = '';
+          this.messageTone = AppColors.Danger;
+          this.serviceAddressMessage = '';
+        })
+
+      this.ServiceAddressMessageText()
+
+      this.ServiceButton('保存地址', $r('sys.symbol.checkmark_circle'), AppColors.Primary, AppColors.OnPrimary, () => {
+        this.saveApiBaseUrl();
+      })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
-  }
-
-  @Builder
-  ServiceModeMessageText() {
-    if (this.serviceModeMessage.length > 0) {
-      Text(this.serviceModeMessage)
-        .fontSize(13)
-        .fontColor(this.serviceModeMessageTone)
-        .lineHeight(18)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
-    }
   }
 
   @Builder
@@ -319,124 +255,6 @@ struct Login {
   }
 
   @Builder
-  OnlineServiceModeButton() {
-    if (this.isOnlineSelected()) {
-      Button({ type: ButtonType.Capsule, stateEffect: true }) {
-        Row({ space: 6 }) {
-          SymbolGlyph($r('sys.symbol.checkmark_circle'))
-            .fontSize(18)
-            .fontColor([AppColors.OnPrimary])
-
-          Text('在线模式')
-            .fontSize(15)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(AppColors.OnPrimary)
-            .maxLines(1)
-        }
-        .width('100%')
-        .justifyContent(FlexAlign.Center)
-        .alignItems(VerticalAlign.Center)
-      }
-      .height(44)
-      .width('100%')
-      .backgroundColor(AppColors.Success)
-      .border({
-        width: 1,
-        color: AppColors.Success
-      })
-      .onClick(() => {
-        this.selectServiceMode(ServiceMode.Online);
-      })
-    } else {
-      Button({ type: ButtonType.Capsule, stateEffect: true }) {
-        Row({ space: 6 }) {
-          SymbolGlyph($r('sys.symbol.checkmark_circle'))
-            .fontSize(18)
-            .fontColor([AppColors.TextPrimary])
-
-          Text('在线模式')
-            .fontSize(15)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(AppColors.TextPrimary)
-            .maxLines(1)
-        }
-        .width('100%')
-        .justifyContent(FlexAlign.Center)
-        .alignItems(VerticalAlign.Center)
-      }
-      .height(44)
-      .width('100%')
-      .backgroundColor(AppColors.Surface)
-      .border({
-        width: 1,
-        color: AppColors.Border
-      })
-      .onClick(() => {
-        this.selectServiceMode(ServiceMode.Online);
-      })
-    }
-  }
-
-  @Builder
-  OfflineServiceModeButton() {
-    if (this.isOfflineSelected()) {
-      Button({ type: ButtonType.Capsule, stateEffect: true }) {
-        Row({ space: 6 }) {
-          SymbolGlyph($r('sys.symbol.xmark_circle'))
-            .fontSize(18)
-            .fontColor([AppColors.OnPrimary])
-
-          Text('离线模式')
-            .fontSize(15)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(AppColors.OnPrimary)
-            .maxLines(1)
-        }
-        .width('100%')
-        .justifyContent(FlexAlign.Center)
-        .alignItems(VerticalAlign.Center)
-      }
-      .height(44)
-      .width('100%')
-      .backgroundColor(AppColors.Warning)
-      .border({
-        width: 1,
-        color: AppColors.Warning
-      })
-      .onClick(() => {
-        this.selectServiceMode(ServiceMode.Offline);
-      })
-    } else {
-      Button({ type: ButtonType.Capsule, stateEffect: true }) {
-        Row({ space: 6 }) {
-          SymbolGlyph($r('sys.symbol.xmark_circle'))
-            .fontSize(18)
-            .fontColor([AppColors.TextPrimary])
-
-          Text('离线模式')
-            .fontSize(15)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(AppColors.TextPrimary)
-            .maxLines(1)
-        }
-        .width('100%')
-        .justifyContent(FlexAlign.Center)
-        .alignItems(VerticalAlign.Center)
-      }
-      .height(44)
-      .width('100%')
-      .backgroundColor(AppColors.Surface)
-      .border({
-        width: 1,
-        color: AppColors.Border
-      })
-      .onClick(() => {
-        this.selectServiceMode(ServiceMode.Offline);
-      })
-    }
-  }
-
-  @Builder
   LoginButton() {
     Button({ type: ButtonType.Capsule, stateEffect: true }) {
       Row({ space: 8 }) {
@@ -469,19 +287,16 @@ struct Login {
     }
 
     this.submitting = true;
-    ApiClient.setServiceMode(this.getSelectedServiceMode());
-    if (this.isOnlineSelected()) {
-      const validationMessage = ApiClient.validateRequiredBaseUrlInput(this.apiBaseUrl);
-      if (validationMessage.length > 0) {
-        this.message = validationMessage;
-        this.messageTone = AppColors.Danger;
-        this.submitting = false;
-        return;
-      }
-
-      ApiClient.setBaseUrl(this.apiBaseUrl);
-      this.apiBaseUrl = ApiClient.getBaseUrl();
+    const validationMessage = ApiClient.validateRequiredBaseUrlInput(this.apiBaseUrl);
+    if (validationMessage.length > 0) {
+      this.message = validationMessage;
+      this.messageTone = AppColors.Danger;
+      this.submitting = false;
+      return;
     }
+
+    ApiClient.setBaseUrl(this.apiBaseUrl);
+    this.apiBaseUrl = ApiClient.getBaseUrl();
 
     const response = await AuthService.loginRemoteFirst({
       username: this.username,
@@ -517,43 +332,6 @@ struct Login {
     this.message = '';
     this.serviceAddressMessage = '服务地址已保存';
     this.serviceAddressMessageTone = AppColors.Success;
-    this.serviceModeMessage = '';
-  }
-
-  selectServiceMode(mode: ServiceMode): void {
-    this.selectedServiceMode = mode;
-    if (mode === ServiceMode.Online) {
-      this.serviceModeMessage = '已选择在线模式';
-      this.serviceModeMessageTone = AppColors.Success;
-      return;
-    }
-
-    this.serviceModeMessage = '已选择离线模式';
-    this.serviceModeMessageTone = AppColors.Warning;
-  }
-
-  getSelectedRuntimeStatusLabel(): string {
-    if (this.isOnlineSelected()) {
-      return this.apiBaseUrl.trim().length > 0 ? '在线模式' : '在线模式未配置';
-    }
-
-    return '离线模式';
-  }
-
-  getSelectedRuntimeStatusTone(): string {
-    return this.isOnlineSelected() ? AppColors.Success : AppColors.Warning;
-  }
-
-  isOnlineSelected(): boolean {
-    return this.selectedServiceMode === ServiceMode.Online;
-  }
-
-  isOfflineSelected(): boolean {
-    return this.selectedServiceMode === ServiceMode.Offline;
-  }
-
-  getSelectedServiceMode(): ServiceMode {
-    return this.selectedServiceMode === ServiceMode.Online ? ServiceMode.Online : ServiceMode.Offline;
   }
 
   openWorkbench(): void {

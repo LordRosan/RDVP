@@ -16,20 +16,16 @@ import {
   RepairTaskStatus,
   RepairTaskValidationResult
 } from '../models/RepairTaskModels';
-import { OperationRecordType } from '../models/OperationRecordModels';
 import { ApiClient } from './ApiClient';
-import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
-import { LocalRepairTaskRepository } from './LocalRepairTaskRepository';
-import { SessionStore } from '../stores/SessionStore';
 
 const DEFAULT_RADIUS_KM = 10;
 const MIN_RADIUS_KM = 1;
-const IDLE_MAX_RADIUS_KM = 20;
-const LOW_LOAD_MAX_RADIUS_KM = 10;
+const IDLE_MAX_RADIUS_KM = 30;
+const LOW_LOAD_MAX_RADIUS_KM = 20;
+const MEDIUM_LOAD_MAX_RADIUS_KM = 10;
 const MAX_RADIUS_KM = IDLE_MAX_RADIUS_KM;
-const MAX_ACTIVE_REPAIR_TASK_COUNT = 2;
+const MAX_ACTIVE_REPAIR_TASK_COUNT = 3;
 const MAX_REPAIR_PROCESS_LENGTH = 1000;
-const MAX_PARTS_USED_LENGTH = 500;
 
 interface DeviceLocationApiResult {
   address: string;
@@ -49,6 +45,7 @@ interface AvailableRepairTaskApiSummary {
   location: DeviceLocationApiResult;
   submittedAt: string;
   status: RepairTaskStatus;
+  taskType?: string;
 }
 
 interface MyRepairTaskApiSummary {
@@ -107,6 +104,10 @@ export class RepairTaskService {
     return LOW_LOAD_MAX_RADIUS_KM;
   }
 
+  static getMediumLoadMaxRadiusKm(): number {
+    return MEDIUM_LOAD_MAX_RADIUS_KM;
+  }
+
   static getMaxActiveRepairTaskCount(): number {
     return MAX_ACTIVE_REPAIR_TASK_COUNT;
   }
@@ -126,6 +127,18 @@ export class RepairTaskService {
         recommendedRadiusKm: 0,
         message: '当前进行中的维修任务已达到上限，暂不可继续接取。请完成并提交维修报告后再刷新任务。',
         canAccept: false
+      };
+    }
+
+    if (normalizedActiveTaskCount >= 2) {
+      return {
+        status: RepairerWorkloadStatus.MediumLoad,
+        activeTaskCount: normalizedActiveTaskCount,
+        maxActiveTaskCount: MAX_ACTIVE_REPAIR_TASK_COUNT,
+        maxRadiusKm: MEDIUM_LOAD_MAX_RADIUS_KM,
+        recommendedRadiusKm: MEDIUM_LOAD_MAX_RADIUS_KM,
+        message: '当前进行中的维修任务较多，系统已限制可接取范围。请优先处理已接取任务。',
+        canAccept: true
       };
     }
 
@@ -153,10 +166,6 @@ export class RepairTaskService {
   }
 
   static getCurrentWorkloadSnapshot(): RepairerWorkloadSnapshot {
-    if (ApiClient.isOfflineMode()) {
-      return RepairTaskService.createWorkloadSnapshot(LocalRepairTaskRepository.getActiveMyTaskCount());
-    }
-
     if (!ApiClient.isConfigured()) {
       return RepairTaskService.createUnavailableWorkloadSnapshot();
     }
@@ -165,15 +174,6 @@ export class RepairTaskService {
   }
 
   static async getCurrentWorkloadSnapshotRemoteFirst(): Promise<ApiResponse<RepairerWorkloadSnapshot>> {
-    if (ApiClient.isOfflineMode()) {
-      return {
-        success: true,
-        data: RepairTaskService.createWorkloadSnapshot(LocalRepairTaskRepository.getActiveMyTaskCount()),
-        requestId: 'local-repairer-workload',
-        timestamp: new Date().toISOString()
-      };
-    }
-
     if (!ApiClient.isConfigured()) {
       return ApiClient.createServiceUnavailableResponse<RepairerWorkloadSnapshot>();
     }
@@ -205,7 +205,7 @@ export class RepairTaskService {
     if (radiusKm !== radiusKm || radiusKm < MIN_RADIUS_KM || radiusKm > MAX_RADIUS_KM) {
       return {
         valid: false,
-        message: '查询范围必须在1到20公里之间'
+        message: '查询范围必须在1到30公里之间'
       };
     }
 
@@ -245,30 +245,6 @@ export class RepairTaskService {
     };
   }
 
-  static queryAvailableRepairTasks(
-    query: AvailableRepairTaskQuery,
-    workloadSnapshot?: RepairerWorkloadSnapshot
-  ): ApiResponse<AvailableRepairTaskListResult> {
-    const workload = workloadSnapshot === undefined ? RepairTaskService.getCurrentWorkloadSnapshot() : workloadSnapshot;
-    const validation = RepairTaskService.validateAvailableRepairTaskQuery(query, workload);
-    if (!validation.valid) {
-      return {
-        success: false,
-        error: {
-          code: 'AVAILABLE_REPAIR_TASK_QUERY_INVALID',
-          message: validation.message
-        }
-      };
-    }
-
-    if (ApiClient.isOfflineMode()) {
-      return RepairTaskService.createLocalAvailableTasksResponse(validation.normalizedRadiusKm ?
-        validation.normalizedRadiusKm : RepairTaskService.normalizeRadiusKm(query.radiusKm), workload);
-    }
-
-    return ApiClient.createServiceUnavailableResponse<AvailableRepairTaskListResult>();
-  }
-
   static async queryAvailableRepairTasksRemoteFirst(
     query: AvailableRepairTaskQuery,
     workloadSnapshot?: RepairerWorkloadSnapshot
@@ -301,10 +277,6 @@ export class RepairTaskService {
 
     const radiusKm = validation.normalizedRadiusKm ?
       validation.normalizedRadiusKm : RepairTaskService.normalizeRadiusKm(query.radiusKm);
-    if (ApiClient.isOfflineMode()) {
-      return RepairTaskService.createLocalAvailableTasksResponse(radiusKm, workload);
-    }
-
     if (!ApiClient.isConfigured()) {
       return ApiClient.createServiceUnavailableResponse<AvailableRepairTaskListResult>();
     }
@@ -339,25 +311,6 @@ export class RepairTaskService {
       requestId: response.requestId,
       timestamp: response.timestamp
     };
-  }
-
-  static acceptRepairTask(taskId: string): ApiResponse<RepairTaskAcceptResult> {
-    const validation = RepairTaskService.validateRepairTaskId(taskId);
-    if (!validation.valid) {
-      return {
-        success: false,
-        error: {
-          code: 'REPAIR_TASK_ACCEPT_INVALID',
-          message: validation.message
-        }
-      };
-    }
-
-    if (ApiClient.isOfflineMode()) {
-      return RepairTaskService.createLocalAcceptTaskResponse(taskId);
-    }
-
-    return ApiClient.createServiceUnavailableResponse<RepairTaskAcceptResult>();
   }
 
   static async acceptRepairTaskRemoteFirst(
@@ -397,10 +350,6 @@ export class RepairTaskService {
         requestId: workloadResponse.requestId,
         timestamp: workloadResponse.timestamp
       };
-    }
-
-    if (ApiClient.isOfflineMode()) {
-      return RepairTaskService.createLocalAcceptTaskResponse(taskId, workloadResponse.data);
     }
 
     if (!ApiClient.isConfigured()) {
@@ -454,19 +403,7 @@ export class RepairTaskService {
     };
   }
 
-  static queryMyRepairTasks(): ApiResponse<MyRepairTaskListResult> {
-    if (ApiClient.isOfflineMode()) {
-      return RepairTaskService.createLocalMyTasksResponse();
-    }
-
-    return ApiClient.createServiceUnavailableResponse<MyRepairTaskListResult>();
-  }
-
   static async queryMyRepairTasksRemoteFirst(): Promise<ApiResponse<MyRepairTaskListResult>> {
-    if (ApiClient.isOfflineMode()) {
-      return RepairTaskService.createLocalMyTasksResponse();
-    }
-
     if (!ApiClient.isConfigured()) {
       return ApiClient.createServiceUnavailableResponse<MyRepairTaskListResult>();
     }
@@ -522,14 +459,14 @@ export class RepairTaskService {
     if (repairedAt.length === 0) {
       return {
         valid: false,
-        message: '请输入维修完成时间'
+        message: '请输入维修时间'
       };
     }
 
     if (repairedAt.length > 64) {
       return {
         valid: false,
-        message: '维修完成时间不能超过64字'
+        message: '维修时间不能超过64字'
       };
     }
 
@@ -537,21 +474,14 @@ export class RepairTaskService {
     if (processDescription.length === 0) {
       return {
         valid: false,
-        message: '请输入维修过程'
+        message: '请输入维修说明'
       };
     }
 
     if (processDescription.length > MAX_REPAIR_PROCESS_LENGTH) {
       return {
         valid: false,
-        message: '维修过程不能超过1000字'
-      };
-    }
-
-    if (form.partsUsed.trim().length > MAX_PARTS_USED_LENGTH) {
-      return {
-        valid: false,
-        message: '更换部件不能超过500字'
+        message: '维修说明不能超过1000字'
       };
     }
 
@@ -559,25 +489,6 @@ export class RepairTaskService {
       valid: true,
       message: ''
     };
-  }
-
-  static submitRepairReport(form: RepairReportForm): ApiResponse<RepairReportRecord> {
-    const validation = RepairTaskService.validateRepairReportForm(form);
-    if (!validation.valid) {
-      return {
-        success: false,
-        error: {
-          code: 'REPAIR_REPORT_INVALID',
-          message: validation.message
-        }
-      };
-    }
-
-    if (ApiClient.isOfflineMode()) {
-      return RepairTaskService.createLocalRepairReportResponse(form);
-    }
-
-    return ApiClient.createServiceUnavailableResponse<RepairReportRecord>();
   }
 
   static async submitRepairReportRemoteFirst(form: RepairReportForm): Promise<ApiResponse<RepairReportRecord>> {
@@ -590,10 +501,6 @@ export class RepairTaskService {
           message: validation.message
         }
       };
-    }
-
-    if (ApiClient.isOfflineMode()) {
-      return RepairTaskService.createLocalRepairReportResponse(form);
     }
 
     if (!ApiClient.isConfigured()) {
@@ -689,10 +596,12 @@ export class RepairTaskService {
         return '空闲';
       case RepairerWorkloadStatus.LowLoad:
         return '低负载';
+      case RepairerWorkloadStatus.MediumLoad:
+        return '中负载';
       case RepairerWorkloadStatus.Busy:
         return '忙碌';
-      case RepairerWorkloadStatus.Offline:
-        return '离线';
+      case RepairerWorkloadStatus.Unavailable:
+        return '未配置';
       default:
         return '-';
     }
@@ -704,6 +613,8 @@ export class RepairTaskService {
         return AppColors.Success;
       case RepairerWorkloadStatus.LowLoad:
         return AppColors.Primary;
+      case RepairerWorkloadStatus.MediumLoad:
+        return AppColors.Warning;
       case RepairerWorkloadStatus.Busy:
         return AppColors.Danger;
       default:
@@ -713,12 +624,12 @@ export class RepairTaskService {
 
   private static createUnavailableWorkloadSnapshot(): RepairerWorkloadSnapshot {
     return {
-      status: RepairerWorkloadStatus.Offline,
+      status: RepairerWorkloadStatus.Unavailable,
       activeTaskCount: 0,
       maxActiveTaskCount: MAX_ACTIVE_REPAIR_TASK_COUNT,
       maxRadiusKm: 0,
       recommendedRadiusKm: 0,
-      message: '在线模式下请先配置后端服务地址，再刷新维修任务。',
+      message: '后端服务地址未配置，请先配置后再刷新维修任务。',
       canAccept: false
     };
   }
@@ -743,7 +654,7 @@ export class RepairTaskService {
       case RepairReportResult.Repaired:
         return '已修复';
       case RepairReportResult.TemporaryRestored:
-        return '临时恢复';
+        return '临时修复';
       case RepairReportResult.Unresolved:
         return '未修复';
       default:
@@ -757,123 +668,10 @@ export class RepairTaskService {
       result === RepairReportResult.Unresolved;
   }
 
-  private static createLocalAvailableTasksResponse(
-    radiusKm: number,
-    workload: RepairerWorkloadSnapshot
-  ): ApiResponse<AvailableRepairTaskListResult> {
-    return {
-      success: true,
-      data: RepairTaskService.withWorkload(LocalRepairTaskRepository.queryAvailableTasks(radiusKm), workload),
-      requestId: 'local-available-repair-tasks',
-      timestamp: new Date().toISOString()
-    };
-  }
-
-  private static createLocalAcceptTaskResponse(
-    taskId: string,
-    workloadSnapshot?: RepairerWorkloadSnapshot
-  ): ApiResponse<RepairTaskAcceptResult> {
-    const workload = workloadSnapshot === undefined ? RepairTaskService.getCurrentWorkloadSnapshot() : workloadSnapshot;
-    const workloadValidation = RepairTaskService.validateRepairerCanAccept(workload);
-    if (!workloadValidation.valid) {
-      return {
-        success: false,
-        error: {
-          code: 'REPAIRER_WORKLOAD_BLOCKED',
-          message: workloadValidation.message
-        }
-      };
-    }
-
-    const taskDistanceKm = LocalRepairTaskRepository.getAvailableTaskDistanceKm(taskId);
-    if (taskDistanceKm === undefined) {
-      return {
-        success: false,
-        error: {
-          code: 'REPAIR_TASK_NOT_FOUND',
-          message: '维修任务不存在或已被接取'
-        }
-      };
-    }
-
-    if (taskDistanceKm > workload.maxRadiusKm) {
-      return {
-        success: false,
-        error: {
-          code: 'REPAIR_TASK_OUT_OF_WORKLOAD_RANGE',
-          message: `当前处于${RepairTaskService.formatWorkloadStatus(workload.status)}状态，仅可接取${workload.maxRadiusKm}公里内的维修任务。`
-        }
-      };
-    }
-
-    const result = LocalRepairTaskRepository.acceptTask(taskId);
-    if (result === undefined) {
-      return {
-        success: false,
-        error: {
-          code: 'REPAIR_TASK_NOT_FOUND',
-          message: '维修任务不存在或已被接取'
-        }
-      };
-    }
-
-    LocalOperationRecordRepository.append(OperationRecordType.RepairTaskAccept, '接取维修任务', result.taskId,
-      '维修任务已分配给当前维修人员', SessionStore.getCurrentOperatorName());
-    return {
-      success: true,
-      data: result,
-      requestId: 'local-repair-task-accept',
-      timestamp: new Date().toISOString()
-    };
-  }
-
-  private static withWorkload(
-    result: AvailableRepairTaskListResult,
-    workload: RepairerWorkloadSnapshot
-  ): AvailableRepairTaskListResult {
-    return {
-      radiusKm: result.radiusKm,
-      items: result.items,
-      total: result.total,
-      workload
-    };
-  }
-
   private static countActiveRepairTasks(tasks: MyRepairTaskSummary[]): number {
     return tasks.filter((task: MyRepairTaskSummary) => {
       return task.status === RepairTaskStatus.Accepted || task.status === RepairTaskStatus.Processing;
     }).length;
-  }
-
-  private static createLocalMyTasksResponse(): ApiResponse<MyRepairTaskListResult> {
-    return {
-      success: true,
-      data: LocalRepairTaskRepository.queryMyTasks(),
-      requestId: 'local-my-repair-tasks',
-      timestamp: new Date().toISOString()
-    };
-  }
-
-  private static createLocalRepairReportResponse(form: RepairReportForm): ApiResponse<RepairReportRecord> {
-    const record = LocalRepairTaskRepository.submitRepairReport(form);
-    if (record === undefined) {
-      return {
-        success: false,
-        error: {
-          code: 'REPAIR_TASK_NOT_FOUND',
-          message: '维修任务不存在或已完成'
-        }
-      };
-    }
-
-    LocalOperationRecordRepository.append(OperationRecordType.RepairReport, '提交维修报告', record.reportNo,
-      `维修结果：${RepairTaskService.formatRepairReportResult(form.result)}`, SessionStore.getCurrentOperatorName());
-    return {
-      success: true,
-      data: record,
-      requestId: 'local-repair-report',
-      timestamp: new Date().toISOString()
-    };
   }
 
   private static mapAvailableTask(item: AvailableRepairTaskApiSummary): AvailableRepairTaskSummary {
@@ -887,7 +685,8 @@ export class RepairTaskService {
       distanceKm: typeof item.distanceKm === 'number' ? item.distanceKm : undefined,
       location: item.location.address,
       submittedAt: item.submittedAt,
-      status: item.status
+      status: item.status,
+      taskType: item.taskType !== undefined && item.taskType.length > 0 ? item.taskType : 'REPAIR'
     };
   }
 

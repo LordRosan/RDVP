@@ -1,6 +1,5 @@
 export enum DeviceArchiveChangeRequestStatus {
   Draft = 'DRAFT',
-  PendingSync = 'PENDING_SYNC',
   PendingReview = 'PENDING_REVIEW',
   Approved = 'APPROVED',
   Rejected = 'REJECTED',
@@ -22,6 +21,7 @@ export interface DeviceArchiveChangeRequestForm {
   manufacturer: string;
   locationAddress: string;
   reason: string;
+  initiatedAt?: string;
   baseline?: DeviceArchiveChangeBaseline;
 }
 
@@ -39,6 +39,7 @@ export interface DeviceArchiveChangeDraft {
   manufacturer: string;
   locationAddress: string;
   reason: string;
+  changeTime?: string;
 }
 
 export interface DeviceArchiveChangeRequestRecord {

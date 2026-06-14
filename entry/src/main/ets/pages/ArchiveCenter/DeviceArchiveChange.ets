@@ -28,6 +28,7 @@ struct DeviceArchiveChange {
   @State messageTone: string = AppColors.Danger;
   @State normalizedDeviceCode: string = '-';
   @State changeCount: number = 0;
+  @State changeTime: string = '';
   @State requestStatus: DeviceArchiveChangeRequestStatus = DeviceArchiveChangeRequestStatus.Draft;
   @State hasDevice: boolean = false;
   @State submitting: boolean = false;
@@ -108,22 +109,14 @@ struct DeviceArchiveChange {
 
   @Builder
   ModeHeader() {
-    Column({ space: 6 }) {
-      Text('设备档案变更')
-        .fontSize(34)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-      Text('提交设备档案修改申请')
-        .fontSize(15)
-        .fontColor(AppColors.TextSecondary)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
+    Text('修改设备档案')
+      .fontSize(34)
+      .fontWeight(FontWeight.Bold)
+      .fontColor(AppColors.TextPrimary)
+      .maxLines(1)
+      .textOverflow({ overflow: TextOverflow.Ellipsis })
     .width('100%')
-    .alignItems(HorizontalAlign.Start)
+    .alignSelf(ItemAlign.Start)
     .padding({
       top: 0,
       bottom: 2
@@ -138,6 +131,7 @@ struct DeviceArchiveChange {
       this.DeviceModelField()
       this.ManufacturerField()
       this.LocationAddressField()
+      this.ChangeTimeField()
       this.ReasonField()
       this.MessageText()
       this.ActionButton(this.getSubmitButtonLabel(), $r('sys.symbol.checkmark_circle'),
@@ -338,12 +332,44 @@ struct DeviceArchiveChange {
   }
 
   @Builder
+  ChangeTimeField() {
+    Column({ space: 10 }) {
+      this.FieldTitle('修改时间')
+
+      TextInput({
+        placeholder: 'YYYY-MM-DD HH:mm',
+        text: this.changeTime
+      })
+        .height(56)
+        .fontSize(16)
+        .backgroundColor(AppColors.FieldBackground)
+        .borderRadius(18)
+        .padding({
+          left: 16,
+          right: 16
+        })
+        .border({
+          width: 1,
+          color: AppColors.Border
+        })
+        .enabled(!this.submitting && !this.isChangeSubmitted())
+        .onChange((value: string) => {
+          this.changeTime = value;
+          this.message = '';
+          this.saveDraft();
+        })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
   ReasonField() {
     Column({ space: 10 }) {
-      this.FieldTitle('变更原因')
+      this.FieldTitle('修改原因')
 
       TextArea({
-        placeholder: '填写变更依据、现场情况或补充说明',
+        placeholder: '填写修改依据、现场情况或补充说明',
         text: this.reason
       })
         .height(118)
@@ -425,29 +451,21 @@ struct DeviceArchiveChange {
   @Builder
   StatusPanel() {
     Column({ space: 10 }) {
-      Text('提交状态')
+      Text('提交摘要')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Column() {
-        StatusInfoRow({ label: '标准编号', value: this.normalizedDeviceCode, tone: AppColors.TextSecondary })
+        StatusInfoRow({ label: '标准设备编号', value: this.normalizedDeviceCode, tone: AppColors.TextSecondary })
         this.CardDivider()
         StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: AppColors.TextSecondary })
-        this.CardDivider()
-        StatusInfoRow({ label: '变更字段', value: `${this.changeCount}项`, tone: AppColors.TextSecondary })
         this.CardDivider()
         StatusInfoRow({
           label: '申请状态',
           value: DeviceArchiveChangeService.formatRequestStatus(this.requestStatus),
           tone: this.getStatusTone(this.requestStatus)
-        })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '服务模式',
-          value: ApiClient.getRuntimeStatusLabel(),
-          tone: ApiClient.getRuntimeStatusTone()
         })
       }
       .width('100%')
@@ -496,7 +514,7 @@ struct DeviceArchiveChange {
 
     if (!response.success) {
       const error = response.error;
-      this.message = error ? error.message : '变更申请提交失败';
+      this.message = error ? error.message : '修改申请提交失败';
       this.messageTone = AppColors.Danger;
       return;
     }
@@ -506,9 +524,7 @@ struct DeviceArchiveChange {
     DeviceArchiveFlowStore.markChangePending(response.data ? response.data.id : '', submittedDraft, this.requestStatus);
     this.applyDraft(submittedDraft);
     this.changeCount = DeviceArchiveChangeService.countChangedFields(this.buildForm());
-    this.message = DeviceArchiveChangeService.isOfflineSyncQueuedResponse(response) ?
-      '变更申请已保存至本地同步队列，恢复在线并同步成功后将提交审核' :
-      '变更申请已提交，等待管理员审核';
+    this.message = '修改申请已提交，等待管理员审核';
     this.messageTone = AppColors.Success;
   }
 
@@ -521,6 +537,7 @@ struct DeviceArchiveChange {
       manufacturer: this.manufacturer,
       locationAddress: this.locationAddress,
       reason: this.reason,
+      initiatedAt: this.changeTime,
       baseline: this.baseline
     };
   }
@@ -535,7 +552,6 @@ struct DeviceArchiveChange {
   getStatusTone(status: DeviceArchiveChangeRequestStatus): string {
     switch (status) {
       case DeviceArchiveChangeRequestStatus.PendingReview:
-      case DeviceArchiveChangeRequestStatus.PendingSync:
         return AppColors.Warning;
       case DeviceArchiveChangeRequestStatus.Approved:
         return AppColors.Success;
@@ -550,8 +566,7 @@ struct DeviceArchiveChange {
   }
 
   isChangeSubmitted(): boolean {
-    return this.requestStatus === DeviceArchiveChangeRequestStatus.PendingReview ||
-      this.requestStatus === DeviceArchiveChangeRequestStatus.PendingSync;
+    return this.requestStatus === DeviceArchiveChangeRequestStatus.PendingReview;
   }
 
   getSubmitButtonLabel(): string {
@@ -569,6 +584,12 @@ struct DeviceArchiveChange {
   loadArchiveContext(): void {
     const device = DeviceArchiveFlowStore.getCurrentDevice();
     if (device === undefined) {
+      const lastCode = DeviceArchiveFlowStore.getLastDeviceCode();
+      if (lastCode.length > 0) {
+        this.reloadDeviceByCode(lastCode);
+        return;
+      }
+
       this.hasDevice = false;
       this.message = '未获取设备档案，请返回后重新查询';
       this.messageTone = AppColors.Danger;
@@ -590,9 +611,7 @@ struct DeviceArchiveChange {
       this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(this.deviceCode);
       this.changeCount = DeviceArchiveChangeService.countChangedFields(this.buildForm());
       this.requestStatus = DeviceArchiveFlowStore.getPendingRequestStatus();
-      this.message = this.requestStatus === DeviceArchiveChangeRequestStatus.PendingSync ?
-        '变更申请已保存至本地同步队列，恢复在线并同步成功后将提交审核' :
-        '变更申请已提交，等待管理员审核';
+      this.message = '修改申请已提交，等待管理员审核';
       this.messageTone = AppColors.Success;
       return;
     }
@@ -620,6 +639,9 @@ struct DeviceArchiveChange {
     this.manufacturer = draft.manufacturer;
     this.locationAddress = draft.locationAddress;
     this.reason = draft.reason;
+    if (draft.changeTime !== undefined) {
+      this.changeTime = draft.changeTime;
+    }
   }
 
   saveDraft(): void {
@@ -637,7 +659,8 @@ struct DeviceArchiveChange {
       model: this.model,
       manufacturer: this.manufacturer,
       locationAddress: this.locationAddress,
-      reason: this.reason
+      reason: this.reason,
+      changeTime: this.changeTime
     };
   }
 
@@ -655,6 +678,22 @@ struct DeviceArchiveChange {
         this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
       } catch (toastErr) {
       }
+    }
+  }
+
+  async reloadDeviceByCode(deviceCode: string): Promise<void> {
+    this.message = '正在重新获取设备档案...';
+    this.messageTone = AppColors.TextSecondary;
+    const response = await DeviceService.queryByCodeRemoteFirst({
+      deviceCode
+    });
+    if (response.success && response.data !== undefined) {
+      DeviceArchiveFlowStore.startFlow(response.data);
+      this.loadArchiveContext();
+    } else {
+      this.hasDevice = false;
+      this.message = '重新获取设备档案失败，请返回查询';
+      this.messageTone = AppColors.Danger;
     }
   }
 }

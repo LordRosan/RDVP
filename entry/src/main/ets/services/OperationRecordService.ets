@@ -8,7 +8,6 @@ import {
   OperationRecordType
 } from '../models/OperationRecordModels';
 import { ApiClient } from './ApiClient';
-import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
 
 const DEFAULT_AUDIT_LOG_PAGE_SIZE = 50;
 
@@ -29,29 +28,7 @@ interface ApiListResult<T> {
 }
 
 export class OperationRecordService {
-  static queryRecentRecords(filter?: OperationRecordQueryFilter): ApiResponse<OperationRecordListResult> {
-    if (ApiClient.isOfflineMode()) {
-      return {
-        success: true,
-        data: OperationRecordService.applyLocalFilter(LocalOperationRecordRepository.queryRecentRecords(), filter),
-        requestId: 'local-operation-records',
-        timestamp: new Date().toISOString()
-      };
-    }
-
-    return ApiClient.createServiceUnavailableResponse<OperationRecordListResult>();
-  }
-
   static async queryRecentRecordsRemoteFirst(filter?: OperationRecordQueryFilter): Promise<ApiResponse<OperationRecordListResult>> {
-    if (ApiClient.isOfflineMode()) {
-      return {
-        success: true,
-        data: OperationRecordService.applyLocalFilter(LocalOperationRecordRepository.queryRecentRecords(), filter),
-        requestId: 'local-operation-records',
-        timestamp: new Date().toISOString()
-      };
-    }
-
     if (!ApiClient.isConfigured()) {
       return ApiClient.createServiceUnavailableResponse<OperationRecordListResult>();
     }
@@ -103,39 +80,6 @@ export class OperationRecordService {
     return params.length === 0 ? '' : `&${params.join('&')}`;
   }
 
-  private static applyLocalFilter(
-    result: OperationRecordListResult,
-    filter?: OperationRecordQueryFilter
-  ): OperationRecordListResult {
-    if (filter === undefined || (filter.action.trim().length === 0 && filter.keyword.trim().length === 0)) {
-      return result;
-    }
-
-    const action = filter.action.trim();
-    const keyword = filter.keyword.trim().toLowerCase();
-    const items = result.items.filter((item: OperationRecordSummary): boolean => {
-      const matchesAction = action.length === 0 || OperationRecordService.resolveApiAction(item) === action;
-      const matchesKeyword = keyword.length === 0 ||
-        item.targetNo.toLowerCase().includes(keyword) ||
-        item.operatorName.toLowerCase().includes(keyword) ||
-        item.description.toLowerCase().includes(keyword);
-      return matchesAction && matchesKeyword;
-    });
-
-    return {
-      items,
-      total: items.length
-    };
-  }
-
-  private static resolveApiAction(item: OperationRecordSummary): string {
-    if (item.title === '档案审核') {
-      return 'DEVICE_CHANGE_REVIEW';
-    }
-
-    return `${item.type}`;
-  }
-
   static formatRecordType(type: OperationRecordType): string {
     switch (type) {
       case OperationRecordType.AuthLogin:
@@ -146,8 +90,6 @@ export class OperationRecordService {
         return '密码复核';
       case OperationRecordType.AuthorizationDenied:
         return '权限拦截';
-      case OperationRecordType.OfflineSync:
-        return '离线同步';
       case OperationRecordType.DeviceVerification:
         return '设备核验';
       case OperationRecordType.DeviceQrCodeExport:
@@ -219,8 +161,6 @@ export class OperationRecordService {
         return OperationRecordType.AuthPasswordVerify;
       case 'AUTHORIZATION_DENIED':
         return OperationRecordType.AuthorizationDenied;
-      case 'OFFLINE_SYNC':
-        return OperationRecordType.OfflineSync;
       case 'DEVICE_VERIFICATION':
         return OperationRecordType.DeviceVerification;
       case 'DEVICE_QRCODE_EXPORT':
@@ -265,12 +205,10 @@ export class OperationRecordService {
         return status === OperationRecordStatus.Success ? '密码复核成功' : '密码复核失败';
       case 'AUTHORIZATION_DENIED':
         return '接口访问被拒绝';
-      case 'OFFLINE_SYNC':
-        return '处理离线同步批次';
       case 'DEVICE_CHANGE_REQUEST':
         return '提交设备档案变更申请';
       case 'DEVICE_CHANGE_REVIEW':
-        return '完成设备档案变更审核';
+        return '完成设备档案审核';
       case 'DEVICE_VERIFICATION':
         return '提交设备核验记录';
       case 'DEVICE_QRCODE_EXPORT':

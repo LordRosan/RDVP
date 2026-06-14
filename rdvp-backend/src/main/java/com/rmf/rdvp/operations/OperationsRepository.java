@@ -24,6 +24,8 @@ public interface OperationsRepository {
 
     boolean hasActiveRepairTaskForFault(String faultReportId);
 
+    boolean hasActiveReinspectionTaskForFault(String faultReportId);
+
     int countActiveRepairTasksByMaintainer(String maintainerId);
 
     void createRepairTask(RepairTaskCreate create);
@@ -43,6 +45,8 @@ public interface OperationsRepository {
     Optional<RepairReportRecord> findLatestRepairReportByFaultReportId(String faultReportId);
 
     boolean markRepairTaskReported(String repairTaskId, OffsetDateTime completedAt);
+
+    boolean markReinspectionTaskReported(String faultReportId, OffsetDateTime completedAt);
 
     boolean updateFaultStatusIfCurrent(
             String faultReportId,

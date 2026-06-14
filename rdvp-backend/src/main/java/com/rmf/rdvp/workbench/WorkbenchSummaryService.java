@@ -33,8 +33,7 @@ public class WorkbenchSummaryService {
                         : 0,
                 hasPermission(user, PermissionCode.OPS_REINSPECTION_CREATE)
                         ? operationsRepository.countPendingReinspections()
-                        : 0,
-                0);
+                        : 0);
     }
 
     private boolean hasPermission(AuthenticatedUser user, PermissionCode permission) {

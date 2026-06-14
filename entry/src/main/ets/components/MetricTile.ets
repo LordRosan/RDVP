@@ -20,17 +20,11 @@ export struct MetricTile {
         .fontWeight(FontWeight.Medium)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-      Text(this.status)
-        .fontSize(12)
-        .fontColor(AppColors.TextSecondary)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .alignItems(HorizontalAlign.Start)
     .justifyContent(FlexAlign.Center)
     .padding(14)
-    .height(112)
+    .height(82)
     .width('100%')
     .backgroundColor(AppColors.Surface)
     .borderRadius(8)

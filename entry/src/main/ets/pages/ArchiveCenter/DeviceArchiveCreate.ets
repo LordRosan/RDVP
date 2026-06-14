@@ -26,13 +26,17 @@ struct DeviceArchiveCreate {
   @State messageTone: string = AppColors.Danger;
   @State normalizedDeviceCode: string = '-';
   @State fieldCount: number = 0;
+  @State createTime: string = '';
   @State requestStatus: DeviceArchiveChangeRequestStatus = DeviceArchiveChangeRequestStatus.Draft;
   @State submitting: boolean = false;
+  private prefilledDeviceCode: string = '';
 
   aboutToAppear(): void {
     if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveDeviceCreate)) {
       return;
     }
+
+    this.loadRouteParams();
   }
 
   build() {
@@ -95,22 +99,14 @@ struct DeviceArchiveCreate {
 
   @Builder
   ModeHeader() {
-    Column({ space: 6 }) {
-      Text('添加设备档案')
-        .fontSize(34)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-      Text('提交新设备建档审核申请')
-        .fontSize(15)
-        .fontColor(AppColors.TextSecondary)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
+    Text('添加设备档案')
+      .fontSize(34)
+      .fontWeight(FontWeight.Bold)
+      .fontColor(AppColors.TextPrimary)
+      .maxLines(1)
+      .textOverflow({ overflow: TextOverflow.Ellipsis })
     .width('100%')
-    .alignItems(HorizontalAlign.Start)
+    .alignSelf(ItemAlign.Start)
     .padding({ top: 0, bottom: 2 })
   }
 
@@ -134,6 +130,7 @@ struct DeviceArchiveCreate {
         this.locationAddress = value;
         this.onFormChanged();
       })
+      this.CreateTimeField()
       this.ReasonField()
       this.MessageText()
       this.ActionButton(this.getSubmitButtonLabel(), $r('sys.symbol.plus_circle'),
@@ -168,7 +165,7 @@ struct DeviceArchiveCreate {
         .borderRadius(18)
         .padding({ left: 16, right: 16 })
         .border({ width: 1, color: AppColors.Border })
-        .enabled(!this.submitting && !this.isSubmitted())
+        .enabled(!this.submitting && !this.isSubmitted() && this.prefilledDeviceCode.length === 0)
         .onChange((value: string) => {
           this.deviceCode = value;
           this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(value);
@@ -207,12 +204,37 @@ struct DeviceArchiveCreate {
   }
 
   @Builder
+  CreateTimeField() {
+    Column({ space: 10 }) {
+      this.FieldTitle('添加时间')
+
+      TextInput({
+        placeholder: 'YYYY-MM-DD HH:mm',
+        text: this.createTime
+      })
+        .height(56)
+        .fontSize(16)
+        .backgroundColor(AppColors.FieldBackground)
+        .borderRadius(18)
+        .padding({ left: 16, right: 16 })
+        .border({ width: 1, color: AppColors.Border })
+        .enabled(!this.submitting && !this.isSubmitted())
+        .onChange((value: string) => {
+          this.createTime = value;
+          this.onFormChanged();
+        })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
   ReasonField() {
     Column({ space: 10 }) {
-      this.FieldTitle('建档原因')
+      this.FieldTitle('添加原因')
 
       TextArea({
-        placeholder: '填写设备来源、安装位置、投用依据或其他建档说明',
+        placeholder: '填写设备来源、安装位置、投用依据或其他添加说明',
         text: this.reason
       })
         .height(118)
@@ -242,29 +264,21 @@ struct DeviceArchiveCreate {
   @Builder
   StatusPanel() {
     Column({ space: 10 }) {
-      Text('提交状态')
+      Text('提交摘要')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Column() {
-        StatusInfoRow({ label: '标准编号', value: this.normalizedDeviceCode, tone: AppColors.TextSecondary })
+        StatusInfoRow({ label: '标准设备编号', value: this.normalizedDeviceCode, tone: AppColors.TextSecondary })
         this.CardDivider()
         StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: AppColors.TextSecondary })
-        this.CardDivider()
-        StatusInfoRow({ label: '档案字段', value: `${this.fieldCount}项`, tone: AppColors.TextSecondary })
         this.CardDivider()
         StatusInfoRow({
           label: '申请状态',
           value: DeviceArchiveChangeService.formatRequestStatus(this.requestStatus),
           tone: this.getStatusTone(this.requestStatus)
-        })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '服务模式',
-          value: ApiClient.getRuntimeStatusLabel(),
-          tone: ApiClient.getRuntimeStatusTone()
         })
       }
       .width('100%')
@@ -357,15 +371,13 @@ struct DeviceArchiveCreate {
 
     if (!response.success) {
       const error = response.error;
-      this.message = error ? error.message : '建档申请提交失败';
+      this.message = error ? error.message : '添加申请提交失败';
       this.messageTone = AppColors.Danger;
       return;
     }
 
     this.requestStatus = response.data === undefined ? DeviceArchiveChangeRequestStatus.PendingReview : response.data.status;
-    this.message = DeviceArchiveLifecycleService.isOfflineSyncQueuedResponse(response) ?
-      '建档申请已保存至本地同步队列，恢复在线并同步成功后将提交审核' :
-      '建档申请已提交，等待管理员审核';
+    this.message = '添加申请已提交，等待管理员审核';
     this.messageTone = AppColors.Success;
   }
 
@@ -376,7 +388,8 @@ struct DeviceArchiveCreate {
       model: this.model,
       manufacturer: this.manufacturer,
       locationAddress: this.locationAddress,
-      reason: this.reason
+      reason: this.reason,
+      initiatedAt: this.createTime
     };
   }
 
@@ -390,8 +403,7 @@ struct DeviceArchiveCreate {
   }
 
   isSubmitted(): boolean {
-    return this.requestStatus === DeviceArchiveChangeRequestStatus.PendingReview ||
-      this.requestStatus === DeviceArchiveChangeRequestStatus.PendingSync;
+    return this.requestStatus === DeviceArchiveChangeRequestStatus.PendingReview;
   }
 
   getSubmitButtonLabel(): string {
@@ -409,7 +421,6 @@ struct DeviceArchiveCreate {
   getStatusTone(status: DeviceArchiveChangeRequestStatus): string {
     switch (status) {
       case DeviceArchiveChangeRequestStatus.PendingReview:
-      case DeviceArchiveChangeRequestStatus.PendingSync:
         return AppColors.Warning;
       case DeviceArchiveChangeRequestStatus.Approved:
         return AppColors.Success;
@@ -420,6 +431,22 @@ struct DeviceArchiveCreate {
       case DeviceArchiveChangeRequestStatus.Draft:
       default:
         return AppColors.TextSecondary;
+    }
+  }
+
+  loadRouteParams(): void {
+    const router = this.getUIContext().getRouter();
+    const params = router.getParams() as Record<string, Object> | undefined;
+    if (params !== undefined) {
+      const code = params['deviceCode'] as string | undefined;
+      if (code !== undefined && code.trim().length > 0) {
+        this.prefilledDeviceCode = code.trim();
+        this.deviceCode = this.prefilledDeviceCode;
+        this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(this.deviceCode);
+        if (this.normalizedDeviceCode.length === 0) {
+          this.normalizedDeviceCode = '-';
+        }
+      }
     }
   }
 

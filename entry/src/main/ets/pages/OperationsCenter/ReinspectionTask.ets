@@ -1,5 +1,3 @@
-import { Filter, FilterType } from '@kit.ArkUI';
-import type { FilterParams, FilterResult } from '@kit.ArkUI';
 import { AppColors } from '../../styles/AppTheme';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { FaultSeverity } from '../../models/FaultModels';
@@ -12,21 +10,12 @@ import { ReinspectionService } from '../../services/ReinspectionService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 
-const REINSPECTION_STATUS_FILTER_OPTIONS: string[] = ['全部状态', '待复检', '已完成'];
-const REINSPECTION_STATUS_FILTER_VALUES: string[] = ['', `${ReinspectionTaskStatus.Pending}`,
-  `${ReinspectionTaskStatus.Completed}`];
-const REINSPECTION_SEVERITY_FILTER_OPTIONS: string[] = ['全部等级', '紧急', '严重', '一般', '轻微'];
-const REINSPECTION_SEVERITY_FILTER_VALUES: string[] = ['', `${FaultSeverity.Emergency}`, `${FaultSeverity.Severe}`,
-  `${FaultSeverity.General}`, `${FaultSeverity.Minor}`];
-
 @Entry
 @Component
 struct ReinspectionTask {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   @State allTaskItems: ReinspectionTaskSummary[] = [];
   @State taskItems: ReinspectionTaskSummary[] = [];
-  @State statusFilterIndex: number = 0;
-  @State severityFilterIndex: number = 0;
   @State taskId: string = '';
   @State result: string = '';
   @State reinspectedAt: string = '';
@@ -34,7 +23,6 @@ struct ReinspectionTask {
   @State taskMessage: string = '';
   @State recordMessage: string = '';
   @State recordMessageTone: string = AppColors.Danger;
-  @State refreshStatus: string = '未刷新';
   @State normalizedTaskId: string = '-';
   @State submittedReinspectionTaskId: string = '';
   @State refreshing: boolean = false;
@@ -115,22 +103,14 @@ struct ReinspectionTask {
 
   @Builder
   ModeHeader() {
-    Column({ space: 6 }) {
       Text('复检任务')
         .fontSize(34)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-      Text('确认高等级故障维修结果')
-        .fontSize(15)
-        .fontColor(AppColors.TextSecondary)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
     .width('100%')
-    .alignItems(HorizontalAlign.Start)
+    .alignSelf(ItemAlign.Start)
     .padding({
       top: 0,
       bottom: 2
@@ -143,7 +123,7 @@ struct ReinspectionTask {
       this.TaskMessageText()
 
       Row() {
-        Text('待复检任务')
+        Text('复检任务列表')
           .fontSize(22)
           .fontWeight(FontWeight.Bold)
           .fontColor(AppColors.TextPrimary)
@@ -166,23 +146,15 @@ struct ReinspectionTask {
       .width('100%')
       .alignItems(VerticalAlign.Center)
 
-      Filter({
-        multiFilters: this.getTaskFilterParams(),
-        onFilterChanged: (filterResults: FilterResult[]) => {
-          this.applyTaskFilterResults(filterResults);
-        },
-        filterType: FilterType.MULTI_LINE_FILTER
-      }) {
-        if (this.taskItems.length === 0) {
-          this.EmptyTaskState()
-        } else {
-          Column({ space: 12 }) {
-            ForEach(this.taskItems, (item: ReinspectionTaskSummary) => {
-              this.TaskItem(item)
-            }, (item: ReinspectionTaskSummary) => item.id)
-          }
-          .width('100%')
+      if (this.taskItems.length === 0) {
+        this.EmptyTaskState()
+      } else {
+        Column({ space: 12 }) {
+          ForEach(this.taskItems, (item: ReinspectionTaskSummary) => {
+            this.TaskItem(item)
+          }, (item: ReinspectionTaskSummary) => item.id)
         }
+        .width('100%')
       }
     }
     .alignItems(HorizontalAlign.Start)
@@ -276,7 +248,7 @@ struct ReinspectionTask {
             .fontSize(18)
             .fontColor([AppColors.OnPrimary])
 
-          Text('填写复检记录')
+          Text('填写复检任务')
             .fontSize(15)
             .fontWeight(FontWeight.Medium)
             .fontColor(AppColors.OnPrimary)
@@ -373,7 +345,7 @@ struct ReinspectionTask {
   @Builder
   ResultSelector() {
     Column({ space: 10 }) {
-      this.FieldTitle('复检结论')
+      this.FieldTitle('复检结果')
 
       Row({ space: 10 }) {
         this.ResultOption(ReinspectionResult.Passed, $r('sys.symbol.checkmark_circle'))
@@ -506,33 +478,21 @@ struct ReinspectionTask {
   @Builder
   StatusPanel() {
     Column({ space: 10 }) {
-      Text('提交状态')
+      Text('提交摘要')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Column() {
-        StatusInfoRow({ label: '标准任务号', value: this.normalizedTaskId, tone: AppColors.TextSecondary })
+        StatusInfoRow({ label: '标准任务编号', value: this.normalizedTaskId, tone: AppColors.TextSecondary })
         this.CardDivider()
         StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: AppColors.TextSecondary })
         this.CardDivider()
         StatusInfoRow({
-          label: '复检结论',
+          label: '复检结果',
           value: this.getResultStatusText(),
           tone: this.getSelectedResultTone()
-        })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '刷新状态',
-          value: this.taskMessage.length > 0 ? '刷新失败' : this.refreshStatus,
-          tone: this.taskMessage.length > 0 ? AppColors.Danger : AppColors.TextSecondary
-        })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '服务模式',
-          value: ApiClient.getRuntimeStatusLabel(),
-          tone: ApiClient.getRuntimeStatusTone()
         })
       }
       .width('100%')
@@ -626,14 +586,12 @@ struct ReinspectionTask {
     if (!response.success) {
       const error = response.error;
       this.taskMessage = error ? error.message : '复检任务刷新失败';
-      this.refreshStatus = '刷新失败';
       return;
     }
 
     const data = response.data;
     this.allTaskItems = data ? data.items : [];
-    this.applyTaskFilters();
-    this.refreshStatus = '已刷新';
+    this.taskItems = [...this.allTaskItems];
     this.taskMessage = '';
   }
 
@@ -670,56 +628,7 @@ struct ReinspectionTask {
     this.allTaskItems = this.allTaskItems.filter((item: ReinspectionTaskSummary) => {
       return item.taskNo !== this.normalizedTaskId && item.id !== this.normalizedTaskId;
     });
-    this.applyTaskFilters();
-    this.refreshStatus = '已更新';
-  }
-
-  applyTaskFilterResults(filterResults: FilterResult[]): void {
-    filterResults.forEach((item: FilterResult) => {
-      if (item.name === '复检状态') {
-        this.statusFilterIndex = this.normalizeFilterIndex(item.index, REINSPECTION_STATUS_FILTER_VALUES.length);
-      } else if (item.name === '故障等级') {
-        this.severityFilterIndex = this.normalizeFilterIndex(item.index, REINSPECTION_SEVERITY_FILTER_VALUES.length);
-      }
-    });
-    this.applyTaskFilters();
-  }
-
-  applyTaskFilters(): void {
-    const statusValue = REINSPECTION_STATUS_FILTER_VALUES[this.statusFilterIndex];
-    const severityValue = REINSPECTION_SEVERITY_FILTER_VALUES[this.severityFilterIndex];
-    this.taskItems = this.allTaskItems.filter((item: ReinspectionTaskSummary) => {
-      const matchesStatus = statusValue.length === 0 || item.status === statusValue;
-      const matchesSeverity = severityValue.length === 0 || item.severity === severityValue;
-      return matchesStatus && matchesSeverity;
-    });
-  }
-
-  getTaskFilterParams(): FilterParams[] {
-    return [
-      this.createFilterParams('复检状态', REINSPECTION_STATUS_FILTER_OPTIONS),
-      this.createFilterParams('故障等级', REINSPECTION_SEVERITY_FILTER_OPTIONS)
-    ];
-  }
-
-  createFilterParams(name: string, options: string[]): FilterParams {
-    const params: FilterParams = {
-      name: name,
-      options: options
-    };
-    return params;
-  }
-
-  normalizeFilterIndex(index: number, length: number): number {
-    if (index !== index || index < 0) {
-      return 0;
-    }
-
-    if (index >= length) {
-      return length - 1;
-    }
-
-    return Math.floor(index);
+    this.taskItems = [...this.allTaskItems];
   }
 
   getSubmitButtonLabel(): string {
@@ -731,7 +640,7 @@ struct ReinspectionTask {
       return '已提交';
     }
 
-    return '提交复检';
+    return '提交报告';
   }
 
   canSubmitRecord(): boolean {

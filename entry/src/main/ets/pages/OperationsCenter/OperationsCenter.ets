@@ -98,22 +98,13 @@ struct OperationsCenter {
   @Builder
   ModeHeader() {
     Row({ space: 16 }) {
-      Column({ space: 6 }) {
         Text('运维中心')
           .fontSize(34)
           .fontWeight(FontWeight.Bold)
           .fontColor(AppColors.TextPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-        Text('处理核验、故障、维修和复检任务')
-          .fontSize(15)
-          .fontColor(AppColors.TextSecondary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      }
       .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start)
     }
     .width('100%')
     .alignItems(VerticalAlign.Center)
@@ -130,17 +121,15 @@ struct OperationsCenter {
         .maxLines(1)
 
       Column() {
-        if (SessionStore.hasPermission(PermissionCode.OpsRepairTaskAccept)) {
-          StatusInfoRow({
-            label: '待接取故障',
-            value: this.getPendingFaultText(),
-            tone: AppColors.Danger
-          })
-          this.CardDivider()
-        }
+        StatusInfoRow({
+          label: '功能权限',
+          value: this.getPermissionSummaryText(),
+          tone: AppColors.Primary
+        })
+        this.CardDivider()
         if (SessionStore.hasPermission(PermissionCode.OpsRepairReportCreate)) {
           StatusInfoRow({
-            label: '已接取维修',
+            label: '维修任务数',
             value: this.getActiveRepairTaskText(),
             tone: AppColors.Warning
           })
@@ -148,17 +137,11 @@ struct OperationsCenter {
         }
         if (SessionStore.hasPermission(PermissionCode.OpsReinspectionCreate)) {
           StatusInfoRow({
-            label: '待复检任务',
+            label: '复检任务数',
             value: this.getPendingReinspectionText(),
             tone: AppColors.Primary
           })
-          this.CardDivider()
         }
-        StatusInfoRow({
-          label: '服务模式',
-          value: ApiClient.getRuntimeStatusLabel(),
-          tone: ApiClient.getRuntimeStatusTone()
-        })
       }
       .width('100%')
       .backgroundColor(AppColors.Surface)
@@ -228,16 +211,21 @@ struct OperationsCenter {
     });
   }
 
-  getPendingFaultCount(): number {
-    if (this.workbenchRefreshRevision < 0) {
-      return 0;
+  getPermissionSummaryText(): string {
+    const parts: string[] = [];
+    if (SessionStore.hasPermission(PermissionCode.OpsDeviceVerify)) {
+      parts.push('可核验');
     }
-
-    return WorkbenchService.getPendingFaultCount();
-  }
-
-  getPendingFaultText(): string {
-    return `${this.getPendingFaultCount()}项`;
+    if (SessionStore.hasPermission(PermissionCode.OpsRepairTaskAccept)) {
+      parts.push('可接取');
+    }
+    if (SessionStore.hasPermission(PermissionCode.OpsRepairReportCreate)) {
+      parts.push('可维修');
+    }
+    if (SessionStore.hasPermission(PermissionCode.OpsReinspectionCreate)) {
+      parts.push('可复检');
+    }
+    return parts.length > 0 ? parts.join('、') : '-';
   }
 
   getActiveRepairTaskText(): string {
@@ -260,22 +248,27 @@ struct OperationsCenter {
     this.message = '';
     this.messageTargetId = '';
     if (action.id === WorkbenchActionId.DeviceVerification) {
-      this.openPage('pages/OperationsCenter/DeviceVerification', '设备核验与报修不可用');
+      this.openPage('pages/OperationsCenter/DeviceVerification', '核验与报修不可用');
       return;
     }
 
     if (action.id === WorkbenchActionId.AvailableRepairTask) {
-      this.openPage('pages/OperationsCenter/AvailableRepairTask', '附近故障不可用');
+      this.openPage('pages/OperationsCenter/AvailableRepairTask', '任务接取不可用');
       return;
     }
 
     if (action.id === WorkbenchActionId.MyRepairTask) {
-      this.openPage('pages/OperationsCenter/MyRepairTask', '我的维修不可用');
+      this.openPage('pages/OperationsCenter/MyRepairTask', '维修任务不可用');
       return;
     }
 
     if (action.id === WorkbenchActionId.ReinspectionTask) {
       this.openPage('pages/OperationsCenter/ReinspectionTask', '复检任务不可用');
+      return;
+    }
+
+    if (action.id === WorkbenchActionId.OperationsRecord) {
+      this.openPage('pages/RecordCenter/OperationsRecord', '历史记录不可用');
       return;
     }
 
@@ -307,6 +300,10 @@ struct OperationsCenter {
 
     if (url === 'pages/OperationsCenter/ReinspectionTask') {
       return `${WorkbenchActionId.ReinspectionTask}`;
+    }
+
+    if (url === 'pages/RecordCenter/OperationsRecord') {
+      return `${WorkbenchActionId.OperationsRecord}`;
     }
 
     return '';

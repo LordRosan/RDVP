@@ -14,10 +14,6 @@ import {
   PermissionCode
 } from '../models/PermissionModels';
 import { ApiClient } from './ApiClient';
-import { LocalDeviceChangeRequestRepository } from './LocalDeviceChangeRequestRepository';
-import { OfflineSyncService } from './OfflineSyncService';
-import { LocalRepairTaskRepository } from './LocalRepairTaskRepository';
-import { LocalReinspectionRepository } from './LocalReinspectionRepository';
 import { SessionStore } from '../stores/SessionStore';
 import { WorkbenchRefreshStore } from '../stores/WorkbenchRefreshStore';
 
@@ -62,14 +58,6 @@ export class WorkbenchService {
       });
     }
 
-    metrics.push({
-      id: 'offlineDrafts',
-      label: '待同步内容',
-      value: `${summary.offlineDrafts}`,
-      status: '同步队列',
-      tone: summary.offlineDrafts > 0 ? AppColors.Warning : AppColors.Primary
-    });
-
     return metrics;
   }
 
@@ -80,7 +68,6 @@ export class WorkbenchService {
       actions.push({
         id: WorkbenchActionId.ArchiveCenter,
         title: '档案中心',
-        summary: '查询档案与发起档案变更',
         tone: AppColors.Primary
       });
     }
@@ -89,23 +76,14 @@ export class WorkbenchService {
       actions.push({
         id: WorkbenchActionId.OperationsCenter,
         title: '运维中心',
-        summary: '核验、报修、维修与复检',
         tone: AppColors.Primary
       });
     }
-
-    actions.push({
-      id: WorkbenchActionId.SyncCenter,
-      title: '同步中心',
-      summary: '管理离线内容与同步策略',
-      tone: OfflineSyncService.getPendingCount() > 0 ? AppColors.Warning : AppColors.Primary
-    });
 
     if (WorkbenchService.canAccessManagementCenter()) {
       actions.push({
         id: WorkbenchActionId.ManagementCenter,
         title: '管理中心',
-        summary: '审核变更与查看操作记录',
         tone: AppColors.Primary
       });
     }
@@ -121,7 +99,6 @@ export class WorkbenchService {
     const actions: WorkbenchAction[] = [{
       id: WorkbenchActionId.DeviceQuery,
       title: '查询设备档案',
-      summary: '按编号或二维码定位档案',
       tone: AppColors.Primary
     }];
 
@@ -129,7 +106,6 @@ export class WorkbenchService {
       actions.push({
         id: WorkbenchActionId.DeviceArchiveCreate,
         title: '添加设备档案',
-        summary: '提交新设备建档申请',
         tone: AppColors.Primary
       });
     }
@@ -141,24 +117,22 @@ export class WorkbenchService {
     const actions: WorkbenchAction[] = [];
 
     if (SessionStore.hasPermission(PermissionCode.OpsDeviceVerify)) {
-      actions.push(WorkbenchService.createAction(WorkbenchActionId.DeviceVerification, '设备核验与报修',
-        '核验设备并联动报修', AppColors.Primary));
+      actions.push(WorkbenchService.createAction(WorkbenchActionId.DeviceVerification, '核验与报修', AppColors.Primary));
     }
 
     if (SessionStore.hasPermission(PermissionCode.OpsRepairTaskAccept)) {
-      actions.push(WorkbenchService.createAction(WorkbenchActionId.AvailableRepairTask, '附近故障',
-        '查看可接取任务', AppColors.Primary));
+      actions.push(WorkbenchService.createAction(WorkbenchActionId.AvailableRepairTask, '任务接取', AppColors.Primary));
     }
 
     if (SessionStore.hasPermission(PermissionCode.OpsRepairReportCreate)) {
-      actions.push(WorkbenchService.createAction(WorkbenchActionId.MyRepairTask, '我的维修',
-        '处理已接取任务', AppColors.Primary));
+      actions.push(WorkbenchService.createAction(WorkbenchActionId.MyRepairTask, '维修任务', AppColors.Primary));
     }
 
     if (SessionStore.hasPermission(PermissionCode.OpsReinspectionCreate)) {
-      actions.push(WorkbenchService.createAction(WorkbenchActionId.ReinspectionTask, '复检任务',
-        '确认高等级故障结果', AppColors.Primary));
+      actions.push(WorkbenchService.createAction(WorkbenchActionId.ReinspectionTask, '复检任务', AppColors.Primary));
     }
+
+    actions.push(WorkbenchService.createAction(WorkbenchActionId.OperationsRecord, '历史记录', AppColors.Primary));
 
     return actions;
   }
@@ -168,8 +142,7 @@ export class WorkbenchService {
     if (WorkbenchService.canReviewDeviceChange()) {
       actions.push({
         id: WorkbenchActionId.DeviceChangeReview,
-        title: '变更审核',
-        summary: '审核待处理档案变更',
+        title: '档案审核',
         tone: AppColors.Primary
       });
     }
@@ -177,14 +150,7 @@ export class WorkbenchService {
     if (SessionStore.hasPermission(PermissionCode.MgmtAuditLogRead)) {
       actions.push({
         id: WorkbenchActionId.OperationRecord,
-        title: '操作记录',
-        summary: '查看业务流转记录',
-        tone: AppColors.Primary
-      });
-      actions.push({
-        id: WorkbenchActionId.OfflineSyncRecord,
-        title: '同步处理记录',
-        summary: '在线查看同步处理留痕',
+        title: '记录中心',
         tone: AppColors.Primary
       });
     }
@@ -196,7 +162,7 @@ export class WorkbenchService {
     const items: WorkbenchStatusItem[] = [
       {
         id: 'network',
-        name: '服务模式',
+        name: '后端服务',
         value: ApiClient.getRuntimeStatusLabel(),
         tone: ApiClient.getRuntimeStatusTone()
       },
@@ -205,23 +171,8 @@ export class WorkbenchService {
         name: '认证状态',
         value: SessionStore.isAuthenticated() ? '已登录' : '未登录',
         tone: SessionStore.isAuthenticated() ? AppColors.Success : AppColors.Danger
-      },
-      {
-        id: 'sync',
-        name: '同步状态',
-        value: OfflineSyncService.getStatusLabel(),
-        tone: OfflineSyncService.getStatusTone()
       }
     ];
-
-    if (OfflineSyncService.isAutoSyncEnabled() || OfflineSyncService.getLatestAutoSyncLabel() !== '暂无记录') {
-      items.push({
-        id: 'autoSync',
-        name: '最近自动同步',
-        value: OfflineSyncService.getLatestAutoSyncLabel(),
-        tone: OfflineSyncService.getLatestAutoSyncTone()
-      });
-    }
 
     return items;
   }
@@ -243,17 +194,6 @@ export class WorkbenchService {
   }
 
   static async refreshSummaryRemoteFirst(): Promise<ApiResponse<WorkbenchSummary>> {
-    if (ApiClient.isOfflineMode()) {
-      const localSummary = WorkbenchService.createLocalSummary();
-      WorkbenchService.updateCachedSummary(localSummary);
-      return {
-        success: true,
-        data: localSummary,
-        requestId: 'local-workbench-summary',
-        timestamp: new Date().toISOString()
-      };
-    }
-
     if (!ApiClient.isConfigured()) {
       const emptySummary = WorkbenchService.createEmptySummary();
       WorkbenchService.updateCachedSummary(emptySummary);
@@ -289,32 +229,17 @@ export class WorkbenchService {
     return SessionStore.hasPermission(PermissionCode.MgmtArchiveChangeReview);
   }
 
-  private static createAction(id: WorkbenchActionId, title: string, summary: string, tone: string): WorkbenchAction {
+  private static createAction(id: WorkbenchActionId, title: string, tone: string): WorkbenchAction {
     return {
       id,
       title,
-      summary,
       tone
     };
   }
 
   private static getSummary(): WorkbenchSummary {
-    if (ApiClient.isOfflineMode()) {
-      return WorkbenchService.createLocalSummary();
-    }
-
     return WorkbenchService.cachedSummary === undefined ?
       WorkbenchService.createEmptySummary() : WorkbenchService.cachedSummary;
-  }
-
-  private static createLocalSummary(): WorkbenchSummary {
-    return {
-      pendingChangeRequests: LocalDeviceChangeRequestRepository.getPendingCount(),
-      availableRepairTasks: LocalRepairTaskRepository.getPendingAvailableTaskCount(),
-      activeRepairTasks: LocalRepairTaskRepository.getActiveMyTaskCount(),
-      pendingReinspections: LocalReinspectionRepository.getPendingTaskCount(),
-      offlineDrafts: OfflineSyncService.getPendingCount()
-    };
   }
 
   private static createEmptySummary(): WorkbenchSummary {
@@ -322,8 +247,7 @@ export class WorkbenchService {
       pendingChangeRequests: 0,
       availableRepairTasks: 0,
       activeRepairTasks: 0,
-      pendingReinspections: 0,
-      offlineDrafts: 0
+      pendingReinspections: 0
     };
   }
 
@@ -332,8 +256,7 @@ export class WorkbenchService {
       pendingChangeRequests: WorkbenchService.normalizeCount(summary.pendingChangeRequests),
       availableRepairTasks: WorkbenchService.normalizeCount(summary.availableRepairTasks),
       activeRepairTasks: WorkbenchService.normalizeCount(summary.activeRepairTasks),
-      pendingReinspections: WorkbenchService.normalizeCount(summary.pendingReinspections),
-      offlineDrafts: WorkbenchService.normalizeCount(summary.offlineDrafts)
+      pendingReinspections: WorkbenchService.normalizeCount(summary.pendingReinspections)
     };
   }
 

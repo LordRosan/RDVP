@@ -29,6 +29,7 @@ struct DeviceArchiveDelete {
   };
   @State hasDevice: boolean = false;
   @State reason: string = '';
+  @State deleteTime: string = '';
   @State message: string = '';
   @State messageTone: string = AppColors.Danger;
   @State requestStatus: DeviceArchiveChangeRequestStatus = DeviceArchiveChangeRequestStatus.Draft;
@@ -125,29 +126,21 @@ struct DeviceArchiveDelete {
 
   @Builder
   ModeHeader() {
-    Column({ space: 6 }) {
-      Text('设备档案删除')
-        .fontSize(34)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-      Text('提交设备档案删除审核申请')
-        .fontSize(15)
-        .fontColor(AppColors.TextSecondary)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
+    Text('删除设备档案')
+      .fontSize(34)
+      .fontWeight(FontWeight.Bold)
+      .fontColor(AppColors.TextPrimary)
+      .maxLines(1)
+      .textOverflow({ overflow: TextOverflow.Ellipsis })
     .width('100%')
-    .alignItems(HorizontalAlign.Start)
+    .alignSelf(ItemAlign.Start)
     .padding({ top: 0, bottom: 2 })
   }
 
   @Builder
   ArchivePanel() {
     Column({ space: 10 }) {
-      Text('目标档案')
+      Text('档案信息')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
@@ -160,7 +153,11 @@ struct DeviceArchiveDelete {
         this.CardDivider()
         StatusInfoRow({ label: '设备型号', value: this.device.model, tone: AppColors.TextSecondary, valueMaxLines: 2 })
         this.CardDivider()
+        StatusInfoRow({ label: '生产厂商', value: this.device.manufacturer, tone: AppColors.TextSecondary, valueMaxLines: 2 })
+        this.CardDivider()
         StatusInfoRow({ label: '设备位置', value: this.device.location.address, tone: AppColors.TextSecondary, valueMaxLines: 2 })
+        this.CardDivider()
+        StatusInfoRow({ label: '最近核验', value: DeviceService.formatTimestampForDisplay(this.device.lastVerificationTime), tone: AppColors.TextSecondary, valueMaxLines: 2 })
       }
       .width('100%')
       .backgroundColor(AppColors.Surface)
@@ -173,6 +170,7 @@ struct DeviceArchiveDelete {
   @Builder
   DeleteForm() {
     Column({ space: 16 }) {
+      this.DeleteTimeField()
       this.ReasonField()
       this.MessageText()
       this.ActionButton(this.getSubmitButtonLabel(), $r('sys.symbol.trash'), this.canOpenConfirmation(), () => {
@@ -188,6 +186,35 @@ struct DeviceArchiveDelete {
     .width('100%')
     .backgroundColor(AppColors.Surface)
     .borderRadius(24)
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  DeleteTimeField() {
+    Column({ space: 10 }) {
+      this.FieldTitle('删除时间')
+
+      TextInput({
+        placeholder: 'YYYY-MM-DD HH:mm',
+        text: this.deleteTime
+      })
+        .height(56)
+        .fontSize(16)
+        .backgroundColor(AppColors.FieldBackground)
+        .borderRadius(18)
+        .padding({ left: 16, right: 16 })
+        .border({ width: 1, color: AppColors.Border })
+        .enabled(!this.isSubmitted() && !this.submitting && !this.isDeleteLocked())
+        .onChange((value: string) => {
+          this.deleteTime = value;
+          this.message = '';
+          this.messageTone = AppColors.Danger;
+          if (!this.isSubmitted()) {
+            this.requestStatus = DeviceArchiveChangeRequestStatus.Draft;
+          }
+        })
+    }
+    .width('100%')
     .alignItems(HorizontalAlign.Start)
   }
 
@@ -231,32 +258,21 @@ struct DeviceArchiveDelete {
   @Builder
   StatusPanel() {
     Column({ space: 10 }) {
-      Text('提交状态')
+      Text('提交摘要')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Column() {
+        StatusInfoRow({ label: '标准设备编号', value: this.device.deviceCode, tone: AppColors.TextSecondary })
+        this.CardDivider()
         StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: AppColors.TextSecondary })
         this.CardDivider()
         StatusInfoRow({
           label: '申请状态',
           value: DeviceArchiveChangeService.formatRequestStatus(this.requestStatus),
           tone: this.getStatusTone(this.requestStatus)
-        })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '删除锁定',
-          value: DeviceArchiveDeleteGuardService.getDeleteLockMessage(this.device.deviceCode),
-          tone: this.isDeleteLocked() ? AppColors.Danger : AppColors.Success,
-          valueMaxLines: 2
-        })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '服务模式',
-          value: ApiClient.getRuntimeStatusLabel(),
-          tone: ApiClient.getRuntimeStatusTone()
         })
       }
       .width('100%')
@@ -289,7 +305,7 @@ struct DeviceArchiveDelete {
     Column() {
       Column({ space: 16 }) {
         Row() {
-          Text('确认删除申请')
+          Text('确认删除')
             .fontSize(22)
             .fontWeight(FontWeight.Bold)
             .fontColor(AppColors.TextPrimary)
@@ -310,12 +326,6 @@ struct DeviceArchiveDelete {
         }
         .width('100%')
         .alignItems(VerticalAlign.Center)
-
-        Text('删除档案属于敏感操作，请完成身份复核后提交审核申请。')
-          .fontSize(14)
-          .fontColor(AppColors.TextSecondary)
-          .lineHeight(20)
-          .width('100%')
 
         this.ConfirmPasswordField()
         this.ConfirmCaptchaField()
@@ -556,6 +566,12 @@ struct DeviceArchiveDelete {
   loadArchiveContext(): void {
     const device = DeviceArchiveFlowStore.getCurrentDevice();
     if (device === undefined) {
+      const lastCode = DeviceArchiveFlowStore.getLastDeviceCode();
+      if (lastCode.length > 0) {
+        this.reloadDeviceByCode(lastCode);
+        return;
+      }
+
       this.hasDevice = false;
       this.message = '未获取设备档案，请返回后重新查询';
       this.messageTone = AppColors.Danger;
@@ -615,7 +631,8 @@ struct DeviceArchiveDelete {
 
     const response = await DeviceArchiveLifecycleService.submitDeleteRequestRemoteFirst({
       device: this.device,
-      reason: this.reason
+      reason: this.reason,
+      initiatedAt: this.deleteTime
     });
     this.submitting = false;
 
@@ -633,9 +650,7 @@ struct DeviceArchiveDelete {
       this.device = pendingDevice;
     }
     this.confirmVisible = false;
-    this.message = DeviceArchiveLifecycleService.isOfflineSyncQueuedResponse(response) ?
-      '删除申请已保存至本地同步队列，恢复在线并同步成功后将提交审核' :
-      '删除申请已提交，等待管理员审核';
+    this.message = '删除申请已提交，等待管理员审核';
     this.messageTone = AppColors.Success;
   }
 
@@ -666,8 +681,7 @@ struct DeviceArchiveDelete {
   }
 
   isSubmitted(): boolean {
-    return this.requestStatus === DeviceArchiveChangeRequestStatus.PendingReview ||
-      this.requestStatus === DeviceArchiveChangeRequestStatus.PendingSync;
+    return this.requestStatus === DeviceArchiveChangeRequestStatus.PendingReview;
   }
 
   isDeleteLocked(): boolean {
@@ -689,7 +703,6 @@ struct DeviceArchiveDelete {
   getStatusTone(status: DeviceArchiveChangeRequestStatus): string {
     switch (status) {
       case DeviceArchiveChangeRequestStatus.PendingReview:
-      case DeviceArchiveChangeRequestStatus.PendingSync:
         return AppColors.Warning;
       case DeviceArchiveChangeRequestStatus.Approved:
         return AppColors.Success;
@@ -712,6 +725,22 @@ struct DeviceArchiveDelete {
         this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
       } catch (toastErr) {
       }
+    }
+  }
+
+  async reloadDeviceByCode(deviceCode: string): Promise<void> {
+    this.message = '正在重新获取设备档案...';
+    this.messageTone = AppColors.TextSecondary;
+    const response = await DeviceService.queryByCodeRemoteFirst({
+      deviceCode
+    });
+    if (response.success && response.data !== undefined) {
+      DeviceArchiveFlowStore.startFlow(response.data);
+      this.loadArchiveContext();
+    } else {
+      this.hasDevice = false;
+      this.message = '重新获取设备档案失败，请返回查询';
+      this.messageTone = AppColors.Danger;
     }
   }
 }

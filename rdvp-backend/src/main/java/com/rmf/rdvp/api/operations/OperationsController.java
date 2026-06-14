@@ -123,6 +123,21 @@ public class OperationsController {
         return ResponseEntity.ok(ApiResponse.success(ReinspectionTaskListResponse.from(result), RequestIds.resolve(request)));
     }
 
+    @PostMapping("/reinspections/{faultReportId}/accept")
+    @PreAuthorize("hasAuthority('OPS_REINSPECTION_CREATE')")
+    public ResponseEntity<ApiResponse<RepairTaskAcceptResponse>> acceptReinspectionTask(
+            @PathVariable String faultReportId,
+            @RequestBody(required = false) RepairTaskAcceptRequest requestBody,
+            @AuthenticationPrincipal AuthenticatedUser user,
+            HttpServletRequest request) {
+        var result = operationsService.acceptReinspectionTask(
+                faultReportId,
+                requestBody == null ? null : requestBody.longitude(),
+                requestBody == null ? null : requestBody.latitude(),
+                user);
+        return ResponseEntity.ok(ApiResponse.success(RepairTaskAcceptResponse.from(result), RequestIds.resolve(request)));
+    }
+
     @PostMapping("/fault-reports/{faultReportId}/reinspection-records")
     @PreAuthorize("hasAuthority('OPS_REINSPECTION_CREATE')")
     public ResponseEntity<ApiResponse<ReinspectionRecordResponse>> submitReinspectionRecord(

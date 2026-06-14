@@ -1,5 +1,3 @@
-import { Filter, FilterType } from '@kit.ArkUI';
-import type { FilterParams, FilterResult } from '@kit.ArkUI';
 import { AppColors } from '../../styles/AppTheme';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { FaultSeverity } from '../../models/FaultModels';
@@ -12,30 +10,19 @@ import { RepairTaskService } from '../../services/RepairTaskService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 
-const MY_REPAIR_STATUS_FILTER_OPTIONS: string[] = ['全部状态', '已接取', '处理中', '报告已提交'];
-const MY_REPAIR_STATUS_FILTER_VALUES: string[] = ['', `${RepairTaskStatus.Accepted}`, `${RepairTaskStatus.Processing}`,
-  `${RepairTaskStatus.ReportSubmitted}`];
-const MY_REPAIR_SEVERITY_FILTER_OPTIONS: string[] = ['全部等级', '紧急', '严重', '一般', '轻微'];
-const MY_REPAIR_SEVERITY_FILTER_VALUES: string[] = ['', `${FaultSeverity.Emergency}`, `${FaultSeverity.Severe}`,
-  `${FaultSeverity.General}`, `${FaultSeverity.Minor}`];
-
 @Entry
 @Component
 struct MyRepairTask {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   @State allTaskItems: MyRepairTaskSummary[] = [];
   @State taskItems: MyRepairTaskSummary[] = [];
-  @State statusFilterIndex: number = 0;
-  @State severityFilterIndex: number = 0;
   @State taskId: string = '';
   @State reportResult: string = '';
   @State repairedAt: string = '';
   @State processDescription: string = '';
-  @State partsUsed: string = '';
   @State taskMessage: string = '';
   @State reportMessage: string = '';
   @State reportMessageTone: string = AppColors.Danger;
-  @State refreshStatus: string = '未刷新';
   @State normalizedTaskId: string = '-';
   @State submittedRepairTaskId: string = '';
   @State refreshing: boolean = false;
@@ -116,22 +103,14 @@ struct MyRepairTask {
 
   @Builder
   ModeHeader() {
-    Column({ space: 6 }) {
-      Text('我的维修')
+      Text('维修任务')
         .fontSize(34)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-      Text('处理已接取任务')
-        .fontSize(15)
-        .fontColor(AppColors.TextSecondary)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
     .width('100%')
-    .alignItems(HorizontalAlign.Start)
+    .alignSelf(ItemAlign.Start)
     .padding({
       top: 0,
       bottom: 2
@@ -144,7 +123,7 @@ struct MyRepairTask {
       this.TaskMessageText()
 
       Row() {
-        Text('已接取任务')
+        Text('维修任务列表')
           .fontSize(22)
           .fontWeight(FontWeight.Bold)
           .fontColor(AppColors.TextPrimary)
@@ -167,23 +146,15 @@ struct MyRepairTask {
       .width('100%')
       .alignItems(VerticalAlign.Center)
 
-      Filter({
-        multiFilters: this.getTaskFilterParams(),
-        onFilterChanged: (filterResults: FilterResult[]) => {
-          this.applyTaskFilterResults(filterResults);
-        },
-        filterType: FilterType.MULTI_LINE_FILTER
-      }) {
-        if (this.taskItems.length === 0) {
-          this.EmptyTaskState()
-        } else {
-          Column({ space: 12 }) {
-            ForEach(this.taskItems, (item: MyRepairTaskSummary) => {
-              this.TaskItem(item)
-            }, (item: MyRepairTaskSummary) => item.id)
-          }
-          .width('100%')
+      if (this.taskItems.length === 0) {
+        this.EmptyTaskState()
+      } else {
+        Column({ space: 12 }) {
+          ForEach(this.taskItems, (item: MyRepairTaskSummary) => {
+            this.TaskItem(item)
+          }, (item: MyRepairTaskSummary) => item.id)
         }
+        .width('100%')
       }
     }
     .alignItems(HorizontalAlign.Start)
@@ -323,7 +294,6 @@ struct MyRepairTask {
       this.ResultSelector()
       this.RepairedAtField()
       this.ProcessDescriptionField()
-      this.PartsUsedField()
       this.ReportMessageText()
       this.ActionButton(this.getSubmitButtonLabel(), $r('sys.symbol.text_clipboard'), this.canSubmitRepairReport(),
         () => {
@@ -434,14 +404,14 @@ struct MyRepairTask {
   @Builder
   RepairedAtField() {
     Column({ space: 10 }) {
-      this.FieldTitle('维修完成时间')
+      this.FieldTitle('维修时间')
 
       Row({ space: 10 }) {
         SymbolGlyph($r('sys.symbol.calendar'))
           .fontSize(20)
           .fontColor([AppColors.TextPrimary])
 
-        Text(this.repairedAt.length > 0 ? this.repairedAt : '选择维修完成时间')
+        Text(this.repairedAt.length > 0 ? this.repairedAt : '选择维修时间')
           .fontSize(16)
           .fontColor(this.repairedAt.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
           .layoutWeight(1)
@@ -481,10 +451,10 @@ struct MyRepairTask {
   @Builder
   ProcessDescriptionField() {
     Column({ space: 10 }) {
-      this.FieldTitle('维修过程')
+      this.FieldTitle('维修说明')
 
       TextArea({
-        placeholder: '填写故障定位、处理过程、验证结果和遗留风险',
+        placeholder: '填写故障定位、处理过程、更换部件和验证结果',
         text: this.processDescription
       })
         .height(132)
@@ -516,53 +486,16 @@ struct MyRepairTask {
   }
 
   @Builder
-  PartsUsedField() {
-    Column({ space: 10 }) {
-      this.FieldTitle('更换部件')
-
-      TextArea({
-        placeholder: '填写更换部件、数量和序列号；未更换可留空',
-        text: this.partsUsed
-      })
-        .height(90)
-        .width('100%')
-        .fontSize(15)
-        .lineHeight(22)
-        .maxLength(500)
-        .backgroundColor(AppColors.FieldBackground)
-        .borderRadius(18)
-        .padding({
-          left: 14,
-          right: 14,
-          top: 12,
-          bottom: 12
-        })
-        .border({
-          width: 1,
-          color: AppColors.Border
-        })
-        .enabled(this.canSubmitRepairReport())
-        .onChange((value: string) => {
-          this.partsUsed = value;
-          this.reportMessage = '';
-          this.reportMessageTone = AppColors.Danger;
-        })
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-  }
-
-  @Builder
   StatusPanel() {
     Column({ space: 10 }) {
-      Text('提交状态')
+      Text('提交摘要')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Column() {
-        StatusInfoRow({ label: '标准任务号', value: this.normalizedTaskId, tone: AppColors.TextSecondary })
+        StatusInfoRow({ label: '标准任务编号', value: this.normalizedTaskId, tone: AppColors.TextSecondary })
         this.CardDivider()
         StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: AppColors.TextSecondary })
         this.CardDivider()
@@ -570,18 +503,6 @@ struct MyRepairTask {
           label: '维修结果',
           value: this.getRepairResultStatusText(),
           tone: this.getSelectedRepairResultTone()
-        })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '刷新状态',
-          value: this.taskMessage.length > 0 ? '刷新失败' : this.refreshStatus,
-          tone: this.taskMessage.length > 0 ? AppColors.Danger : AppColors.TextSecondary
-        })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '服务模式',
-          value: ApiClient.getRuntimeStatusLabel(),
-          tone: ApiClient.getRuntimeStatusTone()
         })
       }
       .width('100%')
@@ -675,14 +596,12 @@ struct MyRepairTask {
     if (!response.success) {
       const error = response.error;
       this.taskMessage = error ? error.message : '维修任务刷新失败';
-      this.refreshStatus = '刷新失败';
       return;
     }
 
     const data = response.data;
     this.allTaskItems = data ? data.items : [];
-    this.applyTaskFilters();
-    this.refreshStatus = '已刷新';
+    this.taskItems = [...this.allTaskItems];
     this.taskMessage = '';
   }
 
@@ -697,7 +616,7 @@ struct MyRepairTask {
       result: this.reportResult as RepairReportResult,
       repairedAt: this.repairedAt,
       processDescription: this.processDescription,
-      partsUsed: this.partsUsed
+      partsUsed: ''
     });
     this.submitting = false;
 
@@ -720,56 +639,7 @@ struct MyRepairTask {
     this.allTaskItems = this.allTaskItems.filter((item: MyRepairTaskSummary) => {
       return item.taskNo !== this.normalizedTaskId && item.id !== this.normalizedTaskId;
     });
-    this.applyTaskFilters();
-    this.refreshStatus = '已更新';
-  }
-
-  applyTaskFilterResults(filterResults: FilterResult[]): void {
-    filterResults.forEach((item: FilterResult) => {
-      if (item.name === '维修状态') {
-        this.statusFilterIndex = this.normalizeFilterIndex(item.index, MY_REPAIR_STATUS_FILTER_VALUES.length);
-      } else if (item.name === '故障等级') {
-        this.severityFilterIndex = this.normalizeFilterIndex(item.index, MY_REPAIR_SEVERITY_FILTER_VALUES.length);
-      }
-    });
-    this.applyTaskFilters();
-  }
-
-  applyTaskFilters(): void {
-    const statusValue = MY_REPAIR_STATUS_FILTER_VALUES[this.statusFilterIndex];
-    const severityValue = MY_REPAIR_SEVERITY_FILTER_VALUES[this.severityFilterIndex];
-    this.taskItems = this.allTaskItems.filter((item: MyRepairTaskSummary) => {
-      const matchesStatus = statusValue.length === 0 || item.status === statusValue;
-      const matchesSeverity = severityValue.length === 0 || item.severity === severityValue;
-      return matchesStatus && matchesSeverity;
-    });
-  }
-
-  getTaskFilterParams(): FilterParams[] {
-    return [
-      this.createFilterParams('维修状态', MY_REPAIR_STATUS_FILTER_OPTIONS),
-      this.createFilterParams('故障等级', MY_REPAIR_SEVERITY_FILTER_OPTIONS)
-    ];
-  }
-
-  createFilterParams(name: string, options: string[]): FilterParams {
-    const params: FilterParams = {
-      name: name,
-      options: options
-    };
-    return params;
-  }
-
-  normalizeFilterIndex(index: number, length: number): number {
-    if (index !== index || index < 0) {
-      return 0;
-    }
-
-    if (index >= length) {
-      return length - 1;
-    }
-
-    return Math.floor(index);
+    this.taskItems = [...this.allTaskItems];
   }
 
   getSubmitButtonLabel(): string {

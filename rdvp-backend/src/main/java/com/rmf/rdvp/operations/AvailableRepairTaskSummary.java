@@ -14,7 +14,8 @@ public record AvailableRepairTaskSummary(
         BigDecimal distanceKm,
         DeviceLocation location,
         OffsetDateTime submittedAt,
-        RepairTaskStatus status) {
+        RepairTaskStatus status,
+        String taskType) {
 
     public record DeviceLocation(
             String address,

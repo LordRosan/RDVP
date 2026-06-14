@@ -10,5 +10,6 @@ public record RepairTaskCreate(
         String maintainerId,
         BigDecimal acceptedLongitude,
         BigDecimal acceptedLatitude,
-        OffsetDateTime acceptedAt) {
+        OffsetDateTime acceptedAt,
+        String taskType) {
 }

@@ -6,7 +6,7 @@ import { ApiResponse } from '../models/ApiModels';
 const DELETE_LOCK_STORAGE_KEY = 'rdvp_archive_delete_locks';
 const QR_EXPORT_LOCK_STORAGE_KEY = 'rdvp_archive_qrcode_export_locks';
 const MAX_PASSWORD_FAILURES = 5;
-const DELETE_LOCK_DURATION_MS = 12 * 60 * 60 * 1000;
+const DELETE_LOCK_DURATION_MS = 6 * 60 * 60 * 1000;
 
 export interface DeviceArchiveDeleteConfirmationForm {
   deviceCode: string;

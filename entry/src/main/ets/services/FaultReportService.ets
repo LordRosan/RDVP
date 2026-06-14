@@ -7,21 +7,11 @@ import {
   FaultStatus,
   FaultType
 } from '../models/FaultModels';
-import {
-  FaultReportOfflineSyncPayload,
-  OfflineSyncOperationType
-} from '../models/OfflineSyncModels';
-import { OperationRecordType } from '../models/OperationRecordModels';
 import { ApiClient } from './ApiClient';
 import { DeviceService } from './DeviceService';
-import { LocalRepairTaskRepository } from './LocalRepairTaskRepository';
-import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
-import { OfflineSyncService } from './OfflineSyncService';
-import { SessionStore } from '../stores/SessionStore';
 
 const MAX_DESCRIPTION_LENGTH = 800;
 const MAX_SCENE_CONDITION_LENGTH = 500;
-const OFFLINE_SYNC_FAULT_REPORT_REQUEST_ID = 'offline-sync-fault-report';
 
 interface FaultReportApiResult {
   id: string;
@@ -65,14 +55,14 @@ export class FaultReportService {
     if (occurredAt.length === 0) {
       return {
         valid: false,
-        message: '请输入发生时间'
+        message: '请输入故障时间'
       };
     }
 
     if (occurredAt.length > 64) {
       return {
         valid: false,
-        message: '发生时间不能超过64字'
+        message: '故障时间不能超过64字'
       };
     }
 
@@ -95,7 +85,7 @@ export class FaultReportService {
     if (sceneCondition.length > MAX_SCENE_CONDITION_LENGTH) {
       return {
         valid: false,
-        message: '现场情况不能超过500字'
+        message: '备注不能超过500字'
       };
     }
 
@@ -103,25 +93,6 @@ export class FaultReportService {
       valid: true,
       message: ''
     };
-  }
-
-  static submitFaultReport(form: FaultReportForm): ApiResponse<FaultReportRecord> {
-    const validation = FaultReportService.validateFaultReportForm(form);
-    if (!validation.valid) {
-      return {
-        success: false,
-        error: {
-          code: 'FAULT_REPORT_INVALID',
-          message: validation.message
-        }
-      };
-    }
-
-    if (ApiClient.isOfflineMode()) {
-      return FaultReportService.createLocalQueuedFaultReportResponse(form);
-    }
-
-    return ApiClient.createServiceUnavailableResponse<FaultReportRecord>();
   }
 
   static async submitFaultReportRemoteFirst(form: FaultReportForm): Promise<ApiResponse<FaultReportRecord>> {
@@ -136,42 +107,11 @@ export class FaultReportService {
       };
     }
 
-    if (ApiClient.isOfflineMode()) {
-      return FaultReportService.createLocalQueuedFaultReportResponse(form);
-    }
-
     if (!ApiClient.isConfigured()) {
       return ApiClient.createServiceUnavailableResponse<FaultReportRecord>();
     }
 
     return FaultReportService.submitFaultReportToBackend(form);
-  }
-
-  static async submitQueuedFaultReport(payloadJson: string): Promise<ApiResponse<FaultReportRecord>> {
-    const payload = FaultReportService.parseOfflineSyncPayload(payloadJson);
-    if (payload === undefined) {
-      return {
-        success: false,
-        error: {
-          code: 'OFFLINE_SYNC_PAYLOAD_INVALID',
-          message: '设备报修待同步数据无效'
-        },
-        timestamp: new Date().toISOString()
-      };
-    }
-
-    return FaultReportService.submitFaultReportToBackend({
-      deviceCode: payload.deviceCode,
-      faultType: payload.faultType as FaultType,
-      severity: payload.severity as FaultSeverity,
-      occurredAt: payload.occurredAt,
-      description: payload.description,
-      sceneCondition: payload.sceneCondition
-    });
-  }
-
-  static isOfflineSyncQueuedResponse(response: ApiResponse<FaultReportRecord>): boolean {
-    return response.requestId === OFFLINE_SYNC_FAULT_REPORT_REQUEST_ID;
   }
 
   private static async submitFaultReportToBackend(form: FaultReportForm): Promise<ApiResponse<FaultReportRecord>> {
@@ -319,103 +259,6 @@ export class FaultReportService {
       severity === FaultSeverity.Severe ||
       severity === FaultSeverity.General ||
       severity === FaultSeverity.Minor;
-  }
-
-  static createLocalFaultReportResponse(form: FaultReportForm): ApiResponse<FaultReportRecord> {
-    const record = LocalRepairTaskRepository.createFaultReport(form);
-    if (record === undefined) {
-      return {
-        success: false,
-        error: FaultReportService.createSubmitError('DEVICE_ACTIVE_FAULT_EXISTS', ''),
-        requestId: 'local-fault-report-blocked',
-        timestamp: new Date().toISOString()
-      };
-    }
-
-    LocalOperationRecordRepository.append(OperationRecordType.FaultReport, '提交设备报修', record.reportNo,
-      `设备 ${record.deviceCode} 进入待接取状态`, SessionStore.getCurrentOperatorName());
-    return {
-      success: true,
-      data: record,
-      requestId: 'local-fault-report',
-      timestamp: new Date().toISOString()
-    };
-  }
-
-  private static createLocalQueuedFaultReportResponse(form: FaultReportForm): ApiResponse<FaultReportRecord> {
-    const normalizedDeviceCode = DeviceService.normalizeDeviceCode(form.deviceCode);
-    const conflictKey = FaultReportService.createOfflineConflictKey(normalizedDeviceCode);
-    if (OfflineSyncService.hasActiveConflict(OfflineSyncOperationType.FaultReportCreate, conflictKey)) {
-      return {
-        success: false,
-        error: FaultReportService.createSubmitError('DEVICE_ACTIVE_FAULT_EXISTS', ''),
-        requestId: 'offline-sync-fault-report-blocked',
-        timestamp: new Date().toISOString()
-      };
-    }
-
-    const localResponse = FaultReportService.createLocalFaultReportResponse(form);
-    if (!localResponse.success || localResponse.data === undefined) {
-      return localResponse;
-    }
-
-    const payload = FaultReportService.createOfflineSyncPayload(form, localResponse.data.reportNo);
-    OfflineSyncService.enqueue(
-      OfflineSyncOperationType.FaultReportCreate,
-      `设备报修 ${normalizedDeviceCode}`,
-      JSON.stringify(payload),
-      conflictKey
-    );
-
-    return {
-      success: true,
-      data: localResponse.data,
-      requestId: OFFLINE_SYNC_FAULT_REPORT_REQUEST_ID,
-      timestamp: new Date().toISOString()
-    };
-  }
-
-  private static createOfflineSyncPayload(form: FaultReportForm, localReportNo: string): FaultReportOfflineSyncPayload {
-    return {
-      deviceCode: DeviceService.normalizeDeviceCode(form.deviceCode),
-      faultType: form.faultType,
-      severity: form.severity,
-      occurredAt: FaultReportService.normalizeText(form.occurredAt),
-      description: FaultReportService.normalizeText(form.description),
-      sceneCondition: FaultReportService.normalizeText(form.sceneCondition),
-      localReportNo,
-      queuedAt: new Date().toISOString()
-    };
-  }
-
-  private static parseOfflineSyncPayload(payloadJson: string): FaultReportOfflineSyncPayload | undefined {
-    try {
-      const payload = JSON.parse(payloadJson) as FaultReportOfflineSyncPayload;
-      if (payload.deviceCode.length === 0 ||
-        payload.faultType.length === 0 ||
-        payload.severity.length === 0 ||
-        payload.occurredAt.length === 0 ||
-        payload.description.length === 0) {
-        return undefined;
-      }
-
-      return {
-        deviceCode: payload.deviceCode,
-        faultType: payload.faultType,
-        severity: payload.severity,
-        occurredAt: payload.occurredAt,
-        description: payload.description,
-        sceneCondition: payload.sceneCondition === undefined ? '' : payload.sceneCondition,
-        localReportNo: payload.localReportNo === undefined ? '' : payload.localReportNo,
-        queuedAt: payload.queuedAt === undefined ? '' : payload.queuedAt
-      };
-    } catch (err) {
-      return undefined;
-    }
-  }
-
-  static createOfflineConflictKey(deviceCode: string): string {
-    return `fault-report:${DeviceService.normalizeDeviceCode(deviceCode)}`;
   }
 
   private static createRecordFromApiResult(form: FaultReportForm, result: FaultReportApiResult): FaultReportRecord {

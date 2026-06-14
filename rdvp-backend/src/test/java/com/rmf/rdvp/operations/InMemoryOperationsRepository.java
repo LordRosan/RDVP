@@ -99,6 +99,16 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     }
 
     @Override
+    public boolean hasActiveReinspectionTaskForFault(String faultReportId) {
+        // In-memory implementation: reinspection tasks share the repairTasksById map.
+        // The real implementation uses task_type column.
+        return repairTasksById.values()
+                .stream()
+                .anyMatch(item -> item.faultReportId().equals(faultReportId)
+                        && (item.status() == RepairTaskStatus.ACCEPTED || item.status() == RepairTaskStatus.PROCESSING));
+    }
+
+    @Override
     public int countActiveRepairTasksByMaintainer(String maintainerId) {
         return (int) repairTasksById.values()
                 .stream()
@@ -236,6 +246,32 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     }
 
     @Override
+    public boolean markReinspectionTaskReported(String faultReportId, OffsetDateTime completedAt) {
+        Optional<RepairTaskRecord> task = repairTasksById.values()
+                .stream()
+                .filter(item -> item.faultReportId().equals(faultReportId)
+                        && (item.status() == RepairTaskStatus.ACCEPTED || item.status() == RepairTaskStatus.PROCESSING))
+                .findFirst();
+        if (task.isEmpty()) {
+            return false;
+        }
+        RepairTaskRecord t = task.get();
+        repairTasksById.put(t.id(), new RepairTaskRecord(
+                t.id(),
+                t.repairTaskNo(),
+                t.faultReportId(),
+                t.deviceId(),
+                t.maintainerId(),
+                t.severity(),
+                RepairTaskStatus.REPORT_SUBMITTED,
+                t.acceptedLongitude(),
+                t.acceptedLatitude(),
+                t.acceptedAt(),
+                completedAt));
+        return true;
+    }
+
+    @Override
     public boolean updateFaultStatusIfCurrent(
             String faultReportId,
             FaultStatus expectedStatus,
@@ -283,7 +319,8 @@ public class InMemoryOperationsRepository implements OperationsRepository {
                 calculateDistanceKm(longitude, latitude, device.longitude(), device.latitude()),
                 new AvailableRepairTaskSummary.DeviceLocation(device.address(), device.longitude(), device.latitude()),
                 fault.createdAt(),
-                RepairTaskStatus.AVAILABLE);
+                RepairTaskStatus.AVAILABLE,
+                "REPAIR");
     }
 
     private BigDecimal calculateDistanceKm(

@@ -6,9 +6,9 @@
     "pages/PersonalCenter/ApplicationSettings",
     "pages/ArchiveCenter/ArchiveCenter",
     "pages/OperationsCenter/OperationsCenter",
-    "pages/SyncCenter/SyncCenter",
     "pages/ManagementCenter/ManagementCenter",
     "pages/ArchiveCenter/DeviceArchiveQuery",
+    "pages/ArchiveCenter/DeviceArchiveCodeVerify",
     "pages/ArchiveCenter/DeviceArchiveCreate",
     "pages/ArchiveCenter/DeviceArchiveDetail",
     "pages/ArchiveCenter/DeviceArchiveChange",
@@ -19,6 +19,9 @@
     "pages/OperationsCenter/ReinspectionTask",
     "pages/ManagementCenter/DeviceArchiveReview",
     "pages/ManagementCenter/OperationRecord",
-    "pages/ManagementCenter/OfflineSyncRecord"
+    "pages/RecordCenter/RecordCenter",
+    "pages/RecordCenter/ArchiveRecord",
+    "pages/RecordCenter/OperationsRecord",
+    "pages/RecordCenter/ReviewRecord"
   ]
 }

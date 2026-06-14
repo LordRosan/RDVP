@@ -2,15 +2,14 @@ import { FaultReportForm, FaultReportRecord } from './FaultModels';
 
 export enum VerificationResult {
   Normal = 'NORMAL',
-  Abnormal = 'ABNORMAL',
-  Unavailable = 'UNAVAILABLE'
+  Abnormal = 'ABNORMAL'
 }
 
 export interface DeviceVerificationForm {
   deviceCode: string;
   result: VerificationResult;
   description: string;
-  remark: string;
+  remark?: string;
 }
 
 export interface DeviceVerificationValidationResult {

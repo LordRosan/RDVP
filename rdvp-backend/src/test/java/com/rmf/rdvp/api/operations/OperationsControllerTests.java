@@ -375,7 +375,7 @@ class OperationsControllerTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "result": "UNAVAILABLE",
+                                  "result": "ABNORMAL",
                                   "description": "设备已不可用。",
                                   "remark": "",
                                   "verifiedAt": "2026-06-03T08:30:00Z",
@@ -422,14 +422,15 @@ class OperationsControllerTests {
 
         mockMvc.perform(get("/api/v1/repair-tasks/available?radiusKm=20")
                         .header("Authorization", "Bearer " + maintainerToken))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.error.code").value("REPAIR_TASK_RADIUS_EXCEEDS_WORKLOAD"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.workload.status").value("LOW_LOAD"))
+                .andExpect(jsonPath("$.data.workload.maxRadiusKm").value(20));
 
         mockMvc.perform(get("/api/v1/repair-tasks/available?radiusKm=10")
                         .header("Authorization", "Bearer " + maintainerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.workload.status").value("LOW_LOAD"))
-                .andExpect(jsonPath("$.data.workload.maxRadiusKm").value(10));
+                .andExpect(jsonPath("$.data.workload.maxRadiusKm").value(20));
 
         mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/accept", secondFaultId)
                         .header("Authorization", "Bearer " + maintainerToken)
@@ -439,13 +440,18 @@ class OperationsControllerTests {
 
         mockMvc.perform(get("/api/v1/repair-tasks/available?radiusKm=10")
                         .header("Authorization", "Bearer " + maintainerToken))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error.code").value("REPAIRER_BUSY"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.workload.status").value("MEDIUM_LOAD"))
+                .andExpect(jsonPath("$.data.workload.maxRadiusKm").value(10));
 
         mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/accept", thirdFaultId)
                         .header("Authorization", "Bearer " + maintainerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(NEAR_DEVICE_LOCATION_BODY))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/repair-tasks/available?radiusKm=10")
+                        .header("Authorization", "Bearer " + maintainerToken))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("REPAIRER_BUSY"));
     }
@@ -547,10 +553,9 @@ class OperationsControllerTests {
     }
 
     @Test
-    void reopensFaultWhenReinspectionFails() throws Exception {
+    void requeuesEmergencyTemporaryRepairWithoutReinspection() throws Exception {
         String operatorToken = login("fieldoperator", "password");
         String maintainerToken = login("maintainer", "password");
-        String reinspectorToken = login("reinspector", "password");
 
         String faultId = createFaultReport(
                 operatorToken,
@@ -570,24 +575,9 @@ class OperationsControllerTests {
                                   "processDescription": "Applied temporary rollback and isolated unstable logic branch.",
                                   "partsUsed": ""
                                 }
-                                """))
+                """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.requiresReinspection").value(true));
-
-        mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-records", faultId)
-                        .header("Authorization", "Bearer " + reinspectorToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "result": "FAILED",
-                                  "reinspectedAt": "2026-05-29T07:00:00Z",
-                                  "description": "Restart risk still exists under simulated peak load."
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.result").value("FAILED"))
-                .andExpect(jsonPath("$.data.nextFaultStatus").value("PENDING_ACCEPTANCE"))
-                .andExpect(jsonPath("$.data.nextDeviceStatus").value("FAULTED"));
+                .andExpect(jsonPath("$.data.requiresReinspection").value(false));
 
         mockMvc.perform(get("/api/v1/repair-tasks/available?radiusKm=10")
                         .header("Authorization", "Bearer " + maintainerToken))

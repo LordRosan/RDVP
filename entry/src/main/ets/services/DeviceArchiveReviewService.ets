@@ -11,7 +11,6 @@ import {
   DeviceArchiveReviewResult
 } from '../models/DeviceArchiveReviewModels';
 import { ApiClient } from './ApiClient';
-import { LocalDeviceChangeRequestRepository } from './LocalDeviceChangeRequestRepository';
 
 interface ApiListResult<T> {
   items: T[];
@@ -40,19 +39,6 @@ interface DeviceArchiveReviewApiItem {
 
 export class DeviceArchiveReviewService {
   static async listPendingReviewsRemoteFirst(): Promise<ApiResponse<DeviceArchiveReviewListResult>> {
-    if (ApiClient.isOfflineMode()) {
-      const items = LocalDeviceChangeRequestRepository.listPending();
-      return {
-        success: true,
-        data: {
-          items,
-          total: items.length
-        },
-        requestId: 'local-device-change-review-list',
-        timestamp: new Date().toISOString()
-      };
-    }
-
     if (!ApiClient.isConfigured()) {
       return ApiClient.createServiceUnavailableResponse<DeviceArchiveReviewListResult>();
     }
@@ -119,27 +105,6 @@ export class DeviceArchiveReviewService {
       };
     }
 
-    if (ApiClient.isOfflineMode()) {
-      const result = LocalDeviceChangeRequestRepository.review(form.requestId, form.decision, form.reviewComment,
-        form.reviewedAt);
-      if (result === undefined) {
-        return {
-          success: false,
-          error: {
-            code: 'CHANGE_REQUEST_NOT_FOUND',
-            message: '未找到可审核的变更申请'
-          }
-        };
-      }
-
-      return {
-        success: true,
-        data: result,
-        requestId: 'local-device-change-review',
-        timestamp: new Date().toISOString()
-      };
-    }
-
     if (!ApiClient.isConfigured()) {
       return ApiClient.createServiceUnavailableResponse<DeviceArchiveReviewResult>();
     }
@@ -195,8 +160,6 @@ export class DeviceArchiveReviewService {
 
   static formatStatus(status: DeviceArchiveChangeRequestStatus): string {
     switch (status) {
-      case DeviceArchiveChangeRequestStatus.PendingSync:
-        return '待同步';
       case DeviceArchiveChangeRequestStatus.PendingReview:
         return '待审核';
       case DeviceArchiveChangeRequestStatus.Approved:
@@ -212,7 +175,6 @@ export class DeviceArchiveReviewService {
 
   static getStatusTone(status: DeviceArchiveChangeRequestStatus): string {
     switch (status) {
-      case DeviceArchiveChangeRequestStatus.PendingSync:
       case DeviceArchiveChangeRequestStatus.PendingReview:
         return AppColors.Warning;
       case DeviceArchiveChangeRequestStatus.Approved:

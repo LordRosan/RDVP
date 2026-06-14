@@ -1,7 +1,6 @@
 import { AppColors } from '../styles/AppTheme';
 import { ApiResponse } from '../models/ApiModels';
 import { FaultSeverity, FaultStatus } from '../models/FaultModels';
-import { OperationRecordType } from '../models/OperationRecordModels';
 import {
   ReinspectionRecord,
   ReinspectionRecordForm,
@@ -12,9 +11,6 @@ import {
   ReinspectionValidationResult
 } from '../models/ReinspectionModels';
 import { ApiClient } from './ApiClient';
-import { LocalOperationRecordRepository } from './LocalOperationRecordRepository';
-import { LocalReinspectionRepository } from './LocalReinspectionRepository';
-import { SessionStore } from '../stores/SessionStore';
 
 const MAX_REINSPECTION_DESCRIPTION_LENGTH = 800;
 
@@ -48,29 +44,7 @@ interface ApiListResult<T> {
 }
 
 export class ReinspectionService {
-  static queryPendingTasks(): ApiResponse<ReinspectionTaskListResult> {
-    if (ApiClient.isOfflineMode()) {
-      return {
-        success: true,
-        data: LocalReinspectionRepository.queryPendingTasks(),
-        requestId: 'local-reinspection-tasks',
-        timestamp: new Date().toISOString()
-      };
-    }
-
-    return ApiClient.createServiceUnavailableResponse<ReinspectionTaskListResult>();
-  }
-
   static async queryPendingTasksRemoteFirst(): Promise<ApiResponse<ReinspectionTaskListResult>> {
-    if (ApiClient.isOfflineMode()) {
-      return {
-        success: true,
-        data: LocalReinspectionRepository.queryPendingTasks(),
-        requestId: 'local-reinspection-tasks',
-        timestamp: new Date().toISOString()
-      };
-    }
-
     if (!ApiClient.isConfigured()) {
       return ApiClient.createServiceUnavailableResponse<ReinspectionTaskListResult>();
     }
@@ -114,7 +88,7 @@ export class ReinspectionService {
     if (!ReinspectionService.isKnownResult(form.result)) {
       return {
         valid: false,
-        message: '请选择复检结论'
+        message: '请选择复检结果'
       };
     }
 
@@ -158,10 +132,6 @@ export class ReinspectionService {
       };
     }
 
-    if (ApiClient.isOfflineMode()) {
-      return ReinspectionService.createLocalRecordResponse(form);
-    }
-
     return ApiClient.createServiceUnavailableResponse<ReinspectionRecord>();
   }
 
@@ -175,10 +145,6 @@ export class ReinspectionService {
           message: validation.message
         }
       };
-    }
-
-    if (ApiClient.isOfflineMode()) {
-      return ReinspectionService.createLocalRecordResponse(form);
     }
 
     if (!ApiClient.isConfigured()) {
@@ -286,28 +252,6 @@ export class ReinspectionService {
 
   private static isKnownResult(result: ReinspectionResult): boolean {
     return result === ReinspectionResult.Passed || result === ReinspectionResult.Failed;
-  }
-
-  private static createLocalRecordResponse(form: ReinspectionRecordForm): ApiResponse<ReinspectionRecord> {
-    const record = LocalReinspectionRepository.submitRecord(form);
-    if (record === undefined) {
-      return {
-        success: false,
-        error: {
-          code: 'REINSPECTION_TASK_NOT_FOUND',
-          message: '复检任务不存在或已完成'
-        }
-      };
-    }
-
-    LocalOperationRecordRepository.append(OperationRecordType.ReinspectionRecord, '提交复检记录', record.recordNo,
-      `复检结论：${ReinspectionService.formatResult(form.result)}`, SessionStore.getCurrentOperatorName());
-    return {
-      success: true,
-      data: record,
-      requestId: 'local-reinspection-record',
-      timestamp: new Date().toISOString()
-    };
   }
 
   private static mapTask(item: ReinspectionTaskApiSummary): ReinspectionTaskSummary {

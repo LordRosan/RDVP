@@ -125,22 +125,55 @@ public class JdbcOperationsRepository implements OperationsRepository {
             BigDecimal longitude,
             BigDecimal latitude,
             int limit) {
-        List<String> conditions = new ArrayList<>();
+        List<String> repairConditions = new ArrayList<>();
         MapSqlParameterSource parameters = new MapSqlParameterSource()
                 .addValue("limit", limit)
                 .addValue("longitude", longitude)
                 .addValue("latitude", latitude)
                 .addValue("radiusMeters", BigDecimal.valueOf(radiusKm).multiply(BigDecimal.valueOf(1000)));
-        conditions.add("f.status = 'PENDING_ACCEPTANCE'");
-        conditions.add("d.deleted_at IS NULL");
+        repairConditions.add("f.status = 'PENDING_ACCEPTANCE'");
+        repairConditions.add("d.deleted_at IS NULL");
         if (severity != null) {
-            conditions.add("f.severity = :severity");
+            repairConditions.add("f.severity = :severity");
             parameters.addValue("severity", severity.name());
         }
+
+        String distanceExpr = """
+                CASE
+                    WHEN :longitude IS NULL OR :latitude IS NULL OR d.longitude IS NULL OR d.latitude IS NULL
+                    THEN NULL
+                    ELSE ROUND((
+                        ST_DistanceSphere(
+                            ST_MakePoint(:longitude, :latitude),
+                            ST_MakePoint(d.longitude, d.latitude)
+                        ) / 1000.0
+                    )::numeric, 2)
+                END AS distance_km
+                """;
+
+        String repairSelect = """
+                SELECT
+                    f.id,
+                    f.fault_report_no,
+                    d.device_code,
+                    d.name AS device_name,
+                    f.fault_type,
+                    f.severity,
+                    %s,
+                    d.address,
+                    d.longitude,
+                    d.latitude,
+                    f.created_at,
+                    'REPAIR' AS task_type
+                FROM fault_reports f
+                JOIN devices d ON d.id = f.device_id
+                """.formatted(distanceExpr);
+
+        List<String> geoConditions = new ArrayList<>();
         if (longitude != null && latitude != null) {
-            conditions.add("d.longitude IS NOT NULL");
-            conditions.add("d.latitude IS NOT NULL");
-            conditions.add("""
+            geoConditions.add("d.longitude IS NOT NULL");
+            geoConditions.add("d.latitude IS NOT NULL");
+            geoConditions.add("""
                     ST_DistanceSphere(
                         ST_MakePoint(:longitude, :latitude),
                         ST_MakePoint(d.longitude, d.latitude)
@@ -148,37 +181,58 @@ public class JdbcOperationsRepository implements OperationsRepository {
                     """);
         }
 
-        return jdbcTemplate.query(
-                """
-                        SELECT
-                            f.id,
-                            f.fault_report_no,
-                            d.device_code,
-                            d.name AS device_name,
-                            f.fault_type,
-                            f.severity,
-                            CASE
-                                WHEN :longitude IS NULL OR :latitude IS NULL OR d.longitude IS NULL OR d.latitude IS NULL
-                                THEN NULL
-                                ELSE ROUND((
-                                    ST_DistanceSphere(
-                                        ST_MakePoint(:longitude, :latitude),
-                                        ST_MakePoint(d.longitude, d.latitude)
-                                    ) / 1000.0
-                                )::numeric, 2)
-                            END AS distance_km,
-                            d.address,
-                            d.longitude,
-                            d.latitude,
-                            f.created_at
-                        FROM fault_reports f
-                        JOIN devices d ON d.id = f.device_id
-                        WHERE %s
-                        ORDER BY distance_km ASC NULLS LAST, f.created_at DESC
-                        LIMIT :limit
-                        """.formatted(String.join(" AND ", conditions)),
-                parameters,
-                this::mapAvailableRepairTask);
+        String repairWhere = " WHERE " + String.join(" AND ", repairConditions);
+        if (!geoConditions.isEmpty()) {
+            repairWhere += " AND " + String.join(" AND ", geoConditions);
+        }
+
+        List<String> reinspectionConditions = new ArrayList<>();
+        reinspectionConditions.add("f2.status = 'PENDING_REINSPECTION'");
+        reinspectionConditions.add("d2.deleted_at IS NULL");
+        reinspectionConditions.add("""
+                NOT EXISTS (
+                    SELECT 1 FROM repair_tasks rt2
+                    WHERE rt2.fault_report_id = f2.id
+                      AND rt2.task_type = 'REINSPECTION'
+                      AND rt2.status IN ('ACCEPTED', 'PROCESSING')
+                )
+                """);
+        if (severity != null) {
+            reinspectionConditions.add("f2.severity = :severity");
+        }
+        if (!geoConditions.isEmpty()) {
+            reinspectionConditions.addAll(geoConditions.stream()
+                    .map(c -> c.replace("d.", "d2."))
+                    .toList());
+        }
+
+        String reinspectionSelect = """
+                SELECT
+                    f2.id,
+                    f2.fault_report_no,
+                    d2.device_code,
+                    d2.name AS device_name,
+                    f2.fault_type,
+                    f2.severity,
+                    %s,
+                    d2.address,
+                    d2.longitude,
+                    d2.latitude,
+                    f2.created_at,
+                    'REINSPECTION' AS task_type
+                FROM fault_reports f2
+                JOIN devices d2 ON d2.id = f2.device_id
+                """.formatted(distanceExpr.replace("d.", "d2."));
+
+        String reinspectionWhere = " WHERE " + String.join(" AND ", reinspectionConditions);
+
+        String sql = repairSelect + repairWhere
+                + " UNION ALL "
+                + reinspectionSelect + reinspectionWhere
+                + " ORDER BY distance_km ASC NULLS LAST, created_at DESC"
+                + " LIMIT :limit";
+
+        return jdbcTemplate.query(sql, parameters, this::mapAvailableRepairTask);
     }
 
     @Override
@@ -211,6 +265,21 @@ public class JdbcOperationsRepository implements OperationsRepository {
     }
 
     @Override
+    public boolean hasActiveReinspectionTaskForFault(String faultReportId) {
+        Integer count = jdbcTemplate.queryForObject(
+                """
+                        SELECT count(*)
+                        FROM repair_tasks
+                        WHERE fault_report_id = :faultReportId
+                          AND task_type = 'REINSPECTION'
+                          AND status IN ('ACCEPTED', 'PROCESSING')
+                        """,
+                Map.of("faultReportId", faultReportId),
+                Integer.class);
+        return count != null && count > 0;
+    }
+
+    @Override
     public int countActiveRepairTasksByMaintainer(String maintainerId) {
         Integer count = jdbcTemplate.queryForObject(
                 """
@@ -234,6 +303,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                             fault_report_id,
                             maintainer_id,
                             status,
+                            task_type,
                             accepted_longitude,
                             accepted_latitude,
                             accepted_at,
@@ -245,6 +315,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                             :faultReportId,
                             :maintainerId,
                             'ACCEPTED',
+                            :taskType,
                             :acceptedLongitude,
                             :acceptedLatitude,
                             :acceptedAt,
@@ -257,6 +328,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                         .addValue("repairTaskNo", create.repairTaskNo())
                         .addValue("faultReportId", create.faultReportId())
                         .addValue("maintainerId", create.maintainerId())
+                        .addValue("taskType", create.taskType() != null ? create.taskType() : "REPAIR")
                         .addValue("acceptedLongitude", create.acceptedLongitude())
                         .addValue("acceptedLatitude", create.acceptedLatitude())
                         .addValue("acceptedAt", create.acceptedAt()));
@@ -470,6 +542,24 @@ public class JdbcOperationsRepository implements OperationsRepository {
     }
 
     @Override
+    public boolean markReinspectionTaskReported(String faultReportId, OffsetDateTime completedAt) {
+        int updated = jdbcTemplate.update(
+                """
+                        UPDATE repair_tasks
+                        SET status = 'REPORT_SUBMITTED',
+                            completed_at = :completedAt,
+                            updated_at = :completedAt
+                        WHERE fault_report_id = :faultReportId
+                          AND task_type = 'REINSPECTION'
+                          AND status IN ('ACCEPTED', 'PROCESSING')
+                        """,
+                new MapSqlParameterSource()
+                        .addValue("faultReportId", faultReportId)
+                        .addValue("completedAt", completedAt));
+        return updated > 0;
+    }
+
+    @Override
     public boolean updateFaultStatusIfCurrent(
             String faultReportId,
             FaultStatus expectedStatus,
@@ -565,7 +655,8 @@ public class JdbcOperationsRepository implements OperationsRepository {
                         resultSet.getBigDecimal("longitude"),
                         resultSet.getBigDecimal("latitude")),
                 resultSet.getObject("created_at", OffsetDateTime.class),
-                RepairTaskStatus.AVAILABLE);
+                RepairTaskStatus.AVAILABLE,
+                resultSet.getString("task_type"));
     }
 
     private MyRepairTaskSummary mapMyRepairTask(ResultSet resultSet, int rowNumber) throws SQLException {

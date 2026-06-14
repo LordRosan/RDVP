@@ -1,5 +1,4 @@
-import { Filter, FilterType } from '@kit.ArkUI';
-import type { FilterParams, FilterResult } from '@kit.ArkUI';
+import { Filter, FilterParams, FilterResult, FilterType } from '@kit.ArkUI';
 import { AppColors } from '../../styles/AppTheme';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { OperationRecordQueryFilter, OperationRecordSummary } from '../../models/OperationRecordModels';
@@ -18,7 +17,6 @@ const OPERATION_ACTION_LABELS: string[] = [
   '维修接取',
   '维修报告',
   '复检记录',
-  '离线同步',
   '登录',
   '密码复核',
   '权限拦截'
@@ -34,7 +32,6 @@ const OPERATION_ACTION_VALUES: string[] = [
   'REPAIR_TASK_ACCEPT',
   'REPAIR_REPORT',
   'REINSPECTION_RECORD',
-  'OFFLINE_SYNC',
   'AUTH_LOGIN',
   'AUTH_PASSWORD_VERIFY',
   'AUTHORIZATION_DENIED'
@@ -75,7 +72,6 @@ struct OperationRecord {
           this.ModeHeader()
           this.FilterPanel()
           this.FilteredRecordListPanel()
-          this.StatusPanel()
         }
         .alignItems(HorizontalAlign.Start)
         .justifyContent(FlexAlign.Start)
@@ -133,22 +129,14 @@ struct OperationRecord {
 
   @Builder
   ModeHeader() {
-    Column({ space: 6 }) {
-      Text('操作记录')
+      Text('记录中心')
         .fontSize(34)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-      Text('查看关键业务流转记录')
-        .fontSize(15)
-        .fontColor(AppColors.TextSecondary)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
     .width('100%')
-    .alignItems(HorizontalAlign.Start)
+    .alignSelf(ItemAlign.Start)
     .padding({
       top: 0,
       bottom: 2
@@ -229,9 +217,12 @@ struct OperationRecord {
       onFilterChanged: (filterResults: FilterResult[]) => {
         this.applyOperationFilterResults(filterResults);
       },
-      filterType: FilterType.MULTI_LINE_FILTER
+      filterType: FilterType.LIST_FILTER
     }) {
-      this.RecordListPanel()
+      Column({ space: 12 }) {
+        this.RecordListPanel()
+        this.StatusPanel()
+      }
     }
   }
 
@@ -375,7 +366,7 @@ struct OperationRecord {
   @Builder
   StatusPanel() {
     Column({ space: 10 }) {
-      Text('查询状态')
+      Text('功能状态')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
@@ -388,12 +379,6 @@ struct OperationRecord {
           label: '刷新状态',
           value: this.message.length > 0 ? '刷新失败' : this.refreshStatus,
           tone: this.message.length > 0 ? AppColors.Danger : AppColors.Success
-        })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '服务模式',
-          value: ApiClient.getRuntimeStatusLabel(),
-          tone: ApiClient.getRuntimeStatusTone()
         })
       }
       .width('100%')
@@ -447,7 +432,7 @@ struct OperationRecord {
 
     if (!response.success) {
       const error = response.error;
-      this.message = error ? error.message : '操作记录刷新失败';
+      this.message = error ? error.message : '记录刷新失败';
       this.refreshStatus = '刷新失败';
       return;
     }
@@ -459,22 +444,25 @@ struct OperationRecord {
     this.refreshStatus = '已刷新';
   }
 
-  applyOperationFilterResults(filterResults: FilterResult[]): void {
-    if (filterResults.length === 0) {
-      this.selectedActionIndex = 0;
-      this.message = '';
-      return;
-    }
+  createCurrentFilter(): OperationRecordQueryFilter {
+    return {
+      action: OPERATION_ACTION_VALUES[this.selectedActionIndex],
+      keyword: this.keyword.trim()
+    };
+  }
 
+  hasActiveFilter(): boolean {
+    return OPERATION_ACTION_VALUES[this.selectedActionIndex].length > 0 || this.keyword.trim().length > 0;
+  }
+
+  applyOperationFilterResults(filterResults: FilterResult[]): void {
     const actionResult = filterResults.find((item: FilterResult) => {
       return item.name === '操作类型';
     });
-    if (actionResult === undefined) {
-      return;
-    }
-
-    this.selectedActionIndex = this.normalizeFilterIndex(actionResult.index, OPERATION_ACTION_VALUES.length);
+    this.selectedActionIndex = actionResult === undefined ? 0 :
+      this.normalizeFilterIndex(actionResult.index, OPERATION_ACTION_VALUES.length);
     this.message = '';
+    this.refreshRecords();
   }
 
   getOperationFilterParams(): FilterParams[] {
@@ -501,17 +489,6 @@ struct OperationRecord {
     }
 
     return Math.floor(index);
-  }
-
-  createCurrentFilter(): OperationRecordQueryFilter {
-    return {
-      action: OPERATION_ACTION_VALUES[this.selectedActionIndex],
-      keyword: this.keyword.trim()
-    };
-  }
-
-  hasActiveFilter(): boolean {
-    return OPERATION_ACTION_VALUES[this.selectedActionIndex].length > 0 || this.keyword.trim().length > 0;
   }
 
   getRecordCountText(): string {

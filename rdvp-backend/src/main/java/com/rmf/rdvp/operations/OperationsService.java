@@ -32,9 +32,10 @@ public class OperationsService {
 
     private static final int DEFAULT_RADIUS_KM = 10;
     private static final int MIN_RADIUS_KM = 1;
-    private static final int IDLE_MAX_RADIUS_KM = 20;
-    private static final int LOW_LOAD_MAX_RADIUS_KM = 10;
-    private static final int MAX_ACTIVE_REPAIR_TASK_COUNT = 2;
+    private static final int IDLE_MAX_RADIUS_KM = 30;
+    private static final int LOW_LOAD_MAX_RADIUS_KM = 20;
+    private static final int MEDIUM_LOAD_MAX_RADIUS_KM = 10;
+    private static final int MAX_ACTIVE_REPAIR_TASK_COUNT = 3;
     private static final int MAX_OPERATION_LIST_ITEMS = 100;
     private static final int MAX_AVAILABLE_REPAIR_TASK_CANDIDATES = 500;
     private static final int MAX_VERIFICATION_DESCRIPTION_LENGTH = 500;
@@ -347,7 +348,8 @@ public class OperationsService {
                 maintainer.id(),
                 normalizedLongitude,
                 normalizedLatitude,
-                now);
+                now,
+                "REPAIR");
         try {
             operationsRepository.createRepairTask(create);
         } catch (DataIntegrityViolationException exception) {
@@ -440,7 +442,7 @@ public class OperationsService {
             throw new BusinessException(ErrorCode.REPAIR_TASK_STATUS_INVALID);
         }
 
-        archiveRepository.updateStatus(task.deviceId(), nextDeviceStatus(nextFaultStatus, normalizedResult), maintainer.id());
+        archiveRepository.updateStatus(task.deviceId(), nextDeviceStatus(nextFaultStatus), maintainer.id());
         RepairReportRecord record = toRecord(create);
         auditLogService.recordSuccess(
                 AuditAction.REPAIR_REPORT,
@@ -454,6 +456,76 @@ public class OperationsService {
     public ReinspectionTaskList listPendingReinspections() {
         var items = operationsRepository.listPendingReinspections(MAX_OPERATION_LIST_ITEMS);
         return new ReinspectionTaskList(items, items.size());
+    }
+
+    @Transactional
+    public RepairTaskAcceptResult acceptReinspectionTask(
+            String faultReportId,
+            BigDecimal longitude,
+            BigDecimal latitude,
+            AuthenticatedUser reinspector) {
+        try {
+            return acceptReinspectionTaskChecked(faultReportId, longitude, latitude, reinspector);
+        } catch (BusinessException exception) {
+            recordReinspectionAcceptFailure(faultReportId, reinspector, exception);
+            throw exception;
+        }
+    }
+
+    private RepairTaskAcceptResult acceptReinspectionTaskChecked(
+            String faultReportId,
+            BigDecimal longitude,
+            BigDecimal latitude,
+            AuthenticatedUser reinspector) {
+        RepairerWorkloadSnapshot workload = currentWorkload(reinspector.id());
+        validateWorkloadForAccept(workload);
+        BigDecimal normalizedLongitude = normalizeRequiredCoordinate(
+                longitude,
+                "longitude",
+                BigDecimal.valueOf(-180),
+                BigDecimal.valueOf(180));
+        BigDecimal normalizedLatitude = normalizeRequiredCoordinate(
+                latitude,
+                "latitude",
+                BigDecimal.valueOf(-90),
+                BigDecimal.valueOf(90));
+
+        String normalizedFaultReportId = normalizeId(faultReportId, "faultReportId");
+        FaultReportRecord faultReport = operationsRepository.findFaultReportByIdOrNo(normalizedFaultReportId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.FAULT_REPORT_NOT_FOUND));
+        if (faultReport.status() != FaultStatus.PENDING_REINSPECTION) {
+            throw new BusinessException(ErrorCode.REINSPECTION_REQUIRED, "Fault is not pending reinspection.");
+        }
+        if (operationsRepository.hasActiveReinspectionTaskForFault(faultReport.id())) {
+            throw new BusinessException(ErrorCode.REINSPECTION_REQUIRED, "An active reinspection task already exists for this fault.");
+        }
+        DeviceArchive device = archiveRepository.findById(faultReport.deviceId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
+        validateRepairTaskDistance(workload, device, normalizedLongitude, normalizedLatitude);
+
+        OffsetDateTime now = now();
+        RepairTaskCreate create = new RepairTaskCreate(
+                "reinspection-task-" + UUID.randomUUID(),
+                newBusinessNo("RDT", now),
+                faultReport.id(),
+                reinspector.id(),
+                normalizedLongitude,
+                normalizedLatitude,
+                now,
+                "REINSPECTION");
+        try {
+            operationsRepository.createRepairTask(create);
+        } catch (DataIntegrityViolationException exception) {
+            throw new BusinessException(ErrorCode.REINSPECTION_REQUIRED, "Failed to create reinspection task.");
+        }
+
+        auditLogService.recordSuccess(
+                AuditAction.REPAIR_TASK_ACCEPT,
+                create.id(),
+                create.repairTaskNo(),
+                reinspector,
+                "Accepted reinspection task.");
+        return new RepairTaskAcceptResult(create.id(), faultReport.id(), RepairTaskStatus.ACCEPTED, create.acceptedAt());
     }
 
     @Transactional
@@ -619,6 +691,19 @@ public class OperationsService {
                 "复检记录提交失败：%s。".formatted(exception.getErrorCode().code()));
     }
 
+    private void recordReinspectionAcceptFailure(
+            String faultReportId,
+            AuthenticatedUser reinspector,
+            BusinessException exception) {
+        String normalizedFaultReportId = normalizeAuditTarget(faultReportId);
+        auditLogService.recordFailure(
+                AuditAction.REPAIR_TASK_ACCEPT,
+                normalizedFaultReportId,
+                resolveFaultReportTargetNo(normalizedFaultReportId),
+                reinspector,
+                "复检任务接取失败：%s。".formatted(exception.getErrorCode().code()));
+    }
+
     private RepairerWorkloadSnapshot currentWorkload(String maintainerId) {
         return createWorkloadSnapshot(operationsRepository.countActiveRepairTasksByMaintainer(maintainerId));
     }
@@ -636,14 +721,25 @@ public class OperationsService {
                     false);
         }
 
-        if (normalizedCount > 0) {
+        if (normalizedCount == 2) {
+            return new RepairerWorkloadSnapshot(
+                    RepairerWorkloadStatus.MEDIUM_LOAD,
+                    normalizedCount,
+                    MAX_ACTIVE_REPAIR_TASK_COUNT,
+                    MEDIUM_LOAD_MAX_RADIUS_KM,
+                    MEDIUM_LOAD_MAX_RADIUS_KM,
+                    "当前已有2个进行中的维修任务，系统已限制可接取范围。请优先处理已接取任务。",
+                    true);
+        }
+
+        if (normalizedCount == 1) {
             return new RepairerWorkloadSnapshot(
                     RepairerWorkloadStatus.LOW_LOAD,
                     normalizedCount,
                     MAX_ACTIVE_REPAIR_TASK_COUNT,
                     LOW_LOAD_MAX_RADIUS_KM,
                     LOW_LOAD_MAX_RADIUS_KM,
-                    "当前已有进行中的维修任务，系统已限制可接取范围。请优先处理已接取任务。",
+                    "当前已有1个进行中的维修任务，系统已限制可接取范围。请优先处理已接取任务。",
                     true);
         }
 
@@ -694,7 +790,7 @@ public class OperationsService {
 
     private int normalizeRadiusKm(int radiusKm) {
         if (radiusKm < MIN_RADIUS_KM || radiusKm > IDLE_MAX_RADIUS_KM) {
-            throw new BusinessException(ErrorCode.REPAIR_TASK_RADIUS_INVALID, "查询范围必须在1到20公里之间。");
+            throw new BusinessException(ErrorCode.REPAIR_TASK_RADIUS_INVALID, "查询范围必须在1到30公里之间。");
         }
 
         return radiusKm;
@@ -872,30 +968,49 @@ public class OperationsService {
         return value;
     }
 
+    private boolean isHighSeverity(FaultSeverity severity) {
+        return severity == FaultSeverity.EMERGENCY || severity == FaultSeverity.SEVERE;
+    }
+
     private boolean requiresReinspection(FaultSeverity severity, RepairReportResult result) {
-        return result != RepairReportResult.UNRESOLVED && (severity == FaultSeverity.EMERGENCY || severity == FaultSeverity.SEVERE);
+        if (result == RepairReportResult.UNRESOLVED) {
+            return false;
+        }
+
+        if (result == RepairReportResult.TEMPORARY_RESTORED) {
+            return !isHighSeverity(severity);
+        }
+
+        return result == RepairReportResult.REPAIRED && isHighSeverity(severity);
     }
 
     private FaultStatus nextFaultStatus(FaultSeverity severity, RepairReportResult result) {
-        if (result == RepairReportResult.UNRESOLVED) {
-            return FaultStatus.UNDER_REPAIR;
+        if (result == RepairReportResult.UNRESOLVED
+                || (result == RepairReportResult.TEMPORARY_RESTORED && isHighSeverity(severity))) {
+            return FaultStatus.PENDING_ACCEPTANCE;
         }
 
-        return requiresReinspection(severity, result) ? FaultStatus.PENDING_REINSPECTION : FaultStatus.CLOSED;
+        if (requiresReinspection(severity, result)) {
+            return FaultStatus.PENDING_REINSPECTION;
+        }
+
+        return FaultStatus.CLOSED;
     }
 
-    private String nextDeviceStatus(FaultStatus nextFaultStatus, RepairReportResult result) {
-        if (result == RepairReportResult.UNRESOLVED) {
-            return "UNDER_REPAIR";
-        }
-
-        return nextFaultStatus == FaultStatus.PENDING_REINSPECTION ? "PENDING_REINSPECTION" : "NORMAL";
+    private String nextDeviceStatus(FaultStatus nextFaultStatus) {
+        return switch (nextFaultStatus) {
+            case PENDING_ACCEPTANCE -> "FAULTED";
+            case PENDING_REINSPECTION -> "PENDING_REINSPECTION";
+            case CLOSED -> "NORMAL";
+            default -> "NORMAL";
+        };
     }
 
     private String formatWorkloadStatus(RepairerWorkloadStatus status) {
         return switch (status) {
             case IDLE -> "空闲";
             case LOW_LOAD -> "低负载";
+            case MEDIUM_LOAD -> "中负载";
             case BUSY -> "忙碌";
         };
     }

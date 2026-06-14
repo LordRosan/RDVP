@@ -10,15 +10,33 @@ export class DeviceArchiveFlowStore {
   private static pendingDraft?: DeviceArchiveChangeDraft = undefined;
   private static pendingRequestStatus: DeviceArchiveChangeRequestStatus = DeviceArchiveChangeRequestStatus.PendingReview;
 
+  private static readonly DEVICE_CODE_STORAGE_KEY = 'rdvp_archive_current_device_code';
+
   static startFlow(device: DeviceSummary): void {
     DeviceArchiveFlowStore.currentDevice = device;
     DeviceArchiveFlowStore.draft = undefined;
     DeviceArchiveFlowStore.pendingDraft = undefined;
     DeviceArchiveFlowStore.pendingRequestStatus = DeviceArchiveChangeRequestStatus.PendingReview;
+    try {
+      AppStorage.setOrCreate<string>(DeviceArchiveFlowStore.DEVICE_CODE_STORAGE_KEY, device.deviceCode);
+    } catch (err) {
+    }
   }
 
   static getCurrentDevice(): DeviceSummary | undefined {
     return DeviceArchiveFlowStore.currentDevice;
+  }
+
+  static getLastDeviceCode(): string {
+    try {
+      const code = AppStorage.get<string>(DeviceArchiveFlowStore.DEVICE_CODE_STORAGE_KEY);
+      if (code !== undefined && code.trim().length > 0) {
+        return code.trim();
+      }
+    } catch (err) {
+    }
+
+    return '';
   }
 
   static getDraft(): DeviceArchiveChangeDraft | undefined {
@@ -113,5 +131,9 @@ export class DeviceArchiveFlowStore {
     DeviceArchiveFlowStore.draft = undefined;
     DeviceArchiveFlowStore.pendingDraft = undefined;
     DeviceArchiveFlowStore.pendingRequestStatus = DeviceArchiveChangeRequestStatus.PendingReview;
+    try {
+      AppStorage.setOrCreate<string>(DeviceArchiveFlowStore.DEVICE_CODE_STORAGE_KEY, '');
+    } catch (err) {
+    }
   }
 }

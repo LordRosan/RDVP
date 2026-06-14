@@ -3,8 +3,9 @@ import { FaultSeverity, FaultType } from './FaultModels';
 export enum RepairerWorkloadStatus {
   Idle = 'IDLE',
   LowLoad = 'LOW_LOAD',
+  MediumLoad = 'MEDIUM_LOAD',
   Busy = 'BUSY',
-  Offline = 'OFFLINE'
+  Unavailable = 'UNAVAILABLE'
 }
 
 export enum RepairTaskStatus {
@@ -53,6 +54,7 @@ export interface AvailableRepairTaskSummary {
   location: string;
   submittedAt: string;
   status: RepairTaskStatus;
+  taskType: string;
 }
 
 export interface AvailableRepairTaskListResult {

@@ -1,5 +1,7 @@
 package com.rmf.rdvp.api.archive;
 
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -70,6 +72,7 @@ public class DeviceChangeRequestController {
                 requestBody.deviceCode(),
                 requestBody.reason(),
                 toDomainChanges(requestBody.changes()),
+                parseInitiatedAt(requestBody.initiatedAt()),
                 user);
         return ResponseEntity.ok(ApiResponse.success(DeviceChangeCreateResponse.from(created), RequestIds.resolve(request)));
     }
@@ -161,5 +164,17 @@ public class DeviceChangeRequestController {
 
     private String normalizeAuditText(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private OffsetDateTime parseInitiatedAt(String initiatedAt) {
+        if (initiatedAt == null || initiatedAt.isBlank()) {
+            return null;
+        }
+
+        try {
+            return OffsetDateTime.parse(initiatedAt.trim()).withOffsetSameInstant(ZoneOffset.UTC);
+        } catch (RuntimeException exception) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "initiatedAt is invalid.");
+        }
     }
 }

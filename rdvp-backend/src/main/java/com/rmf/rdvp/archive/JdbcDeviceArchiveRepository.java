@@ -103,6 +103,7 @@ public class JdbcDeviceArchiveRepository implements DeviceArchiveRepository {
                         SELECT count(*)
                         FROM devices
                         WHERE device_code = :deviceCode
+                          AND deleted_at IS NULL
                         """,
                 Map.of("deviceCode", deviceCode),
                 Integer.class);

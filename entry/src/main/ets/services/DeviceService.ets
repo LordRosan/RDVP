@@ -1,6 +1,6 @@
 import { AppColors } from '../styles/AppTheme';
 import { ApiClient } from './ApiClient';
-import { ApiErrorCode, ApiResponse } from '../models/ApiModels';
+import { ApiResponse } from '../models/ApiModels';
 import {
   DeviceCodeQueryForm,
   DeviceCodeValidationResult,
@@ -9,7 +9,6 @@ import {
   DeviceQrValidationResult,
   DeviceSummary
 } from '../models/DeviceModels';
-import { LocalDeviceArchiveRepository } from './LocalDeviceArchiveRepository';
 
 interface QrVerifyApiResult {
   valid: boolean;
@@ -85,26 +84,6 @@ export class DeviceService {
     };
   }
 
-  static queryByCode(form: DeviceCodeQueryForm): ApiResponse<DeviceSummary> {
-    const validation = DeviceService.validateDeviceCodeQuery(form);
-
-    if (!validation.valid) {
-      return {
-        success: false,
-        error: {
-          code: 'DEVICE_CODE_INVALID',
-          message: validation.message
-        }
-      };
-    }
-
-    if (ApiClient.isOfflineMode()) {
-      return DeviceService.queryLocalArchiveByCode(form.deviceCode);
-    }
-
-    return ApiClient.createServiceUnavailableResponse<DeviceSummary>();
-  }
-
   static async queryByCodeRemoteFirst(form: DeviceCodeQueryForm): Promise<ApiResponse<DeviceSummary>> {
     const validation = DeviceService.validateDeviceCodeQuery(form);
 
@@ -118,36 +97,12 @@ export class DeviceService {
       };
     }
 
-    if (ApiClient.isOfflineMode()) {
-      return DeviceService.queryLocalArchiveByCode(form.deviceCode);
-    }
-
     if (!ApiClient.isConfigured()) {
       return ApiClient.createServiceUnavailableResponse<DeviceSummary>();
     }
 
     const deviceCode = encodeURIComponent(DeviceService.normalizeDeviceCode(form.deviceCode));
     return ApiClient.request<DeviceSummary>(`/api/v1/devices/by-code/${deviceCode}`, 'GET', true);
-  }
-
-  static queryByQrContent(form: DeviceQrQueryForm): ApiResponse<DeviceSummary> {
-    const validation = DeviceService.validateQrQuery(form);
-
-    if (!validation.valid) {
-      return {
-        success: false,
-        error: {
-          code: 'QR_CODE_INVALID',
-          message: validation.message
-        }
-      };
-    }
-
-    if (ApiClient.isOfflineMode()) {
-      return DeviceService.queryLocalArchiveByQrContent(form.qrContent);
-    }
-
-    return ApiClient.createServiceUnavailableResponse<DeviceSummary>();
   }
 
   static async queryByQrContentRemoteFirst(form: DeviceQrQueryForm): Promise<ApiResponse<DeviceSummary>> {
@@ -161,10 +116,6 @@ export class DeviceService {
           message: validation.message
         }
       };
-    }
-
-    if (ApiClient.isOfflineMode()) {
-      return DeviceService.queryLocalArchiveByQrContent(form.qrContent);
     }
 
     if (!ApiClient.isConfigured()) {
@@ -297,18 +248,18 @@ export class DeviceService {
   static formatArchiveChangeLockReason(device: DeviceSummary): string {
     const changeState = device.changeState;
     if (changeState === undefined) {
-      return '可申请变更';
+      return '可申请修改';
     }
 
     if (changeState.locked) {
-      return '存在待审核变更，暂不可再次修改';
+      return '存在待审核修改，暂不可再次修改';
     }
 
     if (DeviceService.isArchiveChangeLocked(device) && changeState.freezeUntil !== undefined) {
-      return `变更冻结中，${DeviceService.formatTimestampForDisplay(changeState.freezeUntil)} 后可再次修改`;
+      return `修改冻结中，${DeviceService.formatTimestampForDisplay(changeState.freezeUntil)} 后可再次修改`;
     }
 
-    return '可申请变更';
+    return '可申请修改';
   }
 
   static formatTimestampForDisplay(value?: string): string {
@@ -324,45 +275,6 @@ export class DeviceService {
     const date = new Date(timestamp);
     return `${date.getFullYear()}-${DeviceService.pad2(date.getMonth() + 1)}-${DeviceService.pad2(
       date.getDate())} ${DeviceService.pad2(date.getHours())}:${DeviceService.pad2(date.getMinutes())}`;
-  }
-
-  private static queryLocalArchiveByCode(deviceCode: string): ApiResponse<DeviceSummary> {
-    const device = LocalDeviceArchiveRepository.findByCode(deviceCode);
-    if (device === undefined) {
-      return {
-        success: false,
-        error: {
-          code: ApiErrorCode.NotFound,
-          message: '未找到设备档案'
-        }
-      };
-    }
-
-    return DeviceService.createLocalArchiveResponse(device);
-  }
-
-  private static queryLocalArchiveByQrContent(qrContent: string): ApiResponse<DeviceSummary> {
-    const device = LocalDeviceArchiveRepository.findByQrContent(qrContent);
-    if (device === undefined) {
-      return {
-        success: false,
-        error: {
-          code: 'QR_DEVICE_NOT_FOUND',
-          message: '二维码未关联设备档案'
-        }
-      };
-    }
-
-    return DeviceService.createLocalArchiveResponse(device);
-  }
-
-  private static createLocalArchiveResponse(device: DeviceSummary): ApiResponse<DeviceSummary> {
-    return {
-      success: true,
-      data: device,
-      requestId: 'local-device-archive',
-      timestamp: new Date().toISOString()
-    };
   }
 
   private static pad2(value: number): string {

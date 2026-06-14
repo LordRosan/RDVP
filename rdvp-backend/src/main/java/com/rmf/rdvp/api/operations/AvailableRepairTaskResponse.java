@@ -15,7 +15,8 @@ public record AvailableRepairTaskResponse(
         BigDecimal distanceKm,
         DeviceLocationResponse location,
         String submittedAt,
-        String status) {
+        String status,
+        String taskType) {
 
     public static AvailableRepairTaskResponse from(AvailableRepairTaskSummary item) {
         return new AvailableRepairTaskResponse(
@@ -29,7 +30,8 @@ public record AvailableRepairTaskResponse(
                 item.distanceKm(),
                 DeviceLocationResponse.from(item.location()),
                 item.submittedAt().toString(),
-                item.status().name());
+                item.status().name(),
+                item.taskType());
     }
 
     public record DeviceLocationResponse(

@@ -98,22 +98,13 @@ struct ArchiveCenter {
   @Builder
   ModeHeader() {
     Row({ space: 16 }) {
-      Column({ space: 6 }) {
-        Text('档案中心')
-          .fontSize(34)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TextPrimary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-        Text('查询设备档案并从详情发起变更')
-          .fontSize(15)
-          .fontColor(AppColors.TextSecondary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      }
+      Text('档案中心')
+        .fontSize(34)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
       .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start)
     }
     .width('100%')
     .alignItems(VerticalAlign.Center)
@@ -131,15 +122,9 @@ struct ArchiveCenter {
 
       Column() {
         StatusInfoRow({
-          label: '档案权限',
+          label: '功能权限',
           value: this.getArchivePermissionText(),
           tone: this.getArchivePermissionTone()
-        })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '服务模式',
-          value: ApiClient.getRuntimeStatusLabel(),
-          tone: ApiClient.getRuntimeStatusTone()
         })
       }
       .width('100%')
@@ -212,12 +197,24 @@ struct ArchiveCenter {
       return '-';
     }
 
-    if (SessionStore.hasPermission(PermissionCode.ArchiveDeviceCreate) ||
-      SessionStore.hasPermission(PermissionCode.ArchiveDeviceDelete)) {
-      return '可管理档案';
+    const permissions: string[] = [];
+    if (SessionStore.hasPermission(PermissionCode.ArchiveDeviceRead)) {
+      permissions.push('可查询');
     }
 
-    return SessionStore.hasPermission(PermissionCode.ArchiveChangeRequestCreate) ? '可申请变更' : '仅查询';
+    if (SessionStore.hasPermission(PermissionCode.ArchiveChangeRequestCreate)) {
+      permissions.push('可修改');
+    }
+
+    if (SessionStore.hasPermission(PermissionCode.ArchiveDeviceDelete)) {
+      permissions.push('可删除');
+    }
+
+    if (SessionStore.hasPermission(PermissionCode.ArchiveDeviceCreate)) {
+      permissions.push('可添加');
+    }
+
+    return permissions.length > 0 ? permissions.join('、') : '仅查询';
   }
 
   getArchivePermissionTone(): string {
@@ -241,7 +238,7 @@ struct ArchiveCenter {
 
     if (action.id === WorkbenchActionId.DeviceArchiveCreate) {
       try {
-        this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveCreate' });
+        this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveCodeVerify' });
       } catch (err) {
         this.message = '添加设备档案不可用';
         this.messageTargetId = `${action.id}`;

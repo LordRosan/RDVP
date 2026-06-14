@@ -3,8 +3,6 @@ import { ActionTile } from '../components/ActionTile';
 import { MetricTile } from '../components/MetricTile';
 import { WorkbenchAction, WorkbenchActionId, WorkbenchMetric, WorkbenchStatusItem } from '../models/WorkbenchModels';
 import { CurrentUserSnapshot } from '../models/SessionModels';
-import { OfflineSyncProcessorService } from '../services/OfflineSyncProcessorService';
-import { OfflineSyncService } from '../services/OfflineSyncService';
 import { WorkbenchService } from '../services/WorkbenchService';
 import { SessionStore } from '../stores/SessionStore';
 
@@ -38,14 +36,9 @@ struct Workbench {
 
   refreshWorkbenchState(): void {
     this.applyWorkbenchState();
-    this.runAutoSyncIfEnabled().then(() => {
-      return WorkbenchService.refreshSummaryRemoteFirst();
-    }).then(() => {
+    WorkbenchService.refreshSummaryRemoteFirst().then(() => {
       this.applyWorkbenchState();
     }).catch(() => {
-      WorkbenchService.refreshSummaryRemoteFirst().then(() => {
-        this.applyWorkbenchState();
-      });
     });
   }
 
@@ -54,29 +47,6 @@ struct Workbench {
     this.actions = WorkbenchService.getActions();
     this.statusItems = WorkbenchService.getStatusItems();
     this.currentUser = SessionStore.getCurrentUser();
-  }
-
-  async runAutoSyncIfEnabled(): Promise<void> {
-    if (!OfflineSyncService.isAutoSyncEnabled()) {
-      return;
-    }
-
-    try {
-      const result = await OfflineSyncProcessorService.syncReadyItems(
-        OfflineSyncService.getAutoSyncBatchLimit(),
-        false
-      );
-      OfflineSyncService.recordAutoSyncResult(result);
-    } catch (err) {
-      OfflineSyncService.recordAutoSyncResult({
-        processedCount: 0,
-        syncedCount: 0,
-        failedCount: 1,
-        skippedCount: 0,
-        message: '自动同步执行失败',
-        itemResults: []
-      });
-    }
   }
 
   build() {
@@ -105,21 +75,12 @@ struct Workbench {
   Header() {
     Column({ space: 16 }) {
       Row() {
-        Column({ space: 4 }) {
-          Text('RDVP')
-            .fontSize(30)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(AppColors.TextPrimary)
-            .maxLines(1)
-
-          Text('远程设备核验与运维报告系统')
-            .fontSize(13)
-            .fontColor(AppColors.TextSecondary)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-        .layoutWeight(1)
-        .alignItems(HorizontalAlign.Start)
+        Text('RDVP')
+          .fontSize(30)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(AppColors.TextPrimary)
+          .maxLines(1)
+          .layoutWeight(1)
 
         Column({ space: 6 }) {
           this.PersonalCenterMessageText()
@@ -325,16 +286,6 @@ struct Workbench {
         this.getUIContext().getRouter().pushUrl({ url: 'pages/OperationsCenter/OperationsCenter' });
       } catch (err) {
         this.actionMessage = '运维中心不可用';
-        this.actionMessageTargetId = `${action.id}`;
-      }
-      return;
-    }
-
-    if (action.id === WorkbenchActionId.SyncCenter) {
-      try {
-        this.getUIContext().getRouter().pushUrl({ url: 'pages/SyncCenter/SyncCenter' });
-      } catch (err) {
-        this.actionMessage = '同步中心不可用';
         this.actionMessageTargetId = `${action.id}`;
       }
       return;

@@ -395,7 +395,7 @@ struct DeviceArchiveQuery {
   @Builder
   ResultPanel() {
     Column({ space: 10 }) {
-      Text('查询状态')
+      Text('功能状态')
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
@@ -403,14 +403,6 @@ struct DeviceArchiveQuery {
 
       Column() {
         this.QueryMethodStatusRow()
-        this.CardDivider()
-        this.QueryValueStatusRow()
-        this.CardDivider()
-        StatusInfoRow({
-          label: '服务模式',
-          value: ApiClient.getRuntimeStatusLabel(),
-          tone: ApiClient.getRuntimeStatusTone()
-        })
       }
       .width('100%')
       .backgroundColor(AppColors.Surface)
@@ -432,34 +424,6 @@ struct DeviceArchiveQuery {
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
       Text(this.queryMode === DeviceQueryMode.Code ? '设备编号' : '二维码')
-        .fontSize(15)
-        .fontColor(AppColors.TextSecondary)
-        .fontWeight(FontWeight.Medium)
-        .textAlign(TextAlign.End)
-        .width('58%')
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
-    .height(54)
-    .padding({
-      left: 18,
-      right: 18
-    })
-    .width('100%')
-  }
-
-  @Builder
-  QueryValueStatusRow() {
-    Row() {
-      Text(this.queryMode === DeviceQueryMode.Code ? '标准编号' : '二维码摘要')
-        .fontSize(15)
-        .fontColor(AppColors.TextPrimary)
-        .fontWeight(FontWeight.Medium)
-        .layoutWeight(1)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-      Text(this.queryMode === DeviceQueryMode.Code ? this.normalizedDeviceCode : this.getQrPreview())
         .fontSize(15)
         .fontColor(AppColors.TextSecondary)
         .fontWeight(FontWeight.Medium)
@@ -673,14 +637,6 @@ struct DeviceArchiveQuery {
     }
 
     return '二维码内容无效';
-  }
-
-  getQrPreview(): string {
-    if (this.qrContent.length === 0) {
-      return '-';
-    }
-
-    return this.getQrDeviceCodeDisplay();
   }
 
   getQrDeviceCodeDisplay(): string {
