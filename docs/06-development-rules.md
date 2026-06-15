@@ -49,7 +49,7 @@ RDVP/
 
 - 设备：`device`
 - 设备核验：`device verification`
-- 设备信息变更申请：`device change request`
+- 设备档案变更申请：`device archive change request`
 - 故障报告：`fault report`
 - 维修任务：`repair task`
 - 维修报告：`repair report`

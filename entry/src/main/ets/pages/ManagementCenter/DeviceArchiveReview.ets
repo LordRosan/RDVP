@@ -36,7 +36,7 @@ struct DeviceArchiveReview {
   @State submitting: boolean = false;
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.MgmtArchiveChangeReview)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.MgmtDeviceArchiveChangeRequestReview)) {
       return;
     }
 
@@ -783,7 +783,7 @@ struct DeviceArchiveReview {
   }
 
   canReview(): boolean {
-    return SessionStore.hasPermission(PermissionCode.MgmtArchiveChangeReview);
+    return SessionStore.hasPermission(PermissionCode.MgmtDeviceArchiveChangeRequestReview);
   }
 
   hasRequest(requestId: string): boolean {

@@ -2,14 +2,13 @@ export enum WorkbenchActionId {
   ArchiveCenter = 'ARCHIVE_CENTER',
   OperationsCenter = 'OPERATIONS_CENTER',
   ManagementCenter = 'MANAGEMENT_CENTER',
-  DeviceQuery = 'DEVICE_QUERY',
+  DeviceArchiveQuery = 'DEVICE_ARCHIVE_QUERY',
   DeviceArchiveCreate = 'DEVICE_ARCHIVE_CREATE',
   DeviceVerification = 'DEVICE_VERIFICATION',
-  AvailableRepairTask = 'AVAILABLE_REPAIR_TASK',
-  MyRepairTask = 'MY_REPAIR_TASK',
+  RepairTaskPool = 'REPAIR_TASK_POOL',
+  AcceptedRepairTask = 'ACCEPTED_REPAIR_TASK',
   ReinspectionTask = 'REINSPECTION_TASK',
-  DeviceChangeReview = 'DEVICE_CHANGE_REVIEW',
-  OperationRecord = 'OPERATION_RECORD',
+  DeviceArchiveReview = 'DEVICE_ARCHIVE_REVIEW',
   ArchiveRecord = 'ARCHIVE_RECORD',
   OperationsRecord = 'OPERATIONS_RECORD',
   ReviewRecord = 'REVIEW_RECORD',
@@ -38,8 +37,8 @@ export interface WorkbenchStatusItem {
 }
 
 export interface WorkbenchSummary {
-  pendingChangeRequests: number;
-  availableRepairTasks: number;
-  activeRepairTasks: number;
+  pendingDeviceArchiveChangeRequests: number;
+  repairTaskPoolItems: number;
+  acceptedRepairTasks: number;
   pendingReinspections: number;
 }

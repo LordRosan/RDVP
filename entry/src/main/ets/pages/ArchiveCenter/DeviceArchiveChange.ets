@@ -36,7 +36,7 @@ struct DeviceArchiveChange {
   private baseline?: DeviceArchiveChangeBaseline = undefined;
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveChangeRequestCreate)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveDeviceChangeRequestCreate)) {
       return;
     }
 

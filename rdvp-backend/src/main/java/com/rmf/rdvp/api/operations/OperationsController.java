@@ -56,22 +56,22 @@ public class OperationsController {
         return ResponseEntity.ok(ApiResponse.success(FaultReportResponse.from(result), RequestIds.resolve(request)));
     }
 
-    @GetMapping("/repair-tasks/available")
+    @GetMapping("/repair-tasks/pool")
     @PreAuthorize("hasAuthority('OPS_REPAIR_TASK_ACCEPT')")
-    public ResponseEntity<ApiResponse<AvailableRepairTaskListResponse>> listAvailableRepairTasks(
+    public ResponseEntity<ApiResponse<RepairTaskPoolListResponse>> listRepairTaskPool(
             @RequestParam(defaultValue = "10") int radiusKm,
             @RequestParam(required = false) String severity,
             @RequestParam(required = false) BigDecimal longitude,
             @RequestParam(required = false) BigDecimal latitude,
             @AuthenticationPrincipal AuthenticatedUser user,
             HttpServletRequest request) {
-        var result = operationsService.listAvailableRepairTasks(
+        var result = operationsService.listRepairTaskPool(
                 radiusKm,
                 severity == null || severity.isBlank() ? null : parseEnum(FaultSeverity.class, severity, "severity"),
                 longitude,
                 latitude,
                 user);
-        return ResponseEntity.ok(ApiResponse.success(AvailableRepairTaskListResponse.from(result), RequestIds.resolve(request)));
+        return ResponseEntity.ok(ApiResponse.success(RepairTaskPoolListResponse.from(result), RequestIds.resolve(request)));
     }
 
     @PostMapping("/fault-reports/{faultReportId}/accept")
@@ -89,13 +89,13 @@ public class OperationsController {
         return ResponseEntity.ok(ApiResponse.success(RepairTaskAcceptResponse.from(result), RequestIds.resolve(request)));
     }
 
-    @GetMapping("/repair-tasks/my")
+    @GetMapping("/repair-tasks/accepted")
     @PreAuthorize("hasAuthority('OPS_REPAIR_REPORT_CREATE')")
-    public ResponseEntity<ApiResponse<MyRepairTaskListResponse>> listMyRepairTasks(
+    public ResponseEntity<ApiResponse<AcceptedRepairTaskListResponse>> listAcceptedRepairTasks(
             @AuthenticationPrincipal AuthenticatedUser user,
             HttpServletRequest request) {
-        var result = operationsService.listMyRepairTasks(user);
-        return ResponseEntity.ok(ApiResponse.success(MyRepairTaskListResponse.from(result), RequestIds.resolve(request)));
+        var result = operationsService.listAcceptedRepairTasks(user);
+        return ResponseEntity.ok(ApiResponse.success(AcceptedRepairTaskListResponse.from(result), RequestIds.resolve(request)));
     }
 
     @PostMapping("/repair-tasks/{repairTaskId}/repair-reports")

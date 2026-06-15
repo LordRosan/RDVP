@@ -1,6 +1,7 @@
 import { AppColors } from '../../styles/AppTheme';
 import { CurrentUserSnapshot } from '../../models/SessionModels';
 import { SessionStore } from '../../stores/SessionStore';
+import { HeaderCircleButton } from '../../components/HeaderCircleButton';
 
 @Entry
 @Component
@@ -85,20 +86,11 @@ struct PersonalCenter {
 
   @Builder
   SettingsButton() {
-    Button({ type: ButtonType.Circle, stateEffect: true }) {
-      SymbolGlyph($r('sys.symbol.gearshape'))
-        .fontSize(31)
-        .fontColor([AppColors.TextPrimary])
-    }
-    .width(58)
-    .height(58)
-    .backgroundColor(AppColors.Surface)
-    .border({
-      width: 1,
-      color: AppColors.Divider
-    })
-    .onClick(() => {
-      this.openApplicationSettings();
+    HeaderCircleButton({
+      icon: $r('sys.symbol.gearshape'),
+      action: () => {
+        this.openApplicationSettings();
+      }
     })
   }
 
@@ -159,7 +151,7 @@ struct PersonalCenter {
       .width('100%')
       .alignItems(VerticalAlign.Center)
 
-      this.InfoRow('角色权限', this.currentUser.roleName, AppColors.TextSecondary)
+      this.InfoRow('用户权限', this.currentUser.roleName, AppColors.TextSecondary)
     }
     .padding(18)
     .width('100%')
@@ -198,10 +190,6 @@ struct PersonalCenter {
   @Builder
   ActionPanel() {
     Column({ space: 12 }) {
-      this.SecondaryButton('返回主界面', $r('sys.symbol.chevron_backward'), () => {
-        this.backToWorkbench();
-      })
-
       this.SettingsMessageText()
       this.LogoutActionMessageText()
       this.DangerButton('退出登录', $r('sys.symbol.person_badge_nosign'), () => {

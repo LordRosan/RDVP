@@ -128,9 +128,9 @@ export class RecordCenterService {
 
   static formatTypeLabel(action: string): string {
     switch (action) {
-      case 'DEVICE_CHANGE_REQUEST':
+      case 'DEVICE_ARCHIVE_CHANGE_REQUEST':
         return '档案变更';
-      case 'DEVICE_CHANGE_REVIEW':
+      case 'DEVICE_ARCHIVE_REVIEW':
         return '档案审核';
       case 'CREATE':
         return '添加档案';
@@ -162,10 +162,29 @@ export class RecordCenterService {
       deviceCode: item.deviceCode ?? '-',
       taskNo: item.taskNo ?? '-',
       operatorName: item.operatorName ?? '-',
-      occurredAt: item.occurredAt,
+      occurredAt: RecordCenterService.formatTimestampForDisplay(item.occurredAt),
       status: item.businessStatus,
       statusLabel: RecordCenterService.formatStatus(item.businessStatus),
       description: item.description
     };
+  }
+
+  private static formatTimestampForDisplay(value: string): string {
+    const normalized = value.trim();
+    if (normalized.length === 0) {
+      return '-';
+    }
+
+    const date = new Date(normalized);
+    if (Number.isNaN(date.getTime())) {
+      return normalized.replace('T', ' ').replace('Z', '').split('.')[0];
+    }
+
+    return `${date.getFullYear()}-${RecordCenterService.pad2(date.getMonth() + 1)}-${RecordCenterService.pad2(date.getDate())} ` +
+      `${RecordCenterService.pad2(date.getHours())}:${RecordCenterService.pad2(date.getMinutes())}:${RecordCenterService.pad2(date.getSeconds())}`;
+  }
+
+  private static pad2(value: number): string {
+    return value < 10 ? `0${value}` : `${value}`;
   }
 }

@@ -28,16 +28,16 @@ export class WorkbenchService {
       metrics.push({
         id: 'archiveCenter',
         label: '档案中心',
-        value: WorkbenchService.canReviewDeviceChange() ? `${summary.pendingChangeRequests}` : '可用',
-        status: WorkbenchService.canReviewDeviceChange() ? '待审核变更' : '档案查询',
+        value: WorkbenchService.canReviewDeviceArchiveChange() ? `${summary.pendingDeviceArchiveChangeRequests}` : '可用',
+        status: WorkbenchService.canReviewDeviceArchiveChange() ? '待审核变更' : '档案查询',
         tone: AppColors.Primary
       });
     }
 
     if (WorkbenchService.canAccessOperationsCenter()) {
       const visibleTaskCount =
-        (SessionStore.hasPermission(PermissionCode.OpsRepairTaskAccept) ? summary.availableRepairTasks : 0) +
-        (SessionStore.hasPermission(PermissionCode.OpsRepairReportCreate) ? summary.activeRepairTasks : 0) +
+        (SessionStore.hasPermission(PermissionCode.OpsRepairTaskAccept) ? summary.repairTaskPoolItems : 0) +
+        (SessionStore.hasPermission(PermissionCode.OpsRepairReportCreate) ? summary.acceptedRepairTasks : 0) +
         (SessionStore.hasPermission(PermissionCode.OpsReinspectionCreate) ? summary.pendingReinspections : 0);
       metrics.push({
         id: 'operationsCenter',
@@ -52,8 +52,8 @@ export class WorkbenchService {
       metrics.push({
         id: 'managementCenter',
         label: '管理中心',
-        value: WorkbenchService.canReviewDeviceChange() ? `${summary.pendingChangeRequests}` : '可用',
-        status: WorkbenchService.canReviewDeviceChange() ? '待审核事项' : '操作审计',
+        value: WorkbenchService.canReviewDeviceArchiveChange() ? `${summary.pendingDeviceArchiveChangeRequests}` : '可用',
+        status: WorkbenchService.canReviewDeviceArchiveChange() ? '待审核事项' : '操作审计',
         tone: AppColors.Primary
       });
     }
@@ -97,7 +97,7 @@ export class WorkbenchService {
     }
 
     const actions: WorkbenchAction[] = [{
-      id: WorkbenchActionId.DeviceQuery,
+      id: WorkbenchActionId.DeviceArchiveQuery,
       title: '查询设备档案',
       tone: AppColors.Primary
     }];
@@ -121,27 +121,27 @@ export class WorkbenchService {
     }
 
     if (SessionStore.hasPermission(PermissionCode.OpsRepairTaskAccept)) {
-      actions.push(WorkbenchService.createAction(WorkbenchActionId.AvailableRepairTask, '任务接取', AppColors.Primary));
+      actions.push(WorkbenchService.createAction(WorkbenchActionId.RepairTaskPool, '任务接取', AppColors.Primary));
     }
 
     if (SessionStore.hasPermission(PermissionCode.OpsRepairReportCreate)) {
-      actions.push(WorkbenchService.createAction(WorkbenchActionId.MyRepairTask, '维修任务', AppColors.Primary));
+      actions.push(WorkbenchService.createAction(WorkbenchActionId.AcceptedRepairTask, '维修任务', AppColors.Primary));
     }
 
     if (SessionStore.hasPermission(PermissionCode.OpsReinspectionCreate)) {
       actions.push(WorkbenchService.createAction(WorkbenchActionId.ReinspectionTask, '复检任务', AppColors.Primary));
     }
 
-    actions.push(WorkbenchService.createAction(WorkbenchActionId.OperationsRecord, '历史记录', AppColors.Primary));
+    actions.push(WorkbenchService.createAction(WorkbenchActionId.OperationsRecord, '运维记录', AppColors.Primary));
 
     return actions;
   }
 
   static getManagementCenterActions(): WorkbenchAction[] {
     const actions: WorkbenchAction[] = [];
-    if (WorkbenchService.canReviewDeviceChange()) {
+    if (WorkbenchService.canReviewDeviceArchiveChange()) {
       actions.push({
-        id: WorkbenchActionId.DeviceChangeReview,
+        id: WorkbenchActionId.DeviceArchiveReview,
         title: '档案审核',
         tone: AppColors.Primary
       });
@@ -149,7 +149,7 @@ export class WorkbenchService {
 
     if (SessionStore.hasPermission(PermissionCode.MgmtAuditLogRead)) {
       actions.push({
-        id: WorkbenchActionId.OperationRecord,
+        id: WorkbenchActionId.RecordCenter,
         title: '记录中心',
         tone: AppColors.Primary
       });
@@ -177,16 +177,16 @@ export class WorkbenchService {
     return items;
   }
 
-  static getPendingChangeCount(): number {
-    return WorkbenchService.getSummary().pendingChangeRequests;
+  static getPendingArchiveChangeRequestCount(): number {
+    return WorkbenchService.getSummary().pendingDeviceArchiveChangeRequests;
   }
 
   static getPendingFaultCount(): number {
-    return WorkbenchService.getSummary().availableRepairTasks;
+    return WorkbenchService.getSummary().repairTaskPoolItems;
   }
 
   static getActiveRepairTaskCount(): number {
-    return WorkbenchService.getSummary().activeRepairTasks;
+    return WorkbenchService.getSummary().acceptedRepairTasks;
   }
 
   static getPendingReinspectionCount(): number {
@@ -225,8 +225,8 @@ export class WorkbenchService {
     return SessionStore.hasAnyPermission(ManagementCenterPermissions);
   }
 
-  static canReviewDeviceChange(): boolean {
-    return SessionStore.hasPermission(PermissionCode.MgmtArchiveChangeReview);
+  static canReviewDeviceArchiveChange(): boolean {
+    return SessionStore.hasPermission(PermissionCode.MgmtDeviceArchiveChangeRequestReview);
   }
 
   private static createAction(id: WorkbenchActionId, title: string, tone: string): WorkbenchAction {
@@ -244,18 +244,18 @@ export class WorkbenchService {
 
   private static createEmptySummary(): WorkbenchSummary {
     return {
-      pendingChangeRequests: 0,
-      availableRepairTasks: 0,
-      activeRepairTasks: 0,
+      pendingDeviceArchiveChangeRequests: 0,
+      repairTaskPoolItems: 0,
+      acceptedRepairTasks: 0,
       pendingReinspections: 0
     };
   }
 
   private static normalizeSummary(summary: WorkbenchSummary): WorkbenchSummary {
     return {
-      pendingChangeRequests: WorkbenchService.normalizeCount(summary.pendingChangeRequests),
-      availableRepairTasks: WorkbenchService.normalizeCount(summary.availableRepairTasks),
-      activeRepairTasks: WorkbenchService.normalizeCount(summary.activeRepairTasks),
+      pendingDeviceArchiveChangeRequests: WorkbenchService.normalizeCount(summary.pendingDeviceArchiveChangeRequests),
+      repairTaskPoolItems: WorkbenchService.normalizeCount(summary.repairTaskPoolItems),
+      acceptedRepairTasks: WorkbenchService.normalizeCount(summary.acceptedRepairTasks),
       pendingReinspections: WorkbenchService.normalizeCount(summary.pendingReinspections)
     };
   }

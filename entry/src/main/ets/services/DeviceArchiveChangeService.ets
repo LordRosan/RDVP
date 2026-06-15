@@ -154,7 +154,7 @@ export class DeviceArchiveChangeService {
       return {
         success: false,
         error: {
-          code: 'DEVICE_CHANGE_REQUEST_INVALID',
+          code: 'DEVICE_ARCHIVE_CHANGE_REQUEST_INVALID',
           message: validation.message
         }
       };
@@ -168,13 +168,13 @@ export class DeviceArchiveChangeService {
       return {
         success: false,
         error: {
-          code: 'DEVICE_CHANGE_BASELINE_MISSING',
+          code: 'DEVICE_ARCHIVE_CHANGE_BASELINE_MISSING',
           message: '缺少设备档案基准信息，请重新查询后提交'
         }
       };
     }
 
-    const response = await ApiClient.request<DeviceArchiveChangeApiResult>('/api/v1/device-change-requests', 'POST', true,
+    const response = await ApiClient.request<DeviceArchiveChangeApiResult>('/api/v1/device-archive-change-requests', 'POST', true,
       DeviceArchiveChangeService.buildCreateRequestBody(form));
 
     if (!response.success) {
@@ -190,7 +190,7 @@ export class DeviceArchiveChangeService {
       return {
         success: false,
         error: {
-          code: 'DEVICE_CHANGE_RESPONSE_INVALID',
+          code: 'DEVICE_ARCHIVE_CHANGE_RESPONSE_INVALID',
           message: '变更申请响应无效'
         },
         requestId: response.requestId,

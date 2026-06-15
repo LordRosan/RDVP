@@ -9,7 +9,7 @@ public record ReinspectionTaskSummary(
         String deviceCode,
         String deviceName,
         FaultSeverity severity,
-        AvailableRepairTaskSummary.DeviceLocation location,
+        RepairTaskPoolItem.DeviceLocation location,
         OffsetDateTime repairedAt,
         FaultStatus status) {
 }

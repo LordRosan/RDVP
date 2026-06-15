@@ -123,8 +123,8 @@ READ_ONLY
 | 角色 | 主要权限 | 说明 |
 | --- | --- | --- |
 | `SYSTEM_ADMIN` | `*` | 具备系统级管理和业务处理权限 |
-| `DEVICE_ADMIN` | `ARCHIVE_DEVICE_READ`, `MGMT_ARCHIVE_CHANGE_REVIEW` | 查询设备档案，审核设备档案变更 |
-| `FIELD_OPERATOR` | `ARCHIVE_DEVICE_READ`, `ARCHIVE_CHANGE_REQUEST_CREATE`, `OPS_DEVICE_VERIFY`, `OPS_FAULT_REPORT_CREATE` | 查询设备档案，提交档案变更申请、状态核验和故障报告 |
+| `DEVICE_ADMIN` | `ARCHIVE_DEVICE_READ`, `MGMT_DEVICE_ARCHIVE_CHANGE_REQUEST_REVIEW` | 查询设备档案，审核设备档案变更 |
+| `FIELD_OPERATOR` | `ARCHIVE_DEVICE_READ`, `ARCHIVE_DEVICE_CHANGE_REQUEST_CREATE`, `OPS_DEVICE_VERIFY`, `OPS_FAULT_REPORT_CREATE` | 查询设备档案，提交档案变更申请、状态核验和故障报告 |
 | `MAINTAINER` | `ARCHIVE_DEVICE_READ`, `OPS_REPAIR_TASK_ACCEPT`, `OPS_REPAIR_REPORT_CREATE` | 查询设备档案，接取维修任务并提交维修报告 |
 | `REINSPECTOR` | `ARCHIVE_DEVICE_READ`, `OPS_REINSPECTION_CREATE` | 查询设备档案，处理复检任务并提交复检记录 |
 | `SUPERVISOR_AUDITOR` | `ARCHIVE_DEVICE_READ`, `MGMT_AUDIT_LOG_READ` | 查询设备档案，查看操作记录和审计日志 |
@@ -138,8 +138,8 @@ READ_ONLY
 
 - 查询设备详情。
 - 提交设备核验记录。
-- 创建设备信息变更申请。
-- 审核设备信息变更申请。
+- 创建设备档案变更申请。
+- 审核设备档案变更申请。
 - 创建故障报告。
 - 接取维修任务。
 - 提交维修报告。
@@ -157,7 +157,7 @@ READ_ONLY
 - 只读人员只能查询被授权范围内的设备。
 - 现场运维人员可以提交核验记录、档案变更申请和故障报告，但不能审核变更或处理维修任务。
 - 维修人员只能查看可接取故障、自己接取的任务和关联报告。
-- 设备管理员可以审核设备信息变更申请。
+- 设备管理员可以审核设备档案变更申请。
 - 主管/审计人员可以查询操作日志，但不一定具备修改设备数据的权限。
 
 ## 7. 二维码防伪
@@ -230,7 +230,7 @@ RDVP:<version>:<deviceCode>:<nonce>:<signature>
 受控状态包括：
 
 - 设备状态。
-- 设备信息变更申请状态。
+- 设备档案变更申请状态。
 - 故障报告状态。
 - 维修任务状态。
 - 维修报告结果。
@@ -254,9 +254,9 @@ RDVP:<version>:<deviceCode>:<nonce>:<signature>
 
 错误响应应提供稳定错误码和必要说明，不暴露内部堆栈、数据库结构、密钥路径、服务器路径或敏感配置。
 
-## 9. 设备信息变更安全
+## 9. 设备档案变更安全
 
-设备主数据不能由普通用户直接修改。设备信息变更通过申请和审核流程完成。
+设备主数据不能由普通用户直接修改。设备档案变更通过申请和审核流程完成。
 
 安全要求：
 
@@ -382,8 +382,8 @@ SYNCED
 以下操作必须写入操作日志：
 
 - 用户登录和退出。
-- 设备信息变更申请提交。
-- 设备信息变更审核。
+- 设备档案变更申请提交。
+- 设备档案变更审核。
 - 故障报告提交。
 - 故障报告驳回。
 - 维修任务接取。

@@ -12,7 +12,7 @@
 
 ## 1. 设计范围
 
-本文档定义 RDVP 后端服务对移动端应用提供的 HTTP API。接口覆盖用户认证、设备查询、二维码校验、设备核验、设备信息变更、故障报告、维修任务、维修报告、复检、附件、通知和审计日志等业务。
+本文档定义 RDVP 后端服务对移动端应用提供的 HTTP API。接口覆盖用户认证、设备查询、二维码校验、设备核验、设备档案变更、故障报告、维修任务、维修报告、复检、附件、通知和审计日志等业务。
 
 API 采用版本化路径，第一版统一使用：
 
@@ -246,9 +246,9 @@ GET /api/v1/workbench/summary
 
 ```json
 {
-  "pendingChangeRequests": 1,
-  "availableRepairTasks": 2,
-  "activeRepairTasks": 0,
+  "pendingDeviceArchiveChangeRequests": 1,
+  "repairTaskPoolItems": 2,
+  "acceptedRepairTasks": 0,
   "pendingReinspections": 0,
   "offlineDrafts": 0
 }
@@ -258,9 +258,9 @@ GET /api/v1/workbench/summary
 
 | 字段 | 说明 |
 | --- | --- |
-| `pendingChangeRequests` | 待审核的设备档案变更、建档或删除申请数量 |
-| `availableRepairTasks` | 当前处于待接取状态的故障数量 |
-| `activeRepairTasks` | 当前登录维修人员已接取且未提交维修报告的任务数量 |
+| `pendingDeviceArchiveChangeRequests` | 待审核的设备档案变更、建档或删除申请数量 |
+| `repairTaskPoolItems` | 当前处于任务池中、可被接取的故障数量 |
+| `acceptedRepairTasks` | 当前登录维修人员已接取且未提交维修报告的任务数量 |
 | `pendingReinspections` | 当前处于待复检状态的故障数量 |
 | `offlineDrafts` | 当前登录用户待同步的离线内容数量 |
 
@@ -447,12 +447,12 @@ GET /api/v1/devices/{deviceId}/verification-records
 
 支持分页参数。
 
-## 9. 设备信息变更申请接口
+## 9. 设备档案变更申请接口
 
 ### 9.1 创建设备档案变更申请
 
 ```text
-POST /api/v1/device-change-requests
+POST /api/v1/device-archive-change-requests
 ```
 
 修改档案请求体：
@@ -509,7 +509,7 @@ POST /api/v1/device-change-requests
 
 | 申请类型 | 权限 |
 | --- | --- |
-| `UPDATE` | `ARCHIVE_CHANGE_REQUEST_CREATE` |
+| `UPDATE` | `ARCHIVE_DEVICE_CHANGE_REQUEST_CREATE` |
 | `CREATE` | `ARCHIVE_DEVICE_CREATE` |
 | `DELETE` | `ARCHIVE_DEVICE_DELETE` |
 
@@ -537,10 +537,10 @@ POST /api/v1/device-change-requests
 ### 9.2 查询变更申请列表
 
 ```text
-GET /api/v1/device-change-requests
+GET /api/v1/device-archive-change-requests
 ```
 
-权限要求：`MGMT_ARCHIVE_CHANGE_REVIEW`
+权限要求：`MGMT_DEVICE_ARCHIVE_CHANGE_REQUEST_REVIEW`
 
 查询参数：
 
@@ -552,13 +552,13 @@ GET /api/v1/device-change-requests
 | `page` | 页码 |
 | `pageSize` | 每页数量 |
 
-### 9.3 审核设备信息变更申请
+### 9.3 审核设备档案变更申请
 
 ```text
-POST /api/v1/device-change-requests/{requestId}/review
+POST /api/v1/device-archive-change-requests/{requestId}/review
 ```
 
-权限要求：`MGMT_ARCHIVE_CHANGE_REVIEW`
+权限要求：`MGMT_DEVICE_ARCHIVE_CHANGE_REQUEST_REVIEW`
 
 请求体：
 
@@ -665,7 +665,7 @@ POST /api/v1/fault-reports/{faultReportId}/reject
 ### 11.1 查询附近可接取故障
 
 ```text
-GET /api/v1/repair-tasks/available
+GET /api/v1/repair-tasks/pool
 ```
 
 查询参数：
@@ -732,10 +732,10 @@ POST /api/v1/fault-reports/{faultReportId}/accept
 
 接取接口必须重新校验维修人员负载状态，不得只依赖查询列表时的前端状态。忙碌状态返回 `REPAIRER_BUSY`；若提供接取位置且目标故障超出当前负载允许范围，返回 `REPAIR_TASK_OUT_OF_WORKLOAD_RANGE`。
 
-### 11.3 查询我的维修任务
+### 11.3 查询已接取维修任务
 
 ```text
-GET /api/v1/repair-tasks/my
+GET /api/v1/repair-tasks/accepted
 ```
 
 查询参数：
@@ -1016,7 +1016,7 @@ DISABLED
 RETIRED
 ```
 
-### 18.2 设备信息变更申请状态
+### 18.2 设备档案变更申请状态
 
 ```text
 PENDING_REVIEW
@@ -1094,7 +1094,7 @@ FAILED
 
 ```text
 VERIFICATION_RECORD
-DEVICE_CHANGE_REQUEST
+DEVICE_ARCHIVE_CHANGE_REQUEST
 FAULT_REPORT
 REPAIR_REPORT
 REINSPECTION_RECORD
@@ -1109,10 +1109,10 @@ REINSPECTION_RECORD
 | `QR_CODE_INVALID` | 二维码内容无效 |
 | `QR_CODE_EXPIRED` | 二维码已过期 |
 | `QR_CODE_SIGNATURE_INVALID` | 二维码签名校验失败 |
-| `DEVICE_CHANGE_LOCKED` | 设备存在待审核变更申请 |
-| `DEVICE_CHANGE_FROZEN` | 设备处于变更冻结期 |
-| `CHANGE_REQUEST_NOT_FOUND` | 设备信息变更申请不存在 |
-| `CHANGE_REQUEST_ALREADY_REVIEWED` | 设备信息变更申请已审核 |
+| `DEVICE_ARCHIVE_CHANGE_LOCKED` | 设备存在待审核变更申请 |
+| `DEVICE_ARCHIVE_CHANGE_FROZEN` | 设备处于变更冻结期 |
+| `DEVICE_ARCHIVE_CHANGE_REQUEST_NOT_FOUND` | 设备档案变更申请不存在 |
+| `DEVICE_ARCHIVE_CHANGE_REQUEST_ALREADY_REVIEWED` | 设备档案变更申请已审核 |
 | `FAULT_REPORT_NOT_FOUND` | 故障报告不存在 |
 | `FAULT_ALREADY_ACCEPTED` | 故障已被其他维修人员接取 |
 | `REPAIR_REPORT_INVALID` | 维修报告内容无效 |

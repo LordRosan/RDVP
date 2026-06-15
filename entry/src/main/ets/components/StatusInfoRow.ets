@@ -6,6 +6,8 @@ export struct StatusInfoRow {
   @Prop tone: string = AppColors.TextSecondary;
   @Prop valueWidth: string = '58%';
   @Prop valueMaxLines: number = 1;
+  @Prop valueTextAlign: TextAlign = TextAlign.End;
+  @Prop valueLeadingPadding: number = 0;
   @Prop rowMinHeight: number = 54;
   @Prop verticalPadding: number = 0;
 
@@ -23,10 +25,11 @@ export struct StatusInfoRow {
         .fontSize(15)
         .fontColor(this.tone)
         .fontWeight(FontWeight.Medium)
-        .textAlign(TextAlign.End)
+        .textAlign(this.valueTextAlign)
         .width(this.valueWidth)
         .maxLines(this.valueMaxLines)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .padding({ left: this.valueLeadingPadding })
     }
     .constraintSize({ minHeight: this.rowMinHeight })
     .padding({

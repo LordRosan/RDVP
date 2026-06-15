@@ -9,7 +9,7 @@ export enum DeviceStatus {
   Retired = 'RETIRED'
 }
 
-export enum DeviceQueryMode {
+export enum DeviceArchiveQueryMode {
   Code = 'CODE',
   Qr = 'QR'
 }

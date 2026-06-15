@@ -2,11 +2,11 @@ import { AppColors } from '../styles/AppTheme';
 import { ApiResponse } from '../models/ApiModels';
 import { FaultSeverity, FaultType } from '../models/FaultModels';
 import {
-  AvailableRepairTaskListResult,
-  AvailableRepairTaskQuery,
-  AvailableRepairTaskSummary,
-  MyRepairTaskListResult,
-  MyRepairTaskSummary,
+  RepairTaskPoolListResult,
+  RepairTaskPoolQuery,
+  RepairTaskPoolItem,
+  AcceptedRepairTaskListResult,
+  AcceptedRepairTaskItem,
   RepairerWorkloadSnapshot,
   RepairerWorkloadStatus,
   RepairReportForm,
@@ -33,7 +33,7 @@ interface DeviceLocationApiResult {
   latitude?: number;
 }
 
-interface AvailableRepairTaskApiSummary {
+interface RepairTaskPoolApiItem {
   id: string;
   faultReportId: string;
   faultReportNo: string;
@@ -48,7 +48,7 @@ interface AvailableRepairTaskApiSummary {
   taskType?: string;
 }
 
-interface MyRepairTaskApiSummary {
+interface AcceptedRepairTaskApiItem {
   id: string;
   repairTaskNo: string;
   faultReportNo: string;
@@ -79,10 +79,10 @@ interface RepairReportApiResult {
   createdAt: string;
 }
 
-interface AvailableRepairTaskApiListResult {
+interface RepairTaskPoolApiListResult {
   radiusKm: number;
   workload?: RepairerWorkloadSnapshot;
-  items: AvailableRepairTaskApiSummary[];
+  items: RepairTaskPoolApiItem[];
   total: number;
 }
 
@@ -178,7 +178,7 @@ export class RepairTaskService {
       return ApiClient.createServiceUnavailableResponse<RepairerWorkloadSnapshot>();
     }
 
-    const response = await RepairTaskService.queryMyRepairTasksRemoteFirst();
+    const response = await RepairTaskService.queryAcceptedRepairTasksRemoteFirst();
     if (!response.success) {
       return {
         success: false,
@@ -197,8 +197,8 @@ export class RepairTaskService {
     };
   }
 
-  static validateAvailableRepairTaskQuery(
-    query: AvailableRepairTaskQuery,
+  static validateRepairTaskPoolQuery(
+    query: RepairTaskPoolQuery,
     workloadSnapshot?: RepairerWorkloadSnapshot
   ): RepairTaskValidationResult {
     const radiusKm = RepairTaskService.normalizeRadiusKm(query.radiusKm);
@@ -245,10 +245,10 @@ export class RepairTaskService {
     };
   }
 
-  static async queryAvailableRepairTasksRemoteFirst(
-    query: AvailableRepairTaskQuery,
+  static async queryRepairTaskPoolRemoteFirst(
+    query: RepairTaskPoolQuery,
     workloadSnapshot?: RepairerWorkloadSnapshot
-  ): Promise<ApiResponse<AvailableRepairTaskListResult>> {
+  ): Promise<ApiResponse<RepairTaskPoolListResult>> {
     let workload = workloadSnapshot;
     if (workload === undefined) {
       const workloadResponse = await RepairTaskService.getCurrentWorkloadSnapshotRemoteFirst();
@@ -264,12 +264,12 @@ export class RepairTaskService {
       workload = workloadResponse.data;
     }
 
-    const validation = RepairTaskService.validateAvailableRepairTaskQuery(query, workload);
+    const validation = RepairTaskService.validateRepairTaskPoolQuery(query, workload);
     if (!validation.valid) {
       return {
         success: false,
         error: {
-          code: 'AVAILABLE_REPAIR_TASK_QUERY_INVALID',
+          code: 'REPAIR_TASK_POOL_QUERY_INVALID',
           message: validation.message
         }
       };
@@ -278,13 +278,13 @@ export class RepairTaskService {
     const radiusKm = validation.normalizedRadiusKm ?
       validation.normalizedRadiusKm : RepairTaskService.normalizeRadiusKm(query.radiusKm);
     if (!ApiClient.isConfigured()) {
-      return ApiClient.createServiceUnavailableResponse<AvailableRepairTaskListResult>();
+      return ApiClient.createServiceUnavailableResponse<RepairTaskPoolListResult>();
     }
 
     const locationQuery = query.longitude !== undefined && query.latitude !== undefined ?
       `&longitude=${query.longitude}&latitude=${query.latitude}` : '';
-    const response = await ApiClient.request<AvailableRepairTaskApiListResult>(
-      `/api/v1/repair-tasks/available?radiusKm=${radiusKm}${locationQuery}`,
+    const response = await ApiClient.request<RepairTaskPoolApiListResult>(
+      `/api/v1/repair-tasks/pool?radiusKm=${radiusKm}${locationQuery}`,
       'GET',
       true
     );
@@ -302,8 +302,8 @@ export class RepairTaskService {
       success: true,
       data: {
         radiusKm: response.data === undefined ? radiusKm : response.data.radiusKm,
-        items: response.data === undefined ? [] : response.data.items.map((item: AvailableRepairTaskApiSummary): AvailableRepairTaskSummary => {
-          return RepairTaskService.mapAvailableTask(item);
+        items: response.data === undefined ? [] : response.data.items.map((item: RepairTaskPoolApiItem): RepairTaskPoolItem => {
+          return RepairTaskService.mapRepairTaskPoolItem(item);
         }),
         total: response.data === undefined ? 0 : response.data.total,
         workload: response.data === undefined || response.data.workload === undefined ? workload : response.data.workload
@@ -403,12 +403,12 @@ export class RepairTaskService {
     };
   }
 
-  static async queryMyRepairTasksRemoteFirst(): Promise<ApiResponse<MyRepairTaskListResult>> {
+  static async queryAcceptedRepairTasksRemoteFirst(): Promise<ApiResponse<AcceptedRepairTaskListResult>> {
     if (!ApiClient.isConfigured()) {
-      return ApiClient.createServiceUnavailableResponse<MyRepairTaskListResult>();
+      return ApiClient.createServiceUnavailableResponse<AcceptedRepairTaskListResult>();
     }
 
-    const response = await ApiClient.request<ApiListResult<MyRepairTaskApiSummary>>('/api/v1/repair-tasks/my', 'GET', true);
+    const response = await ApiClient.request<ApiListResult<AcceptedRepairTaskApiItem>>('/api/v1/repair-tasks/accepted', 'GET', true);
 
     if (!response.success) {
       return {
@@ -422,8 +422,8 @@ export class RepairTaskService {
     return {
       success: true,
       data: {
-        items: response.data === undefined ? [] : response.data.items.map((item: MyRepairTaskApiSummary): MyRepairTaskSummary => {
-          return RepairTaskService.mapMyTask(item);
+        items: response.data === undefined ? [] : response.data.items.map((item: AcceptedRepairTaskApiItem): AcceptedRepairTaskItem => {
+          return RepairTaskService.mapAcceptedRepairTaskItem(item);
         }),
         total: response.data === undefined ? 0 : response.data.total
       },
@@ -668,13 +668,13 @@ export class RepairTaskService {
       result === RepairReportResult.Unresolved;
   }
 
-  private static countActiveRepairTasks(tasks: MyRepairTaskSummary[]): number {
-    return tasks.filter((task: MyRepairTaskSummary) => {
+  private static countActiveRepairTasks(tasks: AcceptedRepairTaskItem[]): number {
+    return tasks.filter((task: AcceptedRepairTaskItem) => {
       return task.status === RepairTaskStatus.Accepted || task.status === RepairTaskStatus.Processing;
     }).length;
   }
 
-  private static mapAvailableTask(item: AvailableRepairTaskApiSummary): AvailableRepairTaskSummary {
+  private static mapRepairTaskPoolItem(item: RepairTaskPoolApiItem): RepairTaskPoolItem {
     return {
       id: item.faultReportId,
       faultNo: item.faultReportNo,
@@ -690,7 +690,7 @@ export class RepairTaskService {
     };
   }
 
-  private static mapMyTask(item: MyRepairTaskApiSummary): MyRepairTaskSummary {
+  private static mapAcceptedRepairTaskItem(item: AcceptedRepairTaskApiItem): AcceptedRepairTaskItem {
     return {
       id: item.id,
       taskNo: item.repairTaskNo,

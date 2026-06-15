@@ -25,7 +25,7 @@ final class BootstrapUserDefinitions {
                         PermissionCode.ARCHIVE_DEVICE_CREATE,
                         PermissionCode.ARCHIVE_DEVICE_DELETE,
                         PermissionCode.ARCHIVE_QRCODE_EXPORT,
-                        PermissionCode.MGMT_ARCHIVE_CHANGE_REVIEW),
+                        PermissionCode.MGMT_DEVICE_ARCHIVE_CHANGE_REQUEST_REVIEW),
                 create(
                         passwordEncoder,
                         defaultPassword,
@@ -34,7 +34,7 @@ final class BootstrapUserDefinitions {
                         "现场运维人员",
                         RoleCode.FIELD_OPERATOR,
                         PermissionCode.ARCHIVE_DEVICE_READ,
-                        PermissionCode.ARCHIVE_CHANGE_REQUEST_CREATE,
+                        PermissionCode.ARCHIVE_DEVICE_CHANGE_REQUEST_CREATE,
                         PermissionCode.OPS_DEVICE_VERIFY,
                         PermissionCode.OPS_FAULT_REPORT_CREATE),
                 create(

@@ -1,5 +1,6 @@
 import { AppColors } from '../styles/AppTheme';
 import { ActionTile } from '../components/ActionTile';
+import { HeaderCircleButton } from '../components/HeaderCircleButton';
 import { MetricTile } from '../components/MetricTile';
 import { WorkbenchAction, WorkbenchActionId, WorkbenchMetric, WorkbenchStatusItem } from '../models/WorkbenchModels';
 import { CurrentUserSnapshot } from '../models/SessionModels';
@@ -233,20 +234,11 @@ struct Workbench {
 
   @Builder
   PersonalCenterButton() {
-    Button({ type: ButtonType.Circle, stateEffect: true }) {
-      SymbolGlyph($r('sys.symbol.person_crop_circle_fill'))
-        .fontSize(31)
-        .fontColor([AppColors.TextPrimary])
-    }
-    .width(58)
-    .height(58)
-    .backgroundColor(AppColors.Surface)
-    .border({
-      width: 1,
-      color: AppColors.Divider
-    })
-    .onClick(() => {
-      this.openPersonalCenter();
+    HeaderCircleButton({
+      icon: $r('sys.symbol.person_crop_circle_fill'),
+      action: () => {
+        this.openPersonalCenter();
+      }
     })
   }
 

@@ -4,17 +4,18 @@ import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { detectBarcode, scanBarcode, scanCore } from '@kit.ScanKit';
 import { PermissionCode } from '../../models/PermissionModels';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
-import { DeviceQueryMode, DeviceSummary } from '../../models/DeviceModels';
+import { DeviceArchiveQueryMode, DeviceSummary } from '../../models/DeviceModels';
 import { ApiClient } from '../../services/ApiClient';
 import { DeviceService } from '../../services/DeviceService';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
 import { AuthGuard } from '../../utils/AuthGuard';
+import { HeaderCircleButton } from '../../components/HeaderCircleButton';
 
 @Entry
 @Component
 struct DeviceArchiveQuery {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
-  @State queryMode: DeviceQueryMode = DeviceQueryMode.Code;
+  @State queryMode: DeviceArchiveQueryMode = DeviceArchiveQueryMode.Code;
   @State deviceCode: string = '';
   @State qrContent: string = '';
   @State codeQueryMessage: string = '';
@@ -125,32 +126,17 @@ struct DeviceArchiveQuery {
 
   @Builder
   ModeSwitchButton() {
-    Button({ type: ButtonType.Circle, stateEffect: true }) {
-      if (this.queryMode === DeviceQueryMode.Code) {
-        SymbolGlyph($r('sys.symbol.circle_viewfinder'))
-          .fontSize(31)
-          .fontColor([AppColors.TextPrimary])
-      } else {
-        SymbolGlyph($r('sys.symbol.rename'))
-          .fontSize(31)
-          .fontColor([AppColors.TextPrimary])
+    HeaderCircleButton({
+      icon: this.queryMode === DeviceArchiveQueryMode.Code ? $r('sys.symbol.circle_viewfinder') : $r('sys.symbol.rename'),
+      action: () => {
+        this.switchQueryMode();
       }
-    }
-    .width(58)
-    .height(58)
-    .backgroundColor(AppColors.Surface)
-    .border({
-      width: 1,
-      color: AppColors.Divider
-    })
-    .onClick(() => {
-      this.switchQueryMode();
     })
   }
 
   @Builder
   QueryPanel() {
-    if (this.queryMode === DeviceQueryMode.Code) {
+    if (this.queryMode === DeviceArchiveQueryMode.Code) {
       this.DeviceCodePanel()
     } else {
       this.QrQueryPanel()
@@ -423,7 +409,7 @@ struct DeviceArchiveQuery {
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      Text(this.queryMode === DeviceQueryMode.Code ? '设备编号' : '二维码')
+      Text(this.queryMode === DeviceArchiveQueryMode.Code ? '设备编号' : '二维码')
         .fontSize(15)
         .fontColor(AppColors.TextSecondary)
         .fontWeight(FontWeight.Medium)
@@ -455,7 +441,7 @@ struct DeviceArchiveQuery {
     this.codeQueryMessage = '';
     this.qrActionMessage = '';
     this.qrQueryMessage = '';
-    this.queryMode = this.queryMode === DeviceQueryMode.Code ? DeviceQueryMode.Qr : DeviceQueryMode.Code;
+    this.queryMode = this.queryMode === DeviceArchiveQueryMode.Code ? DeviceArchiveQueryMode.Qr : DeviceArchiveQueryMode.Code;
   }
 
   getModeTitle(): string {
@@ -463,7 +449,7 @@ struct DeviceArchiveQuery {
   }
 
   getModeSubtitle(): string {
-    return this.queryMode === DeviceQueryMode.Code ? '输入设备编号定位设备档案' : '扫描或上传二维码定位设备档案';
+    return this.queryMode === DeviceArchiveQueryMode.Code ? '输入设备编号定位设备档案' : '扫描或上传二维码定位设备档案';
   }
 
   async submitDeviceCodeQuery(): Promise<void> {
@@ -668,7 +654,7 @@ struct DeviceArchiveQuery {
     try {
       this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveDetail' });
     } catch (err) {
-      if (this.queryMode === DeviceQueryMode.Code) {
+      if (this.queryMode === DeviceArchiveQueryMode.Code) {
         this.codeQueryMessage = '设备档案详情不可用';
       } else {
         this.qrQueryMessage = '设备档案详情不可用';

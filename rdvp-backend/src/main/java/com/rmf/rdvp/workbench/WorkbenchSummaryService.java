@@ -2,7 +2,7 @@ package com.rmf.rdvp.workbench;
 
 import org.springframework.stereotype.Service;
 
-import com.rmf.rdvp.archive.DeviceChangeRequestRepository;
+import com.rmf.rdvp.archive.DeviceArchiveChangeRequestRepository;
 import com.rmf.rdvp.identity.AuthenticatedUser;
 import com.rmf.rdvp.identity.PermissionCode;
 import com.rmf.rdvp.operations.OperationsRepository;
@@ -10,11 +10,11 @@ import com.rmf.rdvp.operations.OperationsRepository;
 @Service
 public class WorkbenchSummaryService {
 
-    private final DeviceChangeRequestRepository changeRequestRepository;
+    private final DeviceArchiveChangeRequestRepository changeRequestRepository;
     private final OperationsRepository operationsRepository;
 
     public WorkbenchSummaryService(
-            DeviceChangeRequestRepository changeRequestRepository,
+            DeviceArchiveChangeRequestRepository changeRequestRepository,
             OperationsRepository operationsRepository) {
         this.changeRequestRepository = changeRequestRepository;
         this.operationsRepository = operationsRepository;
@@ -22,7 +22,7 @@ public class WorkbenchSummaryService {
 
     public WorkbenchSummary getSummary(AuthenticatedUser user) {
         return new WorkbenchSummary(
-                hasPermission(user, PermissionCode.MGMT_ARCHIVE_CHANGE_REVIEW)
+                hasPermission(user, PermissionCode.MGMT_DEVICE_ARCHIVE_CHANGE_REQUEST_REVIEW)
                         ? changeRequestRepository.countPendingReview()
                         : 0,
                 hasPermission(user, PermissionCode.OPS_REPAIR_TASK_ACCEPT)

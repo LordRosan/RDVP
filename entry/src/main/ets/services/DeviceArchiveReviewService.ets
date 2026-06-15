@@ -44,7 +44,7 @@ export class DeviceArchiveReviewService {
     }
 
     const response = await ApiClient.request<ApiListResult<DeviceArchiveReviewApiItem>>(
-      '/api/v1/device-change-requests?status=PENDING_REVIEW',
+      '/api/v1/device-archive-change-requests?status=PENDING_REVIEW',
       'GET',
       true
     );
@@ -110,7 +110,7 @@ export class DeviceArchiveReviewService {
     }
 
     return ApiClient.request<DeviceArchiveReviewResult>(
-      `/api/v1/device-change-requests/${encodeURIComponent(form.requestId)}/review`,
+      `/api/v1/device-archive-change-requests/${encodeURIComponent(form.requestId)}/review`,
       'POST',
       true,
       JSON.stringify({

@@ -7,6 +7,7 @@ import { ApiClient } from '../../services/ApiClient';
 import { WorkbenchService } from '../../services/WorkbenchService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
+import { PermissionTextFormatter } from '../../utils/PermissionTextFormatter';
 
 @Entry
 @Component
@@ -121,19 +122,23 @@ struct ManagementCenter {
         .maxLines(1)
 
       Column() {
-        if (SessionStore.hasPermission(PermissionCode.MgmtArchiveChangeReview)) {
-          StatusInfoRow({
-            label: '待审核档案变更',
-            value: this.getPendingReviewText(),
-            tone: AppColors.Primary
-          })
+        StatusInfoRow({
+          label: '功能权限',
+          value: this.getPermissionSummaryText(),
+          tone: AppColors.Primary,
+          valueWidth: '62%',
+          valueMaxLines: 3,
+          rowMinHeight: 72,
+          verticalPadding: 8
+        })
+        if (SessionStore.hasPermission(PermissionCode.MgmtDeviceArchiveChangeRequestReview)) {
           this.CardDivider()
         }
-        if (SessionStore.hasPermission(PermissionCode.MgmtAuditLogRead)) {
+        if (SessionStore.hasPermission(PermissionCode.MgmtDeviceArchiveChangeRequestReview)) {
           StatusInfoRow({
-            label: '记录中心',
-            value: this.getOperationRecordText(),
-            tone: AppColors.TextSecondary
+            label: '待审核申请数',
+            value: this.getPendingReviewText(),
+            tone: AppColors.Primary
           })
         }
       }
@@ -210,22 +215,30 @@ struct ManagementCenter {
       return '-';
     }
 
-    return `${WorkbenchService.getPendingChangeCount()}项`;
+    return `${WorkbenchService.getPendingArchiveChangeRequestCount()}项`;
   }
 
-  getOperationRecordText(): string {
-    return '可查看';
+  getPermissionSummaryText(): string {
+    const parts: string[] = [];
+    if (SessionStore.hasPermission(PermissionCode.MgmtDeviceArchiveChangeRequestReview)) {
+      parts.push('可审核');
+    }
+    if (SessionStore.hasPermission(PermissionCode.MgmtAuditLogRead)) {
+      parts.push('可查看记录');
+    }
+
+    return PermissionTextFormatter.formatTwoPerLine(parts);
   }
 
   openFeature(action: WorkbenchAction): void {
     this.message = '';
     this.messageTargetId = '';
-    if (action.id === WorkbenchActionId.DeviceChangeReview) {
+    if (action.id === WorkbenchActionId.DeviceArchiveReview) {
       this.openPage('pages/ManagementCenter/DeviceArchiveReview', '档案审核不可用');
       return;
     }
 
-    if (action.id === WorkbenchActionId.OperationRecord) {
+    if (action.id === WorkbenchActionId.RecordCenter) {
       this.openPage('pages/RecordCenter/RecordCenter', '记录中心不可用');
       return;
     }
@@ -245,11 +258,11 @@ struct ManagementCenter {
 
   resolveActionIdByUrl(url: string): string {
     if (url === 'pages/ManagementCenter/DeviceArchiveReview') {
-      return `${WorkbenchActionId.DeviceChangeReview}`;
+      return `${WorkbenchActionId.DeviceArchiveReview}`;
     }
 
     if (url === 'pages/RecordCenter/RecordCenter') {
-      return `${WorkbenchActionId.OperationRecord}`;
+      return `${WorkbenchActionId.RecordCenter}`;
     }
 
     return '';

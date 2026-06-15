@@ -13,7 +13,7 @@ public interface OperationsRepository {
 
     boolean hasActiveFaultForDevice(String deviceId);
 
-    List<AvailableRepairTaskSummary> listAvailableRepairTasks(
+    List<RepairTaskPoolItem> listRepairTaskPool(
             FaultSeverity severity,
             int radiusKm,
             BigDecimal longitude,
@@ -32,7 +32,7 @@ public interface OperationsRepository {
 
     boolean markFaultAccepted(String faultReportId, String repairTaskId, OffsetDateTime updatedAt);
 
-    List<MyRepairTaskSummary> listMyRepairTasks(String maintainerId, int limit);
+    List<AcceptedRepairTaskItem> listAcceptedRepairTasks(String maintainerId, int limit);
 
     Optional<RepairTaskRecord> findRepairTaskByIdOrNo(String idOrNo);
 

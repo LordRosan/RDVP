@@ -105,7 +105,7 @@ POST http://localhost:8080/api/v1/device-qrcodes/verify
 设备档案变更申请：
 
 ```text
-POST http://localhost:8080/api/v1/device-change-requests
+POST http://localhost:8080/api/v1/device-archive-change-requests
 ```
 
 请求示例：
@@ -126,8 +126,8 @@ POST http://localhost:8080/api/v1/device-change-requests
 管理员查询和审核变更申请：
 
 ```text
-GET http://localhost:8080/api/v1/device-change-requests?status=PENDING_REVIEW
-POST http://localhost:8080/api/v1/device-change-requests/{requestId}/review
+GET http://localhost:8080/api/v1/device-archive-change-requests?status=PENDING_REVIEW
+POST http://localhost:8080/api/v1/device-archive-change-requests/{requestId}/review
 ```
 
 审核请求示例：
@@ -144,10 +144,10 @@ POST http://localhost:8080/api/v1/device-change-requests/{requestId}/review
 
 ```text
 POST http://localhost:8080/api/v1/fault-reports
-GET http://localhost:8080/api/v1/repair-tasks/available?radiusKm=10
-GET http://localhost:8080/api/v1/repair-tasks/available?radiusKm=10&longitude=114.1694&latitude=22.3193
+GET http://localhost:8080/api/v1/repair-tasks/pool?radiusKm=10
+GET http://localhost:8080/api/v1/repair-tasks/pool?radiusKm=10&longitude=114.1694&latitude=22.3193
 POST http://localhost:8080/api/v1/fault-reports/{faultReportId}/accept
-GET http://localhost:8080/api/v1/repair-tasks/my
+GET http://localhost:8080/api/v1/repair-tasks/accepted
 POST http://localhost:8080/api/v1/repair-tasks/{repairTaskId}/repair-reports
 GET http://localhost:8080/api/v1/reinspections/pending
 POST http://localhost:8080/api/v1/fault-reports/{faultReportId}/reinspection-records

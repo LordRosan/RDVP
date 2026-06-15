@@ -1,22 +1,26 @@
-import { AppColors } from '../../styles/AppTheme';
 import { ActionTile } from '../../components/ActionTile';
-import { WorkbenchActionId } from '../../models/WorkbenchModels';
+import { StatusInfoRow } from '../../components/StatusInfoRow';
+import { WorkbenchAction, WorkbenchActionId } from '../../models/WorkbenchModels';
+import { AppColors } from '../../styles/AppTheme';
+import { PermissionTextFormatter } from '../../utils/PermissionTextFormatter';
 
 @Entry
 @Component
 struct RecordCenter {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
-  @State selectedTab: string = 'archive';
+  @State actions: WorkbenchAction[] = this.createActions();
+  @State message: string = '';
+  @State messageTargetId: string = '';
 
   build() {
-    Column() {
-      this.PageTitleBar()
+    Scroll() {
+      Column() {
+        this.PageTitleBar()
 
-      Scroll() {
         Column({ space: 18 }) {
           this.ModeHeader()
-          this.TabSelector()
-          this.ContentArea()
+          this.OverviewPanel()
+          this.ActionSection()
         }
         .alignItems(HorizontalAlign.Start)
         .justifyContent(FlexAlign.Start)
@@ -28,8 +32,10 @@ struct RecordCenter {
         })
         .width('100%')
       }
-      .layoutWeight(1)
       .width('100%')
+      .constraintSize({ minHeight: '100%' })
+      .alignItems(HorizontalAlign.Start)
+      .justifyContent(FlexAlign.Start)
     }
     .height('100%')
     .width('100%')
@@ -52,7 +58,10 @@ struct RecordCenter {
       .width(44)
       .height(44)
       .backgroundColor(AppColors.Surface)
-      .border({ width: 1, color: AppColors.Divider })
+      .border({
+        width: 1,
+        color: AppColors.Divider
+      })
       .onClick(() => {
         this.backToManagementCenter();
       })
@@ -60,187 +69,147 @@ struct RecordCenter {
     .width('100%')
     .height(60)
     .alignItems(VerticalAlign.Center)
-    .padding({ left: 24, right: 24 })
+    .padding({
+      left: 24,
+      right: 24
+    })
     .backgroundColor(AppColors.PageBackground)
   }
 
   @Builder
   ModeHeader() {
-    Text('记录中心')
-      .fontSize(34)
-      .fontWeight(FontWeight.Bold)
-      .fontColor(AppColors.TextPrimary)
-      .maxLines(1)
-      .textOverflow({ overflow: TextOverflow.Ellipsis })
-      .width('100%')
-      .alignSelf(ItemAlign.Start)
-      .padding({ top: 0, bottom: 2 })
-  }
-
-  @Builder
-  TabSelector() {
-    Row({ space: 10 }) {
-      this.TabChip('档案记录', 'archive')
-      this.TabChip('运维记录', 'operations')
-      this.TabChip('审核记录', 'review')
+    Row({ space: 16 }) {
+      Text('记录中心')
+        .fontSize(34)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .layoutWeight(1)
     }
     .width('100%')
+    .alignItems(VerticalAlign.Center)
+    .padding({ top: 0, bottom: 2 })
   }
 
   @Builder
-  TabChip(label: string, tabId: string) {
-    Button(label)
-      .fontSize(14)
-      .fontWeight(this.selectedTab === tabId ? FontWeight.Bold : FontWeight.Normal)
-      .fontColor(this.selectedTab === tabId ? AppColors.Primary : AppColors.TextSecondary)
-      .backgroundColor(this.selectedTab === tabId ? AppColors.PrimarySurface : AppColors.FieldBackground)
-      .borderRadius(20)
-      .padding({ left: 18, right: 18, top: 9, bottom: 9 })
-      .border({
-        width: 1,
-        color: this.selectedTab === tabId ? AppColors.Primary : AppColors.Divider
-      })
-      .onClick(() => {
-        this.selectedTab = tabId;
-      })
-  }
+  OverviewPanel() {
+    Column({ space: 10 }) {
+      Text('中心概览')
+        .fontSize(22)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
 
-  @Builder
-  ContentArea() {
-    if (this.selectedTab === 'archive') {
-      this.ArchiveRecordView()
-    } else if (this.selectedTab === 'operations') {
-      this.OperationsRecordView()
-    } else {
-      this.ReviewRecordView()
-    }
-  }
-
-  @Builder
-  ArchiveRecordView() {
-    Column({ space: 12 }) {
-      Row() {
-        Text('档案记录')
-          .fontSize(22)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TextPrimary)
-          .maxLines(1)
-          .layoutWeight(1)
-
-        Button({ type: ButtonType.Capsule, stateEffect: true }) {
-          Row({ space: 6 }) {
-            SymbolGlyph($r('sys.symbol.magnifyingglass'))
-              .fontSize(16)
-              .fontColor([AppColors.Primary])
-            Text('查看全部')
-              .fontSize(13)
-              .fontColor(AppColors.Primary)
-              .maxLines(1)
-          }
-          .width('100%')
-          .justifyContent(FlexAlign.Center)
-        }
-        .padding({ left: 14, right: 14, top: 7, bottom: 7 })
-        .backgroundColor(AppColors.PrimarySurface)
-        .onClick(() => {
-          this.openSubPage('pages/RecordCenter/ArchiveRecord');
+      Column() {
+        StatusInfoRow({
+          label: '功能权限',
+          value: PermissionTextFormatter.formatTwoPerLine(['可查看档案记录', '可查看运维记录', '可查看审核记录']),
+          tone: AppColors.Primary,
+          valueWidth: '62%',
+          valueMaxLines: 3,
+          rowMinHeight: 72,
+          verticalPadding: 8
         })
       }
       .width('100%')
-      .alignItems(VerticalAlign.Center)
+      .backgroundColor(AppColors.Surface)
+      .borderRadius(24)
     }
-    .padding(18)
+    .alignItems(HorizontalAlign.Start)
     .width('100%')
-    .backgroundColor(AppColors.Surface)
-    .borderRadius(24)
   }
 
   @Builder
-  OperationsRecordView() {
+  ActionSection() {
     Column({ space: 12 }) {
-      Row() {
-        Text('运维记录')
-          .fontSize(22)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TextPrimary)
-          .maxLines(1)
-          .layoutWeight(1)
+      Text('功能入口')
+        .fontSize(22)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
 
-        Button({ type: ButtonType.Capsule, stateEffect: true }) {
-          Row({ space: 6 }) {
-            SymbolGlyph($r('sys.symbol.magnifyingglass'))
-              .fontSize(16)
-              .fontColor([AppColors.Primary])
-            Text('查看全部')
-              .fontSize(13)
-              .fontColor(AppColors.Primary)
-              .maxLines(1)
+      Column({ space: 10 }) {
+        ForEach(this.actions, (item: WorkbenchAction) => {
+          Column({ space: 8 }) {
+            if (this.messageTargetId === `${item.id}` && this.message.length > 0) {
+              this.MessageText()
+            }
+
+            ActionTile({ action: item })
+              .onClick(() => {
+                this.openFeature(item);
+              })
           }
           .width('100%')
-          .justifyContent(FlexAlign.Center)
-        }
-        .padding({ left: 14, right: 14, top: 7, bottom: 7 })
-        .backgroundColor(AppColors.PrimarySurface)
-        .onClick(() => {
-          this.openSubPage('pages/RecordCenter/OperationsRecord');
-        })
+        }, (item: WorkbenchAction) => item.id)
       }
       .width('100%')
-      .alignItems(VerticalAlign.Center)
     }
-    .padding(18)
+    .alignItems(HorizontalAlign.Start)
     .width('100%')
-    .backgroundColor(AppColors.Surface)
-    .borderRadius(24)
   }
 
   @Builder
-  ReviewRecordView() {
-    Column({ space: 12 }) {
-      Row() {
-        Text('审核记录')
-          .fontSize(22)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TextPrimary)
-          .maxLines(1)
-          .layoutWeight(1)
-
-        Button({ type: ButtonType.Capsule, stateEffect: true }) {
-          Row({ space: 6 }) {
-            SymbolGlyph($r('sys.symbol.magnifyingglass'))
-              .fontSize(16)
-              .fontColor([AppColors.Primary])
-            Text('查看全部')
-              .fontSize(13)
-              .fontColor(AppColors.Primary)
-              .maxLines(1)
-          }
-          .width('100%')
-          .justifyContent(FlexAlign.Center)
-        }
-        .padding({ left: 14, right: 14, top: 7, bottom: 7 })
-        .backgroundColor(AppColors.PrimarySurface)
-        .onClick(() => {
-          this.openSubPage('pages/RecordCenter/ReviewRecord');
-        })
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
+  MessageText() {
+    if (this.message.length > 0) {
+      Text(this.message)
+        .fontSize(13)
+        .fontColor(AppColors.Danger)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
     }
-    .padding(18)
-    .width('100%')
-    .backgroundColor(AppColors.Surface)
-    .borderRadius(24)
   }
 
-  openSubPage(url: string): void {
+  createActions(): WorkbenchAction[] {
+    return [
+      {
+        id: WorkbenchActionId.ArchiveRecord,
+        title: '档案记录',
+        tone: AppColors.Primary
+      },
+      {
+        id: WorkbenchActionId.OperationsRecord,
+        title: '运维记录',
+        tone: AppColors.Primary
+      },
+      {
+        id: WorkbenchActionId.ReviewRecord,
+        title: '审核记录',
+        tone: AppColors.Primary
+      }
+    ];
+  }
+
+  openFeature(action: WorkbenchAction): void {
+    this.message = '';
+    this.messageTargetId = '';
+    if (action.id === WorkbenchActionId.ArchiveRecord) {
+      this.openSubPage('pages/RecordCenter/ArchiveRecord', '档案记录不可用', action.id);
+      return;
+    }
+
+    if (action.id === WorkbenchActionId.OperationsRecord) {
+      this.openSubPage('pages/RecordCenter/OperationsRecord', '运维记录不可用', action.id);
+      return;
+    }
+
+    if (action.id === WorkbenchActionId.ReviewRecord) {
+      this.openSubPage('pages/RecordCenter/ReviewRecord', '审核记录不可用', action.id);
+      return;
+    }
+
+    this.message = '功能暂不可用';
+    this.messageTargetId = `${action.id}`;
+  }
+
+  openSubPage(url: string, errorMessage: string, actionId: WorkbenchActionId): void {
     try {
       this.getUIContext().getRouter().pushUrl({ url });
     } catch (err) {
-      try {
-        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
-      } catch (toastErr) {
-      }
+      this.message = errorMessage;
+      this.messageTargetId = `${actionId}`;
     }
   }
 
@@ -252,7 +221,7 @@ struct RecordCenter {
         return;
       }
 
-      router.replaceUrl({ url: 'pages/Workbench' });
+      router.replaceUrl({ url: 'pages/ManagementCenter/ManagementCenter' });
     } catch (err) {
       try {
         this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });

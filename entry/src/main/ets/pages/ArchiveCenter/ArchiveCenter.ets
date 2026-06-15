@@ -7,6 +7,7 @@ import { ApiClient } from '../../services/ApiClient';
 import { WorkbenchService } from '../../services/WorkbenchService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
+import { PermissionTextFormatter } from '../../utils/PermissionTextFormatter';
 
 @Entry
 @Component
@@ -124,7 +125,11 @@ struct ArchiveCenter {
         StatusInfoRow({
           label: '功能权限',
           value: this.getArchivePermissionText(),
-          tone: this.getArchivePermissionTone()
+          tone: this.getArchivePermissionTone(),
+          valueWidth: '62%',
+          valueMaxLines: 3,
+          rowMinHeight: 72,
+          verticalPadding: 8
         })
       }
       .width('100%')
@@ -202,7 +207,7 @@ struct ArchiveCenter {
       permissions.push('可查询');
     }
 
-    if (SessionStore.hasPermission(PermissionCode.ArchiveChangeRequestCreate)) {
+    if (SessionStore.hasPermission(PermissionCode.ArchiveDeviceChangeRequestCreate)) {
       permissions.push('可修改');
     }
 
@@ -214,11 +219,11 @@ struct ArchiveCenter {
       permissions.push('可添加');
     }
 
-    return permissions.length > 0 ? permissions.join('、') : '仅查询';
+    return PermissionTextFormatter.formatTwoPerLine(permissions.length > 0 ? permissions : ['仅查询']);
   }
 
   getArchivePermissionTone(): string {
-    return SessionStore.hasPermission(PermissionCode.ArchiveChangeRequestCreate) ||
+    return SessionStore.hasPermission(PermissionCode.ArchiveDeviceChangeRequestCreate) ||
       SessionStore.hasPermission(PermissionCode.ArchiveDeviceCreate) ||
       SessionStore.hasPermission(PermissionCode.ArchiveDeviceDelete) ? AppColors.Primary : AppColors.TextSecondary;
   }
@@ -226,7 +231,7 @@ struct ArchiveCenter {
   openFeature(action: WorkbenchAction): void {
     this.message = '';
     this.messageTargetId = '';
-    if (action.id === WorkbenchActionId.DeviceQuery) {
+    if (action.id === WorkbenchActionId.DeviceArchiveQuery) {
       try {
         this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveQuery' });
       } catch (err) {

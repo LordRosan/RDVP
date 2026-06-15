@@ -66,8 +66,8 @@ export default function abilityTest() {
       expect(result.valid).assertEqual(true);
     });
 
-    it('validatesAvailableRepairTaskQuery', 0, () => {
-      const result = RepairTaskService.validateAvailableRepairTaskQuery({
+    it('validatesRepairTaskPoolQuery', 0, () => {
+      const result = RepairTaskService.validateRepairTaskPoolQuery({
         radiusKm: 10
       }, RepairTaskService.createWorkloadSnapshot(0));
 

@@ -85,7 +85,7 @@ struct DeviceArchiveDetail {
 
     this.device = device;
     this.hasDevice = true;
-    this.canChangeArchive = SessionStore.hasPermission(PermissionCode.ArchiveChangeRequestCreate) &&
+    this.canChangeArchive = SessionStore.hasPermission(PermissionCode.ArchiveDeviceChangeRequestCreate) &&
       !DeviceService.isArchiveChangeLocked(device);
     this.canDeleteArchive = SessionStore.hasPermission(PermissionCode.ArchiveDeviceDelete) &&
       !DeviceService.isArchiveChangeLocked(device) &&
@@ -736,7 +736,7 @@ struct DeviceArchiveDetail {
   }
 
   canViewChangeArchiveAction(): boolean {
-    return SessionStore.hasPermission(PermissionCode.ArchiveChangeRequestCreate);
+    return SessionStore.hasPermission(PermissionCode.ArchiveDeviceChangeRequestCreate);
   }
 
   canViewDeleteArchiveAction(): boolean {
@@ -889,7 +889,7 @@ struct DeviceArchiveDetail {
   }
 
   openChangePage(): void {
-    if (!SessionStore.hasPermission(PermissionCode.ArchiveChangeRequestCreate)) {
+    if (!SessionStore.hasPermission(PermissionCode.ArchiveDeviceChangeRequestCreate)) {
       this.changeActionMessage = '当前账号无权申请修改设备档案';
       this.changeActionMessageTone = AppColors.Danger;
       return;

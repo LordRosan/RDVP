@@ -55,7 +55,7 @@ class OperationsControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("FAULTED"));
 
-        mockMvc.perform(get("/api/v1/repair-tasks/available?radiusKm=10")
+        mockMvc.perform(get("/api/v1/repair-tasks/pool?radiusKm=10")
                         .header("Authorization", "Bearer " + maintainerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.workload.status").value("IDLE"))
@@ -72,7 +72,7 @@ class OperationsControllerTests {
                 .getContentAsString(StandardCharsets.UTF_8);
         String repairTaskId = objectMapper.readTree(acceptResponse).path("data").path("repairTaskId").asText();
 
-        mockMvc.perform(get("/api/v1/repair-tasks/my")
+        mockMvc.perform(get("/api/v1/repair-tasks/accepted")
                         .header("Authorization", "Bearer " + maintainerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1))
@@ -93,7 +93,7 @@ class OperationsControllerTests {
                 .andExpect(jsonPath("$.data.result").value("REPAIRED"))
                 .andExpect(jsonPath("$.data.requiresReinspection").value(false));
 
-        mockMvc.perform(get("/api/v1/repair-tasks/my")
+        mockMvc.perform(get("/api/v1/repair-tasks/accepted")
                         .header("Authorization", "Bearer " + maintainerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(0));
@@ -132,7 +132,7 @@ class OperationsControllerTests {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("DEVICE_ACTIVE_FAULT_EXISTS"));
 
-        mockMvc.perform(get("/api/v1/repair-tasks/available?radiusKm=10")
+        mockMvc.perform(get("/api/v1/repair-tasks/pool?radiusKm=10")
                         .header("Authorization", "Bearer " + maintainerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1))
@@ -183,7 +183,7 @@ class OperationsControllerTests {
     }
 
     @Test
-    void filtersAvailableRepairTasksByProvidedLocation() throws Exception {
+    void filtersRepairTaskPoolByProvidedLocation() throws Exception {
         String operatorToken = login("fieldoperator", "password");
         String maintainerToken = login("maintainer", "password");
 
@@ -194,14 +194,14 @@ class OperationsControllerTests {
                 "GENERAL",
                 "Power supply fluctuates under load.");
 
-        mockMvc.perform(get("/api/v1/repair-tasks/available?radiusKm=1&longitude=114.1694&latitude=22.3193")
+        mockMvc.perform(get("/api/v1/repair-tasks/pool?radiusKm=1&longitude=114.1694&latitude=22.3193")
                         .header("Authorization", "Bearer " + maintainerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items[0].faultReportId").value(faultId))
                 .andExpect(jsonPath("$.data.items[0].distanceKm").isNumber());
 
-        mockMvc.perform(get("/api/v1/repair-tasks/available?radiusKm=1&longitude=120.0000&latitude=30.0000")
+        mockMvc.perform(get("/api/v1/repair-tasks/pool?radiusKm=1&longitude=120.0000&latitude=30.0000")
                         .header("Authorization", "Bearer " + maintainerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(0))
@@ -212,7 +212,7 @@ class OperationsControllerTests {
     void rejectsPartialRepairTaskLocationQuery() throws Exception {
         String maintainerToken = login("maintainer", "password");
 
-        mockMvc.perform(get("/api/v1/repair-tasks/available?radiusKm=1&longitude=114.1694")
+        mockMvc.perform(get("/api/v1/repair-tasks/pool?radiusKm=1&longitude=114.1694")
                         .header("Authorization", "Bearer " + maintainerToken))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.error.code").value("REPAIR_TASK_RADIUS_INVALID"));
@@ -301,7 +301,7 @@ class OperationsControllerTests {
                 .andExpect(jsonPath("$.data.status").value("FAULTED"))
                 .andExpect(jsonPath("$.data.lastVerificationTime").value("2026-06-03T08:30:00Z"));
 
-        mockMvc.perform(get("/api/v1/repair-tasks/available?radiusKm=10")
+        mockMvc.perform(get("/api/v1/repair-tasks/pool?radiusKm=10")
                         .header("Authorization", "Bearer " + maintainerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1))
@@ -420,13 +420,13 @@ class OperationsControllerTests {
                         .content(NEAR_DEVICE_LOCATION_BODY))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/api/v1/repair-tasks/available?radiusKm=20")
+        mockMvc.perform(get("/api/v1/repair-tasks/pool?radiusKm=20")
                         .header("Authorization", "Bearer " + maintainerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.workload.status").value("LOW_LOAD"))
                 .andExpect(jsonPath("$.data.workload.maxRadiusKm").value(20));
 
-        mockMvc.perform(get("/api/v1/repair-tasks/available?radiusKm=10")
+        mockMvc.perform(get("/api/v1/repair-tasks/pool?radiusKm=10")
                         .header("Authorization", "Bearer " + maintainerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.workload.status").value("LOW_LOAD"))
@@ -438,7 +438,7 @@ class OperationsControllerTests {
                         .content(NEAR_DEVICE_LOCATION_BODY))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/api/v1/repair-tasks/available?radiusKm=10")
+        mockMvc.perform(get("/api/v1/repair-tasks/pool?radiusKm=10")
                         .header("Authorization", "Bearer " + maintainerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.workload.status").value("MEDIUM_LOAD"))
@@ -450,7 +450,7 @@ class OperationsControllerTests {
                         .content(NEAR_DEVICE_LOCATION_BODY))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/api/v1/repair-tasks/available?radiusKm=10")
+        mockMvc.perform(get("/api/v1/repair-tasks/pool?radiusKm=10")
                         .header("Authorization", "Bearer " + maintainerToken))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("REPAIRER_BUSY"));
@@ -579,7 +579,7 @@ class OperationsControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.requiresReinspection").value(false));
 
-        mockMvc.perform(get("/api/v1/repair-tasks/available?radiusKm=10")
+        mockMvc.perform(get("/api/v1/repair-tasks/pool?radiusKm=10")
                         .header("Authorization", "Bearer " + maintainerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1))

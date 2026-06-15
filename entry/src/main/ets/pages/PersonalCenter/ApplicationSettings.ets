@@ -107,7 +107,7 @@ struct ApplicationSettings {
         .maxLines(1)
 
       Column({ space: 12 }) {
-        this.InfoRow('显示模式', AppThemeService.getThemeModeLabel(this.getSelectedThemeMode()), AppColors.TextSecondary)
+        this.InfoRow('显示模式', AppThemeService.getThemeModeLabel(AppThemeService.getThemeMode()), AppColors.TextSecondary)
         this.CardDivider()
 
         this.ThemeModeMessageText()
@@ -230,6 +230,7 @@ struct ApplicationSettings {
 
     const abilityContext = context as common.UIAbilityContext;
     AppThemeService.setThemeMode(mode, abilityContext.getApplicationContext(), abilityContext.config);
+    this.selectedThemeMode = AppThemeService.getThemeMode();
     this.themeModeMessage = `已切换为${AppThemeService.getThemeModeLabel(mode)}`;
     this.themeModeMessageTone = AppColors.Primary;
   }

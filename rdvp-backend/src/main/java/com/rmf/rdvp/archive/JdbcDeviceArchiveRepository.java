@@ -40,11 +40,11 @@ public class JdbcDeviceArchiveRepository implements DeviceArchiveRepository {
                             pcr.id AS pending_request_id,
                             fcr.freeze_until
                         FROM devices d
-                        LEFT JOIN device_change_requests pcr
+                        LEFT JOIN device_archive_change_requests pcr
                           ON pcr.device_id = d.id AND pcr.status = 'PENDING_REVIEW'
                         LEFT JOIN LATERAL (
                             SELECT freeze_until
-                            FROM device_change_requests
+                            FROM device_archive_change_requests
                             WHERE device_id = d.id
                               AND freeze_until IS NOT NULL
                               AND freeze_until > now()
@@ -77,11 +77,11 @@ public class JdbcDeviceArchiveRepository implements DeviceArchiveRepository {
                             pcr.id AS pending_request_id,
                             fcr.freeze_until
                         FROM devices d
-                        LEFT JOIN device_change_requests pcr
+                        LEFT JOIN device_archive_change_requests pcr
                           ON pcr.device_id = d.id AND pcr.status = 'PENDING_REVIEW'
                         LEFT JOIN LATERAL (
                             SELECT freeze_until
-                            FROM device_change_requests
+                            FROM device_archive_change_requests
                             WHERE device_id = d.id
                               AND freeze_until IS NOT NULL
                               AND freeze_until > now()

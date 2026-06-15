@@ -1,8 +1,8 @@
 package com.rmf.rdvp.workbench;
 
 public record WorkbenchSummary(
-        long pendingChangeRequests,
-        long availableRepairTasks,
-        long activeRepairTasks,
+        long pendingDeviceArchiveChangeRequests,
+        long repairTaskPoolItems,
+        long acceptedRepairTasks,
         long pendingReinspections) {
 }

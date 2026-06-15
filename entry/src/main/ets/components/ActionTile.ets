@@ -56,7 +56,7 @@ export struct ActionTile {
       SymbolGlyph($r('sys.symbol.checkmark_shield'))
         .fontSize(23)
         .fontColor([AppColors.OnPrimary])
-    } else if (this.action.id === WorkbenchActionId.DeviceQuery) {
+    } else if (this.action.id === WorkbenchActionId.DeviceArchiveQuery) {
       SymbolGlyph($r('sys.symbol.magnifyingglass'))
         .fontSize(22)
         .fontColor([AppColors.OnPrimary])
@@ -68,11 +68,11 @@ export struct ActionTile {
       SymbolGlyph($r('sys.symbol.checkmark_shield'))
         .fontSize(23)
         .fontColor([AppColors.OnPrimary])
-    } else if (this.action.id === WorkbenchActionId.AvailableRepairTask) {
+    } else if (this.action.id === WorkbenchActionId.RepairTaskPool) {
       SymbolGlyph($r('sys.symbol.location_up'))
         .fontSize(23)
         .fontColor([AppColors.OnPrimary])
-    } else if (this.action.id === WorkbenchActionId.MyRepairTask) {
+    } else if (this.action.id === WorkbenchActionId.AcceptedRepairTask) {
       SymbolGlyph($r('sys.symbol.wrench_and_screwdriver'))
         .fontSize(23)
         .fontColor([AppColors.OnPrimary])
@@ -80,12 +80,24 @@ export struct ActionTile {
       SymbolGlyph($r('sys.symbol.doc_text_badge_checkmark'))
         .fontSize(23)
         .fontColor([AppColors.OnPrimary])
-    } else if (this.action.id === WorkbenchActionId.DeviceChangeReview) {
+    } else if (this.action.id === WorkbenchActionId.DeviceArchiveReview) {
       SymbolGlyph($r('sys.symbol.checkmark_shield'))
         .fontSize(23)
         .fontColor([AppColors.OnPrimary])
     } else if (this.action.id === WorkbenchActionId.OperationsRecord) {
       SymbolGlyph($r('sys.symbol.clock'))
+        .fontSize(23)
+        .fontColor([AppColors.OnPrimary])
+    } else if (this.action.id === WorkbenchActionId.ArchiveRecord) {
+      SymbolGlyph($r('sys.symbol.text_clipboard'))
+        .fontSize(23)
+        .fontColor([AppColors.OnPrimary])
+    } else if (this.action.id === WorkbenchActionId.ReviewRecord) {
+      SymbolGlyph($r('sys.symbol.checkmark_shield'))
+        .fontSize(23)
+        .fontColor([AppColors.OnPrimary])
+    } else if (this.action.id === WorkbenchActionId.RecordCenter) {
+      SymbolGlyph($r('sys.symbol.text_clipboard'))
         .fontSize(23)
         .fontColor([AppColors.OnPrimary])
     } else {

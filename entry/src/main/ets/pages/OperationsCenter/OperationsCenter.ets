@@ -7,6 +7,7 @@ import { ApiClient } from '../../services/ApiClient';
 import { WorkbenchService } from '../../services/WorkbenchService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
+import { PermissionTextFormatter } from '../../utils/PermissionTextFormatter';
 
 @Entry
 @Component
@@ -124,12 +125,16 @@ struct OperationsCenter {
         StatusInfoRow({
           label: '功能权限',
           value: this.getPermissionSummaryText(),
-          tone: AppColors.Primary
+          tone: AppColors.Primary,
+          valueWidth: '62%',
+          valueMaxLines: 3,
+          rowMinHeight: 72,
+          verticalPadding: 8
         })
         this.CardDivider()
         if (SessionStore.hasPermission(PermissionCode.OpsRepairReportCreate)) {
           StatusInfoRow({
-            label: '维修任务数',
+            label: '待维修任务数',
             value: this.getActiveRepairTaskText(),
             tone: AppColors.Warning
           })
@@ -137,7 +142,7 @@ struct OperationsCenter {
         }
         if (SessionStore.hasPermission(PermissionCode.OpsReinspectionCreate)) {
           StatusInfoRow({
-            label: '复检任务数',
+            label: '待复检任务数',
             value: this.getPendingReinspectionText(),
             tone: AppColors.Primary
           })
@@ -225,7 +230,7 @@ struct OperationsCenter {
     if (SessionStore.hasPermission(PermissionCode.OpsReinspectionCreate)) {
       parts.push('可复检');
     }
-    return parts.length > 0 ? parts.join('、') : '-';
+    return PermissionTextFormatter.formatTwoPerLine(parts);
   }
 
   getActiveRepairTaskText(): string {
@@ -252,13 +257,13 @@ struct OperationsCenter {
       return;
     }
 
-    if (action.id === WorkbenchActionId.AvailableRepairTask) {
-      this.openPage('pages/OperationsCenter/AvailableRepairTask', '任务接取不可用');
+    if (action.id === WorkbenchActionId.RepairTaskPool) {
+      this.openPage('pages/OperationsCenter/RepairTaskPool', '任务接取不可用');
       return;
     }
 
-    if (action.id === WorkbenchActionId.MyRepairTask) {
-      this.openPage('pages/OperationsCenter/MyRepairTask', '维修任务不可用');
+    if (action.id === WorkbenchActionId.AcceptedRepairTask) {
+      this.openPage('pages/OperationsCenter/AcceptedRepairTask', '维修任务不可用');
       return;
     }
 
@@ -268,7 +273,7 @@ struct OperationsCenter {
     }
 
     if (action.id === WorkbenchActionId.OperationsRecord) {
-      this.openPage('pages/RecordCenter/OperationsRecord', '历史记录不可用');
+      this.openPage('pages/RecordCenter/OperationsRecord', '运维记录不可用');
       return;
     }
 
@@ -290,12 +295,12 @@ struct OperationsCenter {
       return `${WorkbenchActionId.DeviceVerification}`;
     }
 
-    if (url === 'pages/OperationsCenter/AvailableRepairTask') {
-      return `${WorkbenchActionId.AvailableRepairTask}`;
+    if (url === 'pages/OperationsCenter/RepairTaskPool') {
+      return `${WorkbenchActionId.RepairTaskPool}`;
     }
 
-    if (url === 'pages/OperationsCenter/MyRepairTask') {
-      return `${WorkbenchActionId.MyRepairTask}`;
+    if (url === 'pages/OperationsCenter/AcceptedRepairTask') {
+      return `${WorkbenchActionId.AcceptedRepairTask}`;
     }
 
     if (url === 'pages/OperationsCenter/ReinspectionTask') {

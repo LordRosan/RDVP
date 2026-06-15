@@ -3,13 +3,13 @@ export enum PermissionCode {
   ArchiveDeviceCreate = 'ARCHIVE_DEVICE_CREATE',
   ArchiveDeviceDelete = 'ARCHIVE_DEVICE_DELETE',
   ArchiveQrCodeExport = 'ARCHIVE_QRCODE_EXPORT',
-  ArchiveChangeRequestCreate = 'ARCHIVE_CHANGE_REQUEST_CREATE',
+  ArchiveDeviceChangeRequestCreate = 'ARCHIVE_DEVICE_CHANGE_REQUEST_CREATE',
   OpsDeviceVerify = 'OPS_DEVICE_VERIFY',
   OpsFaultReportCreate = 'OPS_FAULT_REPORT_CREATE',
   OpsRepairTaskAccept = 'OPS_REPAIR_TASK_ACCEPT',
   OpsRepairReportCreate = 'OPS_REPAIR_REPORT_CREATE',
   OpsReinspectionCreate = 'OPS_REINSPECTION_CREATE',
-  MgmtArchiveChangeReview = 'MGMT_ARCHIVE_CHANGE_REVIEW',
+  MgmtDeviceArchiveChangeRequestReview = 'MGMT_DEVICE_ARCHIVE_CHANGE_REQUEST_REVIEW',
   MgmtAuditLogRead = 'MGMT_AUDIT_LOG_READ'
 }
 
@@ -18,7 +18,7 @@ export const ArchiveCenterPermissions: string[] = [
   PermissionCode.ArchiveDeviceCreate,
   PermissionCode.ArchiveDeviceDelete,
   PermissionCode.ArchiveQrCodeExport,
-  PermissionCode.ArchiveChangeRequestCreate
+  PermissionCode.ArchiveDeviceChangeRequestCreate
 ];
 
 export const OperationsCenterPermissions: string[] = [
@@ -30,7 +30,7 @@ export const OperationsCenterPermissions: string[] = [
 ];
 
 export const ManagementCenterPermissions: string[] = [
-  PermissionCode.MgmtArchiveChangeReview,
+  PermissionCode.MgmtDeviceArchiveChangeRequestReview,
   PermissionCode.MgmtAuditLogRead
 ];
 
@@ -39,12 +39,12 @@ export const AllPermissionCodes: string[] = [
   PermissionCode.ArchiveDeviceCreate,
   PermissionCode.ArchiveDeviceDelete,
   PermissionCode.ArchiveQrCodeExport,
-  PermissionCode.ArchiveChangeRequestCreate,
+  PermissionCode.ArchiveDeviceChangeRequestCreate,
   PermissionCode.OpsDeviceVerify,
   PermissionCode.OpsFaultReportCreate,
   PermissionCode.OpsRepairTaskAccept,
   PermissionCode.OpsRepairReportCreate,
   PermissionCode.OpsReinspectionCreate,
-  PermissionCode.MgmtArchiveChangeReview,
+  PermissionCode.MgmtDeviceArchiveChangeRequestReview,
   PermissionCode.MgmtAuditLogRead
 ];

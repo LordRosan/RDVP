@@ -163,7 +163,7 @@ export class DeviceArchiveLifecycleService {
       return ApiClient.createServiceUnavailableResponse<DeviceArchiveChangeRequestRecord>();
     }
 
-    const response = await ApiClient.request<DeviceArchiveLifecycleApiResult>('/api/v1/device-change-requests', 'POST',
+    const response = await ApiClient.request<DeviceArchiveLifecycleApiResult>('/api/v1/device-archive-change-requests', 'POST',
       true, DeviceArchiveLifecycleService.buildCreateRequestBody(form, normalizedDeviceCode));
 
     return DeviceArchiveLifecycleService.mapLifecycleResponse(response, normalizedDeviceCode, form.deviceName,
@@ -182,7 +182,7 @@ export class DeviceArchiveLifecycleService {
       return ApiClient.createServiceUnavailableResponse<DeviceArchiveChangeRequestRecord>();
     }
 
-    const response = await ApiClient.request<DeviceArchiveLifecycleApiResult>('/api/v1/device-change-requests', 'POST',
+    const response = await ApiClient.request<DeviceArchiveLifecycleApiResult>('/api/v1/device-archive-change-requests', 'POST',
       true, DeviceArchiveLifecycleService.buildDeleteRequestBody(form));
 
     return DeviceArchiveLifecycleService.mapLifecycleResponse(response, form.device.deviceCode, form.device.name,
@@ -232,7 +232,7 @@ export class DeviceArchiveLifecycleService {
       return {
         success: false,
         error: {
-          code: 'DEVICE_LIFECYCLE_RESPONSE_INVALID',
+          code: 'DEVICE_ARCHIVE_CHANGE_RESPONSE_INVALID',
           message: '档案申请响应无效'
         },
         requestId: response.requestId,
@@ -253,7 +253,7 @@ export class DeviceArchiveLifecycleService {
     return {
       success: false,
       error: {
-        code: 'DEVICE_ARCHIVE_LIFECYCLE_INVALID',
+        code: 'DEVICE_ARCHIVE_CHANGE_REQUEST_INVALID',
         message
       }
     };

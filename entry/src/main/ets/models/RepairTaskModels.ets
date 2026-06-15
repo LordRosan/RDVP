@@ -21,7 +21,7 @@ export enum RepairReportResult {
   Unresolved = 'UNRESOLVED'
 }
 
-export interface AvailableRepairTaskQuery {
+export interface RepairTaskPoolQuery {
   radiusKm: number;
   longitude?: number;
   latitude?: number;
@@ -43,7 +43,7 @@ export interface RepairTaskValidationResult {
   normalizedRadiusKm?: number;
 }
 
-export interface AvailableRepairTaskSummary {
+export interface RepairTaskPoolItem {
   id: string;
   faultNo: string;
   deviceCode: string;
@@ -57,14 +57,14 @@ export interface AvailableRepairTaskSummary {
   taskType: string;
 }
 
-export interface AvailableRepairTaskListResult {
+export interface RepairTaskPoolListResult {
   radiusKm: number;
-  items: AvailableRepairTaskSummary[];
+  items: RepairTaskPoolItem[];
   total: number;
   workload?: RepairerWorkloadSnapshot;
 }
 
-export interface MyRepairTaskSummary {
+export interface AcceptedRepairTaskItem {
   id: string;
   taskNo: string;
   faultNo: string;
@@ -76,8 +76,8 @@ export interface MyRepairTaskSummary {
   status: RepairTaskStatus;
 }
 
-export interface MyRepairTaskListResult {
-  items: MyRepairTaskSummary[];
+export interface AcceptedRepairTaskListResult {
+  items: AcceptedRepairTaskItem[];
   total: number;
 }
 

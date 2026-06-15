@@ -12,7 +12,7 @@
 
 ## 1. 设计范围
 
-本文档定义 RDVP 后端服务的核心数据模型。数据模型覆盖用户、角色权限、设备、二维码、设备核验、设备信息变更、故障报告、维修任务、维修报告、复检、附件、通知、离线同步、审计日志和安全事件。
+本文档定义 RDVP 后端服务的核心数据模型。数据模型覆盖用户、角色权限、设备、二维码、设备核验、设备档案变更、故障报告、维修任务、维修报告、复检、附件、通知、离线同步、审计日志和安全事件。
 
 后端数据库基线采用 PostgreSQL + PostGIS。文档中的逻辑类型用于表达业务语义，物理实现优先映射为 PostgreSQL 类型，例如 `datetime` 映射为 `TIMESTAMPTZ`，`json` 映射为 `JSONB`。
 
@@ -68,7 +68,7 @@ erDiagram
 
   devices ||--o{ device_qrcodes : has
   devices ||--o{ device_verification_records : has
-  devices ||--o{ device_change_requests : has
+  devices ||--o{ device_archive_change_requests : has
   devices ||--o{ fault_reports : has
 
   fault_reports ||--o{ repair_tasks : has
@@ -315,11 +315,11 @@ INDEX(device_id, verified_at)
 INDEX(verifier_id, verified_at)
 ```
 
-## 9. 设备信息变更
+## 9. 设备档案变更
 
-### 9.1 device_change_requests
+### 9.1 device_archive_change_requests
 
-设备信息变更申请表。
+设备档案变更申请表。
 
 | 字段 | 类型 | 必填 | 约束 | 说明 |
 | --- | --- | --- | --- | --- |
@@ -341,7 +341,7 @@ INDEX(verifier_id, verified_at)
 | `updated_at` | datetime | 是 |  | 更新时间 |
 | `updated_by` | id | 否 | FK users.id | 更新人 |
 
-申请状态使用 API 文档中的设备信息变更申请状态枚举。
+申请状态使用 API 文档中的设备档案变更申请状态枚举。
 
 `changes` 示例：
 
@@ -519,7 +519,7 @@ INDEX(reinspector_id, reinspected_at)
 
 ```text
 DEVICE_VERIFICATION_RECORD
-DEVICE_CHANGE_REQUEST
+DEVICE_ARCHIVE_CHANGE_REQUEST
 FAULT_REPORT
 REPAIR_REPORT
 REINSPECTION_RECORD
@@ -672,9 +672,9 @@ ATTACHMENT_TYPE_REJECTED
 
 `device_qrcodes.nonce` 全局唯一。二维码校验应结合版本、设备编号、随机标识和签名摘要。
 
-### 16.3 设备信息变更审核后生效
+### 16.3 设备档案变更审核后生效
 
-设备信息变更先写入 `device_change_requests`。审核通过后再更新 `devices`，并写入 `operation_logs`。
+设备档案变更先写入 `device_archive_change_requests`。审核通过后再更新 `devices`，并写入 `operation_logs`。
 
 ### 16.4 故障接取并发控制
 

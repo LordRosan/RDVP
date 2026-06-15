@@ -88,7 +88,7 @@ export class DeviceArchiveFlowStore {
     DeviceArchiveFlowStore.clearDraft();
   }
 
-  static markCurrentDeviceChangePendingByCode(
+  static markCurrentArchiveChangePendingByCode(
     deviceCode: string,
     requestId: string,
     status: DeviceArchiveChangeRequestStatus = DeviceArchiveChangeRequestStatus.PendingReview
@@ -102,7 +102,7 @@ export class DeviceArchiveFlowStore {
     DeviceArchiveFlowStore.markChangePending(requestId, DeviceArchiveFlowStore.pendingDraft, status);
   }
 
-  static releaseCurrentDeviceChangeLockByCode(deviceCode: string): void {
+  static releaseCurrentArchiveChangeLockByCode(deviceCode: string): void {
     const device = DeviceArchiveFlowStore.currentDevice;
     if (device === undefined ||
       device.deviceCode.trim().toUpperCase() !== deviceCode.trim().toUpperCase()) {
