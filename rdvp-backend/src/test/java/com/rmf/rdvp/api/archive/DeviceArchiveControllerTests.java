@@ -45,19 +45,19 @@ class DeviceArchiveControllerTests {
                 .andExpect(jsonPath("$.data.deviceCode").value("RDVP-DEVICE-0001"))
                 .andExpect(jsonPath("$.data.name").value("冷却泵A-01"))
                 .andExpect(jsonPath("$.data.status").value("NORMAL"))
-                .andExpect(jsonPath("$.data.changeState.locked").value(false));
+                .andExpect(jsonPath("$.data.archiveRequestState.locked").value(false));
     }
 
     @Test
-    void exposesPendingChangeStateForLockedDeviceArchive() throws Exception {
+    void exposesPendingArchiveRequestStateForLockedDeviceArchive() throws Exception {
         String token = login("deviceadmin", "password");
 
         mockMvc.perform(get("/api/v1/devices/by-code/RDVP-DEVICE-0002")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.changeState.locked").value(true))
-                .andExpect(jsonPath("$.data.changeState.pendingRequestId").value("DCR-LOCAL-0002"))
-                .andExpect(jsonPath("$.data.changeState.freezeUntil").doesNotExist());
+                .andExpect(jsonPath("$.data.archiveRequestState.locked").value(true))
+                .andExpect(jsonPath("$.data.archiveRequestState.pendingRequestId").value("DCR-LOCAL-0002"))
+                .andExpect(jsonPath("$.data.archiveRequestState.freezeUntil").doesNotExist());
     }
 
     @Test
@@ -67,9 +67,9 @@ class DeviceArchiveControllerTests {
         mockMvc.perform(get("/api/v1/devices/device-local-0003")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.changeState.locked").value(true))
-                .andExpect(jsonPath("$.data.changeState.pendingRequestId").doesNotExist())
-                .andExpect(jsonPath("$.data.changeState.freezeUntil").isString());
+                .andExpect(jsonPath("$.data.archiveRequestState.locked").value(true))
+                .andExpect(jsonPath("$.data.archiveRequestState.pendingRequestId").doesNotExist())
+                .andExpect(jsonPath("$.data.archiveRequestState.freezeUntil").isString());
     }
 
     @Test

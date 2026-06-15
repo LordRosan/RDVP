@@ -1,10 +1,8 @@
-import { AuthSession, RoleCode } from '../models/AuthModels';
-import { AllPermissionCodes } from '../models/PermissionModels';
-import { CurrentUserSnapshot, SessionState } from '../models/SessionModels';
-import { SecureSessionStorageService } from '../services/SecureSessionStorageService';
+import { AuthSession, RoleCode } from '../models/identity/AuthModels';
+import { AllPermissionCodes } from '../models/identity/PermissionModels';
+import { CurrentUserSnapshot, SessionState } from '../models/identity/SessionModels';
+import { SecureSessionStorageService } from '../services/identity/SecureSessionStorageService';
 import { WorkbenchRefreshStore } from './WorkbenchRefreshStore';
-
-const SESSION_STORAGE_KEY = 'rdvp_auth_session';
 
 export class SessionStore {
   private static sessionState: SessionState = {
@@ -108,6 +106,24 @@ export class SessionStore {
     return permissions.some((permission: string) => grantedPermissions.includes(permission));
   }
 
+  static hasAllPermissions(permissions: string[]): boolean {
+    SessionStore.ensureInitialized();
+    if (!SessionStore.isAuthenticated()) {
+      return false;
+    }
+
+    const grantedPermissions = SessionStore.sessionState.session?.user?.permissions;
+    if (grantedPermissions === undefined) {
+      return false;
+    }
+
+    if (grantedPermissions.includes('*')) {
+      return true;
+    }
+
+    return permissions.every((permission: string) => grantedPermissions.includes(permission));
+  }
+
   private static formatRoleNames(roles: RoleCode[]): string {
     if (roles.length === 0) {
       return '权限未加载';
@@ -147,9 +163,7 @@ export class SessionStore {
     SessionStore.initialized = true;
 
     try {
-      const secureSessionText = SecureSessionStorageService.loadSessionText();
-      const sessionText = secureSessionText === undefined ? SessionStore.loadLegacySessionText() : secureSessionText;
-      SessionStore.clearLegacySessionText();
+      const sessionText = SecureSessionStorageService.loadSessionText();
       const session = SessionStore.parseSession(sessionText);
       if (session !== undefined && !SessionStore.isSessionExpired(session)) {
         SessionStore.sessionState = {
@@ -171,24 +185,6 @@ export class SessionStore {
   private static persistSession(session: AuthSession | undefined): void {
     try {
       SecureSessionStorageService.saveSessionText(session === undefined ? '' : JSON.stringify(session));
-      SessionStore.clearLegacySessionText();
-    } catch (err) {
-    }
-  }
-
-  private static loadLegacySessionText(): string | undefined {
-    try {
-      PersistentStorage.persistProp<string>(SESSION_STORAGE_KEY, '');
-      return AppStorage.get<string>(SESSION_STORAGE_KEY);
-    } catch (err) {
-      return undefined;
-    }
-  }
-
-  private static clearLegacySessionText(): void {
-    try {
-      PersistentStorage.persistProp<string>(SESSION_STORAGE_KEY, '');
-      AppStorage.setOrCreate<string>(SESSION_STORAGE_KEY, '');
     } catch (err) {
     }
   }

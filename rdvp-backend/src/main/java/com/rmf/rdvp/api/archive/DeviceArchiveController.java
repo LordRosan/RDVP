@@ -25,7 +25,7 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1")
-@PreAuthorize("hasAuthority('ARCHIVE_DEVICE_READ')")
+@PreAuthorize("hasAuthority('ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY')")
 public class DeviceArchiveController {
 
     private final DeviceArchiveService archiveService;
@@ -66,7 +66,7 @@ public class DeviceArchiveController {
     }
 
     @PostMapping("/devices/{deviceId}/qrcode-export")
-    @PreAuthorize("hasAuthority('ARCHIVE_DEVICE_READ') and hasAuthority('ARCHIVE_QRCODE_EXPORT')")
+    @PreAuthorize("hasAuthority('ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY') and hasAuthority('ARCHIVE_CENTER_DEVICE_ARCHIVE_QR_CODE_EXPORT')")
     public ResponseEntity<ApiResponse<DeviceQrCodeExportResponse>> exportQrCode(
             @PathVariable String deviceId,
             @Valid @RequestBody DeviceQrCodeExportRequest requestBody,
@@ -111,3 +111,5 @@ public class DeviceArchiveController {
                 "设备二维码导出失败：%s。".formatted(errorCode.code()));
     }
 }
+
+

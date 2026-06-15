@@ -1,0 +1,2 @@
+-- Permission codes are seeded by the application bootstrap with the current
+-- canonical names. Legacy permission aliases are intentionally not migrated.

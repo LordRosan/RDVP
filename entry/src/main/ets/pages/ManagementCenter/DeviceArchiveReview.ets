@@ -2,14 +2,14 @@ import { Filter, FilterParams, FilterResult, FilterType } from '@kit.ArkUI';
 import { AppColors } from '../../styles/AppTheme';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import {
-  DeviceArchiveChangeFieldDiff,
+  DeviceArchiveRequestFieldDiff,
   DeviceArchiveReviewDecision,
   DeviceArchiveReviewItem,
   DeviceArchiveReviewRequestType
-} from '../../models/DeviceArchiveReviewModels';
-import { PermissionCode } from '../../models/PermissionModels';
-import { ApiClient } from '../../services/ApiClient';
-import { DeviceArchiveReviewService } from '../../services/DeviceArchiveReviewService';
+} from '../../models/archive/DeviceArchiveReviewModels';
+import { PermissionCode } from '../../models/identity/PermissionModels';
+import { ApiClient } from '../../services/common/ApiClient';
+import { DeviceArchiveReviewService } from '../../services/management/DeviceArchiveReviewService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 
@@ -36,7 +36,7 @@ struct DeviceArchiveReview {
   @State submitting: boolean = false;
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.MgmtDeviceArchiveChangeRequestReview)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ManagementCenterDeviceArchiveRequestReview)) {
       return;
     }
 
@@ -234,9 +234,9 @@ struct DeviceArchiveReview {
       .width('100%')
 
       Column({ space: 8 }) {
-        ForEach(item.changes, (change: DeviceArchiveChangeFieldDiff) => {
+        ForEach(item.changes, (change: DeviceArchiveRequestFieldDiff) => {
           this.ChangeDiffRow(change)
-        }, (change: DeviceArchiveChangeFieldDiff) => `${item.id}-${change.field}`)
+        }, (change: DeviceArchiveRequestFieldDiff) => `${item.id}-${change.field}`)
       }
       .width('100%')
 
@@ -274,7 +274,7 @@ struct DeviceArchiveReview {
   }
 
   @Builder
-  ChangeDiffRow(change: DeviceArchiveChangeFieldDiff) {
+  ChangeDiffRow(change: DeviceArchiveRequestFieldDiff) {
     Column({ space: 4 }) {
       Text(change.label)
         .fontSize(13)
@@ -638,7 +638,7 @@ struct DeviceArchiveReview {
     }
 
     if (!this.canReview()) {
-      this.refreshMessage = '当前账号无权审核设备档案变更';
+      this.refreshMessage = '当前账号无权审核设备档案申请';
       this.refreshMessageTone = AppColors.Danger;
       return;
     }
@@ -649,7 +649,7 @@ struct DeviceArchiveReview {
 
     if (!response.success) {
       const error = response.error;
-      this.refreshMessage = error ? error.message : '变更申请刷新失败';
+      this.refreshMessage = error ? error.message : '档案申请刷新失败';
       this.refreshMessageTone = AppColors.Danger;
       this.refreshStatus = '刷新失败';
       return;
@@ -729,7 +729,7 @@ struct DeviceArchiveReview {
 
     this.submitting = true;
     const decision = this.reviewDecision as DeviceArchiveReviewDecision;
-    const response = await DeviceArchiveReviewService.reviewChangeRequestRemoteFirst({
+    const response = await DeviceArchiveReviewService.reviewArchiveRequestRemoteFirst({
       requestId: this.selectedRequestId,
       decision,
       reviewedAt: this.reviewedAt,
@@ -783,7 +783,7 @@ struct DeviceArchiveReview {
   }
 
   canReview(): boolean {
-    return SessionStore.hasPermission(PermissionCode.MgmtDeviceArchiveChangeRequestReview);
+    return SessionStore.hasPermission(PermissionCode.ManagementCenterDeviceArchiveRequestReview);
   }
 
   hasRequest(requestId: string): boolean {
@@ -908,3 +908,5 @@ struct DeviceArchiveReview {
     }
   }
 }
+
+

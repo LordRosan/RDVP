@@ -1,14 +1,14 @@
 import { AppColors } from '../../styles/AppTheme';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
-import { DeviceArchiveChangeRequestStatus } from '../../models/DeviceArchiveChangeModels';
-import { PermissionCode } from '../../models/PermissionModels';
-import { ApiClient } from '../../services/ApiClient';
 import {
   DeviceArchiveCreateRequestForm,
-  DeviceArchiveLifecycleService
-} from '../../services/DeviceArchiveLifecycleService';
-import { DeviceArchiveChangeService } from '../../services/DeviceArchiveChangeService';
-import { DeviceService } from '../../services/DeviceService';
+  DeviceArchiveRequestStatus
+} from '../../models/archive/DeviceArchiveRequestModels';
+import { PermissionCode } from '../../models/identity/PermissionModels';
+import { ApiClient } from '../../services/common/ApiClient';
+import { DeviceArchiveRequestService } from '../../services/archive/DeviceArchiveRequestService';
+import { DeviceArchiveUpdateService } from '../../services/archive/DeviceArchiveUpdateService';
+import { DeviceService } from '../../services/archive/DeviceService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 
@@ -27,12 +27,12 @@ struct DeviceArchiveCreate {
   @State normalizedDeviceCode: string = '-';
   @State fieldCount: number = 0;
   @State createTime: string = '';
-  @State requestStatus: DeviceArchiveChangeRequestStatus = DeviceArchiveChangeRequestStatus.Draft;
+  @State requestStatus: DeviceArchiveRequestStatus = DeviceArchiveRequestStatus.Draft;
   @State submitting: boolean = false;
   private prefilledDeviceCode: string = '';
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveDeviceCreate)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveCenterDeviceArchiveCreateRequestSubmit)) {
       return;
     }
 
@@ -277,7 +277,7 @@ struct DeviceArchiveCreate {
         this.CardDivider()
         StatusInfoRow({
           label: '申请状态',
-          value: DeviceArchiveChangeService.formatRequestStatus(this.requestStatus),
+          value: DeviceArchiveUpdateService.formatRequestStatus(this.requestStatus),
           tone: this.getStatusTone(this.requestStatus)
         })
       }
@@ -351,13 +351,13 @@ struct DeviceArchiveCreate {
     }
 
     const form = this.buildForm();
-    const validation = DeviceArchiveLifecycleService.validateCreateRequestForm(form);
+    const validation = DeviceArchiveRequestService.validateCreateRequestForm(form);
     this.normalizedDeviceCode = validation.normalizedDeviceCode ?
       validation.normalizedDeviceCode : DeviceService.normalizeDeviceCode(this.deviceCode);
     if (this.normalizedDeviceCode.length === 0) {
       this.normalizedDeviceCode = '-';
     }
-    this.fieldCount = DeviceArchiveLifecycleService.countCreateFields(form);
+    this.fieldCount = DeviceArchiveRequestService.countCreateFields(form);
 
     if (!validation.valid) {
       this.message = validation.message;
@@ -366,7 +366,7 @@ struct DeviceArchiveCreate {
     }
 
     this.submitting = true;
-    const response = await DeviceArchiveLifecycleService.submitCreateRequestRemoteFirst(form);
+    const response = await DeviceArchiveRequestService.submitCreateRequestRemoteFirst(form);
     this.submitting = false;
 
     if (!response.success) {
@@ -376,7 +376,7 @@ struct DeviceArchiveCreate {
       return;
     }
 
-    this.requestStatus = response.data === undefined ? DeviceArchiveChangeRequestStatus.PendingReview : response.data.status;
+    this.requestStatus = response.data === undefined ? DeviceArchiveRequestStatus.PendingReview : response.data.status;
     this.message = '添加申请已提交，等待管理员审核';
     this.messageTone = AppColors.Success;
   }
@@ -396,14 +396,14 @@ struct DeviceArchiveCreate {
   onFormChanged(): void {
     this.message = '';
     this.messageTone = AppColors.Danger;
-    this.fieldCount = DeviceArchiveLifecycleService.countCreateFields(this.buildForm());
+    this.fieldCount = DeviceArchiveRequestService.countCreateFields(this.buildForm());
     if (!this.isSubmitted()) {
-      this.requestStatus = DeviceArchiveChangeRequestStatus.Draft;
+      this.requestStatus = DeviceArchiveRequestStatus.Draft;
     }
   }
 
   isSubmitted(): boolean {
-    return this.requestStatus === DeviceArchiveChangeRequestStatus.PendingReview;
+    return this.requestStatus === DeviceArchiveRequestStatus.PendingReview;
   }
 
   getSubmitButtonLabel(): string {
@@ -418,17 +418,17 @@ struct DeviceArchiveCreate {
     return '提交申请';
   }
 
-  getStatusTone(status: DeviceArchiveChangeRequestStatus): string {
+  getStatusTone(status: DeviceArchiveRequestStatus): string {
     switch (status) {
-      case DeviceArchiveChangeRequestStatus.PendingReview:
+      case DeviceArchiveRequestStatus.PendingReview:
         return AppColors.Warning;
-      case DeviceArchiveChangeRequestStatus.Approved:
+      case DeviceArchiveRequestStatus.Approved:
         return AppColors.Success;
-      case DeviceArchiveChangeRequestStatus.Rejected:
+      case DeviceArchiveRequestStatus.Rejected:
         return AppColors.Danger;
-      case DeviceArchiveChangeRequestStatus.Withdrawn:
+      case DeviceArchiveRequestStatus.Withdrawn:
         return AppColors.TextSecondary;
-      case DeviceArchiveChangeRequestStatus.Draft:
+      case DeviceArchiveRequestStatus.Draft:
       default:
         return AppColors.TextSecondary;
     }
@@ -467,3 +467,5 @@ struct DeviceArchiveCreate {
     }
   }
 }
+
+

@@ -1,14 +1,14 @@
 import {
-  DeviceArchiveChangeDraft,
-  DeviceArchiveChangeRequestStatus
-} from '../models/DeviceArchiveChangeModels';
-import { DeviceSummary } from '../models/DeviceModels';
+  DeviceArchiveUpdateDraft,
+  DeviceArchiveRequestStatus
+} from '../models/archive/DeviceArchiveRequestModels';
+import { DeviceSummary } from '../models/archive/DeviceModels';
 
 export class DeviceArchiveFlowStore {
   private static currentDevice?: DeviceSummary = undefined;
-  private static draft?: DeviceArchiveChangeDraft = undefined;
-  private static pendingDraft?: DeviceArchiveChangeDraft = undefined;
-  private static pendingRequestStatus: DeviceArchiveChangeRequestStatus = DeviceArchiveChangeRequestStatus.PendingReview;
+  private static draft?: DeviceArchiveUpdateDraft = undefined;
+  private static pendingDraft?: DeviceArchiveUpdateDraft = undefined;
+  private static pendingRequestStatus: DeviceArchiveRequestStatus = DeviceArchiveRequestStatus.PendingReview;
 
   private static readonly DEVICE_CODE_STORAGE_KEY = 'rdvp_archive_current_device_code';
 
@@ -16,7 +16,7 @@ export class DeviceArchiveFlowStore {
     DeviceArchiveFlowStore.currentDevice = device;
     DeviceArchiveFlowStore.draft = undefined;
     DeviceArchiveFlowStore.pendingDraft = undefined;
-    DeviceArchiveFlowStore.pendingRequestStatus = DeviceArchiveChangeRequestStatus.PendingReview;
+    DeviceArchiveFlowStore.pendingRequestStatus = DeviceArchiveRequestStatus.PendingReview;
     try {
       AppStorage.setOrCreate<string>(DeviceArchiveFlowStore.DEVICE_CODE_STORAGE_KEY, device.deviceCode);
     } catch (err) {
@@ -39,11 +39,11 @@ export class DeviceArchiveFlowStore {
     return '';
   }
 
-  static getDraft(): DeviceArchiveChangeDraft | undefined {
+  static getDraft(): DeviceArchiveUpdateDraft | undefined {
     return DeviceArchiveFlowStore.draft;
   }
 
-  static saveDraft(draft: DeviceArchiveChangeDraft): void {
+  static saveDraft(draft: DeviceArchiveUpdateDraft): void {
     DeviceArchiveFlowStore.draft = draft;
   }
 
@@ -51,18 +51,18 @@ export class DeviceArchiveFlowStore {
     DeviceArchiveFlowStore.draft = undefined;
   }
 
-  static getPendingDraft(): DeviceArchiveChangeDraft | undefined {
+  static getPendingDraft(): DeviceArchiveUpdateDraft | undefined {
     return DeviceArchiveFlowStore.pendingDraft;
   }
 
-  static getPendingRequestStatus(): DeviceArchiveChangeRequestStatus {
+  static getPendingRequestStatus(): DeviceArchiveRequestStatus {
     return DeviceArchiveFlowStore.pendingRequestStatus;
   }
 
-  static markChangePending(
+  static markArchiveRequestPending(
     requestId: string,
-    pendingDraft?: DeviceArchiveChangeDraft,
-    status: DeviceArchiveChangeRequestStatus = DeviceArchiveChangeRequestStatus.PendingReview
+    pendingDraft?: DeviceArchiveUpdateDraft,
+    status: DeviceArchiveRequestStatus = DeviceArchiveRequestStatus.PendingReview
   ): void {
     if (DeviceArchiveFlowStore.currentDevice === undefined) {
       return;
@@ -78,7 +78,7 @@ export class DeviceArchiveFlowStore {
       location: device.location,
       status: device.status,
       lastVerificationTime: device.lastVerificationTime,
-      changeState: {
+      archiveRequestState: {
         locked: true,
         pendingRequestId: requestId
       }
@@ -88,10 +88,10 @@ export class DeviceArchiveFlowStore {
     DeviceArchiveFlowStore.clearDraft();
   }
 
-  static markCurrentArchiveChangePendingByCode(
+  static markCurrentArchiveRequestPendingByCode(
     deviceCode: string,
     requestId: string,
-    status: DeviceArchiveChangeRequestStatus = DeviceArchiveChangeRequestStatus.PendingReview
+    status: DeviceArchiveRequestStatus = DeviceArchiveRequestStatus.PendingReview
   ): void {
     const device = DeviceArchiveFlowStore.currentDevice;
     if (device === undefined ||
@@ -99,10 +99,10 @@ export class DeviceArchiveFlowStore {
       return;
     }
 
-    DeviceArchiveFlowStore.markChangePending(requestId, DeviceArchiveFlowStore.pendingDraft, status);
+    DeviceArchiveFlowStore.markArchiveRequestPending(requestId, DeviceArchiveFlowStore.pendingDraft, status);
   }
 
-  static releaseCurrentArchiveChangeLockByCode(deviceCode: string): void {
+  static releaseCurrentArchiveRequestLockByCode(deviceCode: string): void {
     const device = DeviceArchiveFlowStore.currentDevice;
     if (device === undefined ||
       device.deviceCode.trim().toUpperCase() !== deviceCode.trim().toUpperCase()) {
@@ -118,19 +118,19 @@ export class DeviceArchiveFlowStore {
       location: device.location,
       status: device.status,
       lastVerificationTime: device.lastVerificationTime,
-      changeState: {
+      archiveRequestState: {
         locked: false
       }
     };
     DeviceArchiveFlowStore.pendingDraft = undefined;
-    DeviceArchiveFlowStore.pendingRequestStatus = DeviceArchiveChangeRequestStatus.PendingReview;
+    DeviceArchiveFlowStore.pendingRequestStatus = DeviceArchiveRequestStatus.PendingReview;
   }
 
   static clearFlow(): void {
     DeviceArchiveFlowStore.currentDevice = undefined;
     DeviceArchiveFlowStore.draft = undefined;
     DeviceArchiveFlowStore.pendingDraft = undefined;
-    DeviceArchiveFlowStore.pendingRequestStatus = DeviceArchiveChangeRequestStatus.PendingReview;
+    DeviceArchiveFlowStore.pendingRequestStatus = DeviceArchiveRequestStatus.PendingReview;
     try {
       AppStorage.setOrCreate<string>(DeviceArchiveFlowStore.DEVICE_CODE_STORAGE_KEY, '');
     } catch (err) {

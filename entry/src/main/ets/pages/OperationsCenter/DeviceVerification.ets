@@ -1,12 +1,12 @@
 import { AppColors } from '../../styles/AppTheme';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
-import { FaultSeverity, FaultType } from '../../models/FaultModels';
-import { PermissionCode } from '../../models/PermissionModels';
-import { VerificationResult } from '../../models/VerificationModels';
-import { ApiClient } from '../../services/ApiClient';
-import { DeviceService } from '../../services/DeviceService';
-import { DeviceVerificationService } from '../../services/DeviceVerificationService';
-import { FaultReportService } from '../../services/FaultReportService';
+import { FaultSeverity, FaultType } from '../../models/operations/FaultModels';
+import { PermissionCode } from '../../models/identity/PermissionModels';
+import { VerificationResult } from '../../models/operations/VerificationModels';
+import { ApiClient } from '../../services/common/ApiClient';
+import { DeviceService } from '../../services/archive/DeviceService';
+import { DeviceVerificationService } from '../../services/operations/DeviceVerificationService';
+import { FaultReportService } from '../../services/operations/FaultReportService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 
@@ -30,7 +30,7 @@ struct DeviceVerification {
   @State submitted: boolean = false;
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.OpsDeviceVerify)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.OperationsCenterDeviceVerificationSubmit)) {
       return;
     }
   }
@@ -723,7 +723,7 @@ struct DeviceVerification {
   }
 
   async submitVerificationWithFaultReport(): Promise<void> {
-    if (!SessionStore.hasPermission(PermissionCode.OpsFaultReportCreate)) {
+    if (!SessionStore.hasPermission(PermissionCode.OperationsCenterDeviceFaultReportSubmit)) {
       this.message = '当前账号无权提交报修信息，无法提交异常核验';
       this.messageTone = AppColors.Danger;
       return;
@@ -929,3 +929,5 @@ struct DeviceVerification {
     }
   }
 }
+
+

@@ -28,7 +28,7 @@ WHERE id = 'device-local-0003'
   AND manufacturer = 'East Energy'
   AND address = 'Plant 3 Energy Storage Area';
 
-UPDATE device_change_requests
+UPDATE device_archive_requests
 SET reason = '现场标识位置需要修正档案。',
     changes = '{"location.address":{"oldValue":"二号厂房包装区","newValue":"二号厂房包装区A段"}}'::jsonb,
     updated_at = NOW()

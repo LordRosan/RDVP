@@ -22,7 +22,7 @@ CREATE INDEX IF NOT EXISTS idx_devices_name ON devices(name);
 CREATE INDEX IF NOT EXISTS idx_devices_model ON devices(model);
 CREATE INDEX IF NOT EXISTS idx_devices_location ON devices(longitude, latitude);
 
-CREATE TABLE IF NOT EXISTS device_change_requests (
+CREATE TABLE IF NOT EXISTS device_archive_requests (
     id VARCHAR(64) PRIMARY KEY,
     device_id VARCHAR(64) NOT NULL REFERENCES devices(id),
     applicant_id VARCHAR(64) NOT NULL,
@@ -40,10 +40,10 @@ CREATE TABLE IF NOT EXISTS device_change_requests (
     updated_by VARCHAR(64)
 );
 
-CREATE INDEX IF NOT EXISTS idx_device_change_requests_device_status ON device_change_requests(device_id, status);
-CREATE INDEX IF NOT EXISTS idx_device_change_requests_freeze_until ON device_change_requests(freeze_until);
-CREATE UNIQUE INDEX IF NOT EXISTS ux_device_change_requests_pending_device
-    ON device_change_requests(device_id)
+CREATE INDEX IF NOT EXISTS idx_device_archive_requests_device_status ON device_archive_requests(device_id, status);
+CREATE INDEX IF NOT EXISTS idx_device_archive_requests_freeze_until ON device_archive_requests(freeze_until);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_device_archive_requests_pending_device
+    ON device_archive_requests(device_id)
     WHERE status = 'PENDING_REVIEW';
 
 CREATE TABLE IF NOT EXISTS device_qrcodes (
@@ -122,7 +122,7 @@ INSERT INTO devices (
     )
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO device_change_requests (
+INSERT INTO device_archive_requests (
     id,
     device_id,
     applicant_id,

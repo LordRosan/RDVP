@@ -1,0 +1,2 @@
+-- The development schema now creates device archive requests with the final table
+-- and index names in the base migrations. No legacy compatibility migration is required.

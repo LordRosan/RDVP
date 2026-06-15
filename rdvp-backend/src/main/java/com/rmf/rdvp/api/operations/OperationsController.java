@@ -38,7 +38,7 @@ public class OperationsController {
     }
 
     @PostMapping("/fault-reports")
-    @PreAuthorize("hasAuthority('OPS_FAULT_REPORT_CREATE')")
+    @PreAuthorize("hasAuthority('OPERATIONS_CENTER_DEVICE_FAULT_REPORT_SUBMIT')")
     public ResponseEntity<ApiResponse<FaultReportResponse>> createFaultReport(
             @Valid @RequestBody CreateFaultReportRequest requestBody,
             @AuthenticationPrincipal AuthenticatedUser user,
@@ -56,26 +56,26 @@ public class OperationsController {
         return ResponseEntity.ok(ApiResponse.success(FaultReportResponse.from(result), RequestIds.resolve(request)));
     }
 
-    @GetMapping("/repair-tasks/pool")
-    @PreAuthorize("hasAuthority('OPS_REPAIR_TASK_ACCEPT')")
-    public ResponseEntity<ApiResponse<RepairTaskPoolListResponse>> listRepairTaskPool(
+    @GetMapping("/operation-tasks/available")
+    @PreAuthorize("hasAuthority('OPERATIONS_CENTER_REPAIR_TASK_ACCEPT')")
+    public ResponseEntity<ApiResponse<TaskAcceptanceListResponse>> listTaskAcceptance(
             @RequestParam(defaultValue = "10") int radiusKm,
             @RequestParam(required = false) String severity,
             @RequestParam(required = false) BigDecimal longitude,
             @RequestParam(required = false) BigDecimal latitude,
             @AuthenticationPrincipal AuthenticatedUser user,
             HttpServletRequest request) {
-        var result = operationsService.listRepairTaskPool(
+        var result = operationsService.listTaskAcceptance(
                 radiusKm,
                 severity == null || severity.isBlank() ? null : parseEnum(FaultSeverity.class, severity, "severity"),
                 longitude,
                 latitude,
                 user);
-        return ResponseEntity.ok(ApiResponse.success(RepairTaskPoolListResponse.from(result), RequestIds.resolve(request)));
+        return ResponseEntity.ok(ApiResponse.success(TaskAcceptanceListResponse.from(result), RequestIds.resolve(request)));
     }
 
     @PostMapping("/fault-reports/{faultReportId}/accept")
-    @PreAuthorize("hasAuthority('OPS_REPAIR_TASK_ACCEPT')")
+    @PreAuthorize("hasAuthority('OPERATIONS_CENTER_REPAIR_TASK_ACCEPT')")
     public ResponseEntity<ApiResponse<RepairTaskAcceptResponse>> acceptFaultReport(
             @PathVariable String faultReportId,
             @RequestBody(required = false) RepairTaskAcceptRequest requestBody,
@@ -90,16 +90,16 @@ public class OperationsController {
     }
 
     @GetMapping("/repair-tasks/accepted")
-    @PreAuthorize("hasAuthority('OPS_REPAIR_REPORT_CREATE')")
-    public ResponseEntity<ApiResponse<AcceptedRepairTaskListResponse>> listAcceptedRepairTasks(
+    @PreAuthorize("hasAuthority('OPERATIONS_CENTER_REPAIR_REPORT_SUBMIT')")
+    public ResponseEntity<ApiResponse<RepairTaskListResponse>> listRepairTasks(
             @AuthenticationPrincipal AuthenticatedUser user,
             HttpServletRequest request) {
-        var result = operationsService.listAcceptedRepairTasks(user);
-        return ResponseEntity.ok(ApiResponse.success(AcceptedRepairTaskListResponse.from(result), RequestIds.resolve(request)));
+        var result = operationsService.listRepairTasks(user);
+        return ResponseEntity.ok(ApiResponse.success(RepairTaskListResponse.from(result), RequestIds.resolve(request)));
     }
 
     @PostMapping("/repair-tasks/{repairTaskId}/repair-reports")
-    @PreAuthorize("hasAuthority('OPS_REPAIR_REPORT_CREATE')")
+    @PreAuthorize("hasAuthority('OPERATIONS_CENTER_REPAIR_REPORT_SUBMIT')")
     public ResponseEntity<ApiResponse<RepairReportResponse>> submitRepairReport(
             @PathVariable String repairTaskId,
             @Valid @RequestBody RepairReportRequest requestBody,
@@ -116,7 +116,7 @@ public class OperationsController {
     }
 
     @GetMapping("/reinspections/pending")
-    @PreAuthorize("hasAuthority('OPS_REINSPECTION_CREATE')")
+    @PreAuthorize("hasAuthority('OPERATIONS_CENTER_REINSPECTION_TASK_ACCEPT')")
     public ResponseEntity<ApiResponse<ReinspectionTaskListResponse>> listPendingReinspections(
             HttpServletRequest request) {
         var result = operationsService.listPendingReinspections();
@@ -124,7 +124,7 @@ public class OperationsController {
     }
 
     @PostMapping("/reinspections/{faultReportId}/accept")
-    @PreAuthorize("hasAuthority('OPS_REINSPECTION_CREATE')")
+    @PreAuthorize("hasAuthority('OPERATIONS_CENTER_REINSPECTION_TASK_ACCEPT')")
     public ResponseEntity<ApiResponse<RepairTaskAcceptResponse>> acceptReinspectionTask(
             @PathVariable String faultReportId,
             @RequestBody(required = false) RepairTaskAcceptRequest requestBody,
@@ -139,7 +139,7 @@ public class OperationsController {
     }
 
     @PostMapping("/fault-reports/{faultReportId}/reinspection-records")
-    @PreAuthorize("hasAuthority('OPS_REINSPECTION_CREATE')")
+    @PreAuthorize("hasAuthority('OPERATIONS_CENTER_REINSPECTION_REPORT_SUBMIT')")
     public ResponseEntity<ApiResponse<ReinspectionRecordResponse>> submitReinspectionRecord(
             @PathVariable String faultReportId,
             @Valid @RequestBody ReinspectionRecordRequest requestBody,
@@ -162,3 +162,4 @@ public class OperationsController {
         }
     }
 }
+

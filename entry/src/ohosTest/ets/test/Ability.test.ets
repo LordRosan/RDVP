@@ -1,13 +1,13 @@
 import { describe, it, expect } from '@ohos/hypium';
-import { AuthService } from '../../../main/ets/services/AuthService';
-import { DeviceService } from '../../../main/ets/services/DeviceService';
-import { FaultSeverity, FaultType } from '../../../main/ets/models/FaultModels';
-import { RepairReportResult } from '../../../main/ets/models/RepairTaskModels';
-import { VerificationResult } from '../../../main/ets/models/VerificationModels';
-import { FaultReportService } from '../../../main/ets/services/FaultReportService';
-import { DeviceVerificationService } from '../../../main/ets/services/DeviceVerificationService';
-import { RepairTaskService } from '../../../main/ets/services/RepairTaskService';
-import { WorkbenchService } from '../../../main/ets/services/WorkbenchService';
+import { AuthService } from '../../../main/ets/services/identity/AuthService';
+import { DeviceService } from '../../../main/ets/services/archive/DeviceService';
+import { FaultSeverity, FaultType } from '../../../main/ets/models/operations/FaultModels';
+import { RepairReportResult } from '../../../main/ets/models/operations/RepairTaskModels';
+import { VerificationResult } from '../../../main/ets/models/operations/VerificationModels';
+import { FaultReportService } from '../../../main/ets/services/operations/FaultReportService';
+import { DeviceVerificationService } from '../../../main/ets/services/operations/DeviceVerificationService';
+import { RepairTaskService } from '../../../main/ets/services/operations/RepairTaskService';
+import { WorkbenchService } from '../../../main/ets/services/app/WorkbenchService';
 
 export default function abilityTest() {
   describe('rdvpAbilityConfiguration', () => {
@@ -66,8 +66,8 @@ export default function abilityTest() {
       expect(result.valid).assertEqual(true);
     });
 
-    it('validatesRepairTaskPoolQuery', 0, () => {
-      const result = RepairTaskService.validateRepairTaskPoolQuery({
+    it('validatesTaskAcceptanceQuery', 0, () => {
+      const result = RepairTaskService.validateTaskAcceptanceQuery({
         radiusKm: 10
       }, RepairTaskService.createWorkloadSnapshot(0));
 

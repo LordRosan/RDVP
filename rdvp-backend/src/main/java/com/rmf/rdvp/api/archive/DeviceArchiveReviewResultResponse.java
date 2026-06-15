@@ -2,7 +2,7 @@ package com.rmf.rdvp.api.archive;
 
 import java.time.OffsetDateTime;
 
-import com.rmf.rdvp.archive.DeviceArchiveChangeRequest;
+import com.rmf.rdvp.archive.DeviceArchiveRequest;
 
 public record DeviceArchiveReviewResultResponse(
         String id,
@@ -10,7 +10,7 @@ public record DeviceArchiveReviewResultResponse(
         String reviewedAt,
         String freezeUntil) {
 
-    public static DeviceArchiveReviewResultResponse from(DeviceArchiveChangeRequest request) {
+    public static DeviceArchiveReviewResultResponse from(DeviceArchiveRequest request) {
         return new DeviceArchiveReviewResultResponse(
                 request.id(),
                 request.status().name(),

@@ -1,4 +1,4 @@
-import { AppThemeService } from '../services/AppThemeService';
+import { AppThemeService } from '../services/app/AppThemeService';
 
 export class AppColors {
   static get Primary(): string {

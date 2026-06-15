@@ -1,13 +1,13 @@
 import { AppColors } from '../../styles/AppTheme';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
-import { DeviceArchiveChangeRequestStatus } from '../../models/DeviceArchiveChangeModels';
-import { DeviceStatus, DeviceSummary } from '../../models/DeviceModels';
-import { PermissionCode } from '../../models/PermissionModels';
-import { ApiClient } from '../../services/ApiClient';
-import { DeviceArchiveDeleteGuardService } from '../../services/DeviceArchiveDeleteGuardService';
-import { DeviceArchiveLifecycleService } from '../../services/DeviceArchiveLifecycleService';
-import { DeviceArchiveChangeService } from '../../services/DeviceArchiveChangeService';
-import { DeviceService } from '../../services/DeviceService';
+import { DeviceArchiveRequestStatus } from '../../models/archive/DeviceArchiveRequestModels';
+import { DeviceStatus, DeviceSummary } from '../../models/archive/DeviceModels';
+import { PermissionCode } from '../../models/identity/PermissionModels';
+import { ApiClient } from '../../services/common/ApiClient';
+import { DeviceArchiveDeleteGuardService } from '../../services/archive/DeviceArchiveDeleteGuardService';
+import { DeviceArchiveRequestService } from '../../services/archive/DeviceArchiveRequestService';
+import { DeviceArchiveUpdateService } from '../../services/archive/DeviceArchiveUpdateService';
+import { DeviceService } from '../../services/archive/DeviceService';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
@@ -32,7 +32,7 @@ struct DeviceArchiveDelete {
   @State deleteTime: string = '';
   @State message: string = '';
   @State messageTone: string = AppColors.Danger;
-  @State requestStatus: DeviceArchiveChangeRequestStatus = DeviceArchiveChangeRequestStatus.Draft;
+  @State requestStatus: DeviceArchiveRequestStatus = DeviceArchiveRequestStatus.Draft;
   @State submitting: boolean = false;
   @State confirmVisible: boolean = false;
   @State confirmPassword: string = '';
@@ -41,7 +41,7 @@ struct DeviceArchiveDelete {
   @State confirmMessage: string = '';
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveDeviceDelete)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveCenterDeviceArchiveDeleteRequestSubmit)) {
       return;
     }
 
@@ -210,7 +210,7 @@ struct DeviceArchiveDelete {
           this.message = '';
           this.messageTone = AppColors.Danger;
           if (!this.isSubmitted()) {
-            this.requestStatus = DeviceArchiveChangeRequestStatus.Draft;
+            this.requestStatus = DeviceArchiveRequestStatus.Draft;
           }
         })
     }
@@ -247,7 +247,7 @@ struct DeviceArchiveDelete {
           this.message = '';
           this.messageTone = AppColors.Danger;
           if (!this.isSubmitted()) {
-            this.requestStatus = DeviceArchiveChangeRequestStatus.Draft;
+            this.requestStatus = DeviceArchiveRequestStatus.Draft;
           }
         })
     }
@@ -271,7 +271,7 @@ struct DeviceArchiveDelete {
         this.CardDivider()
         StatusInfoRow({
           label: '申请状态',
-          value: DeviceArchiveChangeService.formatRequestStatus(this.requestStatus),
+          value: DeviceArchiveUpdateService.formatRequestStatus(this.requestStatus),
           tone: this.getStatusTone(this.requestStatus)
         })
       }
@@ -587,7 +587,7 @@ struct DeviceArchiveDelete {
   }
 
   prepareDeleteConfirmation(): void {
-    const validation = DeviceArchiveLifecycleService.validateDeleteRequestForm({
+    const validation = DeviceArchiveRequestService.validateDeleteRequestForm({
       device: this.device,
       reason: this.reason
     });
@@ -629,7 +629,7 @@ struct DeviceArchiveDelete {
       return;
     }
 
-    const response = await DeviceArchiveLifecycleService.submitDeleteRequestRemoteFirst({
+    const response = await DeviceArchiveRequestService.submitDeleteRequestRemoteFirst({
       device: this.device,
       reason: this.reason,
       initiatedAt: this.deleteTime
@@ -643,8 +643,8 @@ struct DeviceArchiveDelete {
       return;
     }
 
-    this.requestStatus = response.data === undefined ? DeviceArchiveChangeRequestStatus.PendingReview : response.data.status;
-    DeviceArchiveFlowStore.markChangePending(response.data ? response.data.id : '', undefined, this.requestStatus);
+    this.requestStatus = response.data === undefined ? DeviceArchiveRequestStatus.PendingReview : response.data.status;
+    DeviceArchiveFlowStore.markArchiveRequestPending(response.data ? response.data.id : '', undefined, this.requestStatus);
     const pendingDevice = DeviceArchiveFlowStore.getCurrentDevice();
     if (pendingDevice !== undefined) {
       this.device = pendingDevice;
@@ -681,7 +681,7 @@ struct DeviceArchiveDelete {
   }
 
   isSubmitted(): boolean {
-    return this.requestStatus === DeviceArchiveChangeRequestStatus.PendingReview;
+    return this.requestStatus === DeviceArchiveRequestStatus.PendingReview;
   }
 
   isDeleteLocked(): boolean {
@@ -700,17 +700,17 @@ struct DeviceArchiveDelete {
     return '提交申请';
   }
 
-  getStatusTone(status: DeviceArchiveChangeRequestStatus): string {
+  getStatusTone(status: DeviceArchiveRequestStatus): string {
     switch (status) {
-      case DeviceArchiveChangeRequestStatus.PendingReview:
+      case DeviceArchiveRequestStatus.PendingReview:
         return AppColors.Warning;
-      case DeviceArchiveChangeRequestStatus.Approved:
+      case DeviceArchiveRequestStatus.Approved:
         return AppColors.Success;
-      case DeviceArchiveChangeRequestStatus.Rejected:
+      case DeviceArchiveRequestStatus.Rejected:
         return AppColors.Danger;
-      case DeviceArchiveChangeRequestStatus.Withdrawn:
+      case DeviceArchiveRequestStatus.Withdrawn:
         return AppColors.TextSecondary;
-      case DeviceArchiveChangeRequestStatus.Draft:
+      case DeviceArchiveRequestStatus.Draft:
       default:
         return AppColors.TextSecondary;
     }
@@ -744,3 +744,5 @@ struct DeviceArchiveDelete {
     }
   }
 }
+
+

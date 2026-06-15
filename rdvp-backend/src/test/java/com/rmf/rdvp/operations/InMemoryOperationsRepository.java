@@ -65,7 +65,7 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     }
 
     @Override
-    public List<RepairTaskPoolItem> listRepairTaskPool(
+    public List<TaskAcceptanceItem> listTaskAcceptance(
             FaultSeverity severity,
             int radiusKm,
             BigDecimal longitude,
@@ -75,9 +75,9 @@ public class InMemoryOperationsRepository implements OperationsRepository {
                 .stream()
                 .filter(item -> item.status() == FaultStatus.PENDING_ACCEPTANCE)
                 .filter(item -> severity == null || item.severity() == severity)
-                .map(item -> toRepairTaskPoolItem(item, longitude, latitude))
+                .map(item -> toTaskAcceptanceItem(item, longitude, latitude))
                 .filter(item -> item.distanceKm() == null || item.distanceKm().compareTo(BigDecimal.valueOf(radiusKm)) <= 0)
-                .sorted(Comparator.comparing(RepairTaskPoolItem::submittedAt).reversed())
+                .sorted(Comparator.comparing(TaskAcceptanceItem::submittedAt).reversed())
                 .limit(limit)
                 .toList();
     }
@@ -161,14 +161,14 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     }
 
     @Override
-    public List<AcceptedRepairTaskItem> listAcceptedRepairTasks(String maintainerId, int limit) {
+    public List<RepairTaskItem> listRepairTasks(String maintainerId, int limit) {
         return repairTasksById.values()
                 .stream()
                 .filter(item -> item.maintainerId().equals(maintainerId))
                 .filter(item -> item.status() != RepairTaskStatus.REPORT_SUBMITTED)
                 .sorted(Comparator.comparing(RepairTaskRecord::acceptedAt).reversed())
                 .limit(limit)
-                .map(this::toAcceptedRepairTaskItem)
+                .map(this::toRepairTaskItem)
                 .toList();
     }
 
@@ -306,9 +306,9 @@ public class InMemoryOperationsRepository implements OperationsRepository {
         reinspectionRecordsById.put(create.id(), create);
     }
 
-    private RepairTaskPoolItem toRepairTaskPoolItem(FaultReportRecord fault, BigDecimal longitude, BigDecimal latitude) {
+    private TaskAcceptanceItem toTaskAcceptanceItem(FaultReportRecord fault, BigDecimal longitude, BigDecimal latitude) {
         DeviceArchive device = archiveRepository.findById(fault.deviceId()).orElseThrow();
-        return new RepairTaskPoolItem(
+        return new TaskAcceptanceItem(
                 fault.id(),
                 fault.id(),
                 fault.faultReportNo(),
@@ -317,7 +317,7 @@ public class InMemoryOperationsRepository implements OperationsRepository {
                 fault.faultType(),
                 fault.severity(),
                 calculateDistanceKm(longitude, latitude, device.longitude(), device.latitude()),
-                new RepairTaskPoolItem.DeviceLocation(device.address(), device.longitude(), device.latitude()),
+                new TaskAcceptanceItem.DeviceLocation(device.address(), device.longitude(), device.latitude()),
                 fault.createdAt(),
                 RepairTaskStatus.AVAILABLE,
                 "REPAIR");
@@ -344,10 +344,10 @@ public class InMemoryOperationsRepository implements OperationsRepository {
         return BigDecimal.valueOf(earthRadiusKm * c).setScale(2, RoundingMode.HALF_UP);
     }
 
-    private AcceptedRepairTaskItem toAcceptedRepairTaskItem(RepairTaskRecord task) {
+    private RepairTaskItem toRepairTaskItem(RepairTaskRecord task) {
         FaultReportRecord fault = faultReportsById.get(task.faultReportId());
         DeviceArchive device = archiveRepository.findById(task.deviceId()).orElseThrow();
-        return new AcceptedRepairTaskItem(
+        return new RepairTaskItem(
                 task.id(),
                 task.repairTaskNo(),
                 fault.faultReportNo(),
@@ -371,7 +371,7 @@ public class InMemoryOperationsRepository implements OperationsRepository {
                 device.deviceCode(),
                 device.name(),
                 fault.severity(),
-                new RepairTaskPoolItem.DeviceLocation(device.address(), device.longitude(), device.latitude()),
+                new TaskAcceptanceItem.DeviceLocation(device.address(), device.longitude(), device.latitude()),
                 repairedAt,
                 fault.status());
     }

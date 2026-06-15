@@ -1,0 +1,2 @@
+-- Current permission definitions are represented directly in PermissionCode
+-- and BootstrapUserDefinitions. No legacy permission split is required.

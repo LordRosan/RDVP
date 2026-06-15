@@ -4,7 +4,7 @@ import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import com.rmf.rdvp.archive.DeviceArchiveChangeRequest;
+import com.rmf.rdvp.archive.DeviceArchiveRequest;
 
 public record DeviceArchiveReviewResponse(
         String id,
@@ -18,9 +18,9 @@ public record DeviceArchiveReviewResponse(
         String initiatedAt,
         String createdAt,
         String submittedAt,
-        Map<String, DeviceArchiveChangeValueResponse> changes) {
+        Map<String, DeviceArchiveFieldChangeResponse> changes) {
 
-    public static DeviceArchiveReviewResponse from(DeviceArchiveChangeRequest request) {
+    public static DeviceArchiveReviewResponse from(DeviceArchiveRequest request) {
         return new DeviceArchiveReviewResponse(
                 request.id(),
                 request.type().name(),
@@ -38,7 +38,7 @@ public record DeviceArchiveReviewResponse(
                         .stream()
                         .collect(Collectors.toMap(
                                 Map.Entry::getKey,
-                                entry -> new DeviceArchiveChangeValueResponse(
+                                entry -> new DeviceArchiveFieldChangeResponse(
                                         entry.getValue().oldValue(),
                                         entry.getValue().newValue()))));
     }
@@ -47,7 +47,7 @@ public record DeviceArchiveReviewResponse(
         return value == null ? null : value.toInstant().toString();
     }
 
-    public record DeviceArchiveChangeValueResponse(
+    public record DeviceArchiveFieldChangeResponse(
             String oldValue,
             String newValue) {
     }

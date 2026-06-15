@@ -29,17 +29,17 @@ public enum ErrorCode {
     QR_CODE_INVALID("QR_CODE_INVALID", HttpStatus.BAD_REQUEST, "QR code content is invalid."),
     QR_CODE_EXPIRED("QR_CODE_EXPIRED", HttpStatus.BAD_REQUEST, "QR code is expired."),
     QR_CODE_SIGNATURE_INVALID("QR_CODE_SIGNATURE_INVALID", HttpStatus.BAD_REQUEST, "QR code signature verification failed."),
-    DEVICE_ARCHIVE_CHANGE_REQUEST_INVALID(
-            "DEVICE_ARCHIVE_CHANGE_REQUEST_INVALID",
+    DEVICE_ARCHIVE_REQUEST_INVALID(
+            "DEVICE_ARCHIVE_REQUEST_INVALID",
             HttpStatus.UNPROCESSABLE_CONTENT,
-            "Device archive change request is invalid."),
-    DEVICE_ARCHIVE_CHANGE_LOCKED("DEVICE_ARCHIVE_CHANGE_LOCKED", HttpStatus.CONFLICT, "Device archive has a pending change request."),
-    DEVICE_ARCHIVE_CHANGE_FROZEN("DEVICE_ARCHIVE_CHANGE_FROZEN", HttpStatus.CONFLICT, "Device archive change is frozen."),
-    DEVICE_ARCHIVE_CHANGE_REQUEST_NOT_FOUND("DEVICE_ARCHIVE_CHANGE_REQUEST_NOT_FOUND", HttpStatus.NOT_FOUND, "Device archive change request not found."),
-    DEVICE_ARCHIVE_CHANGE_REQUEST_ALREADY_REVIEWED(
-            "DEVICE_ARCHIVE_CHANGE_REQUEST_ALREADY_REVIEWED",
+            "Device archive request is invalid."),
+    DEVICE_ARCHIVE_REQUEST_LOCKED("DEVICE_ARCHIVE_REQUEST_LOCKED", HttpStatus.CONFLICT, "Device archive has a pending archive request."),
+    DEVICE_ARCHIVE_REQUEST_FROZEN("DEVICE_ARCHIVE_REQUEST_FROZEN", HttpStatus.CONFLICT, "Device archive request is frozen."),
+    DEVICE_ARCHIVE_REQUEST_NOT_FOUND("DEVICE_ARCHIVE_REQUEST_NOT_FOUND", HttpStatus.NOT_FOUND, "Device archive request not found."),
+    DEVICE_ARCHIVE_REQUEST_ALREADY_REVIEWED(
+            "DEVICE_ARCHIVE_REQUEST_ALREADY_REVIEWED",
             HttpStatus.CONFLICT,
-            "Device archive change request has already been reviewed."),
+            "Device archive request has already been reviewed."),
     DEVICE_VERIFICATION_INVALID(
             "DEVICE_VERIFICATION_INVALID",
             HttpStatus.UNPROCESSABLE_CONTENT,

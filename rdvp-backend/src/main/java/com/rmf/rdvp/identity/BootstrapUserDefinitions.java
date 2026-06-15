@@ -21,11 +21,11 @@ final class BootstrapUserDefinitions {
                         "deviceadmin",
                         "设备管理员",
                         RoleCode.DEVICE_ADMIN,
-                        PermissionCode.ARCHIVE_DEVICE_READ,
-                        PermissionCode.ARCHIVE_DEVICE_CREATE,
-                        PermissionCode.ARCHIVE_DEVICE_DELETE,
-                        PermissionCode.ARCHIVE_QRCODE_EXPORT,
-                        PermissionCode.MGMT_DEVICE_ARCHIVE_CHANGE_REQUEST_REVIEW),
+                        PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY,
+                        PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_CREATE_REQUEST_SUBMIT,
+                        PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_DELETE_REQUEST_SUBMIT,
+                        PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_QR_CODE_EXPORT,
+                        PermissionCode.MANAGEMENT_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW),
                 create(
                         passwordEncoder,
                         defaultPassword,
@@ -33,10 +33,10 @@ final class BootstrapUserDefinitions {
                         "fieldoperator",
                         "现场运维人员",
                         RoleCode.FIELD_OPERATOR,
-                        PermissionCode.ARCHIVE_DEVICE_READ,
-                        PermissionCode.ARCHIVE_DEVICE_CHANGE_REQUEST_CREATE,
-                        PermissionCode.OPS_DEVICE_VERIFY,
-                        PermissionCode.OPS_FAULT_REPORT_CREATE),
+                        PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY,
+                        PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_UPDATE_REQUEST_SUBMIT,
+                        PermissionCode.OPERATIONS_CENTER_DEVICE_VERIFICATION_SUBMIT,
+                        PermissionCode.OPERATIONS_CENTER_DEVICE_FAULT_REPORT_SUBMIT),
                 create(
                         passwordEncoder,
                         defaultPassword,
@@ -44,9 +44,9 @@ final class BootstrapUserDefinitions {
                         "maintainer",
                         "维修人员",
                         RoleCode.MAINTAINER,
-                        PermissionCode.ARCHIVE_DEVICE_READ,
-                        PermissionCode.OPS_REPAIR_TASK_ACCEPT,
-                        PermissionCode.OPS_REPAIR_REPORT_CREATE),
+                        PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY,
+                        PermissionCode.OPERATIONS_CENTER_REPAIR_TASK_ACCEPT,
+                        PermissionCode.OPERATIONS_CENTER_REPAIR_REPORT_SUBMIT),
                 create(
                         passwordEncoder,
                         defaultPassword,
@@ -54,8 +54,9 @@ final class BootstrapUserDefinitions {
                         "reinspector",
                         "复检人员",
                         RoleCode.REINSPECTOR,
-                        PermissionCode.ARCHIVE_DEVICE_READ,
-                        PermissionCode.OPS_REINSPECTION_CREATE),
+                        PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY,
+                        PermissionCode.OPERATIONS_CENTER_REINSPECTION_TASK_ACCEPT,
+                        PermissionCode.OPERATIONS_CENTER_REINSPECTION_REPORT_SUBMIT),
                 create(
                         passwordEncoder,
                         defaultPassword,
@@ -63,8 +64,8 @@ final class BootstrapUserDefinitions {
                         "auditor",
                         "监督审计人员",
                         RoleCode.SUPERVISOR_AUDITOR,
-                        PermissionCode.ARCHIVE_DEVICE_READ,
-                        PermissionCode.MGMT_AUDIT_LOG_READ),
+                        PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY,
+                        PermissionCode.MANAGEMENT_CENTER_RECORD_QUERY),
                 create(
                         passwordEncoder,
                         defaultPassword,
@@ -72,7 +73,7 @@ final class BootstrapUserDefinitions {
                         "readonly",
                         "只读用户",
                         RoleCode.READ_ONLY,
-                        PermissionCode.ARCHIVE_DEVICE_READ));
+                        PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY));
     }
 
     private static BootstrapUser create(
@@ -104,3 +105,5 @@ final class BootstrapUserDefinitions {
                 Set.copyOf(permissions));
     }
 }
+
+

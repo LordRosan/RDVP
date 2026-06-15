@@ -1,7 +1,7 @@
 import { AppColors } from '../../styles/AppTheme';
 import { common } from '@kit.AbilityKit';
-import { AppThemeMode } from '../../models/ThemeModels';
-import { AppThemeService } from '../../services/AppThemeService';
+import { AppThemeMode } from '../../models/app/ThemeModels';
+import { AppThemeService } from '../../services/app/AppThemeService';
 import { SessionStore } from '../../stores/SessionStore';
 
 @Entry

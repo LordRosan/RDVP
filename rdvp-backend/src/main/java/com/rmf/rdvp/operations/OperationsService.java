@@ -37,7 +37,7 @@ public class OperationsService {
     private static final int MEDIUM_LOAD_MAX_RADIUS_KM = 10;
     private static final int MAX_ACTIVE_REPAIR_TASK_COUNT = 3;
     private static final int MAX_OPERATION_LIST_ITEMS = 100;
-    private static final int MAX_REPAIR_TASK_POOL_CANDIDATES = 500;
+    private static final int MAX_TASK_ACCEPTANCE_CANDIDATES = 500;
     private static final int MAX_VERIFICATION_DESCRIPTION_LENGTH = 500;
     private static final int MAX_VERIFICATION_REMARK_LENGTH = 300;
     private static final Pattern DEVICE_CODE_PATTERN = Pattern.compile("^RDVP-DEVICE-\\d{4}$");
@@ -267,7 +267,7 @@ public class OperationsService {
         }
     }
 
-    public RepairTaskPoolList listRepairTaskPool(
+    public TaskAcceptanceList listTaskAcceptance(
             int radiusKm,
             FaultSeverity severity,
             BigDecimal longitude,
@@ -285,16 +285,16 @@ public class OperationsService {
         RepairerWorkloadSnapshot workload = currentWorkload(maintainer.id());
         validateWorkloadForRefresh(workload, normalizedRadiusKm);
 
-        var items = operationsRepository.listRepairTaskPool(
+        var items = operationsRepository.listTaskAcceptance(
                         severity,
                         normalizedRadiusKm,
                         normalizedLongitude,
                         normalizedLatitude,
-                        MAX_REPAIR_TASK_POOL_CANDIDATES)
+                        MAX_TASK_ACCEPTANCE_CANDIDATES)
                 .stream()
                 .limit(MAX_OPERATION_LIST_ITEMS)
                 .toList();
-        return new RepairTaskPoolList(normalizedRadiusKm, workload, items, items.size());
+        return new TaskAcceptanceList(normalizedRadiusKm, workload, items, items.size());
     }
 
     @Transactional
@@ -370,9 +370,9 @@ public class OperationsService {
         return new RepairTaskAcceptResult(create.id(), faultReport.id(), RepairTaskStatus.ACCEPTED, create.acceptedAt());
     }
 
-    public AcceptedRepairTaskList listAcceptedRepairTasks(AuthenticatedUser maintainer) {
-        var items = operationsRepository.listAcceptedRepairTasks(maintainer.id(), MAX_OPERATION_LIST_ITEMS);
-        return new AcceptedRepairTaskList(items, items.size());
+    public RepairTaskList listRepairTasks(AuthenticatedUser maintainer) {
+        var items = operationsRepository.listRepairTasks(maintainer.id(), MAX_OPERATION_LIST_ITEMS);
+        return new RepairTaskList(items, items.size());
     }
 
     @Transactional

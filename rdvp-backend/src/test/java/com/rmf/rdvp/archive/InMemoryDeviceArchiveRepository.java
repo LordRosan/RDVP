@@ -33,7 +33,7 @@ public class InMemoryDeviceArchiveRepository implements DeviceArchiveRepository 
                         new BigDecimal("114.1694000"),
                         new BigDecimal("22.3193000"),
                         OffsetDateTime.parse("2026-05-28T09:30:00Z"),
-                        new DeviceArchive.ChangeState(false, null, null)));
+                        new DeviceArchive.ArchiveRequestState(false, null, null)));
         devicesById.put(
                 "device-local-0002",
                 new DeviceArchive(
@@ -47,7 +47,7 @@ public class InMemoryDeviceArchiveRepository implements DeviceArchiveRepository 
                         new BigDecimal("114.1721000"),
                         new BigDecimal("22.3188000"),
                         OffsetDateTime.parse("2026-05-27T15:20:00Z"),
-                        new DeviceArchive.ChangeState(true, "DCR-LOCAL-0002", null)));
+                        new DeviceArchive.ArchiveRequestState(true, "DCR-LOCAL-0002", null)));
         devicesById.put(
                 "device-local-0003",
                 new DeviceArchive(
@@ -61,7 +61,7 @@ public class InMemoryDeviceArchiveRepository implements DeviceArchiveRepository 
                         new BigDecimal("114.1662000"),
                         new BigDecimal("22.3210000"),
                         OffsetDateTime.parse("2026-05-26T11:10:00Z"),
-                        new DeviceArchive.ChangeState(true, null, frozenUntil)));
+                        new DeviceArchive.ArchiveRequestState(true, null, frozenUntil)));
     }
 
     @Override
@@ -101,7 +101,7 @@ public class InMemoryDeviceArchiveRepository implements DeviceArchiveRepository 
                 create.longitude(),
                 create.latitude(),
                 null,
-                new DeviceArchive.ChangeState(false, null, null)));
+                new DeviceArchive.ArchiveRequestState(false, null, null)));
     }
 
     @Override
@@ -122,7 +122,7 @@ public class InMemoryDeviceArchiveRepository implements DeviceArchiveRepository 
                 device.longitude(),
                 device.latitude(),
                 device.lastVerificationTime(),
-                device.changeState()));
+                device.archiveRequestState()));
     }
 
     @Override
@@ -143,7 +143,7 @@ public class InMemoryDeviceArchiveRepository implements DeviceArchiveRepository 
                 device.longitude(),
                 device.latitude(),
                 verifiedAt,
-                device.changeState()));
+                device.archiveRequestState()));
     }
 
     @Override
@@ -163,7 +163,7 @@ public class InMemoryDeviceArchiveRepository implements DeviceArchiveRepository 
             return;
         }
 
-        devicesById.put(deviceId, copyWithChangeState(device, new DeviceArchive.ChangeState(true, requestId, null)));
+        devicesById.put(deviceId, copyWithArchiveRequestState(device, new DeviceArchive.ArchiveRequestState(true, requestId, null)));
     }
 
     public void applyUpdate(DeviceArchiveUpdate update, OffsetDateTime freezeUntil) {
@@ -183,7 +183,7 @@ public class InMemoryDeviceArchiveRepository implements DeviceArchiveRepository 
                 device.longitude(),
                 device.latitude(),
                 device.lastVerificationTime(),
-                new DeviceArchive.ChangeState(true, null, freezeUntil)));
+                new DeviceArchive.ArchiveRequestState(true, null, freezeUntil)));
     }
 
     public void clearPending(String deviceId) {
@@ -192,10 +192,12 @@ public class InMemoryDeviceArchiveRepository implements DeviceArchiveRepository 
             return;
         }
 
-        devicesById.put(deviceId, copyWithChangeState(device, new DeviceArchive.ChangeState(false, null, null)));
+        devicesById.put(deviceId, copyWithArchiveRequestState(device, new DeviceArchive.ArchiveRequestState(false, null, null)));
     }
 
-    private DeviceArchive copyWithChangeState(DeviceArchive device, DeviceArchive.ChangeState changeState) {
+    private DeviceArchive copyWithArchiveRequestState(
+            DeviceArchive device,
+            DeviceArchive.ArchiveRequestState archiveRequestState) {
         return new DeviceArchive(
                 device.id(),
                 device.deviceCode(),
@@ -207,6 +209,6 @@ public class InMemoryDeviceArchiveRepository implements DeviceArchiveRepository 
                 device.longitude(),
                 device.latitude(),
                 device.lastVerificationTime(),
-                changeState);
+                archiveRequestState);
     }
 }

@@ -2,13 +2,13 @@ package com.rmf.rdvp.api.archive;
 
 import java.util.List;
 
-import com.rmf.rdvp.archive.DeviceArchiveChangeRequestPage;
+import com.rmf.rdvp.archive.DeviceArchiveRequestPage;
 
 public record DeviceArchiveReviewListResponse(
         List<DeviceArchiveReviewResponse> items,
         long total) {
 
-    public static DeviceArchiveReviewListResponse from(DeviceArchiveChangeRequestPage page) {
+    public static DeviceArchiveReviewListResponse from(DeviceArchiveRequestPage page) {
         return new DeviceArchiveReviewListResponse(
                 page.items().stream().map(DeviceArchiveReviewResponse::from).toList(),
                 page.total());

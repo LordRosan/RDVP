@@ -1,7 +1,7 @@
 import { AbilityConstant, Configuration, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
-import { AppThemeService } from '../services/AppThemeService';
+import { AppThemeService } from '../services/app/AppThemeService';
 
 const DOMAIN = 0x0000;
 const LOG_TAG = 'RDVP';

@@ -49,11 +49,11 @@ RDVP/
 
 - 设备：`device`
 - 设备核验：`device verification`
-- 设备档案变更申请：`device archive change request`
-- 故障报告：`fault report`
+- 设备档案申请：`device archive request`
+- 设备故障报修：`device fault report`
 - 维修任务：`repair task`
 - 维修报告：`repair report`
-- 复检记录：`reinspection record`
+- 复检任务报告：`reinspection report`
 - 操作日志：`operation log`
 
 ## 4. Git 规则

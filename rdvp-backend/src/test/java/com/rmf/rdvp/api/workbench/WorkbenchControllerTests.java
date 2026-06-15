@@ -42,9 +42,9 @@ class WorkbenchControllerTests {
                         .header("Authorization", "Bearer " + maintainerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.pendingDeviceArchiveChangeRequests").value(0))
-                .andExpect(jsonPath("$.data.repairTaskPoolItems").value(1))
-                .andExpect(jsonPath("$.data.acceptedRepairTasks").value(0))
+                .andExpect(jsonPath("$.data.pendingDeviceArchiveRequests").value(0))
+                .andExpect(jsonPath("$.data.taskAcceptanceItems").value(1))
+                .andExpect(jsonPath("$.data.repairTasks").value(0))
                 .andExpect(jsonPath("$.data.pendingReinspections").value(0));
     }
 
@@ -60,25 +60,25 @@ class WorkbenchControllerTests {
         mockMvc.perform(get("/api/v1/workbench/summary")
                         .header("Authorization", "Bearer " + readonlyToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.pendingDeviceArchiveChangeRequests").value(0))
-                .andExpect(jsonPath("$.data.repairTaskPoolItems").value(0))
-                .andExpect(jsonPath("$.data.acceptedRepairTasks").value(0))
+                .andExpect(jsonPath("$.data.pendingDeviceArchiveRequests").value(0))
+                .andExpect(jsonPath("$.data.taskAcceptanceItems").value(0))
+                .andExpect(jsonPath("$.data.repairTasks").value(0))
                 .andExpect(jsonPath("$.data.pendingReinspections").value(0));
 
         mockMvc.perform(get("/api/v1/workbench/summary")
                         .header("Authorization", "Bearer " + deviceAdminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.pendingDeviceArchiveChangeRequests").value(1))
-                .andExpect(jsonPath("$.data.repairTaskPoolItems").value(0))
-                .andExpect(jsonPath("$.data.acceptedRepairTasks").value(0))
+                .andExpect(jsonPath("$.data.pendingDeviceArchiveRequests").value(1))
+                .andExpect(jsonPath("$.data.taskAcceptanceItems").value(0))
+                .andExpect(jsonPath("$.data.repairTasks").value(0))
                 .andExpect(jsonPath("$.data.pendingReinspections").value(0));
 
         mockMvc.perform(get("/api/v1/workbench/summary")
                         .header("Authorization", "Bearer " + reinspectorToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.pendingDeviceArchiveChangeRequests").value(0))
-                .andExpect(jsonPath("$.data.repairTaskPoolItems").value(0))
-                .andExpect(jsonPath("$.data.acceptedRepairTasks").value(0))
+                .andExpect(jsonPath("$.data.pendingDeviceArchiveRequests").value(0))
+                .andExpect(jsonPath("$.data.taskAcceptanceItems").value(0))
+                .andExpect(jsonPath("$.data.repairTasks").value(0))
                 .andExpect(jsonPath("$.data.pendingReinspections").value(0));
     }
 

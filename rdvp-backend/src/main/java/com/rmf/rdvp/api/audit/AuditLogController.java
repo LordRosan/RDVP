@@ -24,7 +24,7 @@ public class AuditLogController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('MGMT_AUDIT_LOG_READ')")
+    @PreAuthorize("hasAuthority('MANAGEMENT_CENTER_RECORD_QUERY')")
     public ResponseEntity<ApiResponse<AuditLogListResponse>> list(
             @RequestParam(required = false) String action,
             @RequestParam(required = false) String keyword,
@@ -35,3 +35,4 @@ public class AuditLogController {
         return ResponseEntity.ok(ApiResponse.success(AuditLogListResponse.from(result), RequestIds.resolve(request)));
     }
 }
+

@@ -179,10 +179,10 @@ class AuditLogControllerTests {
     }
 
     @Test
-    void recordsFailedDeviceArchiveChangeRequestForAuditReview() throws Exception {
+    void recordsFailedDeviceArchiveRequestForAuditReview() throws Exception {
         String operatorToken = login("fieldoperator", "password");
 
-        mockMvc.perform(post("/api/v1/device-archive-change-requests")
+        mockMvc.perform(post("/api/v1/device-archive-requests")
                         .header("Authorization", "Bearer " + operatorToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -198,23 +198,23 @@ class AuditLogControllerTests {
                                 }
                                 """))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error.code").value("DEVICE_ARCHIVE_CHANGE_LOCKED"));
+                .andExpect(jsonPath("$.error.code").value("DEVICE_ARCHIVE_REQUEST_LOCKED"));
         String auditorToken = login("auditor", "password");
 
-        mockMvc.perform(get("/api/v1/audit-logs?action=DEVICE_ARCHIVE_CHANGE_REQUEST")
+        mockMvc.perform(get("/api/v1/audit-logs?action=DEVICE_ARCHIVE_REQUEST")
                         .header("Authorization", "Bearer " + auditorToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items[0].status").value("FAILED"))
                 .andExpect(jsonPath("$.data.items[0].targetNo").value("RDVP-DEVICE-0002"))
-                .andExpect(jsonPath("$.data.items[0].description").value("设备档案变更申请提交失败：DEVICE_ARCHIVE_CHANGE_LOCKED。"));
+                .andExpect(jsonPath("$.data.items[0].description").value("设备档案修改申请提交失败：DEVICE_ARCHIVE_REQUEST_LOCKED。"));
     }
 
     @Test
     void recordsFailedDeviceArchiveReviewForAuditReview() throws Exception {
         String reviewerToken = login("deviceadmin", "password");
 
-        mockMvc.perform(post("/api/v1/device-archive-change-requests/{requestId}/review", "DCR-LOCAL-0002")
+        mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", "DCR-LOCAL-0002")
                         .header("Authorization", "Bearer " + reviewerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -225,7 +225,7 @@ class AuditLogControllerTests {
                                 }
                                 """))
                 .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.error.code").value("DEVICE_ARCHIVE_CHANGE_REQUEST_INVALID"));
+                .andExpect(jsonPath("$.error.code").value("DEVICE_ARCHIVE_REQUEST_INVALID"));
         String auditorToken = login("auditor", "password");
 
         mockMvc.perform(get("/api/v1/audit-logs?action=DEVICE_ARCHIVE_REVIEW")
@@ -234,7 +234,7 @@ class AuditLogControllerTests {
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items[0].status").value("FAILED"))
                 .andExpect(jsonPath("$.data.items[0].targetNo").value("RDVP-DEVICE-0002"))
-                .andExpect(jsonPath("$.data.items[0].description").value("设备档案审核提交失败：DEVICE_ARCHIVE_CHANGE_REQUEST_INVALID。"));
+                .andExpect(jsonPath("$.data.items[0].description").value("设备档案审核提交失败：DEVICE_ARCHIVE_REQUEST_INVALID。"));
     }
 
     @Test

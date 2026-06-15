@@ -123,12 +123,12 @@ READ_ONLY
 | 角色 | 主要权限 | 说明 |
 | --- | --- | --- |
 | `SYSTEM_ADMIN` | `*` | 具备系统级管理和业务处理权限 |
-| `DEVICE_ADMIN` | `ARCHIVE_DEVICE_READ`, `MGMT_DEVICE_ARCHIVE_CHANGE_REQUEST_REVIEW` | 查询设备档案，审核设备档案变更 |
-| `FIELD_OPERATOR` | `ARCHIVE_DEVICE_READ`, `ARCHIVE_DEVICE_CHANGE_REQUEST_CREATE`, `OPS_DEVICE_VERIFY`, `OPS_FAULT_REPORT_CREATE` | 查询设备档案，提交档案变更申请、状态核验和故障报告 |
-| `MAINTAINER` | `ARCHIVE_DEVICE_READ`, `OPS_REPAIR_TASK_ACCEPT`, `OPS_REPAIR_REPORT_CREATE` | 查询设备档案，接取维修任务并提交维修报告 |
-| `REINSPECTOR` | `ARCHIVE_DEVICE_READ`, `OPS_REINSPECTION_CREATE` | 查询设备档案，处理复检任务并提交复检记录 |
-| `SUPERVISOR_AUDITOR` | `ARCHIVE_DEVICE_READ`, `MGMT_AUDIT_LOG_READ` | 查询设备档案，查看操作记录和审计日志 |
-| `READ_ONLY` | `ARCHIVE_DEVICE_READ` | 仅查询授权范围内的设备档案 |
+| `DEVICE_ADMIN` | `ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY`, `MANAGEMENT_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW` | 查询设备档案，审核设备档案申请 |
+| `FIELD_OPERATOR` | `ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY`, `ARCHIVE_CENTER_DEVICE_ARCHIVE_UPDATE_REQUEST_SUBMIT`, `OPERATIONS_CENTER_DEVICE_VERIFICATION_SUBMIT`, `OPERATIONS_CENTER_DEVICE_FAULT_REPORT_SUBMIT` | 查询设备档案，提交档案申请、状态核验和故障报修 |
+| `MAINTAINER` | `ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY`, `OPERATIONS_CENTER_REPAIR_TASK_ACCEPT`, `OPERATIONS_CENTER_REPAIR_REPORT_SUBMIT` | 查询设备档案，接取维修任务并提交维修报告 |
+| `REINSPECTOR` | `ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY`, `OPERATIONS_CENTER_REINSPECTION_TASK_ACCEPT`, `OPERATIONS_CENTER_REINSPECTION_REPORT_SUBMIT` | 查询设备档案，接取复检任务并提交复检任务报告 |
+| `SUPERVISOR_AUDITOR` | `ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY`, `MANAGEMENT_CENTER_RECORD_QUERY` | 查询设备档案，查看操作记录和审计日志 |
+| `READ_ONLY` | `ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY` | 仅查询授权范围内的设备档案 |
 
 ### 6.2 授权边界
 
@@ -136,14 +136,14 @@ READ_ONLY
 
 后端应在以下位置执行授权校验：
 
-- 查询设备详情。
+- 查询设备档案详情。
 - 提交设备核验记录。
-- 创建设备档案变更申请。
-- 审核设备档案变更申请。
-- 创建故障报告。
+- 创建设备档案添加、删除或修改申请。
+- 审核设备档案申请。
+- 提交设备故障报修。
 - 接取维修任务。
-- 提交维修报告。
-- 提交复检记录。
+- 提交维修任务报告。
+- 提交复检任务报告。
 - 上传和下载附件。
 - 查询操作日志。
 - 管理用户、角色和权限。
@@ -155,9 +155,9 @@ READ_ONLY
 数据范围示例：
 
 - 只读人员只能查询被授权范围内的设备。
-- 现场运维人员可以提交核验记录、档案变更申请和故障报告，但不能审核变更或处理维修任务。
+- 现场运维人员可以提交核验记录、档案修改申请和故障报告，但不能审核档案申请或处理维修任务。
 - 维修人员只能查看可接取故障、自己接取的任务和关联报告。
-- 设备管理员可以审核设备档案变更申请。
+- 设备管理员可以审核设备档案申请。
 - 主管/审计人员可以查询操作日志，但不一定具备修改设备数据的权限。
 
 ## 7. 二维码防伪
@@ -230,7 +230,7 @@ RDVP:<version>:<deviceCode>:<nonce>:<signature>
 受控状态包括：
 
 - 设备状态。
-- 设备档案变更申请状态。
+- 设备档案申请状态。
 - 故障报告状态。
 - 维修任务状态。
 - 维修报告结果。
@@ -254,17 +254,17 @@ RDVP:<version>:<deviceCode>:<nonce>:<signature>
 
 错误响应应提供稳定错误码和必要说明，不暴露内部堆栈、数据库结构、密钥路径、服务器路径或敏感配置。
 
-## 9. 设备档案变更安全
+## 9. 设备档案申请安全
 
-设备主数据不能由普通用户直接修改。设备档案变更通过申请和审核流程完成。
+设备主数据不能由普通用户直接修改。设备档案添加、删除和修改均通过申请和审核流程完成。
 
 安全要求：
 
-- 变更申请必须记录申请人、申请时间、申请原因和变更字段。
-- 变更内容必须保存修改前和修改后值。
+- 档案申请必须记录申请人、申请时间、申请原因和申请类型。
+- 修改申请必须保存修改前和修改后值；添加和删除申请必须保留可审计的字段快照。
 - 审核通过后才更新设备主数据。
-- 同一设备存在待审核变更申请时，后端必须拒绝新的变更申请。
-- 设备变更审核通过并应用后，后端必须设置 12 小时变更冻结期并拒绝冻结期内的再次变更。
+- 同一设备存在待审核档案申请时，后端必须拒绝新的档案申请。
+- 修改档案申请审核通过并应用后，后端必须设置 12 小时档案冻结期并拒绝冻结期内的再次修改或删除申请。
 - 审核人、审核时间和审核意见必须保存。
 - 审核通过、审核驳回和申请撤回必须记录操作日志。
 - 审核人不得绕过后端接口直接修改设备状态。
@@ -382,8 +382,8 @@ SYNCED
 以下操作必须写入操作日志：
 
 - 用户登录和退出。
-- 设备档案变更申请提交。
-- 设备档案变更审核。
+- 设备档案申请提交。
+- 设备档案申请审核。
 - 故障报告提交。
 - 故障报告驳回。
 - 维修任务接取。
@@ -511,3 +511,5 @@ config.example.json
 - 审计日志和安全事件保留周期。
 - 生产环境密钥管理方式。
 - 是否需要多因素认证。
+
+

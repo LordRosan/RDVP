@@ -36,7 +36,7 @@ public class DeviceVerificationController {
     }
 
     @PostMapping("/devices/{deviceId}/verification-records")
-    @PreAuthorize("hasAuthority('OPS_DEVICE_VERIFY')")
+    @PreAuthorize("hasAuthority('OPERATIONS_CENTER_DEVICE_VERIFICATION_SUBMIT')")
     public ResponseEntity<ApiResponse<DeviceVerificationRecordResponse>> createVerificationRecord(
             @PathVariable String deviceId,
             @Valid @RequestBody CreateDeviceVerificationRecordRequest requestBody,
@@ -53,7 +53,7 @@ public class DeviceVerificationController {
     }
 
     @PostMapping("/devices/{deviceId}/verification-records/fault-report")
-    @PreAuthorize("hasAuthority('OPS_DEVICE_VERIFY') and hasAuthority('OPS_FAULT_REPORT_CREATE')")
+    @PreAuthorize("hasAuthority('OPERATIONS_CENTER_DEVICE_VERIFICATION_SUBMIT') and hasAuthority('OPERATIONS_CENTER_DEVICE_FAULT_REPORT_SUBMIT')")
     public ResponseEntity<ApiResponse<DeviceVerificationFaultReportResponse>> createVerificationWithFaultReport(
             @PathVariable String deviceId,
             @Valid @RequestBody CreateDeviceVerificationFaultReportRequest requestBody,
@@ -88,3 +88,5 @@ public class DeviceVerificationController {
         }
     }
 }
+
+

@@ -2,11 +2,11 @@ import { AppColors } from '../../styles/AppTheme';
 import { abilityAccessCtrl } from '@kit.AbilityKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { detectBarcode, scanBarcode, scanCore } from '@kit.ScanKit';
-import { PermissionCode } from '../../models/PermissionModels';
+import { PermissionCode } from '../../models/identity/PermissionModels';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
-import { DeviceArchiveQueryMode, DeviceSummary } from '../../models/DeviceModels';
-import { ApiClient } from '../../services/ApiClient';
-import { DeviceService } from '../../services/DeviceService';
+import { DeviceArchiveQueryMode, DeviceSummary } from '../../models/archive/DeviceModels';
+import { ApiClient } from '../../services/common/ApiClient';
+import { DeviceService } from '../../services/archive/DeviceService';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { HeaderCircleButton } from '../../components/HeaderCircleButton';
@@ -25,7 +25,7 @@ struct DeviceArchiveQuery {
   @State querying: boolean = false;
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveDeviceRead)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveCenterDeviceArchiveQuery)) {
       return;
     }
   }
@@ -680,3 +680,5 @@ struct DeviceArchiveQuery {
     }
   }
 }
+
+

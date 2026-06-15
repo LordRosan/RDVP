@@ -1,6 +1,6 @@
 import { AppColors } from '../styles/AppTheme';
-import { AuthService } from '../services/AuthService';
-import { ApiClient } from '../services/ApiClient';
+import { AuthService } from '../services/identity/AuthService';
+import { ApiClient } from '../services/common/ApiClient';
 import { SessionStore } from '../stores/SessionStore';
 
 @Entry

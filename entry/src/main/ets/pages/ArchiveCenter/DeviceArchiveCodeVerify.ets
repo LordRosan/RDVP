@@ -1,7 +1,7 @@
 import { AppColors } from '../../styles/AppTheme';
-import { PermissionCode } from '../../models/PermissionModels';
-import { ApiClient } from '../../services/ApiClient';
-import { DeviceService } from '../../services/DeviceService';
+import { PermissionCode } from '../../models/identity/PermissionModels';
+import { ApiClient } from '../../services/common/ApiClient';
+import { DeviceService } from '../../services/archive/DeviceService';
 import { AuthGuard } from '../../utils/AuthGuard';
 
 interface CodeAvailabilityResult {
@@ -20,7 +20,7 @@ struct DeviceArchiveCodeVerify {
   @State result: CodeAvailabilityResult | undefined = undefined;
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveDeviceCreate)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveCenterDeviceArchiveCreateRequestSubmit)) {
       return;
     }
   }
@@ -324,3 +324,5 @@ struct DeviceArchiveCodeVerify {
     }
   }
 }
+
+

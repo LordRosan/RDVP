@@ -1,10 +1,10 @@
 import { AppColors } from '../../styles/AppTheme';
 import { ActionTile } from '../../components/ActionTile';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
-import { OperationsCenterPermissions, PermissionCode } from '../../models/PermissionModels';
-import { WorkbenchAction, WorkbenchActionId } from '../../models/WorkbenchModels';
-import { ApiClient } from '../../services/ApiClient';
-import { WorkbenchService } from '../../services/WorkbenchService';
+import { OperationsCenterPermissions, PermissionCode } from '../../models/identity/PermissionModels';
+import { WorkbenchAction, WorkbenchActionId } from '../../models/app/WorkbenchModels';
+import { ApiClient } from '../../services/common/ApiClient';
+import { WorkbenchService } from '../../services/app/WorkbenchService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { PermissionTextFormatter } from '../../utils/PermissionTextFormatter';
@@ -132,7 +132,7 @@ struct OperationsCenter {
           verticalPadding: 8
         })
         this.CardDivider()
-        if (SessionStore.hasPermission(PermissionCode.OpsRepairReportCreate)) {
+        if (SessionStore.hasPermission(PermissionCode.OperationsCenterRepairReportSubmit)) {
           StatusInfoRow({
             label: '待维修任务数',
             value: this.getActiveRepairTaskText(),
@@ -140,7 +140,7 @@ struct OperationsCenter {
           })
           this.CardDivider()
         }
-        if (SessionStore.hasPermission(PermissionCode.OpsReinspectionCreate)) {
+        if (SessionStore.hasPermission(PermissionCode.OperationsCenterReinspectionReportSubmit)) {
           StatusInfoRow({
             label: '待复检任务数',
             value: this.getPendingReinspectionText(),
@@ -218,16 +218,16 @@ struct OperationsCenter {
 
   getPermissionSummaryText(): string {
     const parts: string[] = [];
-    if (SessionStore.hasPermission(PermissionCode.OpsDeviceVerify)) {
+    if (SessionStore.hasPermission(PermissionCode.OperationsCenterDeviceVerificationSubmit)) {
       parts.push('可核验');
     }
-    if (SessionStore.hasPermission(PermissionCode.OpsRepairTaskAccept)) {
+    if (SessionStore.hasPermission(PermissionCode.OperationsCenterRepairTaskAccept)) {
       parts.push('可接取');
     }
-    if (SessionStore.hasPermission(PermissionCode.OpsRepairReportCreate)) {
+    if (SessionStore.hasPermission(PermissionCode.OperationsCenterRepairReportSubmit)) {
       parts.push('可维修');
     }
-    if (SessionStore.hasPermission(PermissionCode.OpsReinspectionCreate)) {
+    if (SessionStore.hasPermission(PermissionCode.OperationsCenterReinspectionReportSubmit)) {
       parts.push('可复检');
     }
     return PermissionTextFormatter.formatTwoPerLine(parts);
@@ -257,23 +257,23 @@ struct OperationsCenter {
       return;
     }
 
-    if (action.id === WorkbenchActionId.RepairTaskPool) {
-      this.openPage('pages/OperationsCenter/RepairTaskPool', '任务接取不可用');
+    if (action.id === WorkbenchActionId.TaskAcceptance) {
+      this.openPage('pages/OperationsCenter/TaskAcceptance', '任务接取不可用');
       return;
     }
 
-    if (action.id === WorkbenchActionId.AcceptedRepairTask) {
-      this.openPage('pages/OperationsCenter/AcceptedRepairTask', '维修任务不可用');
+    if (action.id === WorkbenchActionId.RepairReport) {
+      this.openPage('pages/OperationsCenter/RepairReport', '维修任务不可用');
       return;
     }
 
-    if (action.id === WorkbenchActionId.ReinspectionTask) {
-      this.openPage('pages/OperationsCenter/ReinspectionTask', '复检任务不可用');
+    if (action.id === WorkbenchActionId.ReinspectionReport) {
+      this.openPage('pages/OperationsCenter/ReinspectionReport', '复检任务不可用');
       return;
     }
 
-    if (action.id === WorkbenchActionId.OperationsRecord) {
-      this.openPage('pages/RecordCenter/OperationsRecord', '运维记录不可用');
+    if (action.id === WorkbenchActionId.OperationRecordQuery) {
+      this.openPage('pages/ManagementCenter/RecordQuery/OperationRecordQuery', '运维记录不可用');
       return;
     }
 
@@ -295,20 +295,20 @@ struct OperationsCenter {
       return `${WorkbenchActionId.DeviceVerification}`;
     }
 
-    if (url === 'pages/OperationsCenter/RepairTaskPool') {
-      return `${WorkbenchActionId.RepairTaskPool}`;
+    if (url === 'pages/OperationsCenter/TaskAcceptance') {
+      return `${WorkbenchActionId.TaskAcceptance}`;
     }
 
-    if (url === 'pages/OperationsCenter/AcceptedRepairTask') {
-      return `${WorkbenchActionId.AcceptedRepairTask}`;
+    if (url === 'pages/OperationsCenter/RepairReport') {
+      return `${WorkbenchActionId.RepairReport}`;
     }
 
-    if (url === 'pages/OperationsCenter/ReinspectionTask') {
-      return `${WorkbenchActionId.ReinspectionTask}`;
+    if (url === 'pages/OperationsCenter/ReinspectionReport') {
+      return `${WorkbenchActionId.ReinspectionReport}`;
     }
 
-    if (url === 'pages/RecordCenter/OperationsRecord') {
-      return `${WorkbenchActionId.OperationsRecord}`;
+    if (url === 'pages/ManagementCenter/RecordQuery/OperationRecordQuery') {
+      return `${WorkbenchActionId.OperationRecordQuery}`;
     }
 
     return '';
@@ -331,3 +331,5 @@ struct OperationsCenter {
     }
   }
 }
+
+

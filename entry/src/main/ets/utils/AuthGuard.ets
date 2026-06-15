@@ -32,4 +32,20 @@ export class AuthGuard {
     }
     return false;
   }
+
+  static requireAllPermissions(uiContext: UIContext, permissions: string[]): boolean {
+    if (!AuthGuard.requireAuthenticated(uiContext)) {
+      return false;
+    }
+
+    if (SessionStore.hasAllPermissions(permissions)) {
+      return true;
+    }
+
+    try {
+      uiContext.getRouter().replaceUrl({ url: 'pages/Workbench' });
+    } catch (err) {
+    }
+    return false;
+  }
 }

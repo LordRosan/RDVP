@@ -9,7 +9,7 @@ public record ReinspectionTaskResponse(
         String deviceCode,
         String deviceName,
         String severity,
-        RepairTaskPoolItemResponse.DeviceLocationResponse location,
+        TaskAcceptanceItemResponse.DeviceLocationResponse location,
         String repairedAt,
         String status) {
 
@@ -21,7 +21,7 @@ public record ReinspectionTaskResponse(
                 item.deviceCode(),
                 item.deviceName(),
                 item.severity().name(),
-                RepairTaskPoolItemResponse.DeviceLocationResponse.from(item.location()),
+                TaskAcceptanceItemResponse.DeviceLocationResponse.from(item.location()),
                 item.repairedAt() == null ? null : item.repairedAt().toString(),
                 item.status().name());
     }

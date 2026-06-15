@@ -12,7 +12,7 @@
 
 ## 1. 设计范围
 
-本文档定义 RDVP 后端服务对移动端应用提供的 HTTP API。接口覆盖用户认证、设备查询、二维码校验、设备核验、设备档案变更、故障报告、维修任务、维修报告、复检、附件、通知和审计日志等业务。
+本文档定义 RDVP 后端服务对移动端应用提供的 HTTP API。接口覆盖用户认证、设备档案查询、二维码校验、设备核验、设备档案申请、故障报修、维修任务、维修报告、复检、附件、通知和审计日志等业务。
 
 API 采用版本化路径，第一版统一使用：
 
@@ -167,7 +167,7 @@ POST /api/v1/auth/login
     "username": "user001",
     "displayName": "User Name",
     "roles": ["MAINTAINER"],
-    "permissions": ["ARCHIVE_DEVICE_READ", "OPS_FAULT_REPORT_CREATE"]
+    "permissions": ["ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY", "OPERATIONS_CENTER_DEVICE_FAULT_REPORT_SUBMIT"]
   }
 }
 ```
@@ -186,7 +186,7 @@ GET /api/v1/auth/me
   "username": "user001",
   "displayName": "User Name",
   "roles": ["MAINTAINER"],
-  "permissions": ["ARCHIVE_DEVICE_READ", "OPS_FAULT_REPORT_CREATE"]
+  "permissions": ["ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY", "OPERATIONS_CENTER_DEVICE_FAULT_REPORT_SUBMIT"]
 }
 ```
 
@@ -246,9 +246,9 @@ GET /api/v1/workbench/summary
 
 ```json
 {
-  "pendingDeviceArchiveChangeRequests": 1,
-  "repairTaskPoolItems": 2,
-  "acceptedRepairTasks": 0,
+  "pendingDeviceArchiveRequests": 1,
+  "taskAcceptanceItems": 2,
+  "repairTasks": 0,
   "pendingReinspections": 0,
   "offlineDrafts": 0
 }
@@ -258,9 +258,9 @@ GET /api/v1/workbench/summary
 
 | 字段 | 说明 |
 | --- | --- |
-| `pendingDeviceArchiveChangeRequests` | 待审核的设备档案变更、建档或删除申请数量 |
-| `repairTaskPoolItems` | 当前处于任务池中、可被接取的故障数量 |
-| `acceptedRepairTasks` | 当前登录维修人员已接取且未提交维修报告的任务数量 |
+| `pendingDeviceArchiveRequests` | 待审核的设备档案添加、修改或删除申请数量 |
+| `taskAcceptanceItems` | 当前处于任务池中、可被接取的故障数量 |
+| `repairTasks` | 当前登录维修人员已接取且未提交维修报告的任务数量 |
 | `pendingReinspections` | 当前处于待复检状态的故障数量 |
 | `offlineDrafts` | 当前登录用户待同步的离线内容数量 |
 
@@ -272,7 +272,7 @@ GET /api/v1/workbench/summary
 GET /api/v1/devices/by-code/{deviceCode}
 ```
 
-权限要求：`ARCHIVE_DEVICE_READ`
+权限要求：`ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY`
 
 当前设备编号格式：
 
@@ -296,7 +296,7 @@ RDVP-DEVICE-0001
   },
   "status": "NORMAL",
   "lastVerificationTime": "2026-05-27T07:30:00Z",
-  "changeState": {
+  "archiveRequestState": {
     "locked": false,
     "pendingRequestId": null,
     "freezeUntil": null
@@ -310,7 +310,7 @@ RDVP-DEVICE-0001
 GET /api/v1/devices/{deviceId}
 ```
 
-权限要求：`ARCHIVE_DEVICE_READ`
+权限要求：`ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY`
 
 响应数据：
 
@@ -328,7 +328,7 @@ GET /api/v1/devices/{deviceId}
   },
   "status": "NORMAL",
   "lastVerificationTime": "2026-05-27T07:30:00Z",
-  "changeState": {
+  "archiveRequestState": {
     "locked": false,
     "pendingRequestId": null,
     "freezeUntil": null
@@ -362,7 +362,7 @@ GET /api/v1/devices
 POST /api/v1/device-qrcodes/verify
 ```
 
-权限要求：`ARCHIVE_DEVICE_READ`
+权限要求：`ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY`
 
 二维码内容格式：
 
@@ -447,12 +447,12 @@ GET /api/v1/devices/{deviceId}/verification-records
 
 支持分页参数。
 
-## 9. 设备档案变更申请接口
+## 9. 设备档案申请接口
 
-### 9.1 创建设备档案变更申请
+### 9.1 创建设备档案申请
 
 ```text
-POST /api/v1/device-archive-change-requests
+POST /api/v1/device-archive-requests
 ```
 
 修改档案请求体：
@@ -509,16 +509,16 @@ POST /api/v1/device-archive-change-requests
 
 | 申请类型 | 权限 |
 | --- | --- |
-| `UPDATE` | `ARCHIVE_DEVICE_CHANGE_REQUEST_CREATE` |
-| `CREATE` | `ARCHIVE_DEVICE_CREATE` |
-| `DELETE` | `ARCHIVE_DEVICE_DELETE` |
+| `UPDATE` | `ARCHIVE_CENTER_DEVICE_ARCHIVE_UPDATE_REQUEST_SUBMIT` |
+| `CREATE` | `ARCHIVE_CENTER_DEVICE_ARCHIVE_CREATE_REQUEST_SUBMIT` |
+| `DELETE` | `ARCHIVE_CENTER_DEVICE_ARCHIVE_DELETE_REQUEST_SUBMIT` |
 
-当前可变更字段：`name`、`model`、`manufacturer`、`location.address`。设备运行状态不通过档案变更申请直接修改，应由核验、故障、维修和复检流程驱动。
+当前可修改字段：`name`、`model`、`manufacturer`、`location.address`。设备运行状态不通过档案修改申请直接修改，应由核验、故障、维修和复检流程驱动。
 
 后端创建申请前必须校验：
 
-- 设备不存在待审核变更申请。
-- 设备不处于变更冻结期。
+- 设备不存在待审核档案申请。
+- 设备不处于档案申请冻结期。
 - 提交的新值与当前设备档案存在有效差异。
 - 申请中的 `oldValue` 必须与后端当前档案值一致，避免基于过期页面提交覆盖更新。
 - 添加和删除档案申请在审核通过前不直接写入或删除正式档案。
@@ -534,13 +534,13 @@ POST /api/v1/device-archive-change-requests
 }
 ```
 
-### 9.2 查询变更申请列表
+### 9.2 查询档案申请列表
 
 ```text
-GET /api/v1/device-archive-change-requests
+GET /api/v1/device-archive-requests
 ```
 
-权限要求：`MGMT_DEVICE_ARCHIVE_CHANGE_REQUEST_REVIEW`
+权限要求：`MANAGEMENT_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW`
 
 查询参数：
 
@@ -552,13 +552,13 @@ GET /api/v1/device-archive-change-requests
 | `page` | 页码 |
 | `pageSize` | 每页数量 |
 
-### 9.3 审核设备档案变更申请
+### 9.3 审核设备档案申请
 
 ```text
-POST /api/v1/device-archive-change-requests/{requestId}/review
+POST /api/v1/device-archive-requests/{requestId}/review
 ```
 
-权限要求：`MGMT_DEVICE_ARCHIVE_CHANGE_REQUEST_REVIEW`
+权限要求：`MANAGEMENT_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW`
 
 请求体：
 
@@ -581,7 +581,7 @@ POST /api/v1/device-archive-change-requests/{requestId}/review
 }
 ```
 
-审核通过后，后端按申请类型应用档案修改、添加或删除；修改档案申请通过后设置 12 小时变更冻结期。审核驳回时必须保留驳回意见。
+审核通过后，后端按申请类型应用档案修改、添加或删除；修改档案申请通过后设置 12 小时档案申请冻结期。审核驳回时必须保留驳回意见。
 
 ## 10. 故障报告接口
 
@@ -665,7 +665,7 @@ POST /api/v1/fault-reports/{faultReportId}/reject
 ### 11.1 查询附近可接取故障
 
 ```text
-GET /api/v1/repair-tasks/pool
+GET /api/v1/operation-tasks/available
 ```
 
 查询参数：
@@ -1008,7 +1008,7 @@ GET /api/v1/audit-logs
 ```text
 NORMAL
 PENDING_VERIFICATION
-CHANGE_PENDING_REVIEW
+ARCHIVE_REQUEST_PENDING_REVIEW
 FAULTED
 UNDER_REPAIR
 PENDING_REINSPECTION
@@ -1016,7 +1016,7 @@ DISABLED
 RETIRED
 ```
 
-### 18.2 设备档案变更申请状态
+### 18.2 设备档案申请状态
 
 ```text
 PENDING_REVIEW
@@ -1094,7 +1094,7 @@ FAILED
 
 ```text
 VERIFICATION_RECORD
-DEVICE_ARCHIVE_CHANGE_REQUEST
+DEVICE_ARCHIVE_REQUEST
 FAULT_REPORT
 REPAIR_REPORT
 REINSPECTION_RECORD
@@ -1109,10 +1109,10 @@ REINSPECTION_RECORD
 | `QR_CODE_INVALID` | 二维码内容无效 |
 | `QR_CODE_EXPIRED` | 二维码已过期 |
 | `QR_CODE_SIGNATURE_INVALID` | 二维码签名校验失败 |
-| `DEVICE_ARCHIVE_CHANGE_LOCKED` | 设备存在待审核变更申请 |
-| `DEVICE_ARCHIVE_CHANGE_FROZEN` | 设备处于变更冻结期 |
-| `DEVICE_ARCHIVE_CHANGE_REQUEST_NOT_FOUND` | 设备档案变更申请不存在 |
-| `DEVICE_ARCHIVE_CHANGE_REQUEST_ALREADY_REVIEWED` | 设备档案变更申请已审核 |
+| `DEVICE_ARCHIVE_REQUEST_LOCKED` | 设备存在待审核档案申请 |
+| `DEVICE_ARCHIVE_REQUEST_FROZEN` | 设备处于档案申请冻结期 |
+| `DEVICE_ARCHIVE_REQUEST_NOT_FOUND` | 设备档案申请不存在 |
+| `DEVICE_ARCHIVE_REQUEST_ALREADY_REVIEWED` | 设备档案申请已审核 |
 | `FAULT_REPORT_NOT_FOUND` | 故障报告不存在 |
 | `FAULT_ALREADY_ACCEPTED` | 故障已被其他维修人员接取 |
 | `REPAIR_REPORT_INVALID` | 维修报告内容无效 |
@@ -1136,3 +1136,6 @@ REINSPECTION_RECORD
 - 离线批量同步是否需要全局幂等键。
 - 维修人员位置来源和更新频率。
 - 是否为 Web 管理后台复用同一套 API。
+
+
+

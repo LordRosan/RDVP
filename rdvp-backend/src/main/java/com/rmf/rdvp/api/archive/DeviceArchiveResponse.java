@@ -15,7 +15,7 @@ public record DeviceArchiveResponse(
         LocationResponse location,
         String status,
         String lastVerificationTime,
-        ChangeStateResponse changeState,
+        ArchiveRequestStateResponse archiveRequestState,
         List<Object> recentFaultReports,
         List<Object> recentRepairReports,
         List<Object> recentVerificationRecords) {
@@ -30,7 +30,7 @@ public record DeviceArchiveResponse(
                 new LocationResponse(archive.address(), archive.longitude(), archive.latitude()),
                 archive.status(),
                 toIsoString(archive.lastVerificationTime()),
-                ChangeStateResponse.from(archive.changeState()),
+                ArchiveRequestStateResponse.from(archive.archiveRequestState()),
                 List.of(),
                 List.of(),
                 List.of());
@@ -50,16 +50,16 @@ public record DeviceArchiveResponse(
             BigDecimal latitude) {
     }
 
-    public record ChangeStateResponse(
+    public record ArchiveRequestStateResponse(
             boolean locked,
             String pendingRequestId,
             String freezeUntil) {
 
-        static ChangeStateResponse from(DeviceArchive.ChangeState changeState) {
-            return new ChangeStateResponse(
-                    changeState.locked(),
-                    changeState.pendingRequestId(),
-                    toIsoString(changeState.freezeUntil()));
+        static ArchiveRequestStateResponse from(DeviceArchive.ArchiveRequestState archiveRequestState) {
+            return new ArchiveRequestStateResponse(
+                    archiveRequestState.locked(),
+                    archiveRequestState.pendingRequestId(),
+                    toIsoString(archiveRequestState.freezeUntil()));
         }
     }
 }

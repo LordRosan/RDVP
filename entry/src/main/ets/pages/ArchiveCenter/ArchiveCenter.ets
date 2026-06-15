@@ -1,10 +1,10 @@
 import { AppColors } from '../../styles/AppTheme';
 import { ActionTile } from '../../components/ActionTile';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
-import { PermissionCode } from '../../models/PermissionModels';
-import { WorkbenchAction, WorkbenchActionId } from '../../models/WorkbenchModels';
-import { ApiClient } from '../../services/ApiClient';
-import { WorkbenchService } from '../../services/WorkbenchService';
+import { PermissionCode } from '../../models/identity/PermissionModels';
+import { WorkbenchAction, WorkbenchActionId } from '../../models/app/WorkbenchModels';
+import { ApiClient } from '../../services/common/ApiClient';
+import { WorkbenchService } from '../../services/app/WorkbenchService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { PermissionTextFormatter } from '../../utils/PermissionTextFormatter';
@@ -19,7 +19,7 @@ struct ArchiveCenter {
   @StorageLink('rdvp_workbench_refresh_revision') workbenchRefreshRevision: number = 0;
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveDeviceRead)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveCenterDeviceArchiveQuery)) {
       return;
     }
 
@@ -27,7 +27,7 @@ struct ArchiveCenter {
   }
 
   onPageShow(): void {
-    if (AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveDeviceRead)) {
+    if (AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveCenterDeviceArchiveQuery)) {
       this.refreshCenterState();
     }
   }
@@ -203,19 +203,19 @@ struct ArchiveCenter {
     }
 
     const permissions: string[] = [];
-    if (SessionStore.hasPermission(PermissionCode.ArchiveDeviceRead)) {
+    if (SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveQuery)) {
       permissions.push('可查询');
     }
 
-    if (SessionStore.hasPermission(PermissionCode.ArchiveDeviceChangeRequestCreate)) {
+    if (SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveUpdateRequestSubmit)) {
       permissions.push('可修改');
     }
 
-    if (SessionStore.hasPermission(PermissionCode.ArchiveDeviceDelete)) {
+    if (SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveDeleteRequestSubmit)) {
       permissions.push('可删除');
     }
 
-    if (SessionStore.hasPermission(PermissionCode.ArchiveDeviceCreate)) {
+    if (SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveCreateRequestSubmit)) {
       permissions.push('可添加');
     }
 
@@ -223,9 +223,9 @@ struct ArchiveCenter {
   }
 
   getArchivePermissionTone(): string {
-    return SessionStore.hasPermission(PermissionCode.ArchiveDeviceChangeRequestCreate) ||
-      SessionStore.hasPermission(PermissionCode.ArchiveDeviceCreate) ||
-      SessionStore.hasPermission(PermissionCode.ArchiveDeviceDelete) ? AppColors.Primary : AppColors.TextSecondary;
+    return SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveUpdateRequestSubmit) ||
+      SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveCreateRequestSubmit) ||
+      SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveDeleteRequestSubmit) ? AppColors.Primary : AppColors.TextSecondary;
   }
 
   openFeature(action: WorkbenchAction): void {
@@ -241,7 +241,7 @@ struct ArchiveCenter {
       return;
     }
 
-    if (action.id === WorkbenchActionId.DeviceArchiveCreate) {
+    if (action.id === WorkbenchActionId.DeviceArchiveCreateRequest) {
       try {
         this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveCodeVerify' });
       } catch (err) {
@@ -272,3 +272,5 @@ struct ArchiveCenter {
     }
   }
 }
+
+

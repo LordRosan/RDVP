@@ -1,5 +1,5 @@
 import { AppColors } from '../styles/AppTheme';
-import { WorkbenchAction, WorkbenchActionId } from '../models/WorkbenchModels';
+import { WorkbenchAction, WorkbenchActionId } from '../models/app/WorkbenchModels';
 
 @Component
 export struct ActionTile {
@@ -60,7 +60,7 @@ export struct ActionTile {
       SymbolGlyph($r('sys.symbol.magnifyingglass'))
         .fontSize(22)
         .fontColor([AppColors.OnPrimary])
-    } else if (this.action.id === WorkbenchActionId.DeviceArchiveCreate) {
+    } else if (this.action.id === WorkbenchActionId.DeviceArchiveCreateRequest) {
       SymbolGlyph($r('sys.symbol.plus_circle'))
         .fontSize(23)
         .fontColor([AppColors.OnPrimary])
@@ -68,15 +68,15 @@ export struct ActionTile {
       SymbolGlyph($r('sys.symbol.checkmark_shield'))
         .fontSize(23)
         .fontColor([AppColors.OnPrimary])
-    } else if (this.action.id === WorkbenchActionId.RepairTaskPool) {
+    } else if (this.action.id === WorkbenchActionId.TaskAcceptance) {
       SymbolGlyph($r('sys.symbol.location_up'))
         .fontSize(23)
         .fontColor([AppColors.OnPrimary])
-    } else if (this.action.id === WorkbenchActionId.AcceptedRepairTask) {
+    } else if (this.action.id === WorkbenchActionId.RepairReport) {
       SymbolGlyph($r('sys.symbol.wrench_and_screwdriver'))
         .fontSize(23)
         .fontColor([AppColors.OnPrimary])
-    } else if (this.action.id === WorkbenchActionId.ReinspectionTask) {
+    } else if (this.action.id === WorkbenchActionId.ReinspectionReport) {
       SymbolGlyph($r('sys.symbol.doc_text_badge_checkmark'))
         .fontSize(23)
         .fontColor([AppColors.OnPrimary])
@@ -84,19 +84,19 @@ export struct ActionTile {
       SymbolGlyph($r('sys.symbol.checkmark_shield'))
         .fontSize(23)
         .fontColor([AppColors.OnPrimary])
-    } else if (this.action.id === WorkbenchActionId.OperationsRecord) {
+    } else if (this.action.id === WorkbenchActionId.OperationRecordQuery) {
       SymbolGlyph($r('sys.symbol.clock'))
         .fontSize(23)
         .fontColor([AppColors.OnPrimary])
-    } else if (this.action.id === WorkbenchActionId.ArchiveRecord) {
+    } else if (this.action.id === WorkbenchActionId.ArchiveRecordQuery) {
       SymbolGlyph($r('sys.symbol.text_clipboard'))
         .fontSize(23)
         .fontColor([AppColors.OnPrimary])
-    } else if (this.action.id === WorkbenchActionId.ReviewRecord) {
+    } else if (this.action.id === WorkbenchActionId.ReviewRecordQuery) {
       SymbolGlyph($r('sys.symbol.checkmark_shield'))
         .fontSize(23)
         .fontColor([AppColors.OnPrimary])
-    } else if (this.action.id === WorkbenchActionId.RecordCenter) {
+    } else if (this.action.id === WorkbenchActionId.RecordQuery) {
       SymbolGlyph($r('sys.symbol.text_clipboard'))
         .fontSize(23)
         .fontColor([AppColors.OnPrimary])

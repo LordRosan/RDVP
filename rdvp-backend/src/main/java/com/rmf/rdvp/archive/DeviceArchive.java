@@ -14,9 +14,9 @@ public record DeviceArchive(
         BigDecimal longitude,
         BigDecimal latitude,
         OffsetDateTime lastVerificationTime,
-        ChangeState changeState) {
+        ArchiveRequestState archiveRequestState) {
 
-    public record ChangeState(
+    public record ArchiveRequestState(
             boolean locked,
             String pendingRequestId,
             OffsetDateTime freezeUntil) {

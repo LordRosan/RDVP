@@ -1,14 +1,14 @@
 import { AppColors } from '../../styles/AppTheme';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
-import { DeviceStatus, DeviceSummary } from '../../models/DeviceModels';
-import { PermissionCode } from '../../models/PermissionModels';
-import { DeviceArchiveDeleteGuardService } from '../../services/DeviceArchiveDeleteGuardService';
-import { ApiClient } from '../../services/ApiClient';
+import { DeviceStatus, DeviceSummary } from '../../models/archive/DeviceModels';
+import { PermissionCode } from '../../models/identity/PermissionModels';
+import { DeviceArchiveDeleteGuardService } from '../../services/archive/DeviceArchiveDeleteGuardService';
+import { ApiClient } from '../../services/common/ApiClient';
 import {
   DeviceQrCodeExportResult,
   DeviceQrCodeExportService
-} from '../../services/DeviceQrCodeExportService';
-import { DeviceService } from '../../services/DeviceService';
+} from '../../services/archive/DeviceQrCodeExportService';
+import { DeviceService } from '../../services/archive/DeviceService';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
@@ -48,7 +48,7 @@ struct DeviceArchiveDetail {
   @State qrExportResult: DeviceQrCodeExportResult | undefined = undefined;
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveDeviceRead)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveCenterDeviceArchiveQuery)) {
       return;
     }
 
@@ -56,7 +56,7 @@ struct DeviceArchiveDetail {
   }
 
   onPageShow(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveDeviceRead)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveCenterDeviceArchiveQuery)) {
       return;
     }
 
@@ -85,12 +85,12 @@ struct DeviceArchiveDetail {
 
     this.device = device;
     this.hasDevice = true;
-    this.canChangeArchive = SessionStore.hasPermission(PermissionCode.ArchiveDeviceChangeRequestCreate) &&
-      !DeviceService.isArchiveChangeLocked(device);
-    this.canDeleteArchive = SessionStore.hasPermission(PermissionCode.ArchiveDeviceDelete) &&
-      !DeviceService.isArchiveChangeLocked(device) &&
+    this.canChangeArchive = SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveUpdateRequestSubmit) &&
+      !DeviceService.isArchiveRequestLocked(device);
+    this.canDeleteArchive = SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveDeleteRequestSubmit) &&
+      !DeviceService.isArchiveRequestLocked(device) &&
       !DeviceArchiveDeleteGuardService.isDeleteLocked(device.deviceCode);
-    this.canExportQrCode = SessionStore.hasPermission(PermissionCode.ArchiveQrCodeExport);
+    this.canExportQrCode = SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveQrCodeExport);
     this.detailMessage = '';
     this.detailMessageTone = AppColors.Danger;
     this.changeActionMessage = '';
@@ -298,8 +298,8 @@ struct DeviceArchiveDetail {
         this.CardDivider()
         StatusInfoRow({
           label: '档案状态',
-          value: DeviceService.formatArchiveChangeLockReason(this.device),
-          tone: DeviceService.isArchiveChangeLocked(this.device) ? AppColors.Danger : AppColors.Success,
+          value: DeviceService.formatArchiveRequestLockReason(this.device),
+          tone: DeviceService.isArchiveRequestLocked(this.device) ? AppColors.Danger : AppColors.Success,
           valueMaxLines: 2,
           verticalPadding: 12
         })
@@ -736,15 +736,15 @@ struct DeviceArchiveDetail {
   }
 
   canViewChangeArchiveAction(): boolean {
-    return SessionStore.hasPermission(PermissionCode.ArchiveDeviceChangeRequestCreate);
+    return SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveUpdateRequestSubmit);
   }
 
   canViewDeleteArchiveAction(): boolean {
-    return SessionStore.hasPermission(PermissionCode.ArchiveDeviceDelete);
+    return SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveDeleteRequestSubmit);
   }
 
   openQrExportDialog(): void {
-    if (!SessionStore.hasPermission(PermissionCode.ArchiveQrCodeExport)) {
+    if (!SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveQrCodeExport)) {
       this.detailMessage = '当前账号无权导出设备二维码';
       this.detailMessageTone = AppColors.Danger;
       return;
@@ -889,20 +889,20 @@ struct DeviceArchiveDetail {
   }
 
   openChangePage(): void {
-    if (!SessionStore.hasPermission(PermissionCode.ArchiveDeviceChangeRequestCreate)) {
+    if (!SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveUpdateRequestSubmit)) {
       this.changeActionMessage = '当前账号无权申请修改设备档案';
       this.changeActionMessageTone = AppColors.Danger;
       return;
     }
 
-    if (DeviceService.isArchiveChangeLocked(this.device)) {
-      this.changeActionMessage = DeviceService.formatArchiveChangeLockReason(this.device);
+    if (DeviceService.isArchiveRequestLocked(this.device)) {
+      this.changeActionMessage = DeviceService.formatArchiveRequestLockReason(this.device);
       this.changeActionMessageTone = AppColors.Danger;
       return;
     }
 
     try {
-      this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveChange' });
+      this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveUpdate' });
     } catch (err) {
       this.changeActionMessage = '修改设备档案不可用';
       this.changeActionMessageTone = AppColors.Danger;
@@ -910,7 +910,7 @@ struct DeviceArchiveDetail {
   }
 
   openDeletePage(): void {
-    if (!SessionStore.hasPermission(PermissionCode.ArchiveDeviceDelete)) {
+    if (!SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveDeleteRequestSubmit)) {
       this.deleteActionMessage = '当前账号无权申请删除设备档案';
       this.deleteActionMessageTone = AppColors.Danger;
       return;
@@ -922,8 +922,8 @@ struct DeviceArchiveDetail {
       return;
     }
 
-    if (DeviceService.isArchiveChangeLocked(this.device)) {
-      this.deleteActionMessage = DeviceService.formatArchiveChangeLockReason(this.device);
+    if (DeviceService.isArchiveRequestLocked(this.device)) {
+      this.deleteActionMessage = DeviceService.formatArchiveRequestLockReason(this.device);
       this.deleteActionMessageTone = AppColors.Danger;
       return;
     }
@@ -973,3 +973,5 @@ struct DeviceArchiveDetail {
     }
   }
 }
+
+

@@ -2,9 +2,9 @@ import { AppColors } from '../styles/AppTheme';
 import { ActionTile } from '../components/ActionTile';
 import { HeaderCircleButton } from '../components/HeaderCircleButton';
 import { MetricTile } from '../components/MetricTile';
-import { WorkbenchAction, WorkbenchActionId, WorkbenchMetric, WorkbenchStatusItem } from '../models/WorkbenchModels';
-import { CurrentUserSnapshot } from '../models/SessionModels';
-import { WorkbenchService } from '../services/WorkbenchService';
+import { WorkbenchAction, WorkbenchActionId, WorkbenchMetric, WorkbenchStatusItem } from '../models/app/WorkbenchModels';
+import { CurrentUserSnapshot } from '../models/identity/SessionModels';
+import { WorkbenchService } from '../services/app/WorkbenchService';
 import { SessionStore } from '../stores/SessionStore';
 
 @Entry

@@ -1,5 +1,5 @@
 import { AppColors } from '../../styles/AppTheme';
-import { CurrentUserSnapshot } from '../../models/SessionModels';
+import { CurrentUserSnapshot } from '../../models/identity/SessionModels';
 import { SessionStore } from '../../stores/SessionStore';
 import { HeaderCircleButton } from '../../components/HeaderCircleButton';
 

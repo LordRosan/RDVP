@@ -119,7 +119,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
     }
 
     @Override
-    public List<RepairTaskPoolItem> listRepairTaskPool(
+    public List<TaskAcceptanceItem> listTaskAcceptance(
             FaultSeverity severity,
             int radiusKm,
             BigDecimal longitude,
@@ -232,7 +232,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                 + " ORDER BY distance_km ASC NULLS LAST, created_at DESC"
                 + " LIMIT :limit";
 
-        return jdbcTemplate.query(sql, parameters, this::mapRepairTaskPool);
+        return jdbcTemplate.query(sql, parameters, this::mapTaskAcceptance);
     }
 
     @Override
@@ -354,7 +354,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
     }
 
     @Override
-    public List<AcceptedRepairTaskItem> listAcceptedRepairTasks(String maintainerId, int limit) {
+    public List<RepairTaskItem> listRepairTasks(String maintainerId, int limit) {
         return jdbcTemplate.query(
                 """
                         SELECT
@@ -377,7 +377,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                         LIMIT :limit
                         """,
                 Map.of("maintainerId", maintainerId, "limit", limit),
-                this::mapAcceptedRepairTask);
+                this::mapRepairTaskItem);
     }
 
     @Override
@@ -402,7 +402,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                            OR rt.repair_task_no = :idOrNo
                         """,
                 Map.of("idOrNo", idOrNo),
-                this::mapRepairTask);
+                this::mapRepairTaskRecord);
         return results.stream().findFirst();
     }
 
@@ -640,8 +640,8 @@ public class JdbcOperationsRepository implements OperationsRepository {
                 resultSet.getObject("updated_at", OffsetDateTime.class));
     }
 
-    private RepairTaskPoolItem mapRepairTaskPool(ResultSet resultSet, int rowNumber) throws SQLException {
-        return new RepairTaskPoolItem(
+    private TaskAcceptanceItem mapTaskAcceptance(ResultSet resultSet, int rowNumber) throws SQLException {
+        return new TaskAcceptanceItem(
                 resultSet.getString("id"),
                 resultSet.getString("id"),
                 resultSet.getString("fault_report_no"),
@@ -650,7 +650,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                 FaultType.valueOf(resultSet.getString("fault_type")),
                 FaultSeverity.valueOf(resultSet.getString("severity")),
                 resultSet.getBigDecimal("distance_km"),
-                new RepairTaskPoolItem.DeviceLocation(
+                new TaskAcceptanceItem.DeviceLocation(
                         resultSet.getString("address"),
                         resultSet.getBigDecimal("longitude"),
                         resultSet.getBigDecimal("latitude")),
@@ -659,8 +659,8 @@ public class JdbcOperationsRepository implements OperationsRepository {
                 resultSet.getString("task_type"));
     }
 
-    private AcceptedRepairTaskItem mapAcceptedRepairTask(ResultSet resultSet, int rowNumber) throws SQLException {
-        return new AcceptedRepairTaskItem(
+    private RepairTaskItem mapRepairTaskItem(ResultSet resultSet, int rowNumber) throws SQLException {
+        return new RepairTaskItem(
                 resultSet.getString("id"),
                 resultSet.getString("repair_task_no"),
                 resultSet.getString("fault_report_no"),
@@ -672,7 +672,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                 RepairTaskStatus.valueOf(resultSet.getString("status")));
     }
 
-    private RepairTaskRecord mapRepairTask(ResultSet resultSet, int rowNumber) throws SQLException {
+    private RepairTaskRecord mapRepairTaskRecord(ResultSet resultSet, int rowNumber) throws SQLException {
         return new RepairTaskRecord(
                 resultSet.getString("id"),
                 resultSet.getString("repair_task_no"),
@@ -695,7 +695,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                 resultSet.getString("device_code"),
                 resultSet.getString("device_name"),
                 FaultSeverity.valueOf(resultSet.getString("severity")),
-                new RepairTaskPoolItem.DeviceLocation(
+                new TaskAcceptanceItem.DeviceLocation(
                         resultSet.getString("address"),
                         resultSet.getBigDecimal("longitude"),
                         resultSet.getBigDecimal("latitude")),

@@ -1,10 +1,10 @@
 import { AppColors } from '../../styles/AppTheme';
 import { ActionTile } from '../../components/ActionTile';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
-import { ManagementCenterPermissions, PermissionCode } from '../../models/PermissionModels';
-import { WorkbenchAction, WorkbenchActionId } from '../../models/WorkbenchModels';
-import { ApiClient } from '../../services/ApiClient';
-import { WorkbenchService } from '../../services/WorkbenchService';
+import { ManagementCenterPermissions, PermissionCode } from '../../models/identity/PermissionModels';
+import { WorkbenchAction, WorkbenchActionId } from '../../models/app/WorkbenchModels';
+import { ApiClient } from '../../services/common/ApiClient';
+import { WorkbenchService } from '../../services/app/WorkbenchService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { PermissionTextFormatter } from '../../utils/PermissionTextFormatter';
@@ -131,10 +131,10 @@ struct ManagementCenter {
           rowMinHeight: 72,
           verticalPadding: 8
         })
-        if (SessionStore.hasPermission(PermissionCode.MgmtDeviceArchiveChangeRequestReview)) {
+        if (SessionStore.hasPermission(PermissionCode.ManagementCenterDeviceArchiveRequestReview)) {
           this.CardDivider()
         }
-        if (SessionStore.hasPermission(PermissionCode.MgmtDeviceArchiveChangeRequestReview)) {
+        if (SessionStore.hasPermission(PermissionCode.ManagementCenterDeviceArchiveRequestReview)) {
           StatusInfoRow({
             label: '待审核申请数',
             value: this.getPendingReviewText(),
@@ -215,15 +215,15 @@ struct ManagementCenter {
       return '-';
     }
 
-    return `${WorkbenchService.getPendingArchiveChangeRequestCount()}项`;
+    return `${WorkbenchService.getPendingArchiveRequestCount()}项`;
   }
 
   getPermissionSummaryText(): string {
     const parts: string[] = [];
-    if (SessionStore.hasPermission(PermissionCode.MgmtDeviceArchiveChangeRequestReview)) {
+    if (SessionStore.hasPermission(PermissionCode.ManagementCenterDeviceArchiveRequestReview)) {
       parts.push('可审核');
     }
-    if (SessionStore.hasPermission(PermissionCode.MgmtAuditLogRead)) {
+    if (SessionStore.hasPermission(PermissionCode.ManagementCenterRecordQuery)) {
       parts.push('可查看记录');
     }
 
@@ -238,8 +238,8 @@ struct ManagementCenter {
       return;
     }
 
-    if (action.id === WorkbenchActionId.RecordCenter) {
-      this.openPage('pages/RecordCenter/RecordCenter', '记录中心不可用');
+    if (action.id === WorkbenchActionId.RecordQuery) {
+      this.openPage('pages/ManagementCenter/RecordQuery/RecordQuery', '记录查询不可用');
       return;
     }
 
@@ -261,8 +261,8 @@ struct ManagementCenter {
       return `${WorkbenchActionId.DeviceArchiveReview}`;
     }
 
-    if (url === 'pages/RecordCenter/RecordCenter') {
-      return `${WorkbenchActionId.RecordCenter}`;
+    if (url === 'pages/ManagementCenter/RecordQuery/RecordQuery') {
+      return `${WorkbenchActionId.RecordQuery}`;
     }
 
     return '';
@@ -285,3 +285,5 @@ struct ManagementCenter {
     }
   }
 }
+
+
