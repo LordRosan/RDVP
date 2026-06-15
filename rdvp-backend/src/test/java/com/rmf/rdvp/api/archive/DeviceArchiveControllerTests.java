@@ -84,6 +84,59 @@ class DeviceArchiveControllerTests {
     }
 
     @Test
+    void reportsExistingDeviceCodeAsUnavailable() throws Exception {
+        String token = login("deviceadmin", "password");
+
+        mockMvc.perform(get("/api/v1/device-codes/rdvp-device-0001/availability")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.available").value(false))
+                .andExpect(jsonPath("$.data.reason").value("设备编号已被现有档案使用"));
+    }
+
+    @Test
+    void reportsPendingCreateRequestDeviceCodeAsUnavailable() throws Exception {
+        String token = login("deviceadmin", "password");
+
+        mockMvc.perform(post("/api/v1/device-archive-requests")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "type": "CREATE",
+                                  "deviceCode": "RDVP-DEVICE-0098",
+                                  "reason": "新增设备安装。",
+                                  "changes": {
+                                    "name": {
+                                      "newValue": "巡检网关G-98"
+                                    }
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/device-codes/RDVP-DEVICE-0098/availability")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.available").value(false))
+                .andExpect(jsonPath("$.data.reason").value("设备编号已有待审核的添加申请"));
+    }
+
+    @Test
+    void reportsUnusedDeviceCodeAsAvailable() throws Exception {
+        String token = login("deviceadmin", "password");
+
+        mockMvc.perform(get("/api/v1/device-codes/RDVP-DEVICE-0097/availability")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.available").value(true))
+                .andExpect(jsonPath("$.data.reason").value("设备编号可用于添加档案"));
+    }
+
+    @Test
     void rejectsInvalidDeviceId() throws Exception {
         String token = login("fieldoperator", "password");
 

@@ -104,6 +104,11 @@ public class DeviceArchiveRequestService {
                 pageResult.total());
     }
 
+    public boolean hasPendingCreateRequestByDeviceCode(String deviceCode) {
+        String normalizedDeviceCode = normalizeDeviceCode(deviceCode);
+        return archiveRequestRepository.hasPendingByTargetDeviceCode(normalizedDeviceCode);
+    }
+
     @Transactional
     public DeviceArchiveRequest review(
             String requestId,

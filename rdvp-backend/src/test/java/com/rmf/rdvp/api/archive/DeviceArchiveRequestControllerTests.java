@@ -53,6 +53,31 @@ class DeviceArchiveRequestControllerTests {
     }
 
     @Test
+    void acceptsLocalDisplayInitiatedAtForArchiveRequest() throws Exception {
+        String token = login("fieldoperator", "password");
+
+        mockMvc.perform(post("/api/v1/device-archive-requests")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "deviceId": "device-local-0001",
+                                  "reason": "名称修正。",
+                                  "initiatedAt": "2026-06-15 20:42",
+                                  "changes": {
+                                    "name": {
+                                      "oldValue": "冷却泵A-01",
+                                      "newValue": "冷却泵A-02"
+                                    }
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.status").value("PENDING_REVIEW"));
+    }
+
+    @Test
     void listsPendingArchiveRequestsForReviewer() throws Exception {
         String token = login("deviceadmin", "password");
 

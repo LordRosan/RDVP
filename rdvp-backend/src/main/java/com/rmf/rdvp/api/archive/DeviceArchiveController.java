@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.rmf.rdvp.api.common.ApiResponse;
 import com.rmf.rdvp.api.common.RequestIds;
+import com.rmf.rdvp.archive.DeviceArchiveRequestService;
 import com.rmf.rdvp.archive.DeviceArchiveService;
 import com.rmf.rdvp.audit.AuditAction;
 import com.rmf.rdvp.audit.AuditLogService;
@@ -29,14 +30,17 @@ import jakarta.validation.Valid;
 public class DeviceArchiveController {
 
     private final DeviceArchiveService archiveService;
+    private final DeviceArchiveRequestService archiveRequestService;
     private final AuthenticationService authenticationService;
     private final AuditLogService auditLogService;
 
     public DeviceArchiveController(
             DeviceArchiveService archiveService,
+            DeviceArchiveRequestService archiveRequestService,
             AuthenticationService authenticationService,
             AuditLogService auditLogService) {
         this.archiveService = archiveService;
+        this.archiveRequestService = archiveRequestService;
         this.authenticationService = authenticationService;
         this.auditLogService = auditLogService;
     }
@@ -55,6 +59,28 @@ public class DeviceArchiveController {
             HttpServletRequest request) {
         DeviceArchiveResponse response = DeviceArchiveResponse.from(archiveService.findById(deviceId));
         return ResponseEntity.ok(ApiResponse.success(response, RequestIds.resolve(request)));
+    }
+
+    @GetMapping("/device-codes/{deviceCode}/availability")
+    @PreAuthorize("hasAuthority('ARCHIVE_CENTER_DEVICE_ARCHIVE_CREATE_REQUEST_SUBMIT')")
+    public ResponseEntity<ApiResponse<DeviceCodeAvailabilityResponse>> checkDeviceCodeAvailability(
+            @PathVariable String deviceCode,
+            HttpServletRequest request) {
+        if (archiveService.existsByCode(deviceCode)) {
+            return ResponseEntity.ok(ApiResponse.success(
+                    new DeviceCodeAvailabilityResponse(false, "设备编号已被现有档案使用"),
+                    RequestIds.resolve(request)));
+        }
+
+        if (archiveRequestService.hasPendingCreateRequestByDeviceCode(deviceCode)) {
+            return ResponseEntity.ok(ApiResponse.success(
+                    new DeviceCodeAvailabilityResponse(false, "设备编号已有待审核的添加申请"),
+                    RequestIds.resolve(request)));
+        }
+
+        return ResponseEntity.ok(ApiResponse.success(
+                new DeviceCodeAvailabilityResponse(true, "设备编号可用于添加档案"),
+                RequestIds.resolve(request)));
     }
 
     @PostMapping("/device-qrcodes/verify")

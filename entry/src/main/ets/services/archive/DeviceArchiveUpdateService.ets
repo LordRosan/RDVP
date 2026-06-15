@@ -8,6 +8,7 @@ import {
 } from '../../models/archive/DeviceArchiveRequestModels';
 import { ApiClient } from '../common/ApiClient';
 import { DeviceService } from './DeviceService';
+import { DateTimeFormatUtil } from '../../utils/DateTimeFormatUtil';
 
 interface DeviceArchiveUpdateApiResult {
   id: string;
@@ -317,7 +318,7 @@ export class DeviceArchiveUpdateService {
       `"changes":${DeviceArchiveUpdateService.buildApiChangesPayload(form)}`
     ];
     if (form.initiatedAt !== undefined && form.initiatedAt.trim().length > 0) {
-      fieldList.push(`"initiatedAt":${JSON.stringify(form.initiatedAt.trim())}`);
+      fieldList.push(`"initiatedAt":${JSON.stringify(DateTimeFormatUtil.toApiIsoString(form.initiatedAt))}`);
     }
 
     return `{${fieldList.join(',')}}`;

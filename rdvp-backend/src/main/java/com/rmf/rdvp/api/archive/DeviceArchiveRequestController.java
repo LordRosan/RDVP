@@ -2,6 +2,9 @@ package com.rmf.rdvp.api.archive;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -36,6 +39,8 @@ import jakarta.validation.Valid;
 @RestController
 @RequestMapping("/api/v1/device-archive-requests")
 public class DeviceArchiveRequestController {
+
+    private static final DateTimeFormatter LOCAL_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private final DeviceArchiveRequestService archiveRequestService;
     private final AuthenticationService authenticationService;
@@ -171,10 +176,16 @@ public class DeviceArchiveRequestController {
             return null;
         }
 
+        String normalized = initiatedAt.trim();
         try {
-            return OffsetDateTime.parse(initiatedAt.trim()).withOffsetSameInstant(ZoneOffset.UTC);
-        } catch (RuntimeException exception) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "initiatedAt is invalid.");
+            return OffsetDateTime.parse(normalized).withOffsetSameInstant(ZoneOffset.UTC);
+        } catch (DateTimeParseException ignored) {
+        }
+
+        try {
+            return LocalDateTime.parse(normalized, LOCAL_DATE_TIME_FORMATTER).atOffset(ZoneOffset.UTC);
+        } catch (DateTimeParseException exception) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "申请发起时间格式无效，请重新选择时间。");
         }
     }
 }

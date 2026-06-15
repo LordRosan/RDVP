@@ -11,6 +11,7 @@ import {
   DeviceArchiveReviewResult
 } from '../../models/archive/DeviceArchiveReviewModels';
 import { ApiClient } from '../common/ApiClient';
+import { DateTimeFormatUtil } from '../../utils/DateTimeFormatUtil';
 
 interface ApiListResult<T> {
   items: T[];
@@ -245,32 +246,7 @@ export class DeviceArchiveReviewService {
   }
 
   private static toApiReviewedAt(value: string): string {
-    const date = DeviceArchiveReviewService.parseLocalDateTime(value);
+    const date = DateTimeFormatUtil.parseLocalDisplayDateTime(value);
     return date === undefined ? '' : date.toISOString();
-  }
-
-  private static parseLocalDateTime(value: string): Date | undefined {
-    const trimmed = value.trim();
-    const segments = trimmed.split(' ');
-    if (segments.length !== 2) {
-      return undefined;
-    }
-
-    const dateSegments = segments[0].split('-');
-    const timeSegments = segments[1].split(':');
-    if (dateSegments.length !== 3 || timeSegments.length < 2) {
-      return undefined;
-    }
-
-    const year = Number(dateSegments[0]);
-    const month = Number(dateSegments[1]);
-    const day = Number(dateSegments[2]);
-    const hour = Number(timeSegments[0]);
-    const minute = Number(timeSegments[1]);
-    if (year !== year || month !== month || day !== day || hour !== hour || minute !== minute) {
-      return undefined;
-    }
-
-    return new Date(year, month - 1, day, hour, minute);
   }
 }

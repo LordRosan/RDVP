@@ -598,8 +598,8 @@ struct DeviceArchiveReview {
   }
 
   @Builder
-  ActionButton(label: string, icon: Resource, enabled: boolean, action: () => void) {
-    Button({ type: ButtonType.Capsule, stateEffect: enabled }) {
+  ActionButton(label: string, icon: Resource, active: boolean, action: () => void) {
+    Button({ type: ButtonType.Capsule, stateEffect: !this.submitting }) {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
           .fontSize(20)
@@ -617,8 +617,8 @@ struct DeviceArchiveReview {
     }
     .height(54)
     .width('100%')
-    .backgroundColor(enabled ? AppColors.Primary : AppColors.Disabled)
-    .enabled(enabled)
+    .backgroundColor(active ? AppColors.Primary : AppColors.Disabled)
+    .enabled(!this.submitting)
     .onClick(() => {
       action();
     })
@@ -752,15 +752,22 @@ struct DeviceArchiveReview {
   }
 
   canSubmitReview(): boolean {
-    return this.canReview() && !this.refreshing && !this.submitting &&
-      this.selectedRequestId.length > 0 &&
+    return !this.refreshing && !this.submitting && this.isReviewFormComplete();
+  }
+
+  isReviewFormComplete(): boolean {
+    return this.selectedRequestId.length > 0 &&
       this.hasReviewDecision() &&
       this.reviewedAt.length > 0 &&
       (this.reviewDecision !== `${DeviceArchiveReviewDecision.Rejected}` || this.reviewComment.trim().length > 0);
   }
 
   fillSubmitValidationMessage(): void {
-    if (this.selectedRequestId.length === 0) {
+    if (this.refreshing) {
+      this.message = '申请列表正在刷新，请稍后提交审核结果';
+    } else if (!this.canReview()) {
+      this.message = '当前账号无权审核设备档案申请';
+    } else if (this.selectedRequestId.length === 0) {
       this.message = '请先选择待审核申请';
     } else if (!this.hasReviewDecision()) {
       this.message = '请选择审核结论';

@@ -80,6 +80,10 @@ public class DeviceArchiveService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
     }
 
+    public boolean existsByCode(String deviceCode) {
+        return archiveRepository.existsByCode(normalizeDeviceCode(deviceCode));
+    }
+
     public QrVerificationResult verifyQrCode(String qrContent) {
         ParsedQrContent parsed = parseQrContent(qrContent);
         DeviceArchive device = archiveRepository.findByCode(parsed.deviceCode())

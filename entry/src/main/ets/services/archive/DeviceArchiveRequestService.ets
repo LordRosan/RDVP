@@ -8,6 +8,7 @@ import {
 } from '../../models/archive/DeviceArchiveRequestModels';
 import { ApiClient } from '../common/ApiClient';
 import { DeviceService } from './DeviceService';
+import { DateTimeFormatUtil } from '../../utils/DateTimeFormatUtil';
 
 interface DeviceArchiveRequestApiResult {
   id: string;
@@ -286,7 +287,7 @@ export class DeviceArchiveRequestService {
       `"changes":{${changeItems.join(',')}}`
     ];
     if (form.initiatedAt !== undefined && form.initiatedAt.trim().length > 0) {
-      baseFields.push(`"initiatedAt":${JSON.stringify(form.initiatedAt.trim())}`);
+      baseFields.push(`"initiatedAt":${JSON.stringify(DateTimeFormatUtil.toApiIsoString(form.initiatedAt))}`);
     }
 
     return `{${baseFields.join(',')}}`;
@@ -299,7 +300,7 @@ export class DeviceArchiveRequestService {
       `"reason":${JSON.stringify(DeviceArchiveRequestService.normalizeText(form.reason))}`
     ];
     if (form.initiatedAt !== undefined && form.initiatedAt.trim().length > 0) {
-      fields.push(`"initiatedAt":${JSON.stringify(form.initiatedAt.trim())}`);
+      fields.push(`"initiatedAt":${JSON.stringify(DateTimeFormatUtil.toApiIsoString(form.initiatedAt))}`);
     }
 
     return `{${fields.join(',')}}`;
