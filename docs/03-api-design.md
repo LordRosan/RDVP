@@ -528,7 +528,7 @@ POST /api/v1/device-archive-requests
 
 ```json
 {
-  "id": "change-request-id",
+  "id": "archive-request-id",
   "status": "PENDING_REVIEW",
   "createdAt": "2026-05-27T07:30:00Z"
 }
@@ -574,7 +574,7 @@ POST /api/v1/device-archive-requests/{requestId}/review
 
 ```json
 {
-  "id": "change-request-id",
+  "id": "archive-request-id",
   "status": "APPROVED",
   "reviewedAt": "2026-05-27T07:30:00Z",
   "freezeUntil": "2026-05-27T19:30:00Z"

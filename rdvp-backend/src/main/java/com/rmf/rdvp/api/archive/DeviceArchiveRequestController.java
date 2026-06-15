@@ -106,7 +106,7 @@ public class DeviceArchiveRequestController {
         return ResponseEntity.ok(ApiResponse.success(DeviceArchiveReviewResultResponse.from(reviewed), RequestIds.resolve(request)));
     }
 
-    private Map<String, DeviceArchiveFieldChange> toDomainChanges(Map<String, DeviceArchiveFieldChangeRequest> changes) {
+    private Map<String, DeviceArchiveFieldChange> toDomainChanges(Map<String, DeviceArchiveFieldChangePayload> changes) {
         if (changes == null) {
             return Map.of();
         }
@@ -116,7 +116,7 @@ public class DeviceArchiveRequestController {
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
                         entry -> {
-                            DeviceArchiveFieldChangeRequest value = entry.getValue();
+                            DeviceArchiveFieldChangePayload value = entry.getValue();
                             return new DeviceArchiveFieldChange(
                                     value == null ? null : value.oldValue(),
                                     value == null ? null : value.newValue());

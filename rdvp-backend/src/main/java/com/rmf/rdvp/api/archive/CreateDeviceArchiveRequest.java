@@ -11,6 +11,6 @@ public record CreateDeviceArchiveRequest(
         @Size(max = 64) String deviceId,
         @Size(max = 64) String deviceCode,
         @Size(max = 500) String reason,
-        Map<@Size(max = 64) String, @Valid DeviceArchiveFieldChangeRequest> changes,
+        Map<@Size(max = 64) String, @Valid DeviceArchiveFieldChangePayload> changes,
         @Nullable String initiatedAt) {
 }

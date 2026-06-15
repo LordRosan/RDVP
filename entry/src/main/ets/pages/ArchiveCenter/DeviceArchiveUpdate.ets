@@ -336,12 +336,24 @@ struct DeviceArchiveUpdate {
     Column({ space: 10 }) {
       this.FieldTitle('修改时间')
 
-      TextInput({
-        placeholder: 'YYYY-MM-DD HH:mm',
-        text: this.initiatedAt
-      })
+      Row({ space: 10 }) {
+        SymbolGlyph($r('sys.symbol.calendar'))
+          .fontSize(20)
+          .fontColor([AppColors.TextPrimary])
+
+        Text(this.initiatedAt.length > 0 ? this.initiatedAt : '选择修改时间')
+          .fontSize(16)
+          .fontColor(this.initiatedAt.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
+          .layoutWeight(1)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+        SymbolGlyph($r('sys.symbol.chevron_forward'))
+          .fontSize(18)
+          .fontColor([AppColors.TextSecondary])
+      }
         .height(56)
-        .fontSize(16)
+        .width('100%')
         .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
         .padding({
@@ -352,11 +364,12 @@ struct DeviceArchiveUpdate {
           width: 1,
           color: AppColors.Border
         })
-        .enabled(!this.submitting && !this.isUpdateSubmitted())
-        .onChange((value: string) => {
-          this.initiatedAt = value;
-          this.message = '';
-          this.saveDraft();
+        .onClick(() => {
+          if (this.submitting || this.isUpdateSubmitted()) {
+            return;
+          }
+
+          this.showInitiatedAtPicker();
         })
     }
     .width('100%')
@@ -695,6 +708,63 @@ struct DeviceArchiveUpdate {
       this.message = '重新获取设备档案失败，请返回查询';
       this.messageTone = AppColors.Danger;
     }
+  }
+
+  showInitiatedAtPicker(): void {
+    if (this.submitting || this.isUpdateSubmitted()) {
+      return;
+    }
+
+    this.getUIContext().showDatePickerDialog({
+      start: new Date(2000, 0, 1, 0, 0),
+      end: new Date(2100, 11, 31, 23, 59),
+      selected: this.resolveSelectedDate(this.initiatedAt),
+      showTime: true,
+      useMilitaryTime: true,
+      onDateAccept: (value: Date) => {
+        this.initiatedAt = this.formatDateTime(value);
+        this.message = '';
+        this.saveDraft();
+      }
+    });
+  }
+
+  resolveSelectedDate(value: string): Date {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      return new Date();
+    }
+
+    const segments = trimmed.split(' ');
+    if (segments.length !== 2) {
+      return new Date();
+    }
+
+    const dateSegments = segments[0].split('-');
+    const timeSegments = segments[1].split(':');
+    if (dateSegments.length !== 3 || timeSegments.length < 2) {
+      return new Date();
+    }
+
+    const year = Number(dateSegments[0]);
+    const month = Number(dateSegments[1]);
+    const day = Number(dateSegments[2]);
+    const hour = Number(timeSegments[0]);
+    const minute = Number(timeSegments[1]);
+    if (year !== year || month !== month || day !== day || hour !== hour || minute !== minute) {
+      return new Date();
+    }
+
+    return new Date(year, month - 1, day, hour, minute);
+  }
+
+  formatDateTime(value: Date): string {
+    return `${value.getFullYear()}-${this.pad2(value.getMonth() + 1)}-${this.pad2(value.getDate())} ${this.pad2(
+      value.getHours())}:${this.pad2(value.getMinutes())}`;
+  }
+
+  pad2(value: number): string {
+    return value < 10 ? `0${value}` : `${value}`;
   }
 }
 

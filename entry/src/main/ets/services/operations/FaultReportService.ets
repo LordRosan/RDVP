@@ -55,7 +55,7 @@ export class FaultReportService {
     if (occurredAt.length === 0) {
       return {
         valid: false,
-        message: '请输入故障时间'
+        message: '请选择故障时间'
       };
     }
 

@@ -208,20 +208,34 @@ struct DeviceArchiveCreate {
     Column({ space: 10 }) {
       this.FieldTitle('添加时间')
 
-      TextInput({
-        placeholder: 'YYYY-MM-DD HH:mm',
-        text: this.createTime
-      })
+      Row({ space: 10 }) {
+        SymbolGlyph($r('sys.symbol.calendar'))
+          .fontSize(20)
+          .fontColor([AppColors.TextPrimary])
+
+        Text(this.createTime.length > 0 ? this.createTime : '选择添加时间')
+          .fontSize(16)
+          .fontColor(this.createTime.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
+          .layoutWeight(1)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+        SymbolGlyph($r('sys.symbol.chevron_forward'))
+          .fontSize(18)
+          .fontColor([AppColors.TextSecondary])
+      }
         .height(56)
-        .fontSize(16)
+        .width('100%')
         .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
         .padding({ left: 16, right: 16 })
         .border({ width: 1, color: AppColors.Border })
-        .enabled(!this.submitting && !this.isSubmitted())
-        .onChange((value: string) => {
-          this.createTime = value;
-          this.onFormChanged();
+        .onClick(() => {
+          if (this.submitting || this.isSubmitted()) {
+            return;
+          }
+
+          this.showCreateTimePicker();
         })
     }
     .width('100%')
@@ -448,6 +462,62 @@ struct DeviceArchiveCreate {
         }
       }
     }
+  }
+
+  showCreateTimePicker(): void {
+    if (this.submitting || this.isSubmitted()) {
+      return;
+    }
+
+    this.getUIContext().showDatePickerDialog({
+      start: new Date(2000, 0, 1, 0, 0),
+      end: new Date(2100, 11, 31, 23, 59),
+      selected: this.resolveSelectedDate(this.createTime),
+      showTime: true,
+      useMilitaryTime: true,
+      onDateAccept: (value: Date) => {
+        this.createTime = this.formatDateTime(value);
+        this.onFormChanged();
+      }
+    });
+  }
+
+  resolveSelectedDate(value: string): Date {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      return new Date();
+    }
+
+    const segments = trimmed.split(' ');
+    if (segments.length !== 2) {
+      return new Date();
+    }
+
+    const dateSegments = segments[0].split('-');
+    const timeSegments = segments[1].split(':');
+    if (dateSegments.length !== 3 || timeSegments.length < 2) {
+      return new Date();
+    }
+
+    const year = Number(dateSegments[0]);
+    const month = Number(dateSegments[1]);
+    const day = Number(dateSegments[2]);
+    const hour = Number(timeSegments[0]);
+    const minute = Number(timeSegments[1]);
+    if (year !== year || month !== month || day !== day || hour !== hour || minute !== minute) {
+      return new Date();
+    }
+
+    return new Date(year, month - 1, day, hour, minute);
+  }
+
+  formatDateTime(value: Date): string {
+    return `${value.getFullYear()}-${this.pad2(value.getMonth() + 1)}-${this.pad2(value.getDate())} ${this.pad2(
+      value.getHours())}:${this.pad2(value.getMinutes())}`;
+  }
+
+  pad2(value: number): string {
+    return value < 10 ? `0${value}` : `${value}`;
   }
 
   backToArchiveCenter(): void {

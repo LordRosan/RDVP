@@ -32,8 +32,18 @@ docker compose up -d postgres
 启动后端服务：
 
 ```powershell
-.\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=local
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
 ```
+
+开发期如数据库迁移脚本发生重构，旧本地库可能因 Flyway 校验失败而无法启动。确认本地数据可清空后，可重建开发库：
+
+```powershell
+docker compose down -v
+docker compose up -d postgres
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
+```
+
+该操作会删除本地 PostgreSQL volume，只适用于开发环境；生产或测试环境不得用删除数据库替代正式迁移。
 
 未显式启用本地 profile 时，服务会拒绝使用默认引导密码和默认二维码签名密钥启动。部署环境应使用非本地 profile，并通过环境变量配置独立的 `RDVP_BOOTSTRAP_PASSWORD` 和 `RDVP_QR_SIGNING_SECRET`。
 

@@ -56,6 +56,23 @@ RDVP/
 - 复检任务报告：`reinspection report`
 - 操作日志：`operation log`
 
+### 3.4 领域目录和实体命名
+
+前后端目录应围绕一级业务中心和稳定领域划分，优先使用完整英文词，不使用 `Ops`、`Mgmt`、`RecordCenter` 等缩写或旧界面名。
+
+核心领域目录规则：
+
+- `archive` 表示档案领域，用于设备档案、二维码、档案申请和档案审核相关模型与服务。
+- `operations` 表示运维领域，是领域集合名，不按普通复数理解；设备核验、故障报修、维修任务和复检任务均归入该领域。
+- `management` 表示管理领域，用于档案审核、记录查询和后续管理能力。
+- `identity` 表示身份领域，用于认证、会话、角色和权限。
+- `app` 表示应用级能力，用于工作台、主题、应用设置等跨业务中心能力。
+- `common` 表示通用基础能力，用于 API 响应、通用工具和跨领域基础模型。
+
+实体、页面、函数和变量命名应使用单数业务对象表达一个具体概念，例如 `RepairTask`、`RepairReport`、`ReinspectionReport`、`DeviceArchiveRequest`、`OperationRecordQuery`。只有当名称表达领域集合或列表结果时才使用集合语义，例如 `operations` 目录、`OperationsCenter` 页面、`RepairTaskList`。
+
+记录查询作为管理中心下的功能，统一使用 `RecordQuery` 命名，不再使用 `RecordCenter`。运维记录使用 `OperationRecordQuery`，其中 `Operation` 是单条运维记录的领域修饰词；运维领域目录仍使用 `operations`。
+
 ## 4. Git 规则
 
 ### 4.1 分支

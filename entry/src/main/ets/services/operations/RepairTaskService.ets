@@ -459,7 +459,7 @@ export class RepairTaskService {
     if (repairedAt.length === 0) {
       return {
         valid: false,
-        message: '请输入维修时间'
+        message: '请选择维修时间'
       };
     }
 
