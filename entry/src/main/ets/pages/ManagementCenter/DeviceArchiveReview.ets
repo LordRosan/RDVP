@@ -34,6 +34,7 @@ struct DeviceArchiveReview {
   @State refreshStatus: string = '未刷新';
   @State refreshing: boolean = false;
   @State submitting: boolean = false;
+  @State reviewReady: boolean = false;
 
   aboutToAppear(): void {
     if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ManagementCenterDeviceArchiveRequestReview)) {
@@ -339,9 +340,7 @@ struct DeviceArchiveReview {
         this.ReviewCommentField()
       }
       this.MessageText()
-      this.ActionButton(this.getSubmitButtonLabel(), $r('sys.symbol.checkmark_circle'), this.canSubmitReview(), () => {
-        this.submitReview();
-      })
+      this.ReviewSubmitButton()
     }
     .padding({
       left: 18,
@@ -423,6 +422,7 @@ struct DeviceArchiveReview {
       this.reviewDecision = `${decision}`;
       this.message = '';
       this.messageTone = AppColors.Danger;
+      this.updateReviewReady();
     })
   }
 
@@ -495,6 +495,7 @@ struct DeviceArchiveReview {
           this.reviewComment = value;
           this.message = '';
           this.messageTone = AppColors.Danger;
+          this.updateReviewReady();
         })
     }
     .width('100%')
@@ -598,14 +599,14 @@ struct DeviceArchiveReview {
   }
 
   @Builder
-  ActionButton(label: string, icon: Resource, active: boolean, action: () => void) {
-    Button({ type: ButtonType.Capsule, stateEffect: !this.submitting }) {
+  ReviewSubmitButton() {
+    Button({ type: ButtonType.Capsule, stateEffect: this.isReviewActionEnabled() }) {
       Row({ space: 8 }) {
-        SymbolGlyph(icon)
+        SymbolGlyph($r('sys.symbol.checkmark_circle'))
           .fontSize(20)
           .fontColor([AppColors.OnPrimary])
 
-        Text(label)
+        Text(this.getSubmitButtonLabel())
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
           .fontColor(AppColors.OnPrimary)
@@ -617,10 +618,10 @@ struct DeviceArchiveReview {
     }
     .height(54)
     .width('100%')
-    .backgroundColor(active ? AppColors.Primary : AppColors.Disabled)
-    .enabled(!this.submitting)
+    .backgroundColor(this.isReviewActionEnabled() ? AppColors.Primary : AppColors.Disabled)
+    .enabled(this.isReviewActionEnabled())
     .onClick(() => {
-      action();
+      this.submitReview();
     })
   }
 
@@ -660,6 +661,7 @@ struct DeviceArchiveReview {
     if (this.selectedRequestId.length > 0 && !this.hasRequest(this.selectedRequestId)) {
       this.clearReviewForm();
     }
+    this.updateReviewReady();
 
     this.refreshMessage = '';
     this.refreshMessageTone = AppColors.Danger;
@@ -677,6 +679,7 @@ struct DeviceArchiveReview {
     this.reviewedAt = '';
     this.message = '';
     this.messageTone = AppColors.Danger;
+    this.updateReviewReady();
   }
 
   applyRequestFilters(): void {
@@ -752,7 +755,11 @@ struct DeviceArchiveReview {
   }
 
   canSubmitReview(): boolean {
-    return !this.refreshing && !this.submitting && this.isReviewFormComplete();
+    return this.isReviewActionEnabled();
+  }
+
+  isReviewActionEnabled(): boolean {
+    return !this.refreshing && !this.submitting && this.reviewReady;
   }
 
   isReviewFormComplete(): boolean {
@@ -787,6 +794,7 @@ struct DeviceArchiveReview {
     this.reviewDecision = '';
     this.reviewComment = '';
     this.reviewedAt = '';
+    this.updateReviewReady();
   }
 
   canReview(): boolean {
@@ -856,8 +864,13 @@ struct DeviceArchiveReview {
         this.reviewedAt = this.formatDateTime(value);
         this.message = '';
         this.messageTone = AppColors.Danger;
+        this.updateReviewReady();
       }
     });
+  }
+
+  updateReviewReady(): void {
+    this.reviewReady = this.isReviewFormComplete();
   }
 
   resolveSelectedDate(value: string): Date {
