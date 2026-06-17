@@ -17,7 +17,6 @@ export interface DeviceQrCodeExportResult {
   deviceCode: string;
   fileName: string;
   qrImageBase64: string;
-  qrContentDigest: string;
   exportedAt: string;
 }
 
@@ -109,15 +108,6 @@ export class DeviceQrCodeExportService {
     }
 
     return `data:image/png;base64,${result.qrImageBase64.trim()}`;
-  }
-
-  static formatDigest(result: DeviceQrCodeExportResult): string {
-    const digest = result.qrContentDigest.trim();
-    if (digest.length <= 12) {
-      return digest.length === 0 ? '-' : digest;
-    }
-
-    return `${digest.substring(0, 6)}...${digest.substring(digest.length - 6)}`;
   }
 
   private static validateForm(form: DeviceQrCodeExportForm): string {

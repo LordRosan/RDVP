@@ -404,21 +404,26 @@ struct DeviceArchiveDetail {
         this.QrExportPasswordField()
         this.QrExportCaptchaField()
 
-        Row({ space: 10 }) {
-          Column() {
-            this.QrExportSecondaryButton('取消', () => {
-              this.closeQrExportDialog();
-            })
-          }
-          .layoutWeight(1)
+        Column({ space: 10 }) {
+          this.QrExportMessageText()
 
-          Column({ space: 8 }) {
-            this.QrExportMessageText()
-            this.QrExportPrimaryButton(this.qrExporting ? '导出中' : '导出', () => {
-              this.confirmAndExportQrCode();
-            })
+          Row({ space: 10 }) {
+            Column() {
+              this.QrExportSecondaryButton('取消', () => {
+                this.closeQrExportDialog();
+              })
+            }
+            .layoutWeight(1)
+
+            Column() {
+              this.QrExportPrimaryButton(this.qrExporting ? '导出中' : '导出', () => {
+                this.confirmAndExportQrCode();
+              })
+            }
+            .layoutWeight(1)
           }
-          .layoutWeight(1)
+          .width('100%')
+          .alignItems(VerticalAlign.Center)
         }
         .width('100%')
       }
@@ -473,14 +478,6 @@ struct DeviceArchiveDetail {
       .backgroundColor(AppColors.FieldBackground)
       .borderRadius(18)
       .border({ width: 1, color: AppColors.Border })
-
-      Text(`内容摘要：${this.getQrExportDigestText()}`)
-        .fontSize(12)
-        .fontColor(AppColors.TextSecondary)
-        .width('100%')
-        .textAlign(TextAlign.Center)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .width('100%')
   }
@@ -870,14 +867,6 @@ struct DeviceArchiveDetail {
     }
 
     return DeviceQrCodeExportService.getImageDataUri(this.qrExportResult);
-  }
-
-  getQrExportDigestText(): string {
-    if (this.qrExportResult === undefined) {
-      return '-';
-    }
-
-    return DeviceQrCodeExportService.formatDigest(this.qrExportResult);
   }
 
   isQrExportLocked(): boolean {
