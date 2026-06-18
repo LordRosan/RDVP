@@ -1,7 +1,11 @@
-import { AppColors } from '../styles/AppTheme';
+import { AppColors, AppSpacing } from '../styles/AppTheme';
 import { ActionTile } from '../components/ActionTile';
+import { AppSectionTitle } from '../components/AppSectionTitle';
 import { HeaderCircleButton } from '../components/HeaderCircleButton';
+import { HeroSurface } from '../components/HeroSurface';
+import { InlineMessageSurface } from '../components/InlineMessageSurface';
 import { MetricTile } from '../components/MetricTile';
+import { SummaryPanel } from '../components/SummaryPanel';
 import { WorkbenchAction, WorkbenchActionId, WorkbenchMetric, WorkbenchStatusItem } from '../models/app/WorkbenchModels';
 import { CurrentUserSnapshot } from '../models/identity/SessionModels';
 import { WorkbenchService } from '../services/app/WorkbenchService';
@@ -52,7 +56,7 @@ struct Workbench {
 
   build() {
     Scroll() {
-      Column({ space: 18 }) {
+      Column({ space: AppSpacing.Section }) {
         this.Header()
         this.MetricSection()
         this.ActionSection()
@@ -60,10 +64,10 @@ struct Workbench {
       }
       .alignItems(HorizontalAlign.Start)
       .padding({
-        left: 18,
-        right: 18,
+        left: AppSpacing.PageX,
+        right: AppSpacing.PageX,
         top: 18,
-        bottom: 28
+        bottom: AppSpacing.PageBottom
       })
       .width('100%')
     }
@@ -74,35 +78,34 @@ struct Workbench {
 
   @Builder
   Header() {
-    Column({ space: 16 }) {
-      Row() {
-        Text('RDVP')
-          .fontSize(30)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TextPrimary)
-          .maxLines(1)
+    Column({ space: 12 }) {
+      Row({ space: 12 }) {
+        HeroSurface({
+          eyebrow: this.getUserEyebrow(),
+          title: 'RDVP 工作台',
+          subtitle: '集中处理设备档案、现场运维、审核和记录追溯。',
+          icon: $r('sys.symbol.checkmark_shield'),
+          tone: AppColors.Primary
+        })
           .layoutWeight(1)
 
-        Column({ space: 6 }) {
-          this.PersonalCenterMessageText()
-          this.PersonalCenterButton()
-        }
-        .alignItems(HorizontalAlign.End)
+        this.PersonalCenterButton()
       }
       .width('100%')
-      .alignItems(VerticalAlign.Center)
+      .alignItems(VerticalAlign.Top)
+
+      this.PersonalCenterMessageText()
     }
     .width('100%')
+    .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
   MetricSection() {
-    Column({ space: 12 }) {
-      Text('中心概览')
-        .fontSize(18)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-
+    SummaryPanel({
+      title: '中心概览',
+      caption: '按当前账号权限展示可处理事项。'
+    }) {
       Grid() {
         ForEach(this.metrics, (item: WorkbenchMetric) => {
           GridItem() {
@@ -120,29 +123,25 @@ struct Workbench {
       .rowsGap(12)
       .width('100%')
     }
-    .alignItems(HorizontalAlign.Start)
-    .width('100%')
   }
 
   @Builder
   ActionSection() {
     Column({ space: 12 }) {
-      Text('业务中心')
-        .fontSize(18)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
+      AppSectionTitle({
+        title: '业务中心',
+        subtitle: '进入对应中心继续处理授权业务。'
+      })
 
       Grid() {
         ForEach(this.actions, (item: WorkbenchAction) => {
           GridItem() {
             Column({ space: 8 }) {
               if (this.actionMessageTargetId === `${item.id}` && this.actionMessage.length > 0) {
-                Text(this.actionMessage)
-                  .fontSize(13)
-                  .fontColor(AppColors.Danger)
-                  .maxLines(2)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis })
-                  .width('100%')
+                InlineMessageSurface({
+                  message: this.actionMessage,
+                  tone: AppColors.Danger
+                })
               }
 
               ActionTile({
@@ -167,24 +166,19 @@ struct Workbench {
   @Builder
   PersonalCenterMessageText() {
     if (this.personalCenterMessage.length > 0) {
-      Text(this.personalCenterMessage)
-        .fontSize(12)
-        .fontColor(AppColors.Danger)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width(92)
-        .textAlign(TextAlign.End)
+      InlineMessageSurface({
+        message: this.personalCenterMessage,
+        tone: AppColors.Danger
+      })
     }
   }
 
   @Builder
   StatusSection() {
-    Column({ space: 12 }) {
-      Text('系统状态')
-        .fontSize(18)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-
+    SummaryPanel({
+      title: '系统状态',
+      caption: '登录态与后端服务连接状态。'
+    }) {
       Column() {
         ForEach(this.statusItems, (item: WorkbenchStatusItem) => {
           Row() {
@@ -217,10 +211,7 @@ struct Workbench {
         width: 1,
         color: AppColors.Divider
       })
-
     }
-    .alignItems(HorizontalAlign.Start)
-    .width('100%')
   }
 
   openLoginPage(): void {
@@ -240,6 +231,16 @@ struct Workbench {
         this.openPersonalCenter();
       }
     })
+  }
+
+  getUserEyebrow(): string {
+    const username = this.currentUser.username === undefined ? '' : this.currentUser.username;
+    const displayName = this.currentUser.displayName.length > 0 ? this.currentUser.displayName : username;
+    if (displayName.length > 0) {
+      return `${displayName} 的业务入口`;
+    }
+
+    return '统一业务入口';
   }
 
   openPersonalCenter(): void {

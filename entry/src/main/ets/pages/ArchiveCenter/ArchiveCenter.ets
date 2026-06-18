@@ -1,9 +1,13 @@
-import { AppColors } from '../../styles/AppTheme';
+import { AppColors, AppSpacing } from '../../styles/AppTheme';
 import { ActionTile } from '../../components/ActionTile';
+import { AppSectionTitle } from '../../components/AppSectionTitle';
+import { CenterTitleBar } from '../../components/CenterTitleBar';
+import { HeroSurface } from '../../components/HeroSurface';
+import { InlineMessageSurface } from '../../components/InlineMessageSurface';
+import { SummaryPanel } from '../../components/SummaryPanel';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { PermissionCode } from '../../models/identity/PermissionModels';
 import { WorkbenchAction, WorkbenchActionId } from '../../models/app/WorkbenchModels';
-import { ApiClient } from '../../services/common/ApiClient';
 import { WorkbenchService } from '../../services/app/WorkbenchService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
@@ -37,18 +41,18 @@ struct ArchiveCenter {
       Column() {
         this.PageTitleBar()
 
-        Column({ space: 18 }) {
-          this.ModeHeader()
+        Column({ space: AppSpacing.Section }) {
+          this.PageHero()
           this.OverviewPanel()
           this.ActionSection()
         }
         .alignItems(HorizontalAlign.Start)
         .justifyContent(FlexAlign.Start)
         .padding({
-          left: 24,
-          right: 24,
+          left: AppSpacing.PageX,
+          right: AppSpacing.PageX,
           top: 0,
-          bottom: 28
+          bottom: AppSpacing.PageBottom
         })
         .width('100%')
       }
@@ -69,58 +73,31 @@ struct ArchiveCenter {
 
   @Builder
   PageTitleBar() {
-    Row({ space: 12 }) {
-      Button({ type: ButtonType.Circle, stateEffect: true }) {
-        SymbolGlyph($r('sys.symbol.chevron_backward'))
-          .fontSize(22)
-          .fontColor([AppColors.TextPrimary])
-      }
-      .width(44)
-      .height(44)
-      .backgroundColor(AppColors.Surface)
-      .border({
-        width: 1,
-        color: AppColors.Divider
-      })
-      .onClick(() => {
+    CenterTitleBar({
+      title: '档案中心',
+      action: () => {
         this.backToWorkbench();
-      })
-    }
-    .width('100%')
-    .height(60)
-    .alignItems(VerticalAlign.Center)
-    .padding({
-      left: 24,
-      right: 24
+      }
     })
-    .backgroundColor(AppColors.PageBackground)
   }
 
   @Builder
-  ModeHeader() {
-    Row({ space: 16 }) {
-      Text('档案中心')
-        .fontSize(34)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-      .layoutWeight(1)
-    }
-    .width('100%')
-    .alignItems(VerticalAlign.Center)
-    .padding({ top: 0, bottom: 2 })
+  PageHero() {
+    HeroSurface({
+      eyebrow: 'Archive command',
+      title: '档案中心',
+      subtitle: '围绕设备档案查询、新增申请和二维码可信核验组织入口。',
+      icon: $r('sys.symbol.text_clipboard'),
+      tone: AppColors.Primary
+    })
   }
 
   @Builder
   OverviewPanel() {
-    Column({ space: 10 }) {
-      Text('中心概览')
-        .fontSize(22)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
-
+    SummaryPanel({
+      title: '中心概览',
+      caption: '当前账号在档案中心的可用能力。'
+    }) {
       Column() {
         StatusInfoRow({
           label: '功能权限',
@@ -134,26 +111,26 @@ struct ArchiveCenter {
       }
       .width('100%')
       .backgroundColor(AppColors.Surface)
-      .borderRadius(24)
+      .borderRadius(18)
     }
-    .alignItems(HorizontalAlign.Start)
-    .width('100%')
   }
 
   @Builder
   ActionSection() {
     Column({ space: 12 }) {
-      Text('功能入口')
-        .fontSize(22)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
+      AppSectionTitle({
+        title: '功能入口',
+        subtitle: '进入查询或新增申请流程。'
+      })
 
       Column({ space: 10 }) {
         ForEach(this.actions, (item: WorkbenchAction) => {
           Column({ space: 8 }) {
             if (this.messageTargetId === `${item.id}` && this.message.length > 0) {
-              this.MessageText()
+              InlineMessageSurface({
+                message: this.message,
+                tone: AppColors.Danger
+              })
             }
 
             ActionTile({ action: item })
@@ -173,12 +150,10 @@ struct ArchiveCenter {
   @Builder
   MessageText() {
     if (this.message.length > 0) {
-      Text(this.message)
-        .fontSize(13)
-        .fontColor(AppColors.Danger)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
+      InlineMessageSurface({
+        message: this.message,
+        tone: AppColors.Danger
+      })
     }
   }
 

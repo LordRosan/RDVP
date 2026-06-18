@@ -12,9 +12,9 @@ export struct HeaderCircleButton {
         .fontSize(this.iconSize)
         .fontColor([AppColors.TextPrimary])
     }
-    .width(58)
-    .height(58)
-    .backgroundColor(AppColors.Surface)
+    .width(52)
+    .height(52)
+    .backgroundColor(AppColors.SurfaceRaised)
     .border({
       width: 1,
       color: AppColors.Divider

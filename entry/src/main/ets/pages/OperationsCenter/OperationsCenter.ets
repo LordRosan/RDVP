@@ -1,9 +1,13 @@
-import { AppColors } from '../../styles/AppTheme';
+import { AppColors, AppSpacing } from '../../styles/AppTheme';
 import { ActionTile } from '../../components/ActionTile';
+import { AppSectionTitle } from '../../components/AppSectionTitle';
+import { CenterTitleBar } from '../../components/CenterTitleBar';
+import { HeroSurface } from '../../components/HeroSurface';
+import { InlineMessageSurface } from '../../components/InlineMessageSurface';
+import { SummaryPanel } from '../../components/SummaryPanel';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { OperationsCenterPermissions, PermissionCode } from '../../models/identity/PermissionModels';
 import { WorkbenchAction, WorkbenchActionId } from '../../models/app/WorkbenchModels';
-import { ApiClient } from '../../services/common/ApiClient';
 import { WorkbenchService } from '../../services/app/WorkbenchService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
@@ -37,18 +41,18 @@ struct OperationsCenter {
       Column() {
         this.PageTitleBar()
 
-        Column({ space: 18 }) {
-          this.ModeHeader()
+        Column({ space: AppSpacing.Section }) {
+          this.PageHero()
           this.OverviewPanel()
           this.ActionSection()
         }
         .alignItems(HorizontalAlign.Start)
         .justifyContent(FlexAlign.Start)
         .padding({
-          left: 24,
-          right: 24,
+          left: AppSpacing.PageX,
+          right: AppSpacing.PageX,
           top: 0,
-          bottom: 28
+          bottom: AppSpacing.PageBottom
         })
         .width('100%')
       }
@@ -69,58 +73,31 @@ struct OperationsCenter {
 
   @Builder
   PageTitleBar() {
-    Row({ space: 12 }) {
-      Button({ type: ButtonType.Circle, stateEffect: true }) {
-        SymbolGlyph($r('sys.symbol.chevron_backward'))
-          .fontSize(22)
-          .fontColor([AppColors.TextPrimary])
-      }
-      .width(44)
-      .height(44)
-      .backgroundColor(AppColors.Surface)
-      .border({
-        width: 1,
-        color: AppColors.Divider
-      })
-      .onClick(() => {
+    CenterTitleBar({
+      title: '运维中心',
+      action: () => {
         this.backToWorkbench();
-      })
-    }
-    .width('100%')
-    .height(60)
-    .alignItems(VerticalAlign.Center)
-    .padding({
-      left: 24,
-      right: 24
+      }
     })
-    .backgroundColor(AppColors.PageBackground)
   }
 
   @Builder
-  ModeHeader() {
-    Row({ space: 16 }) {
-        Text('运维中心')
-          .fontSize(34)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TextPrimary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      .layoutWeight(1)
-    }
-    .width('100%')
-    .alignItems(VerticalAlign.Center)
-    .padding({ top: 0, bottom: 2 })
+  PageHero() {
+    HeroSurface({
+      eyebrow: 'Operations command',
+      title: '运维中心',
+      subtitle: '围绕现场核验、任务接取、维修上报和复检闭环组织工作。',
+      icon: $r('sys.symbol.wrench_and_screwdriver'),
+      tone: AppColors.Success
+    })
   }
 
   @Builder
   OverviewPanel() {
-    Column({ space: 10 }) {
-      Text('中心概览')
-        .fontSize(22)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
-
+    SummaryPanel({
+      title: '中心概览',
+      caption: '当前账号可处理的运维能力与任务数量。'
+    }) {
       Column() {
         StatusInfoRow({
           label: '功能权限',
@@ -150,26 +127,26 @@ struct OperationsCenter {
       }
       .width('100%')
       .backgroundColor(AppColors.Surface)
-      .borderRadius(24)
+      .borderRadius(18)
     }
-    .alignItems(HorizontalAlign.Start)
-    .width('100%')
   }
 
   @Builder
   ActionSection() {
     Column({ space: 12 }) {
-      Text('功能入口')
-        .fontSize(22)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
+      AppSectionTitle({
+        title: '功能入口',
+        subtitle: '选择任务或记录入口继续处理。'
+      })
 
       Column({ space: 10 }) {
         ForEach(this.actions, (item: WorkbenchAction) => {
           Column({ space: 8 }) {
             if (this.messageTargetId === `${item.id}` && this.message.length > 0) {
-              this.MessageText()
+              InlineMessageSurface({
+                message: this.message,
+                tone: AppColors.Danger
+              })
             }
 
             ActionTile({ action: item })
@@ -189,12 +166,10 @@ struct OperationsCenter {
   @Builder
   MessageText() {
     if (this.message.length > 0) {
-      Text(this.message)
-        .fontSize(13)
-        .fontColor(AppColors.Danger)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
+      InlineMessageSurface({
+        message: this.message,
+        tone: AppColors.Danger
+      })
     }
   }
 

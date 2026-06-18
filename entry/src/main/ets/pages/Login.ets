@@ -1,4 +1,4 @@
-import { AppColors } from '../styles/AppTheme';
+import { AppColors, AppRadii, AppSpacing } from '../styles/AppTheme';
 import { AuthService } from '../services/identity/AuthService';
 import { ApiClient } from '../services/common/ApiClient';
 import { SessionStore } from '../stores/SessionStore';
@@ -27,24 +27,25 @@ struct Login {
 
   build() {
     Scroll() {
-      Column({ space: 24 }) {
-        Blank()
-          .height(12)
+      Column({ space: 20 }) {
+        this.BrandHeader()
+        this.LoginPanel()
 
-        Column({ space: 22 }) {
-          this.BrandHeader()
-          this.LoginPanel()
-        }
-        .width('100%')
-        .padding({
-          left: 24,
-          right: 24
-        })
-
-        Blank()
-          .height(12)
+        Text('使用当前账号权限访问档案、运维和管理模块')
+          .fontSize(12)
+          .fontColor(AppColors.TextTertiary)
+          .maxLines(2)
+          .textAlign(TextAlign.Center)
+          .width('100%')
+          .padding({ left: 12, right: 12 })
       }
       .width('100%')
+      .padding({
+        left: AppSpacing.PageX,
+        right: AppSpacing.PageX,
+        top: 30,
+        bottom: AppSpacing.PageBottom
+      })
       .constraintSize({ minHeight: '100%' })
       .justifyContent(FlexAlign.Center)
     }
@@ -59,44 +60,102 @@ struct Login {
 
   @Builder
   BrandHeader() {
-    Column({ space: 12 }) {
-      Row({ space: 12 }) {
+    Column({ space: 18 }) {
+      Row({ space: 14 }) {
         Stack() {
           Text('RD')
-            .fontSize(18)
+            .fontSize(19)
             .fontWeight(FontWeight.Bold)
             .fontColor(AppColors.OnPrimary)
             .maxLines(1)
         }
-        .width(52)
-        .height(52)
-        .borderRadius(16)
+        .width(56)
+        .height(56)
+        .borderRadius(20)
         .backgroundColor(AppColors.Primary)
 
+        Column({ space: 4 }) {
           Text('RDVP')
             .fontSize(34)
             .fontWeight(FontWeight.Bold)
             .fontColor(AppColors.TextPrimary)
             .maxLines(1)
-            .layoutWeight(1)
+
+          Text('Remote device verification platform')
+            .fontSize(13)
+            .fontColor(AppColors.TextSecondary)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
+
+      Column({ space: 8 }) {
+        Text('设备档案与运维协同')
+          .fontSize(28)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(AppColors.TextPrimary)
+          .maxLines(2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+        Text('从登录开始进入统一工作台，完成查询、核验、维修、审核和记录追溯。')
+          .fontSize(14)
+          .fontColor(AppColors.TextSecondary)
+          .lineHeight(20)
+          .maxLines(3)
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
     }
     .width('100%')
-    .alignItems(HorizontalAlign.Start)
+    .padding({
+      left: 22,
+      right: 22,
+      top: 24,
+      bottom: 22
+    })
+    .backgroundColor(AppColors.HeroSurface)
+    .borderRadius(AppRadii.Hero)
+    .border({
+      width: 1,
+      color: AppColors.Divider
+    })
+    .shadow({
+      radius: 20,
+      color: AppColors.Shadow,
+      offsetX: 0,
+      offsetY: 8
+    })
   }
 
   @Builder
   LoginPanel() {
     Column({ space: 18 }) {
-        Text('登录')
+      Row() {
+        Column({ space: 4 }) {
+          Text('登录')
+            .fontSize(22)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(AppColors.TextPrimary)
+            .maxLines(1)
+
+          Text('连接服务并验证账号')
+            .fontSize(13)
+            .fontColor(AppColors.TextSecondary)
+            .maxLines(1)
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+
+        SymbolGlyph($r('sys.symbol.person_badge_checkmark'))
           .fontSize(28)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TextPrimary)
-          .maxLines(1)
-      .alignSelf(ItemAlign.Start)
+          .fontColor([AppColors.Primary])
+      }
       .width('100%')
+      .alignItems(VerticalAlign.Center)
 
       this.InputField('账号', '输入账号', false)
       this.InputField('密码', '输入密码', true)
@@ -112,7 +171,11 @@ struct Login {
     })
     .width('100%')
     .backgroundColor(AppColors.Surface)
-    .borderRadius(24)
+    .borderRadius(AppRadii.Large)
+    .border({
+      width: 1,
+      color: AppColors.Divider
+    })
     .alignItems(HorizontalAlign.Start)
   }
 
@@ -133,7 +196,7 @@ struct Login {
         .height(54)
         .fontSize(16)
         .backgroundColor(AppColors.FieldBackground)
-        .borderRadius(18)
+        .borderRadius(AppRadii.Medium)
         .padding({
           left: 16,
           right: 16
@@ -159,11 +222,21 @@ struct Login {
   @Builder
   ServiceConfigPanel() {
     Column({ space: 10 }) {
-      Text('服务地址')
-        .fontSize(14)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
+      Row({ space: 8 }) {
+        Text('服务地址')
+          .fontSize(14)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppColors.TextPrimary)
+          .maxLines(1)
+          .layoutWeight(1)
+
+        Text(ApiClient.isConfigured() ? '已配置' : '未配置')
+          .fontSize(12)
+          .fontColor(ApiClient.isConfigured() ? AppColors.Success : AppColors.Warning)
+          .maxLines(1)
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
 
       TextInput({
         placeholder: 'http://192.168.x.x:8080',
@@ -172,7 +245,7 @@ struct Login {
         .height(50)
         .fontSize(15)
         .backgroundColor(AppColors.FieldBackground)
-        .borderRadius(18)
+        .borderRadius(AppRadii.Medium)
         .padding({
           left: 16,
           right: 16
@@ -195,6 +268,14 @@ struct Login {
       })
     }
     .width('100%')
+    .padding({
+      left: 14,
+      right: 14,
+      top: 14,
+      bottom: 14
+    })
+    .backgroundColor(AppColors.SurfaceMuted)
+    .borderRadius(AppRadii.Medium)
     .alignItems(HorizontalAlign.Start)
   }
 
