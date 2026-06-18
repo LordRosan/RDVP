@@ -32,25 +32,82 @@ class AuthControllerTests {
 
     @Test
     void logsInAndReturnsCurrentUser() throws Exception {
-        String token = login("fieldoperator", "password");
+        String token = login("operator", "password");
 
         mockMvc.perform(get("/api/v1/auth/me")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.username").value("fieldoperator"))
-                .andExpect(jsonPath("$.data.roles[0]").value("FIELD_OPERATOR"))
+                .andExpect(jsonPath("$.data.username").value("operator"))
+                .andExpect(jsonPath("$.data.roles[0]").value("operationsstaff"))
                 .andExpect(jsonPath("$.data.permissions").isArray());
     }
 
     @Test
     void normalizesUsernameBeforeLogin() throws Exception {
-        String token = login(" FieldOperator ", "password");
+        String token = login(" Operator ", "password");
 
         mockMvc.perform(get("/api/v1/auth/me")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.username").value("fieldoperator"));
+                .andExpect(jsonPath("$.data.username").value("operator"));
+    }
+
+    @Test
+    void seedsIssueDefinedRoleAccountsWithExpectedPermissions() throws Exception {
+        assertUserPermissions("admin", "superadmin",
+                "ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY",
+                "ARCHIVE_CENTER_DEVICE_ARCHIVE_CREATE_REQUEST_SUBMIT",
+                "ARCHIVE_CENTER_DEVICE_ARCHIVE_UPDATE_REQUEST_SUBMIT",
+                "ARCHIVE_CENTER_DEVICE_ARCHIVE_DELETE_REQUEST_SUBMIT",
+                "ARCHIVE_CENTER_DEVICE_ARCHIVE_QR_CODE_EXPORT",
+                "OPERATIONS_CENTER_DEVICE_VERIFICATION_SUBMIT",
+                "OPERATIONS_CENTER_DEVICE_FAULT_REPORT_SUBMIT",
+                "OPERATIONS_CENTER_REPAIR_TASK_ACCEPT",
+                "OPERATIONS_CENTER_REPAIR_REPORT_SUBMIT",
+                "OPERATIONS_CENTER_REINSPECTION_TASK_ACCEPT",
+                "OPERATIONS_CENTER_REINSPECTION_REPORT_SUBMIT",
+                "MANAGEMENT_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW",
+                "MANAGEMENT_CENTER_OPERATIONS_REVIEW",
+                "MANAGEMENT_CENTER_ARCHIVE_RECORD_QUERY",
+                "MANAGEMENT_CENTER_OPERATION_RECORD_QUERY",
+                "MANAGEMENT_CENTER_REVIEW_RECORD_QUERY");
+        assertUserPermissions("archiveadmin", "archiveadmin",
+                "ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY",
+                "ARCHIVE_CENTER_DEVICE_ARCHIVE_CREATE_REQUEST_SUBMIT",
+                "ARCHIVE_CENTER_DEVICE_ARCHIVE_UPDATE_REQUEST_SUBMIT",
+                "ARCHIVE_CENTER_DEVICE_ARCHIVE_DELETE_REQUEST_SUBMIT",
+                "ARCHIVE_CENTER_DEVICE_ARCHIVE_QR_CODE_EXPORT",
+                "MANAGEMENT_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW",
+                "MANAGEMENT_CENTER_ARCHIVE_RECORD_QUERY");
+        assertUserPermissions("archivist", "archivestaff",
+                "ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY",
+                "ARCHIVE_CENTER_DEVICE_ARCHIVE_CREATE_REQUEST_SUBMIT",
+                "ARCHIVE_CENTER_DEVICE_ARCHIVE_UPDATE_REQUEST_SUBMIT",
+                "ARCHIVE_CENTER_DEVICE_ARCHIVE_DELETE_REQUEST_SUBMIT",
+                "ARCHIVE_CENTER_DEVICE_ARCHIVE_QR_CODE_EXPORT");
+        assertUserPermissions("operationsadmin", "operationsadmin",
+                "OPERATIONS_CENTER_DEVICE_VERIFICATION_SUBMIT",
+                "OPERATIONS_CENTER_DEVICE_FAULT_REPORT_SUBMIT",
+                "OPERATIONS_CENTER_REPAIR_TASK_ACCEPT",
+                "OPERATIONS_CENTER_REPAIR_REPORT_SUBMIT",
+                "OPERATIONS_CENTER_REINSPECTION_TASK_ACCEPT",
+                "OPERATIONS_CENTER_REINSPECTION_REPORT_SUBMIT",
+                "MANAGEMENT_CENTER_OPERATIONS_REVIEW",
+                "MANAGEMENT_CENTER_OPERATION_RECORD_QUERY");
+        assertUserPermissions("operator", "operationsstaff",
+                "OPERATIONS_CENTER_DEVICE_VERIFICATION_SUBMIT",
+                "OPERATIONS_CENTER_DEVICE_FAULT_REPORT_SUBMIT",
+                "OPERATIONS_CENTER_REPAIR_TASK_ACCEPT",
+                "OPERATIONS_CENTER_REPAIR_REPORT_SUBMIT",
+                "OPERATIONS_CENTER_REINSPECTION_TASK_ACCEPT",
+                "OPERATIONS_CENTER_REINSPECTION_REPORT_SUBMIT");
+        assertUserPermissions("manager", "admin",
+                "MANAGEMENT_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW",
+                "MANAGEMENT_CENTER_OPERATIONS_REVIEW",
+                "MANAGEMENT_CENTER_ARCHIVE_RECORD_QUERY",
+                "MANAGEMENT_CENTER_OPERATION_RECORD_QUERY",
+                "MANAGEMENT_CENTER_REVIEW_RECORD_QUERY");
     }
 
     @Test
@@ -79,7 +136,7 @@ class AuthControllerTests {
 
     @Test
     void logsOutAndInvalidatesToken() throws Exception {
-        String token = login("maintainer", "password");
+        String token = login("operator", "password");
 
         mockMvc.perform(post("/api/v1/auth/logout")
                         .header("Authorization", "Bearer " + token))
@@ -95,7 +152,7 @@ class AuthControllerTests {
 
     @Test
     void verifiesCurrentUserPasswordWithoutCreatingSession() throws Exception {
-        String token = login("deviceadmin", "password");
+        String token = login("archiveadmin", "password");
 
         mockMvc.perform(post("/api/v1/auth/password-verification")
                         .header("Authorization", "Bearer " + token)
@@ -123,12 +180,12 @@ class AuthControllerTests {
         mockMvc.perform(get("/api/v1/auth/me")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.username").value("deviceadmin"));
+                .andExpect(jsonPath("$.data.username").value("archiveadmin"));
     }
 
     @Test
     void locksPasswordVerificationAfterConsecutiveFailures() throws Exception {
-        String token = login("auditor", "password");
+        String token = login("manager", "password");
 
         for (int index = 0; index < 4; index++) {
             mockMvc.perform(post("/api/v1/auth/password-verification")
@@ -204,5 +261,25 @@ class AuthControllerTests {
         String token = root.path("data").path("accessToken").asText();
         assertThat(token).isNotBlank();
         return token;
+    }
+
+    private void assertUserPermissions(String username, String role, String... permissions) throws Exception {
+        String token = login(username, "password");
+
+        var result = mockMvc.perform(get("/api/v1/auth/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.username").value(username))
+                .andExpect(jsonPath("$.data.roles[0]").value(role))
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+
+        JsonNode actualPermissions = objectMapper.readTree(result).path("data").path("permissions");
+        assertThat(actualPermissions).hasSize(permissions.length);
+        assertThat(actualPermissions)
+                .extracting(JsonNode::asText)
+                .containsExactlyInAnyOrder(permissions);
     }
 }

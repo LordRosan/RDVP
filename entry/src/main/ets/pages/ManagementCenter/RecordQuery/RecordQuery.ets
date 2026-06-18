@@ -1,7 +1,10 @@
 import { ActionTile } from '../../../components/ActionTile';
 import { StatusInfoRow } from '../../../components/StatusInfoRow';
 import { WorkbenchAction, WorkbenchActionId } from '../../../models/app/WorkbenchModels';
+import { ManagementCenterRecordPermissions, PermissionCode } from '../../../models/identity/PermissionModels';
+import { SessionStore } from '../../../stores/SessionStore';
 import { AppColors } from '../../../styles/AppTheme';
+import { AuthGuard } from '../../../utils/AuthGuard';
 import { PermissionTextFormatter } from '../../../utils/PermissionTextFormatter';
 
 @Entry
@@ -11,6 +14,20 @@ struct RecordQuery {
   @State actions: WorkbenchAction[] = this.createActions();
   @State message: string = '';
   @State messageTargetId: string = '';
+
+  aboutToAppear(): void {
+    if (!AuthGuard.requireAnyPermission(this.getUIContext(), ManagementCenterRecordPermissions)) {
+      return;
+    }
+
+    this.actions = this.createActions();
+  }
+
+  onPageShow(): void {
+    if (AuthGuard.requireAnyPermission(this.getUIContext(), ManagementCenterRecordPermissions)) {
+      this.actions = this.createActions();
+    }
+  }
 
   build() {
     Scroll() {
@@ -104,7 +121,7 @@ struct RecordQuery {
       Column() {
         StatusInfoRow({
           label: '功能权限',
-          value: PermissionTextFormatter.formatTwoPerLine(['可查看档案记录', '可查看运维记录', '可查看审核记录']),
+          value: PermissionTextFormatter.formatTwoPerLine(this.getPermissionLabels()),
           tone: AppColors.Primary,
           valueWidth: '62%',
           valueMaxLines: 3,
@@ -163,23 +180,45 @@ struct RecordQuery {
   }
 
   createActions(): WorkbenchAction[] {
-    return [
-      {
+    const actions: WorkbenchAction[] = [];
+    if (SessionStore.hasPermission(PermissionCode.ManagementCenterArchiveRecordQuery)) {
+      actions.push({
         id: WorkbenchActionId.ArchiveRecordQuery,
         title: '档案记录',
         tone: AppColors.Primary
-      },
-      {
+      });
+    }
+    if (SessionStore.hasPermission(PermissionCode.ManagementCenterOperationRecordQuery)) {
+      actions.push({
         id: WorkbenchActionId.OperationRecordQuery,
         title: '运维记录',
         tone: AppColors.Primary
-      },
-      {
+      });
+    }
+    if (SessionStore.hasPermission(PermissionCode.ManagementCenterReviewRecordQuery)) {
+      actions.push({
         id: WorkbenchActionId.ReviewRecordQuery,
         title: '审核记录',
         tone: AppColors.Primary
-      }
-    ];
+      });
+    }
+
+    return actions;
+  }
+
+  getPermissionLabels(): string[] {
+    const labels: string[] = [];
+    if (SessionStore.hasPermission(PermissionCode.ManagementCenterArchiveRecordQuery)) {
+      labels.push('可查看档案记录');
+    }
+    if (SessionStore.hasPermission(PermissionCode.ManagementCenterOperationRecordQuery)) {
+      labels.push('可查看运维记录');
+    }
+    if (SessionStore.hasPermission(PermissionCode.ManagementCenterReviewRecordQuery)) {
+      labels.push('可查看审核记录');
+    }
+
+    return labels;
   }
 
   openFeature(action: WorkbenchAction): void {

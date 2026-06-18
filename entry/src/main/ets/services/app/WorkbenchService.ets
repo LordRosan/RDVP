@@ -10,6 +10,7 @@ import {
 import {
   ArchiveCenterPermissions,
   ManagementCenterPermissions,
+  ManagementCenterRecordPermissions,
   OperationsCenterPermissions,
   PermissionCode
 } from '../../models/identity/PermissionModels';
@@ -132,7 +133,9 @@ export class WorkbenchService {
       actions.push(WorkbenchService.createAction(WorkbenchActionId.ReinspectionReport, '复检任务', AppColors.Primary));
     }
 
-    actions.push(WorkbenchService.createAction(WorkbenchActionId.OperationRecordQuery, '运维记录', AppColors.Primary));
+    if (SessionStore.hasPermission(PermissionCode.ManagementCenterOperationRecordQuery)) {
+      actions.push(WorkbenchService.createAction(WorkbenchActionId.OperationRecordQuery, '运维记录', AppColors.Primary));
+    }
 
     return actions;
   }
@@ -147,7 +150,15 @@ export class WorkbenchService {
       });
     }
 
-    if (SessionStore.hasPermission(PermissionCode.ManagementCenterRecordQuery)) {
+    if (SessionStore.hasPermission(PermissionCode.ManagementCenterOperationsReview)) {
+      actions.push({
+        id: WorkbenchActionId.OperationsReview,
+        title: '运维审核',
+        tone: AppColors.Primary
+      });
+    }
+
+    if (SessionStore.hasAnyPermission(ManagementCenterRecordPermissions)) {
       actions.push({
         id: WorkbenchActionId.RecordQuery,
         title: '记录查询',
@@ -227,6 +238,10 @@ export class WorkbenchService {
 
   static canReviewDeviceArchiveRequest(): boolean {
     return SessionStore.hasPermission(PermissionCode.ManagementCenterDeviceArchiveRequestReview);
+  }
+
+  static canQueryAnyManagementRecord(): boolean {
+    return SessionStore.hasAnyPermission(ManagementCenterRecordPermissions);
   }
 
   private static createAction(id: WorkbenchActionId, title: string, tone: string): WorkbenchAction {

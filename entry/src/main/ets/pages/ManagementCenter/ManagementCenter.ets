@@ -196,10 +196,19 @@ struct ManagementCenter {
   getPermissionSummaryText(): string {
     const parts: string[] = [];
     if (SessionStore.hasPermission(PermissionCode.ManagementCenterDeviceArchiveRequestReview)) {
-      parts.push('可审核');
+      parts.push('档案审核');
     }
-    if (SessionStore.hasPermission(PermissionCode.ManagementCenterRecordQuery)) {
-      parts.push('可查看记录');
+    if (SessionStore.hasPermission(PermissionCode.ManagementCenterOperationsReview)) {
+      parts.push('运维审核');
+    }
+    if (SessionStore.hasPermission(PermissionCode.ManagementCenterArchiveRecordQuery)) {
+      parts.push('档案记录');
+    }
+    if (SessionStore.hasPermission(PermissionCode.ManagementCenterOperationRecordQuery)) {
+      parts.push('运维记录');
+    }
+    if (SessionStore.hasPermission(PermissionCode.ManagementCenterReviewRecordQuery)) {
+      parts.push('审核记录');
     }
 
     return PermissionTextFormatter.formatTwoPerLine(parts);
@@ -210,6 +219,12 @@ struct ManagementCenter {
     this.messageTargetId = '';
     if (action.id === WorkbenchActionId.DeviceArchiveReview) {
       this.openPage('pages/ManagementCenter/DeviceArchiveReview', '档案审核不可用');
+      return;
+    }
+
+    if (action.id === WorkbenchActionId.OperationsReview) {
+      this.message = '运维审核功能后续开放';
+      this.messageTargetId = `${action.id}`;
       return;
     }
 

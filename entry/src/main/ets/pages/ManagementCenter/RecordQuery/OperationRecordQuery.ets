@@ -1,7 +1,9 @@
 import { Filter, FilterParams, FilterResult, FilterType } from '@kit.ArkUI';
 import { AppColors } from '../../../styles/AppTheme';
+import { PermissionCode } from '../../../models/identity/PermissionModels';
 import { RecordCategory, RecordItem, RecordQueryFilter } from '../../../models/management/RecordQueryModels';
 import { RecordQueryService } from '../../../services/management/RecordQueryService';
+import { AuthGuard } from '../../../utils/AuthGuard';
 
 const OPERATION_RECORD_TYPE_OPTIONS: string[] = ['全部', '核验', '报修', '接取', '维修', '复检'];
 const OPERATION_RECORD_TYPE_VALUES: string[] = ['', 'DEVICE_VERIFICATION', 'FAULT_REPORT',
@@ -18,6 +20,10 @@ struct OperationRecordQuery {
   @State refreshing: boolean = false;
 
   aboutToAppear(): void {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ManagementCenterOperationRecordQuery)) {
+      return;
+    }
+
     this.refreshRecords();
   }
 

@@ -93,7 +93,7 @@ public class JdbcUserAccountRepository implements UserAccountRepository {
                         Map.of("userId", userId),
                         String.class)
                 .stream()
-                .map(RoleCode::valueOf)
+                .map(RoleCode::fromCode)
                 .collect(Collectors.toUnmodifiableSet());
     }
 
@@ -153,7 +153,7 @@ public class JdbcUserAccountRepository implements UserAccountRepository {
                             VALUES (:userId, :roleCode)
                             ON CONFLICT (user_id, role_code) DO NOTHING
                             """,
-                    Map.of("userId", user.id(), "roleCode", role.name()));
+                    Map.of("userId", user.id(), "roleCode", role.code()));
         }
     }
 

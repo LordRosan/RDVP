@@ -136,20 +136,18 @@ export class SessionStore {
 
   private static formatRoleName(role: RoleCode): string {
     switch (role) {
-      case RoleCode.SystemAdmin:
-        return '系统管理员';
-      case RoleCode.DeviceAdmin:
-        return '设备管理员';
-      case RoleCode.FieldOperator:
-        return '现场运维人员';
-      case RoleCode.Maintainer:
-        return '维修人员';
-      case RoleCode.Reinspector:
-        return '复检人员';
-      case RoleCode.SupervisorAuditor:
-        return '审计人员';
-      case RoleCode.ReadOnly:
-        return '只读人员';
+      case RoleCode.SuperAdmin:
+        return '超级管理员';
+      case RoleCode.ArchiveAdmin:
+        return '档案管理员';
+      case RoleCode.ArchiveStaff:
+        return '档案员';
+      case RoleCode.OperationsAdmin:
+        return '运维管理员';
+      case RoleCode.OperationsStaff:
+        return '运维员';
+      case RoleCode.GeneralAdmin:
+        return '普通管理员';
       default:
         return '-';
     }

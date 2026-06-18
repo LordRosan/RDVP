@@ -9,6 +9,7 @@ export enum WorkbenchActionId {
   RepairReport = 'REPAIR_REPORT',
   ReinspectionReport = 'REINSPECTION_REPORT',
   DeviceArchiveReview = 'DEVICE_ARCHIVE_REVIEW',
+  OperationsReview = 'OPERATIONS_REVIEW',
   ArchiveRecordQuery = 'ARCHIVE_RECORD_QUERY',
   OperationRecordQuery = 'OPERATION_RECORD_QUERY',
   ReviewRecordQuery = 'REVIEW_RECORD_QUERY',

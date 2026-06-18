@@ -1,11 +1,10 @@
 export enum RoleCode {
-  SystemAdmin = 'SYSTEM_ADMIN',
-  DeviceAdmin = 'DEVICE_ADMIN',
-  FieldOperator = 'FIELD_OPERATOR',
-  Maintainer = 'MAINTAINER',
-  Reinspector = 'REINSPECTOR',
-  SupervisorAuditor = 'SUPERVISOR_AUDITOR',
-  ReadOnly = 'READ_ONLY'
+  SuperAdmin = 'superadmin',
+  ArchiveAdmin = 'archiveadmin',
+  ArchiveStaff = 'archivestaff',
+  OperationsAdmin = 'operationsadmin',
+  OperationsStaff = 'operationsstaff',
+  GeneralAdmin = 'admin'
 }
 
 export interface LoginForm {

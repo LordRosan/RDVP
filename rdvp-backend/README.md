@@ -65,7 +65,7 @@ POST http://localhost:8080/api/v1/auth/login
 
 ```json
 {
-  "username": "fieldoperator",
+  "username": "operator",
   "password": "password",
   "clientDeviceId": "local-device"
 }
@@ -174,15 +174,14 @@ GET http://localhost:8080/api/v1/audit-logs?action=FAULT_REPORT
 
 数据库模式下，本地引导账号会在服务启动时写入 `users`、`user_roles`、`user_permissions` 表。再次启动时会同步账号显示名、状态、角色和权限，但不会覆盖已经存在的密码哈希；测试配置使用内存账号仓储。
 
-| 用户名 | 密码 | 角色 |
+| 用户名 | 密码 | 权限名 |
 | --- | --- | --- |
-| `admin` | `password` | `SYSTEM_ADMIN` |
-| `deviceadmin` | `password` | `DEVICE_ADMIN` |
-| `fieldoperator` | `password` | `FIELD_OPERATOR` |
-| `maintainer` | `password` | `MAINTAINER` |
-| `reinspector` | `password` | `REINSPECTOR` |
-| `auditor` | `password` | `SUPERVISOR_AUDITOR` |
-| `readonly` | `password` | `READ_ONLY` |
+| `admin` | `password` | `superadmin` |
+| `archiveadmin` | `password` | `archiveadmin` |
+| `archivist` | `password` | `archivestaff` |
+| `operationsadmin` | `password` | `operationsadmin` |
+| `operator` | `password` | `operationsstaff` |
+| `manager` | `password` | `admin` |
 
 ## 环境变量
 

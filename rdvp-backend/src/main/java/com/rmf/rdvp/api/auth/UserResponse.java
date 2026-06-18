@@ -16,7 +16,7 @@ public record UserResponse(
                 user.id(),
                 user.username(),
                 user.displayName(),
-                user.roles().stream().map(Enum::name).sorted().toList(),
+                user.roles().stream().map(role -> role.code()).sorted().toList(),
                 user.permissions().stream().map(Enum::name).sorted().toList());
     }
 }

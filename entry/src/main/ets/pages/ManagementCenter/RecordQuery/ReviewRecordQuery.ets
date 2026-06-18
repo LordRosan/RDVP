@@ -1,7 +1,9 @@
 import { Filter, FilterParams, FilterResult, FilterType } from '@kit.ArkUI';
 import { AppColors } from '../../../styles/AppTheme';
+import { PermissionCode } from '../../../models/identity/PermissionModels';
 import { RecordCategory, RecordItem, RecordQueryFilter } from '../../../models/management/RecordQueryModels';
 import { RecordQueryService } from '../../../services/management/RecordQueryService';
+import { AuthGuard } from '../../../utils/AuthGuard';
 
 const REVIEW_TYPE_OPTIONS: string[] = ['全部', '添加档案', '修改档案', '删除档案'];
 const REVIEW_TYPE_VALUES: string[] = ['', 'CREATE', 'UPDATE', 'DELETE'];
@@ -17,6 +19,10 @@ struct ReviewRecordQuery {
   @State refreshing: boolean = false;
 
   aboutToAppear(): void {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ManagementCenterReviewRecordQuery)) {
+      return;
+    }
+
     this.refreshRecords();
   }
 
