@@ -65,7 +65,7 @@ RDVP/
 
 ## 本地联调
 
-后端服务独立运行，不会随 HarmonyOS App 安装到模拟器或真机。联调时先启动 `rdvp-backend`，再在 App 登录页填写后端服务地址并保存。
+后端服务独立运行，不会随 HarmonyOS App 安装到模拟器或真机。联调时先启动 `rdvp-backend`；App 登录时会在内部探测后端健康检查地址，连接成功后缓存可用地址。登录页只需要输入账号和密码。
 
 ```powershell
 cd rdvp-backend
@@ -73,7 +73,7 @@ docker compose up -d postgres
 .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
 ```
 
-模拟器访问电脑本机服务时，通常应填写电脑在局域网中的地址，例如：
+后端候选地址位于移动端 `ApiClient` 配置中，当前包含本机和模拟器宿主机常用地址。真机访问电脑本机服务时，通常应把电脑在局域网中的地址加入候选列表，例如：
 
 ```text
 http://192.168.x.x:8080

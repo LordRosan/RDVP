@@ -5,10 +5,16 @@ import { SessionStore } from '../../stores/SessionStore';
 import { WorkbenchRefreshStore } from '../../stores/WorkbenchRefreshStore';
 import { SecureRandomService } from './SecureRandomService';
 
-const DEFAULT_API_BASE_URL = '';
+const DEFAULT_API_BASE_URL = 'http://localhost:8080';
 const API_BASE_URL_STORAGE_KEY = 'rdvp_api_base_url';
+const API_BASE_URL_CANDIDATES: string[] = [
+  'http://localhost:8080',
+  'http://127.0.0.1:8080',
+  'http://10.0.2.2:8080'
+];
 const CLIENT_VERSION = 'rdvp-harmony-0.1.0';
 const REQUEST_TIMEOUT_MS = 15000;
+const HEALTH_CHECK_TIMEOUT_MS = 3000;
 
 interface ApiHttpHeaders {
   'Content-Type': string;
@@ -44,9 +50,24 @@ export class ApiClient {
       success: false,
       error: {
         code: ApiErrorCode.ServiceUnavailable,
-        message: '请先在登录页配置后端服务地址'
+        message: '后端服务暂不可用，请稍后重试'
       }
     };
+  }
+
+  static async ensureBackendConnected(): Promise<boolean> {
+    ApiClient.ensureInitialized();
+
+    const candidates = ApiClient.createBaseUrlCandidates();
+    for (let i = 0; i < candidates.length; i++) {
+      const candidate = candidates[i];
+      if (await ApiClient.checkHealth(candidate)) {
+        ApiClient.setBaseUrl(candidate);
+        return true;
+      }
+    }
+
+    return false;
   }
 
   static createRequestOptions(path: string, method: string, requiresAuth: boolean, body?: string): ApiRequestOptions {
@@ -151,6 +172,45 @@ export class ApiClient {
     try {
       AppStorage.setOrCreate<string>(API_BASE_URL_STORAGE_KEY, baseUrl);
     } catch (err) {
+    }
+  }
+
+  private static createBaseUrlCandidates(): string[] {
+    const candidates: string[] = [];
+    ApiClient.addCandidate(candidates, ApiClient.getBaseUrl());
+    for (let i = 0; i < API_BASE_URL_CANDIDATES.length; i++) {
+      ApiClient.addCandidate(candidates, API_BASE_URL_CANDIDATES[i]);
+    }
+
+    return candidates;
+  }
+
+  private static addCandidate(candidates: string[], baseUrl: string): void {
+    const normalized = ApiClient.normalizeBaseUrl(baseUrl);
+    if (normalized.length === 0) {
+      return;
+    }
+
+    if (candidates.indexOf(normalized) < 0) {
+      candidates.push(normalized);
+    }
+  }
+
+  private static async checkHealth(baseUrl: string): Promise<boolean> {
+    const request = http.createHttp();
+    try {
+      const response = await request.request(`${baseUrl}/healthz`, {
+        method: http.RequestMethod.GET,
+        expectDataType: http.HttpDataType.STRING,
+        readTimeout: HEALTH_CHECK_TIMEOUT_MS,
+        connectTimeout: HEALTH_CHECK_TIMEOUT_MS
+      });
+
+      return response.responseCode >= 200 && response.responseCode < 300;
+    } catch (err) {
+      return false;
+    } finally {
+      request.destroy();
     }
   }
 

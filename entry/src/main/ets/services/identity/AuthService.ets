@@ -50,7 +50,7 @@ export class AuthService {
       };
     }
 
-    if (!ApiClient.isConfigured()) {
+    if (!await ApiClient.ensureBackendConnected()) {
       return ApiClient.createServiceUnavailableResponse<AuthSession>();
     }
 
