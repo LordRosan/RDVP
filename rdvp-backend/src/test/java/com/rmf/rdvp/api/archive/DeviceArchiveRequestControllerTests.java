@@ -41,7 +41,7 @@ class DeviceArchiveRequestControllerTests {
 
     @Test
     void createsArchiveRequestAndLocksArchiveEntry() throws Exception {
-        String token = login("fieldoperator", "password");
+        String token = login("archivist", "password");
 
         String requestId = createNameChange(token, "冷却泵A-02");
 
@@ -54,7 +54,7 @@ class DeviceArchiveRequestControllerTests {
 
     @Test
     void acceptsLocalDisplayInitiatedAtForArchiveRequest() throws Exception {
-        String token = login("fieldoperator", "password");
+        String token = login("archivist", "password");
 
         mockMvc.perform(post("/api/v1/device-archive-requests")
                         .header("Authorization", "Bearer " + token)
@@ -79,7 +79,7 @@ class DeviceArchiveRequestControllerTests {
 
     @Test
     void listsPendingArchiveRequestsForReviewer() throws Exception {
-        String token = login("deviceadmin", "password");
+        String token = login("archiveadmin", "password");
 
         mockMvc.perform(get("/api/v1/device-archive-requests?status=PENDING_REVIEW")
                         .header("Authorization", "Bearer " + token))
@@ -87,15 +87,15 @@ class DeviceArchiveRequestControllerTests {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items[0].id").value("DCR-LOCAL-0002"))
-                .andExpect(jsonPath("$.data.items[0].applicantName").value("现场运维人员"))
+                .andExpect(jsonPath("$.data.items[0].applicantName").value("档案员"))
                 .andExpect(jsonPath("$.data.items[0].changes['location.address'].newValue")
                         .value("二号厂房包装区A段"));
     }
 
     @Test
     void approvesArchiveRequestAndAppliesArchiveUpdate() throws Exception {
-        String applicantToken = login("fieldoperator", "password");
-        String reviewerToken = login("deviceadmin", "password");
+        String applicantToken = login("archivist", "password");
+        String reviewerToken = login("archiveadmin", "password");
         String requestId = createNameChange(applicantToken, "冷却泵A-02");
 
         mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", requestId)
@@ -125,8 +125,8 @@ class DeviceArchiveRequestControllerTests {
 
     @Test
     void rejectsApprovalWhenArchiveBaselineChangedAfterRequestCreation() throws Exception {
-        String applicantToken = login("fieldoperator", "password");
-        String reviewerToken = login("deviceadmin", "password");
+        String applicantToken = login("archivist", "password");
+        String reviewerToken = login("archiveadmin", "password");
         String requestId = createNameChange(applicantToken, "冷却泵A-02");
 
         archiveRepository.applyUpdate(
@@ -136,7 +136,7 @@ class DeviceArchiveRequestControllerTests {
                         "CP-1000",
                         "北方设备",
                         "一号厂房动力区",
-                        "usr-device-admin",
+                        "usr-archive-admin",
                         OffsetDateTime.parse("2026-06-01T07:30:00Z")),
                 null);
 
@@ -161,7 +161,7 @@ class DeviceArchiveRequestControllerTests {
 
     @Test
     void rejectsDeleteApprovalWhenArchiveSnapshotChangedAfterRequestCreation() throws Exception {
-        String token = login("deviceadmin", "password");
+        String token = login("archiveadmin", "password");
         verifyPassword(token, "password");
         String requestId = createArchiveDeleteRequest(token, "device-local-0001");
 
@@ -172,7 +172,7 @@ class DeviceArchiveRequestControllerTests {
                         "CP-1000",
                         "北方设备",
                         "一号厂房动力区",
-                        "usr-device-admin",
+                        "usr-archive-admin",
                         OffsetDateTime.parse("2026-06-01T07:45:00Z")),
                 null);
 
@@ -197,8 +197,8 @@ class DeviceArchiveRequestControllerTests {
 
     @Test
     void rejectsRepeatedArchiveRequestReview() throws Exception {
-        String applicantToken = login("fieldoperator", "password");
-        String reviewerToken = login("deviceadmin", "password");
+        String applicantToken = login("archivist", "password");
+        String reviewerToken = login("archiveadmin", "password");
         String requestId = createNameChange(applicantToken, "冷却泵A-02");
 
         mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", requestId)
@@ -229,8 +229,8 @@ class DeviceArchiveRequestControllerTests {
 
     @Test
     void requiresExplicitReviewTime() throws Exception {
-        String applicantToken = login("fieldoperator", "password");
-        String reviewerToken = login("deviceadmin", "password");
+        String applicantToken = login("archivist", "password");
+        String reviewerToken = login("archiveadmin", "password");
         String requestId = createNameChange(applicantToken, "冷却泵A-02");
 
         mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", requestId)
@@ -248,8 +248,8 @@ class DeviceArchiveRequestControllerTests {
 
     @Test
     void rejectsInvalidReviewDecisionWithoutUnhandledException() throws Exception {
-        String applicantToken = login("fieldoperator", "password");
-        String reviewerToken = login("deviceadmin", "password");
+        String applicantToken = login("archivist", "password");
+        String reviewerToken = login("archiveadmin", "password");
         String requestId = createNameChange(applicantToken, "冷却泵A-02");
 
         mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", requestId)
@@ -268,7 +268,7 @@ class DeviceArchiveRequestControllerTests {
 
     @Test
     void createsDeviceArchiveOnlyAfterCreateRequestApproval() throws Exception {
-        String token = login("deviceadmin", "password");
+        String token = login("archiveadmin", "password");
         String requestId = createArchiveCreateRequest(token, "RDVP-DEVICE-0099");
 
         mockMvc.perform(get("/api/v1/devices/by-code/RDVP-DEVICE-0099")
@@ -300,7 +300,7 @@ class DeviceArchiveRequestControllerTests {
 
     @Test
     void deletesDeviceArchiveOnlyAfterDeleteRequestApproval() throws Exception {
-        String token = login("deviceadmin", "password");
+        String token = login("archiveadmin", "password");
         verifyPassword(token, "password");
         String requestId = createArchiveDeleteRequest(token, "device-local-0001");
 
@@ -331,7 +331,7 @@ class DeviceArchiveRequestControllerTests {
 
     @Test
     void rejectsDeleteRequestWithoutRecentPasswordVerification() throws Exception {
-        String token = login("deviceadmin", "password");
+        String token = login("archiveadmin", "password");
 
         mockMvc.perform(post("/api/v1/device-archive-requests")
                         .header("Authorization", "Bearer " + token)
@@ -346,9 +346,9 @@ class DeviceArchiveRequestControllerTests {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("SENSITIVE_OPERATION_VERIFICATION_REQUIRED"));
 
-        String auditorToken = login("auditor", "password");
+        String managerToken = login("manager", "password");
         mockMvc.perform(get("/api/v1/audit-logs?action=DEVICE_ARCHIVE_REQUEST&keyword=device-local-0001")
-                        .header("Authorization", "Bearer " + auditorToken))
+                        .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items[*].status").value(hasItem("FAILED")))
                 .andExpect(jsonPath("$.data.items[*].targetId").value(hasItem("device-local-0001")))
@@ -358,7 +358,7 @@ class DeviceArchiveRequestControllerTests {
 
     @Test
     void rejectsDuplicatePendingArchiveRequest() throws Exception {
-        String token = login("fieldoperator", "password");
+        String token = login("archivist", "password");
 
         mockMvc.perform(post("/api/v1/device-archive-requests")
                         .header("Authorization", "Bearer " + token)
@@ -381,7 +381,7 @@ class DeviceArchiveRequestControllerTests {
 
     @Test
     void rejectsFrozenArchiveRequest() throws Exception {
-        String token = login("fieldoperator", "password");
+        String token = login("archivist", "password");
 
         mockMvc.perform(post("/api/v1/device-archive-requests")
                         .header("Authorization", "Bearer " + token)
@@ -404,7 +404,7 @@ class DeviceArchiveRequestControllerTests {
 
     @Test
     void rejectsStaleArchiveBaseline() throws Exception {
-        String token = login("fieldoperator", "password");
+        String token = login("archivist", "password");
 
         mockMvc.perform(post("/api/v1/device-archive-requests")
                         .header("Authorization", "Bearer " + token)
@@ -427,7 +427,7 @@ class DeviceArchiveRequestControllerTests {
 
     @Test
     void requiresReviewPermissionForManagementEndpoints() throws Exception {
-        String token = login("fieldoperator", "password");
+        String token = login("operator", "password");
 
         mockMvc.perform(get("/api/v1/device-archive-requests?status=PENDING_REVIEW")
                         .header("Authorization", "Bearer " + token))

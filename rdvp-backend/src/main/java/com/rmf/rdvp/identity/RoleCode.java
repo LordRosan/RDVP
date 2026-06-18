@@ -20,7 +20,7 @@ public enum RoleCode {
 
     public static RoleCode fromCode(String code) {
         for (RoleCode role : values()) {
-            if (role.code.equals(code) || role.name().equals(code)) {
+            if (role.code.equals(code)) {
                 return role;
             }
         }

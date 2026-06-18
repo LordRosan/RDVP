@@ -96,6 +96,7 @@ class AuthControllerTests {
                 "MANAGEMENT_CENTER_OPERATIONS_REVIEW",
                 "MANAGEMENT_CENTER_OPERATION_RECORD_QUERY");
         assertUserPermissions("operator", "operationsstaff",
+                "ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY",
                 "OPERATIONS_CENTER_DEVICE_VERIFICATION_SUBMIT",
                 "OPERATIONS_CENTER_DEVICE_FAULT_REPORT_SUBMIT",
                 "OPERATIONS_CENTER_REPAIR_TASK_ACCEPT",
@@ -116,7 +117,7 @@ class AuthControllerTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "username": "fieldoperator",
+                                  "username": "operator",
                                   "password": "wrong"
                                 }
                                 """))

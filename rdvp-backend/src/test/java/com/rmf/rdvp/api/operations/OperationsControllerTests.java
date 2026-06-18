@@ -40,8 +40,8 @@ class OperationsControllerTests {
 
     @Test
     void createsAcceptsAndReportsRepairWorkflow() throws Exception {
-        String operatorToken = login("fieldoperator", "password");
-        String maintainerToken = login("maintainer", "password");
+        String operatorToken = login("operator", "password");
+        String operatorWorkerToken = login("operator", "password");
 
         String faultId = createFaultReport(
                 operatorToken,
@@ -56,13 +56,13 @@ class OperationsControllerTests {
                 .andExpect(jsonPath("$.data.status").value("FAULTED"));
 
         mockMvc.perform(get("/api/v1/operation-tasks/available?radiusKm=10")
-                        .header("Authorization", "Bearer " + maintainerToken))
+                        .header("Authorization", "Bearer " + operatorWorkerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.workload.status").value("IDLE"))
                 .andExpect(jsonPath("$.data.items[0].faultReportId").value(faultId));
 
         String acceptResponse = mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/accept", faultId)
-                        .header("Authorization", "Bearer " + maintainerToken)
+                        .header("Authorization", "Bearer " + operatorWorkerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(NEAR_DEVICE_LOCATION_BODY))
                 .andExpect(status().isOk())
@@ -73,13 +73,13 @@ class OperationsControllerTests {
         String repairTaskId = objectMapper.readTree(acceptResponse).path("data").path("repairTaskId").asText();
 
         mockMvc.perform(get("/api/v1/repair-tasks/accepted")
-                        .header("Authorization", "Bearer " + maintainerToken))
+                        .header("Authorization", "Bearer " + operatorWorkerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items[0].id").value(repairTaskId));
 
         mockMvc.perform(post("/api/v1/repair-tasks/{repairTaskId}/repair-reports", repairTaskId)
-                        .header("Authorization", "Bearer " + maintainerToken)
+                        .header("Authorization", "Bearer " + operatorWorkerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -94,7 +94,7 @@ class OperationsControllerTests {
                 .andExpect(jsonPath("$.data.requiresReinspection").value(false));
 
         mockMvc.perform(get("/api/v1/repair-tasks/accepted")
-                        .header("Authorization", "Bearer " + maintainerToken))
+                        .header("Authorization", "Bearer " + operatorWorkerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(0));
 
@@ -106,8 +106,8 @@ class OperationsControllerTests {
 
     @Test
     void rejectsDuplicateActiveFaultReportForSameDevice() throws Exception {
-        String operatorToken = login("fieldoperator", "password");
-        String maintainerToken = login("maintainer", "password");
+        String operatorToken = login("operator", "password");
+        String operatorWorkerToken = login("operator", "password");
 
         createFaultReport(
                 operatorToken,
@@ -133,7 +133,7 @@ class OperationsControllerTests {
                 .andExpect(jsonPath("$.error.code").value("DEVICE_ACTIVE_FAULT_EXISTS"));
 
         mockMvc.perform(get("/api/v1/operation-tasks/available?radiusKm=10")
-                        .header("Authorization", "Bearer " + maintainerToken))
+                        .header("Authorization", "Bearer " + operatorWorkerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items[0].deviceCode").value("RDVP-DEVICE-0001"));
@@ -141,7 +141,7 @@ class OperationsControllerTests {
 
     @Test
     void rejectsFaultReportWhenOnlyOneCoordinateIsProvided() throws Exception {
-        String operatorToken = login("fieldoperator", "password");
+        String operatorToken = login("operator", "password");
 
         mockMvc.perform(post("/api/v1/fault-reports")
                         .header("Authorization", "Bearer " + operatorToken)
@@ -162,7 +162,7 @@ class OperationsControllerTests {
 
     @Test
     void rejectsFaultReportWhenCoordinateIsOutOfRange() throws Exception {
-        String operatorToken = login("fieldoperator", "password");
+        String operatorToken = login("operator", "password");
 
         mockMvc.perform(post("/api/v1/fault-reports")
                         .header("Authorization", "Bearer " + operatorToken)
@@ -184,8 +184,8 @@ class OperationsControllerTests {
 
     @Test
     void filtersTaskAcceptanceByProvidedLocation() throws Exception {
-        String operatorToken = login("fieldoperator", "password");
-        String maintainerToken = login("maintainer", "password");
+        String operatorToken = login("operator", "password");
+        String operatorWorkerToken = login("operator", "password");
 
         String faultId = createFaultReport(
                 operatorToken,
@@ -195,14 +195,14 @@ class OperationsControllerTests {
                 "Power supply fluctuates under load.");
 
         mockMvc.perform(get("/api/v1/operation-tasks/available?radiusKm=1&longitude=114.1694&latitude=22.3193")
-                        .header("Authorization", "Bearer " + maintainerToken))
+                        .header("Authorization", "Bearer " + operatorWorkerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items[0].faultReportId").value(faultId))
                 .andExpect(jsonPath("$.data.items[0].distanceKm").isNumber());
 
         mockMvc.perform(get("/api/v1/operation-tasks/available?radiusKm=1&longitude=120.0000&latitude=30.0000")
-                        .header("Authorization", "Bearer " + maintainerToken))
+                        .header("Authorization", "Bearer " + operatorWorkerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(0))
                 .andExpect(jsonPath("$.data.items").isEmpty());
@@ -210,18 +210,18 @@ class OperationsControllerTests {
 
     @Test
     void rejectsPartialRepairTaskLocationQuery() throws Exception {
-        String maintainerToken = login("maintainer", "password");
+        String operatorWorkerToken = login("operator", "password");
 
         mockMvc.perform(get("/api/v1/operation-tasks/available?radiusKm=1&longitude=114.1694")
-                        .header("Authorization", "Bearer " + maintainerToken))
+                        .header("Authorization", "Bearer " + operatorWorkerToken))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.error.code").value("REPAIR_TASK_RADIUS_INVALID"));
     }
 
     @Test
     void requiresLocationWhenAcceptingRepairTask() throws Exception {
-        String operatorToken = login("fieldoperator", "password");
-        String maintainerToken = login("maintainer", "password");
+        String operatorToken = login("operator", "password");
+        String operatorWorkerToken = login("operator", "password");
 
         String faultId = createFaultReport(
                 operatorToken,
@@ -231,7 +231,7 @@ class OperationsControllerTests {
                 "Power supply fluctuates under load.");
 
         mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/accept", faultId)
-                        .header("Authorization", "Bearer " + maintainerToken)
+                        .header("Authorization", "Bearer " + operatorWorkerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isUnprocessableContent())
@@ -240,8 +240,8 @@ class OperationsControllerTests {
 
     @Test
     void rejectsRepairTaskAcceptWhenLocationIsOutOfWorkloadRange() throws Exception {
-        String operatorToken = login("fieldoperator", "password");
-        String maintainerToken = login("maintainer", "password");
+        String operatorToken = login("operator", "password");
+        String operatorWorkerToken = login("operator", "password");
 
         String faultId = createFaultReport(
                 operatorToken,
@@ -251,7 +251,7 @@ class OperationsControllerTests {
                 "Power supply fluctuates under load.");
 
         mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/accept", faultId)
-                        .header("Authorization", "Bearer " + maintainerToken)
+                        .header("Authorization", "Bearer " + operatorWorkerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -265,8 +265,8 @@ class OperationsControllerTests {
 
     @Test
     void createsFaultReportWhenAbnormalVerificationIsSubmitted() throws Exception {
-        String operatorToken = login("fieldoperator", "password");
-        String maintainerToken = login("maintainer", "password");
+        String operatorToken = login("operator", "password");
+        String operatorWorkerToken = login("operator", "password");
 
         String response = mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records/fault-report", "device-local-0001")
                         .header("Authorization", "Bearer " + operatorToken)
@@ -302,7 +302,7 @@ class OperationsControllerTests {
                 .andExpect(jsonPath("$.data.lastVerificationTime").value("2026-06-03T08:30:00Z"));
 
         mockMvc.perform(get("/api/v1/operation-tasks/available?radiusKm=10")
-                        .header("Authorization", "Bearer " + maintainerToken))
+                        .header("Authorization", "Bearer " + operatorWorkerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items[0].faultReportId").value(faultId));
@@ -310,7 +310,7 @@ class OperationsControllerTests {
 
     @Test
     void rejectsVerificationFaultReportWhenOnlyOneCoordinateIsProvided() throws Exception {
-        String operatorToken = login("fieldoperator", "password");
+        String operatorToken = login("operator", "password");
 
         mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records/fault-report", "device-local-0001")
                         .header("Authorization", "Bearer " + operatorToken)
@@ -335,7 +335,7 @@ class OperationsControllerTests {
 
     @Test
     void rejectsVerificationFaultReportWhenCoordinateIsOutOfRange() throws Exception {
-        String operatorToken = login("fieldoperator", "password");
+        String operatorToken = login("operator", "password");
 
         mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records/fault-report", "device-local-0001")
                         .header("Authorization", "Bearer " + operatorToken)
@@ -361,7 +361,7 @@ class OperationsControllerTests {
 
     @Test
     void rejectsDuplicateFaultReportFromAbnormalVerificationForActiveDeviceFault() throws Exception {
-        String operatorToken = login("fieldoperator", "password");
+        String operatorToken = login("operator", "password");
 
         createFaultReport(
                 operatorToken,
@@ -392,8 +392,8 @@ class OperationsControllerTests {
 
     @Test
     void derivesMaintainerWorkloadBeforeListingOrAcceptingTasks() throws Exception {
-        String operatorToken = login("fieldoperator", "password");
-        String maintainerToken = login("maintainer", "password");
+        String operatorToken = login("operator", "password");
+        String operatorWorkerToken = login("operator", "password");
 
         String firstFaultId = createFaultReport(
                 operatorToken,
@@ -415,52 +415,52 @@ class OperationsControllerTests {
                 "Third repair workload item.");
 
         mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/accept", firstFaultId)
-                        .header("Authorization", "Bearer " + maintainerToken)
+                        .header("Authorization", "Bearer " + operatorWorkerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(NEAR_DEVICE_LOCATION_BODY))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/v1/operation-tasks/available?radiusKm=20")
-                        .header("Authorization", "Bearer " + maintainerToken))
+                        .header("Authorization", "Bearer " + operatorWorkerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.workload.status").value("LOW_LOAD"))
                 .andExpect(jsonPath("$.data.workload.maxRadiusKm").value(20));
 
         mockMvc.perform(get("/api/v1/operation-tasks/available?radiusKm=10")
-                        .header("Authorization", "Bearer " + maintainerToken))
+                        .header("Authorization", "Bearer " + operatorWorkerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.workload.status").value("LOW_LOAD"))
                 .andExpect(jsonPath("$.data.workload.maxRadiusKm").value(20));
 
         mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/accept", secondFaultId)
-                        .header("Authorization", "Bearer " + maintainerToken)
+                        .header("Authorization", "Bearer " + operatorWorkerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(NEAR_DEVICE_LOCATION_BODY))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/v1/operation-tasks/available?radiusKm=10")
-                        .header("Authorization", "Bearer " + maintainerToken))
+                        .header("Authorization", "Bearer " + operatorWorkerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.workload.status").value("MEDIUM_LOAD"))
                 .andExpect(jsonPath("$.data.workload.maxRadiusKm").value(10));
 
         mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/accept", thirdFaultId)
-                        .header("Authorization", "Bearer " + maintainerToken)
+                        .header("Authorization", "Bearer " + operatorWorkerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(NEAR_DEVICE_LOCATION_BODY))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/v1/operation-tasks/available?radiusKm=10")
-                        .header("Authorization", "Bearer " + maintainerToken))
+                        .header("Authorization", "Bearer " + operatorWorkerToken))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("REPAIRER_BUSY"));
     }
 
     @Test
     void completesSevereRepairThroughReinspection() throws Exception {
-        String operatorToken = login("fieldoperator", "password");
-        String maintainerToken = login("maintainer", "password");
-        String reinspectorToken = login("reinspector", "password");
+        String operatorToken = login("operator", "password");
+        String operatorWorkerToken = login("operator", "password");
+        String operatorReinspectToken = login("operator", "password");
 
         String faultId = createFaultReport(
                 operatorToken,
@@ -468,10 +468,10 @@ class OperationsControllerTests {
                 "HARDWARE_DAMAGE",
                 "SEVERE",
                 "Primary bearing assembly is unstable.");
-        String repairTaskId = acceptFaultReport(maintainerToken, faultId);
+        String repairTaskId = acceptFaultReport(operatorWorkerToken, faultId);
 
         mockMvc.perform(post("/api/v1/repair-tasks/{repairTaskId}/repair-reports", repairTaskId)
-                        .header("Authorization", "Bearer " + maintainerToken)
+                        .header("Authorization", "Bearer " + operatorWorkerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -490,14 +490,14 @@ class OperationsControllerTests {
                 .andExpect(jsonPath("$.data.status").value("PENDING_REINSPECTION"));
 
         mockMvc.perform(get("/api/v1/reinspections/pending")
-                        .header("Authorization", "Bearer " + reinspectorToken))
+                        .header("Authorization", "Bearer " + operatorReinspectToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items[0].faultReportId").value(faultId))
                 .andExpect(jsonPath("$.data.items[0].severity").value("SEVERE"));
 
         mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-records", faultId)
-                        .header("Authorization", "Bearer " + reinspectorToken)
+                        .header("Authorization", "Bearer " + operatorReinspectToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -512,7 +512,7 @@ class OperationsControllerTests {
                 .andExpect(jsonPath("$.data.nextDeviceStatus").value("NORMAL"));
 
         mockMvc.perform(get("/api/v1/reinspections/pending")
-                        .header("Authorization", "Bearer " + reinspectorToken))
+                        .header("Authorization", "Bearer " + operatorReinspectToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(0));
 
@@ -524,8 +524,8 @@ class OperationsControllerTests {
 
     @Test
     void rejectsRepeatedRepairReportSubmission() throws Exception {
-        String operatorToken = login("fieldoperator", "password");
-        String maintainerToken = login("maintainer", "password");
+        String operatorToken = login("operator", "password");
+        String operatorWorkerToken = login("operator", "password");
 
         String faultId = createFaultReport(
                 operatorToken,
@@ -533,12 +533,12 @@ class OperationsControllerTests {
                 "ENERGY_FAULT",
                 "GENERAL",
                 "Power supply fluctuates under load.");
-        String repairTaskId = acceptFaultReport(maintainerToken, faultId);
+        String repairTaskId = acceptFaultReport(operatorWorkerToken, faultId);
 
-        submitRepairReport(maintainerToken, repairTaskId);
+        submitRepairReport(operatorWorkerToken, repairTaskId);
 
         mockMvc.perform(post("/api/v1/repair-tasks/{repairTaskId}/repair-reports", repairTaskId)
-                        .header("Authorization", "Bearer " + maintainerToken)
+                        .header("Authorization", "Bearer " + operatorWorkerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -554,8 +554,8 @@ class OperationsControllerTests {
 
     @Test
     void requeuesEmergencyTemporaryRepairWithoutReinspection() throws Exception {
-        String operatorToken = login("fieldoperator", "password");
-        String maintainerToken = login("maintainer", "password");
+        String operatorToken = login("operator", "password");
+        String operatorWorkerToken = login("operator", "password");
 
         String faultId = createFaultReport(
                 operatorToken,
@@ -563,10 +563,10 @@ class OperationsControllerTests {
                 "LOGIC_FAULT",
                 "EMERGENCY",
                 "Control loop enters unsafe repeated restart.");
-        String repairTaskId = acceptFaultReport(maintainerToken, faultId);
+        String repairTaskId = acceptFaultReport(operatorWorkerToken, faultId);
 
         mockMvc.perform(post("/api/v1/repair-tasks/{repairTaskId}/repair-reports", repairTaskId)
-                        .header("Authorization", "Bearer " + maintainerToken)
+                        .header("Authorization", "Bearer " + operatorWorkerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -580,7 +580,7 @@ class OperationsControllerTests {
                 .andExpect(jsonPath("$.data.requiresReinspection").value(false));
 
         mockMvc.perform(get("/api/v1/operation-tasks/available?radiusKm=10")
-                        .header("Authorization", "Bearer " + maintainerToken))
+                        .header("Authorization", "Bearer " + operatorWorkerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items[0].faultReportId").value(faultId));
@@ -588,9 +588,9 @@ class OperationsControllerTests {
 
     @Test
     void rejectsRepeatedReinspectionRecordSubmission() throws Exception {
-        String operatorToken = login("fieldoperator", "password");
-        String maintainerToken = login("maintainer", "password");
-        String reinspectorToken = login("reinspector", "password");
+        String operatorToken = login("operator", "password");
+        String operatorWorkerToken = login("operator", "password");
+        String operatorReinspectToken = login("operator", "password");
 
         String faultId = createFaultReport(
                 operatorToken,
@@ -598,11 +598,11 @@ class OperationsControllerTests {
                 "HARDWARE_DAMAGE",
                 "SEVERE",
                 "Primary bearing assembly is unstable.");
-        String repairTaskId = acceptFaultReport(maintainerToken, faultId);
-        submitRepairReport(maintainerToken, repairTaskId);
+        String repairTaskId = acceptFaultReport(operatorWorkerToken, faultId);
+        submitRepairReport(operatorWorkerToken, repairTaskId);
 
         mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-records", faultId)
-                        .header("Authorization", "Bearer " + reinspectorToken)
+                        .header("Authorization", "Bearer " + operatorReinspectToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -614,7 +614,7 @@ class OperationsControllerTests {
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-records", faultId)
-                        .header("Authorization", "Bearer " + reinspectorToken)
+                        .header("Authorization", "Bearer " + operatorReinspectToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -629,10 +629,10 @@ class OperationsControllerTests {
 
     @Test
     void protectsOperationsEndpointsByPermission() throws Exception {
-        String readonlyToken = login("readonly", "password");
+        String archivistToken = login("archivist", "password");
 
         mockMvc.perform(post("/api/v1/fault-reports")
-                        .header("Authorization", "Bearer " + readonlyToken)
+                        .header("Authorization", "Bearer " + archivistToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -640,7 +640,7 @@ class OperationsControllerTests {
                                   "faultType": "ENERGY_FAULT",
                                   "severity": "GENERAL",
                                   "occurredAt": "2026-05-29T04:00:00Z",
-                                  "description": "Readonly user must not submit fault reports."
+                                  "description": "Archivist must not submit fault reports."
                                 }
                                 """))
                 .andExpect(status().isForbidden())

@@ -33,13 +33,13 @@ class WorkbenchControllerTests {
 
     @Test
     void returnsSummaryForAuthenticatedUser() throws Exception {
-        String operatorToken = login("fieldoperator", "password");
-        String maintainerToken = login("maintainer", "password");
+        String operatorToken = login("operator", "password");
+        String operatorWorkerToken = login("operator", "password");
 
         createFaultReport(operatorToken, "RDVP-DEVICE-0001", "ENERGY_FAULT", "GENERAL");
 
         mockMvc.perform(get("/api/v1/workbench/summary")
-                        .header("Authorization", "Bearer " + maintainerToken))
+                        .header("Authorization", "Bearer " + operatorWorkerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.pendingDeviceArchiveRequests").value(0))
@@ -50,15 +50,15 @@ class WorkbenchControllerTests {
 
     @Test
     void returnsOnlyPermittedSummaryCounters() throws Exception {
-        String operatorToken = login("fieldoperator", "password");
-        String readonlyToken = login("readonly", "password");
-        String deviceAdminToken = login("deviceadmin", "password");
-        String reinspectorToken = login("reinspector", "password");
+        String operatorToken = login("operator", "password");
+        String archivistToken = login("archivist", "password");
+        String archiveAdminToken = login("archiveadmin", "password");
+        String operatorReinspectToken = login("operator", "password");
 
         createFaultReport(operatorToken, "RDVP-DEVICE-0001", "ENERGY_FAULT", "GENERAL");
 
         mockMvc.perform(get("/api/v1/workbench/summary")
-                        .header("Authorization", "Bearer " + readonlyToken))
+                        .header("Authorization", "Bearer " + archivistToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.pendingDeviceArchiveRequests").value(0))
                 .andExpect(jsonPath("$.data.taskAcceptanceItems").value(0))
@@ -66,7 +66,7 @@ class WorkbenchControllerTests {
                 .andExpect(jsonPath("$.data.pendingReinspections").value(0));
 
         mockMvc.perform(get("/api/v1/workbench/summary")
-                        .header("Authorization", "Bearer " + deviceAdminToken))
+                        .header("Authorization", "Bearer " + archiveAdminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.pendingDeviceArchiveRequests").value(1))
                 .andExpect(jsonPath("$.data.taskAcceptanceItems").value(0))
@@ -74,10 +74,10 @@ class WorkbenchControllerTests {
                 .andExpect(jsonPath("$.data.pendingReinspections").value(0));
 
         mockMvc.perform(get("/api/v1/workbench/summary")
-                        .header("Authorization", "Bearer " + reinspectorToken))
+                        .header("Authorization", "Bearer " + operatorReinspectToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.pendingDeviceArchiveRequests").value(0))
-                .andExpect(jsonPath("$.data.taskAcceptanceItems").value(0))
+                .andExpect(jsonPath("$.data.taskAcceptanceItems").value(1))
                 .andExpect(jsonPath("$.data.repairTasks").value(0))
                 .andExpect(jsonPath("$.data.pendingReinspections").value(0));
     }

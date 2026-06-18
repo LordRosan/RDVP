@@ -26,7 +26,7 @@ public class InMemoryDeviceArchiveRequestRepository implements DeviceArchiveRequ
                         "device-local-0002",
                         "RDVP-DEVICE-0002",
                         "输送线B-02",
-                        "usr-field-operator",
+                        "usr-archivist",
                         null,
                         DeviceArchiveRequestStatus.PENDING_REVIEW,
                         "现场标识位置需要修正档案。",

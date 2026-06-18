@@ -41,39 +41,39 @@ class AuditLogControllerTests {
 
     @Test
     void listsAuditLogsForAuthorizedAuditor() throws Exception {
-        String operatorToken = login("fieldoperator", "password");
+        String operatorToken = login("operator", "password");
         createFaultReport(operatorToken);
-        String auditorToken = login("auditor", "password");
+        String managerToken = login("manager", "password");
 
         mockMvc.perform(get("/api/v1/audit-logs?action=FAULT_REPORT")
-                        .header("Authorization", "Bearer " + auditorToken))
+                        .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items[0].action").value("FAULT_REPORT"))
                 .andExpect(jsonPath("$.data.items[0].targetNo").isString())
-                .andExpect(jsonPath("$.data.items[0].actorName").value("现场运维人员"))
+                .andExpect(jsonPath("$.data.items[0].actorName").value("运维员"))
                 .andExpect(jsonPath("$.data.items[0].status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.items[0].occurredAt").isString());
     }
 
     @Test
     void protectsAuditLogsByPermission() throws Exception {
-        String readonlyToken = login("readonly", "password");
+        String archivistToken = login("archivist", "password");
 
         mockMvc.perform(get("/api/v1/audit-logs")
-                        .header("Authorization", "Bearer " + readonlyToken))
+                        .header("Authorization", "Bearer " + archivistToken))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("FORBIDDEN"));
 
-        String auditorToken = login("auditor", "password");
+        String managerToken = login("manager", "password");
         mockMvc.perform(get("/api/v1/audit-logs?action=AUTHORIZATION_DENIED")
-                        .header("Authorization", "Bearer " + auditorToken))
+                        .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items[0].status").value("FAILED"))
                 .andExpect(jsonPath("$.data.items[0].targetNo").value("GET /api/v1/audit-logs"))
-                .andExpect(jsonPath("$.data.items[0].actorName").value("只读用户"))
+                .andExpect(jsonPath("$.data.items[0].actorName").value("档案员"))
                 .andExpect(jsonPath("$.data.items[0].description").value("接口访问被拒绝：权限不足。"));
     }
 
@@ -83,21 +83,21 @@ class AuditLogControllerTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "username": "fieldoperator",
+                                  "username": "operator",
                                   "password": "wrong",
                                   "clientDeviceId": "test-device"
                                 }
                                 """))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
-        String auditorToken = login("auditor", "password");
+        String managerToken = login("manager", "password");
 
         mockMvc.perform(get("/api/v1/audit-logs?action=AUTH_LOGIN")
-                        .header("Authorization", "Bearer " + auditorToken))
+                        .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(2))
                 .andExpect(jsonPath("$.data.items[*].status").value(hasItem("FAILED")))
-                .andExpect(jsonPath("$.data.items[?(@.status == 'FAILED')].targetNo").value(hasItem("fieldoperator")))
+                .andExpect(jsonPath("$.data.items[?(@.status == 'FAILED')].targetNo").value(hasItem("operator")))
                 .andExpect(jsonPath("$.data.items[?(@.status == 'FAILED')].description").value(hasItem("用户登录失败。")));
     }
 
@@ -111,10 +111,10 @@ class AuditLogControllerTests {
                         .header("Authorization", "Bearer invalid-token-value"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
-        String auditorToken = login("auditor", "password");
+        String managerToken = login("manager", "password");
 
         mockMvc.perform(get("/api/v1/audit-logs?action=AUTHENTICATION_FAILED")
-                        .header("Authorization", "Bearer " + auditorToken))
+                        .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(2))
                 .andExpect(jsonPath("$.data.items[*].status").value(hasItem("FAILED")))
@@ -125,10 +125,10 @@ class AuditLogControllerTests {
 
     @Test
     void recordsFailedPasswordVerificationForAuditReview() throws Exception {
-        String deviceAdminToken = login("deviceadmin", "password");
+        String archiveAdminToken = login("archiveadmin", "password");
 
         mockMvc.perform(post("/api/v1/auth/password-verification")
-                        .header("Authorization", "Bearer " + deviceAdminToken)
+                        .header("Authorization", "Bearer " + archiveAdminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -137,21 +137,21 @@ class AuditLogControllerTests {
                                 """))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
-        String auditorToken = login("auditor", "password");
+        String managerToken = login("manager", "password");
 
         mockMvc.perform(get("/api/v1/audit-logs?action=AUTH_PASSWORD_VERIFY")
-                        .header("Authorization", "Bearer " + auditorToken))
+                        .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items[0].status").value("FAILED"))
-                .andExpect(jsonPath("$.data.items[0].targetNo").value("deviceadmin"))
-                .andExpect(jsonPath("$.data.items[0].actorName").value("设备管理员"))
+                .andExpect(jsonPath("$.data.items[0].targetNo").value("archiveadmin"))
+                .andExpect(jsonPath("$.data.items[0].actorName").value("档案管理员"))
                 .andExpect(jsonPath("$.data.items[0].description").value("用户密码复核失败：INVALID_CREDENTIALS。"));
     }
 
     @Test
     void recordsFailedStandaloneDeviceVerificationForAuditReview() throws Exception {
-        String operatorToken = login("fieldoperator", "password");
+        String operatorToken = login("operator", "password");
 
         mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records", "device-local-0001")
                         .header("Authorization", "Bearer " + operatorToken)
@@ -166,21 +166,21 @@ class AuditLogControllerTests {
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"));
-        String auditorToken = login("auditor", "password");
+        String managerToken = login("manager", "password");
 
         mockMvc.perform(get("/api/v1/audit-logs?action=DEVICE_VERIFICATION")
-                        .header("Authorization", "Bearer " + auditorToken))
+                        .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items[0].status").value("FAILED"))
                 .andExpect(jsonPath("$.data.items[0].targetNo").value("RDVP-DEVICE-0001"))
-                .andExpect(jsonPath("$.data.items[0].actorName").value("现场运维人员"))
+                .andExpect(jsonPath("$.data.items[0].actorName").value("运维员"))
                 .andExpect(jsonPath("$.data.items[0].description").value("设备核验提交失败：BAD_REQUEST。"));
     }
 
     @Test
     void recordsFailedDeviceArchiveRequestForAuditReview() throws Exception {
-        String operatorToken = login("fieldoperator", "password");
+        String operatorToken = login("archivist", "password");
 
         mockMvc.perform(post("/api/v1/device-archive-requests")
                         .header("Authorization", "Bearer " + operatorToken)
@@ -199,10 +199,10 @@ class AuditLogControllerTests {
                                 """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("DEVICE_ARCHIVE_REQUEST_LOCKED"));
-        String auditorToken = login("auditor", "password");
+        String managerToken = login("manager", "password");
 
         mockMvc.perform(get("/api/v1/audit-logs?action=DEVICE_ARCHIVE_REQUEST")
-                        .header("Authorization", "Bearer " + auditorToken))
+                        .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items[0].status").value("FAILED"))
@@ -212,7 +212,7 @@ class AuditLogControllerTests {
 
     @Test
     void recordsFailedDeviceArchiveReviewForAuditReview() throws Exception {
-        String reviewerToken = login("deviceadmin", "password");
+        String reviewerToken = login("archiveadmin", "password");
 
         mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", "DCR-LOCAL-0002")
                         .header("Authorization", "Bearer " + reviewerToken)
@@ -226,10 +226,10 @@ class AuditLogControllerTests {
                                 """))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.error.code").value("DEVICE_ARCHIVE_REQUEST_INVALID"));
-        String auditorToken = login("auditor", "password");
+        String managerToken = login("manager", "password");
 
         mockMvc.perform(get("/api/v1/audit-logs?action=DEVICE_ARCHIVE_REVIEW")
-                        .header("Authorization", "Bearer " + auditorToken))
+                        .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items[0].status").value("FAILED"))
@@ -239,20 +239,20 @@ class AuditLogControllerTests {
 
     @Test
     void recordsFailedRepairTaskAcceptForAuditReview() throws Exception {
-        String operatorToken = login("fieldoperator", "password");
-        String maintainerToken = login("maintainer", "password");
+        String operatorToken = login("operator", "password");
+        String operatorWorkerToken = login("operator", "password");
         String faultId = createFaultReport(operatorToken);
 
         mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/accept", faultId)
-                        .header("Authorization", "Bearer " + maintainerToken)
+                        .header("Authorization", "Bearer " + operatorWorkerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.error.code").value("REPAIR_TASK_RADIUS_INVALID"));
-        String auditorToken = login("auditor", "password");
+        String managerToken = login("manager", "password");
 
         mockMvc.perform(get("/api/v1/audit-logs?action=REPAIR_TASK_ACCEPT")
-                        .header("Authorization", "Bearer " + auditorToken))
+                        .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items[0].status").value("FAILED"))
@@ -262,7 +262,7 @@ class AuditLogControllerTests {
 
     @Test
     void recordsFailedFaultReportAndVerificationForAuditReview() throws Exception {
-        String operatorToken = login("fieldoperator", "password");
+        String operatorToken = login("operator", "password");
         createFaultReport(operatorToken);
 
         mockMvc.perform(post("/api/v1/fault-reports")
@@ -299,10 +299,10 @@ class AuditLogControllerTests {
                                 """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("DEVICE_ACTIVE_FAULT_EXISTS"));
-        String auditorToken = login("auditor", "password");
+        String managerToken = login("manager", "password");
 
         mockMvc.perform(get("/api/v1/audit-logs?action=FAULT_REPORT")
-                        .header("Authorization", "Bearer " + auditorToken))
+                        .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(2))
                 .andExpect(jsonPath("$.data.items[*].status").value(hasItem("FAILED")))
@@ -311,7 +311,7 @@ class AuditLogControllerTests {
                         .value(hasItem("设备报修提交失败：DEVICE_ACTIVE_FAULT_EXISTS。")));
 
         mockMvc.perform(get("/api/v1/audit-logs?action=DEVICE_VERIFICATION")
-                        .header("Authorization", "Bearer " + auditorToken))
+                        .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items[0].status").value("FAILED"))
@@ -322,15 +322,15 @@ class AuditLogControllerTests {
 
     @Test
     void recordsFailedRepairReportAndReinspectionForAuditReview() throws Exception {
-        String operatorToken = login("fieldoperator", "password");
-        String maintainerToken = login("maintainer", "password");
-        String reinspectorToken = login("reinspector", "password");
+        String operatorToken = login("operator", "password");
+        String operatorWorkerToken = login("operator", "password");
+        String operatorReinspectToken = login("operator", "password");
         String generalFaultId = createFaultReport(operatorToken);
-        String generalRepairTaskId = acceptFaultReport(maintainerToken, generalFaultId);
+        String generalRepairTaskId = acceptFaultReport(operatorWorkerToken, generalFaultId);
 
-        submitRepairReport(maintainerToken, generalRepairTaskId);
+        submitRepairReport(operatorWorkerToken, generalRepairTaskId);
         mockMvc.perform(post("/api/v1/repair-tasks/{repairTaskId}/repair-reports", generalRepairTaskId)
-                        .header("Authorization", "Bearer " + maintainerToken)
+                        .header("Authorization", "Bearer " + operatorWorkerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -349,11 +349,11 @@ class AuditLogControllerTests {
                 "HARDWARE_DAMAGE",
                 "SEVERE",
                 "Primary bearing assembly is unstable.");
-        String severeRepairTaskId = acceptFaultReport(maintainerToken, severeFaultId);
-        submitRepairReport(maintainerToken, severeRepairTaskId);
-        submitReinspectionRecord(reinspectorToken, severeFaultId);
+        String severeRepairTaskId = acceptFaultReport(operatorWorkerToken, severeFaultId);
+        submitRepairReport(operatorWorkerToken, severeRepairTaskId);
+        submitReinspectionRecord(operatorReinspectToken, severeFaultId);
         mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-records", severeFaultId)
-                        .header("Authorization", "Bearer " + reinspectorToken)
+                        .header("Authorization", "Bearer " + operatorReinspectToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -364,10 +364,10 @@ class AuditLogControllerTests {
                                 """))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.error.code").value("REINSPECTION_REQUIRED"));
-        String auditorToken = login("auditor", "password");
+        String managerToken = login("manager", "password");
 
         mockMvc.perform(get("/api/v1/audit-logs?action=REPAIR_REPORT")
-                        .header("Authorization", "Bearer " + auditorToken))
+                        .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(3))
                 .andExpect(jsonPath("$.data.items[*].status").value(hasItem("FAILED")))
@@ -375,7 +375,7 @@ class AuditLogControllerTests {
                         .value(hasItem("维修报告提交失败：REPAIR_TASK_STATUS_INVALID。")));
 
         mockMvc.perform(get("/api/v1/audit-logs?action=REINSPECTION_RECORD")
-                        .header("Authorization", "Bearer " + auditorToken))
+                        .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(2))
                 .andExpect(jsonPath("$.data.items[*].status").value(hasItem("FAILED")))
@@ -385,20 +385,20 @@ class AuditLogControllerTests {
 
     @Test
     void rejectsInvalidAuditActionFilter() throws Exception {
-        String auditorToken = login("auditor", "password");
+        String managerToken = login("manager", "password");
 
         mockMvc.perform(get("/api/v1/audit-logs?action=UNKNOWN_ACTION")
-                        .header("Authorization", "Bearer " + auditorToken))
+                        .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"));
     }
 
     @Test
     void rejectsOverlongAuditKeywordFilter() throws Exception {
-        String auditorToken = login("auditor", "password");
+        String managerToken = login("manager", "password");
 
         mockMvc.perform(get("/api/v1/audit-logs?keyword=" + "a".repeat(129))
-                        .header("Authorization", "Bearer " + auditorToken))
+                        .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"));
     }

@@ -136,13 +136,13 @@ INSERT INTO device_archive_requests (
 ) VALUES (
     'DCR-LOCAL-0002',
     'device-local-0002',
-    'usr-field-operator',
+    'usr-archivist',
     'PENDING_REVIEW',
     'NORMAL',
     'Site marker location requires archive correction.',
     '{"location.address":{"oldValue":"Plant 2 Packaging Area","newValue":"Plant 2 Packaging Area Section A"}}'::jsonb,
     '2026-05-29T10:10:00Z',
-    'usr-field-operator',
+    'usr-archivist',
     '2026-05-29T10:10:00Z'
 )
 ON CONFLICT (id) DO NOTHING;
