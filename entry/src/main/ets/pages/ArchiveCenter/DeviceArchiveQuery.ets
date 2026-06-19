@@ -61,7 +61,7 @@ struct DeviceArchiveQuery {
   }
 
   onBackPress(): boolean {
-    this.backToWorkbench();
+    this.backToMainPage();
     return true;
   }
 
@@ -81,7 +81,7 @@ struct DeviceArchiveQuery {
         color: AppColors.Divider
       })
       .onClick(() => {
-        this.backToWorkbench();
+        this.backToMainPage();
       })
     }
     .width('100%')
@@ -662,7 +662,7 @@ struct DeviceArchiveQuery {
     }
   }
 
-  backToWorkbench(): void {
+  backToMainPage(): void {
     try {
       DeviceArchiveFlowStore.clearFlow();
       const router = this.getUIContext().getRouter();
@@ -671,7 +671,7 @@ struct DeviceArchiveQuery {
         return;
       }
 
-      router.replaceUrl({ url: 'pages/Workbench' });
+      router.replaceUrl({ url: 'pages/MainPage' });
     } catch (err) {
       try {
         this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });

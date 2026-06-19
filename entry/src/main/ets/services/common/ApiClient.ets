@@ -1,8 +1,6 @@
-import { AppColors } from '../../styles/AppTheme';
 import { http } from '@kit.NetworkKit';
 import { ApiErrorCode, ApiRequestOptions, ApiResponse } from '../../models/common/ApiModels';
 import { SessionStore } from '../../stores/SessionStore';
-import { WorkbenchRefreshStore } from '../../stores/WorkbenchRefreshStore';
 import { SecureRandomService } from './SecureRandomService';
 
 const DEFAULT_API_BASE_URL = 'http://localhost:8080';
@@ -35,14 +33,6 @@ export class ApiClient {
 
   static isConfigured(): boolean {
     return ApiClient.getBaseUrl().length > 0;
-  }
-
-  static getRuntimeStatusLabel(): string {
-    return ApiClient.isConfigured() ? '已配置' : '未配置';
-  }
-
-  static getRuntimeStatusTone(): string {
-    return ApiClient.isConfigured() ? AppColors.Primary : AppColors.Warning;
   }
 
   static createServiceUnavailableResponse<T>(): ApiResponse<T> {
@@ -124,7 +114,6 @@ export class ApiClient {
     ApiClient.ensureInitialized();
     ApiClient.baseUrl = ApiClient.normalizeBaseUrl(baseUrl);
     ApiClient.persistBaseUrl(ApiClient.baseUrl);
-    WorkbenchRefreshStore.notifyChanged();
   }
 
   static normalizeBaseUrlInput(baseUrl: string): string {

@@ -82,6 +82,33 @@ public class JdbcDeviceArchiveRequestRepository implements DeviceArchiveRequestR
     }
 
     @Override
+    public long countApprovedByType(DeviceArchiveRequestType type) {
+        Long count = jdbcTemplate.queryForObject(
+                """
+                        SELECT count(*)
+                        FROM device_archive_requests
+                        WHERE status = 'APPROVED'
+                          AND request_type = :requestType
+                        """,
+                Map.of("requestType", type.name()),
+                Long.class);
+        return count == null ? 0 : count;
+    }
+
+    @Override
+    public long countReviewed() {
+        Long count = jdbcTemplate.queryForObject(
+                """
+                        SELECT count(*)
+                        FROM device_archive_requests
+                        WHERE status IN ('APPROVED', 'REJECTED')
+                        """,
+                Map.of(),
+                Long.class);
+        return count == null ? 0 : count;
+    }
+
+    @Override
     public boolean hasPendingByDeviceId(String deviceId) {
         Integer count = jdbcTemplate.queryForObject(
                 """

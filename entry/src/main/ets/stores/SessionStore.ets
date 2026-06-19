@@ -2,7 +2,6 @@ import { AuthSession, RoleCode } from '../models/identity/AuthModels';
 import { AllPermissionCodes } from '../models/identity/PermissionModels';
 import { CurrentUserSnapshot, SessionState } from '../models/identity/SessionModels';
 import { SecureSessionStorageService } from '../services/identity/SecureSessionStorageService';
-import { WorkbenchRefreshStore } from './WorkbenchRefreshStore';
 
 export class SessionStore {
   private static sessionState: SessionState = {
@@ -31,7 +30,6 @@ export class SessionStore {
       session
     };
     SessionStore.persistSession(session);
-    WorkbenchRefreshStore.notifyChanged();
   }
 
   static clearSession(): void {
@@ -39,7 +37,6 @@ export class SessionStore {
       authenticated: false
     };
     SessionStore.persistSession(undefined);
-    WorkbenchRefreshStore.notifyChanged();
   }
 
   static getCurrentUser(): CurrentUserSnapshot {

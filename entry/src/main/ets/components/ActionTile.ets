@@ -1,10 +1,10 @@
 import { AppColors, AppRadii } from '../styles/AppTheme';
-import { WorkbenchAction, WorkbenchActionId } from '../models/app/WorkbenchModels';
+import { MainPageAction, MainPageActionId } from '../models/app/MainPageModels';
 
 @Component
 export struct ActionTile {
-  action: WorkbenchAction = {
-    id: WorkbenchActionId.ArchiveCenter,
+  action: MainPageAction = {
+    id: MainPageActionId.ArchiveCenter,
     title: '',
     tone: AppColors.Primary
   };
@@ -52,51 +52,51 @@ export struct ActionTile {
   }
 
   getIcon(): Resource {
-    if (this.action.id === WorkbenchActionId.ArchiveCenter ||
-      this.action.id === WorkbenchActionId.DeviceArchiveQuery ||
-      this.action.id === WorkbenchActionId.ArchiveRecordQuery ||
-      this.action.id === WorkbenchActionId.RecordQuery) {
+    if (this.action.id === MainPageActionId.ArchiveCenter ||
+      this.action.id === MainPageActionId.DeviceArchiveQuery ||
+      this.action.id === MainPageActionId.ArchiveRecordQuery ||
+      this.action.id === MainPageActionId.RecordQuery) {
       return $r('sys.symbol.text_clipboard');
     }
-    if (this.action.id === WorkbenchActionId.DeviceArchiveCreateRequest) {
+    if (this.action.id === MainPageActionId.DeviceArchiveCreateRequest) {
       return $r('sys.symbol.plus_circle');
     }
-    if (this.action.id === WorkbenchActionId.OperationsCenter ||
-      this.action.id === WorkbenchActionId.RepairReport) {
+    if (this.action.id === MainPageActionId.OperationsCenter ||
+      this.action.id === MainPageActionId.RepairReport) {
       return $r('sys.symbol.wrench_and_screwdriver');
     }
-    if (this.action.id === WorkbenchActionId.TaskAcceptance) {
+    if (this.action.id === MainPageActionId.TaskAcceptance) {
       return $r('sys.symbol.location_up');
     }
-    if (this.action.id === WorkbenchActionId.ReinspectionReport) {
+    if (this.action.id === MainPageActionId.ReinspectionReport) {
       return $r('sys.symbol.doc_text_badge_checkmark');
     }
-    if (this.action.id === WorkbenchActionId.ManagementCenter ||
-      this.action.id === WorkbenchActionId.DeviceArchiveReview ||
-      this.action.id === WorkbenchActionId.OperationsReview ||
-      this.action.id === WorkbenchActionId.ReviewRecordQuery) {
+    if (this.action.id === MainPageActionId.ManagementCenter ||
+      this.action.id === MainPageActionId.DeviceArchiveReview ||
+      this.action.id === MainPageActionId.OperationsReview ||
+      this.action.id === MainPageActionId.ReviewRecordQuery) {
       return $r('sys.symbol.checkmark_shield');
     }
-    if (this.action.id === WorkbenchActionId.OperationRecordQuery) {
+    if (this.action.id === MainPageActionId.OperationRecordQuery) {
       return $r('sys.symbol.clock');
     }
     return $r('sys.symbol.checkmark_shield');
   }
 
   getTone(): string {
-    if (this.action.id === WorkbenchActionId.OperationsCenter ||
-      this.action.id === WorkbenchActionId.DeviceVerification ||
-      this.action.id === WorkbenchActionId.TaskAcceptance ||
-      this.action.id === WorkbenchActionId.RepairReport ||
-      this.action.id === WorkbenchActionId.ReinspectionReport) {
+    if (this.action.id === MainPageActionId.OperationsCenter ||
+      this.action.id === MainPageActionId.DeviceVerification ||
+      this.action.id === MainPageActionId.TaskAcceptance ||
+      this.action.id === MainPageActionId.RepairReport ||
+      this.action.id === MainPageActionId.ReinspectionReport) {
       return AppColors.Success;
     }
-    if (this.action.id === WorkbenchActionId.ManagementCenter ||
-      this.action.id === WorkbenchActionId.DeviceArchiveReview ||
-      this.action.id === WorkbenchActionId.OperationsReview ||
-      this.action.id === WorkbenchActionId.OperationRecordQuery ||
-      this.action.id === WorkbenchActionId.ReviewRecordQuery ||
-      this.action.id === WorkbenchActionId.RecordQuery) {
+    if (this.action.id === MainPageActionId.ManagementCenter ||
+      this.action.id === MainPageActionId.DeviceArchiveReview ||
+      this.action.id === MainPageActionId.OperationsReview ||
+      this.action.id === MainPageActionId.OperationRecordQuery ||
+      this.action.id === MainPageActionId.ReviewRecordQuery ||
+      this.action.id === MainPageActionId.RecordQuery) {
       return AppColors.Warning;
     }
     return AppColors.Primary;

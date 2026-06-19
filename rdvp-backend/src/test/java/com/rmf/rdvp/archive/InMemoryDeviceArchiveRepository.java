@@ -78,6 +78,11 @@ public class InMemoryDeviceArchiveRepository implements DeviceArchiveRepository 
     }
 
     @Override
+    public long countActiveDevices() {
+        return devicesById.size();
+    }
+
+    @Override
     public boolean existsByCode(String deviceCode) {
         if (deletedDeviceCodes.contains(deviceCode)) {
             return true;

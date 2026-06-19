@@ -30,4 +30,9 @@ public class InMemoryDeviceVerificationRepository implements DeviceVerificationR
     public Optional<DeviceVerificationRecord> findById(String id) {
         return Optional.ofNullable(recordsById.get(id));
     }
+
+    @Override
+    public long countAll() {
+        return recordsById.size();
+    }
 }

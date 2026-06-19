@@ -44,6 +44,14 @@ public class InMemoryAuditLogRepository implements AuditLogRepository {
         return new AuditLogPage(filtered.subList(offset, toIndex), filtered.size());
     }
 
+    @Override
+    public long countSuccessByAction(AuditAction action) {
+        return records.stream()
+                .filter(record -> record.action() == action)
+                .filter(record -> record.status() == AuditStatus.SUCCESS)
+                .count();
+    }
+
     private String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value;
     }

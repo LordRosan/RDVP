@@ -71,7 +71,7 @@ struct ReinspectionReport {
   }
 
   onBackPress(): boolean {
-    this.backToWorkbench();
+    this.backToMainPage();
     return true;
   }
 
@@ -91,7 +91,7 @@ struct ReinspectionReport {
         color: AppColors.Divider
       })
       .onClick(() => {
-        this.backToWorkbench();
+        this.backToMainPage();
       })
     }
     .width('100%')
@@ -719,7 +719,7 @@ struct ReinspectionReport {
     return value < 10 ? `0${value}` : `${value}`;
   }
 
-  backToWorkbench(): void {
+  backToMainPage(): void {
     try {
       const router = this.getUIContext().getRouter();
       if (router.getState().index > 1) {
@@ -727,7 +727,7 @@ struct ReinspectionReport {
         return;
       }
 
-      router.replaceUrl({ url: 'pages/Workbench' });
+      router.replaceUrl({ url: 'pages/MainPage' });
     } catch (err) {
       try {
         this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });

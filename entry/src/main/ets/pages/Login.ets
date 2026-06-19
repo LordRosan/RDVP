@@ -14,7 +14,7 @@ struct Login {
 
   aboutToAppear(): void {
     if (SessionStore.isAuthenticated()) {
-      this.openWorkbench();
+      this.openMainPage();
       return;
     }
   }
@@ -218,7 +218,7 @@ struct Login {
       SessionStore.setSession(response.data);
     }
 
-    this.openWorkbench();
+    this.openMainPage();
   }
 
   validateBeforeRemoteLogin(): string {
@@ -247,9 +247,9 @@ struct Login {
     return fallbackMessage.length > 0 ? fallbackMessage : '登录失败';
   }
 
-  openWorkbench(): void {
+  openMainPage(): void {
     try {
-      this.getUIContext().getRouter().replaceUrl({ url: 'pages/Workbench' });
+      this.getUIContext().getRouter().replaceUrl({ url: 'pages/MainPage' });
     } catch (err) {
       this.message = '页面跳转失败';
     }

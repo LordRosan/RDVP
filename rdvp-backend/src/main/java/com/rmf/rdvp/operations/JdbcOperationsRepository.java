@@ -251,6 +251,48 @@ public class JdbcOperationsRepository implements OperationsRepository {
     }
 
     @Override
+    public long countTaskPoolItems() {
+        Long count = jdbcTemplate.queryForObject(
+                """
+                        SELECT count(*)
+                        FROM (
+                            SELECT f.id
+                            FROM fault_reports f
+                            JOIN devices d ON d.id = f.device_id
+                            WHERE f.status = 'PENDING_ACCEPTANCE'
+                              AND d.deleted_at IS NULL
+                            UNION ALL
+                            SELECT f2.id
+                            FROM fault_reports f2
+                            JOIN devices d2 ON d2.id = f2.device_id
+                            WHERE f2.status = 'PENDING_REINSPECTION'
+                              AND d2.deleted_at IS NULL
+                              AND NOT EXISTS (
+                                  SELECT 1 FROM repair_tasks rt2
+                                  WHERE rt2.fault_report_id = f2.id
+                                    AND rt2.task_type = 'REINSPECTION'
+                                    AND rt2.status IN ('ACCEPTED', 'PROCESSING')
+                              )
+                        ) pool_items
+                        """,
+                Map.of(),
+                Long.class);
+        return count == null ? 0 : count;
+    }
+
+    @Override
+    public long countFaultReports() {
+        Long count = jdbcTemplate.queryForObject(
+                """
+                        SELECT count(*)
+                        FROM fault_reports
+                        """,
+                Map.of(),
+                Long.class);
+        return count == null ? 0 : count;
+    }
+
+    @Override
     public boolean hasActiveRepairTaskForFault(String faultReportId) {
         Integer count = jdbcTemplate.queryForObject(
                 """
@@ -499,6 +541,18 @@ public class JdbcOperationsRepository implements OperationsRepository {
     }
 
     @Override
+    public long countRepairReports() {
+        Long count = jdbcTemplate.queryForObject(
+                """
+                        SELECT count(*)
+                        FROM repair_reports
+                        """,
+                Map.of(),
+                Long.class);
+        return count == null ? 0 : count;
+    }
+
+    @Override
     public Optional<RepairReportRecord> findLatestRepairReportByFaultReportId(String faultReportId) {
         List<RepairReportRecord> results = jdbcTemplate.query(
                 """
@@ -619,6 +673,18 @@ public class JdbcOperationsRepository implements OperationsRepository {
                         .addValue("reinspectedAt", create.reinspectedAt())
                         .addValue("description", create.description())
                         .addValue("createdAt", create.createdAt()));
+    }
+
+    @Override
+    public long countReinspectionRecords() {
+        Long count = jdbcTemplate.queryForObject(
+                """
+                        SELECT count(*)
+                        FROM reinspection_records
+                        """,
+                Map.of(),
+                Long.class);
+        return count == null ? 0 : count;
     }
 
     private FaultReportRecord mapFaultReport(ResultSet resultSet, int rowNumber) throws SQLException {

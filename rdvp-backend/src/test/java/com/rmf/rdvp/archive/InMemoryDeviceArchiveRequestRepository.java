@@ -75,6 +75,24 @@ public class InMemoryDeviceArchiveRequestRepository implements DeviceArchiveRequ
     }
 
     @Override
+    public long countApprovedByType(DeviceArchiveRequestType type) {
+        return requestsById.values()
+                .stream()
+                .filter(item -> item.status() == DeviceArchiveRequestStatus.APPROVED)
+                .filter(item -> item.type() == type)
+                .count();
+    }
+
+    @Override
+    public long countReviewed() {
+        return requestsById.values()
+                .stream()
+                .filter(item -> item.status() == DeviceArchiveRequestStatus.APPROVED ||
+                        item.status() == DeviceArchiveRequestStatus.REJECTED)
+                .count();
+    }
+
+    @Override
     public boolean hasPendingByDeviceId(String deviceId) {
         return requestsById.values()
                 .stream()

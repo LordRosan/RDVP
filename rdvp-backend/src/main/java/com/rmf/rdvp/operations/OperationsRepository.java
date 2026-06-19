@@ -22,6 +22,10 @@ public interface OperationsRepository {
 
     long countPendingAcceptanceFaults();
 
+    long countTaskPoolItems();
+
+    long countFaultReports();
+
     boolean hasActiveRepairTaskForFault(String faultReportId);
 
     boolean hasActiveReinspectionTaskForFault(String faultReportId);
@@ -42,6 +46,8 @@ public interface OperationsRepository {
 
     void createRepairReport(RepairReportCreate create);
 
+    long countRepairReports();
+
     Optional<RepairReportRecord> findLatestRepairReportByFaultReportId(String faultReportId);
 
     boolean markRepairTaskReported(String repairTaskId, OffsetDateTime completedAt);
@@ -55,4 +61,6 @@ public interface OperationsRepository {
             OffsetDateTime updatedAt);
 
     void createReinspectionRecord(ReinspectionRecordCreate create);
+
+    long countReinspectionRecords();
 }

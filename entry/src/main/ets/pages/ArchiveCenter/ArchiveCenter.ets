@@ -7,8 +7,8 @@ import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { SummaryPanel } from '../../components/SummaryPanel';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { PermissionCode } from '../../models/identity/PermissionModels';
-import { WorkbenchAction, WorkbenchActionId } from '../../models/app/WorkbenchModels';
-import { WorkbenchService } from '../../services/app/WorkbenchService';
+import { MainPageAction, MainPageActionId } from '../../models/app/MainPageModels';
+import { MainPageService } from '../../services/app/MainPageService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { PermissionTextFormatter } from '../../utils/PermissionTextFormatter';
@@ -17,10 +17,9 @@ import { PermissionTextFormatter } from '../../utils/PermissionTextFormatter';
 @Component
 struct ArchiveCenter {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
-  @State actions: WorkbenchAction[] = WorkbenchService.getArchiveCenterActions();
+  @State actions: MainPageAction[] = MainPageService.getArchiveCenterActions();
   @State message: string = '';
   @State messageTargetId: string = '';
-  @StorageLink('rdvp_workbench_refresh_revision') workbenchRefreshRevision: number = 0;
 
   aboutToAppear(): void {
     if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveCenterDeviceArchiveQuery)) {
@@ -67,7 +66,7 @@ struct ArchiveCenter {
   }
 
   onBackPress(): boolean {
-    this.backToWorkbench();
+    this.backToMainPage();
     return true;
   }
 
@@ -76,7 +75,7 @@ struct ArchiveCenter {
     CenterTitleBar({
       title: '档案中心',
       action: () => {
-        this.backToWorkbench();
+        this.backToMainPage();
       }
     })
   }
@@ -124,7 +123,7 @@ struct ArchiveCenter {
       })
 
       Column({ space: 10 }) {
-        ForEach(this.actions, (item: WorkbenchAction) => {
+        ForEach(this.actions, (item: MainPageAction) => {
           Column({ space: 8 }) {
             if (this.messageTargetId === `${item.id}` && this.message.length > 0) {
               InlineMessageSurface({
@@ -139,7 +138,7 @@ struct ArchiveCenter {
               })
           }
           .width('100%')
-        }, (item: WorkbenchAction) => item.id)
+        }, (item: MainPageAction) => item.id)
       }
       .width('100%')
     }
@@ -169,14 +168,10 @@ struct ArchiveCenter {
   }
 
   refreshCenterState(): void {
-    this.actions = WorkbenchService.getArchiveCenterActions();
+    this.actions = MainPageService.getArchiveCenterActions();
   }
 
   getArchivePermissionText(): string {
-    if (this.workbenchRefreshRevision < 0) {
-      return '-';
-    }
-
     const permissions: string[] = [];
     if (SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveQuery)) {
       permissions.push('可查询');
@@ -203,10 +198,10 @@ struct ArchiveCenter {
       SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveDeleteRequestSubmit) ? AppColors.Primary : AppColors.TextSecondary;
   }
 
-  openFeature(action: WorkbenchAction): void {
+  openFeature(action: MainPageAction): void {
     this.message = '';
     this.messageTargetId = '';
-    if (action.id === WorkbenchActionId.DeviceArchiveQuery) {
+    if (action.id === MainPageActionId.DeviceArchiveQuery) {
       try {
         this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveQuery' });
       } catch (err) {
@@ -216,7 +211,7 @@ struct ArchiveCenter {
       return;
     }
 
-    if (action.id === WorkbenchActionId.DeviceArchiveCreateRequest) {
+    if (action.id === MainPageActionId.DeviceArchiveCreateRequest) {
       try {
         this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveCodeVerify' });
       } catch (err) {
@@ -230,7 +225,7 @@ struct ArchiveCenter {
     this.messageTargetId = `${action.id}`;
   }
 
-  backToWorkbench(): void {
+  backToMainPage(): void {
     try {
       const router = this.getUIContext().getRouter();
       if (router.getState().index > 1) {
@@ -238,7 +233,7 @@ struct ArchiveCenter {
         return;
       }
 
-      router.replaceUrl({ url: 'pages/Workbench' });
+      router.replaceUrl({ url: 'pages/MainPage' });
     } catch (err) {
       try {
         this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });

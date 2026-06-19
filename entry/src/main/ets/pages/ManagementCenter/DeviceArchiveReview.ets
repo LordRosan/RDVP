@@ -80,7 +80,7 @@ struct DeviceArchiveReview {
   }
 
   onBackPress(): boolean {
-    this.backToWorkbench();
+    this.backToMainPage();
     return true;
   }
 
@@ -97,7 +97,7 @@ struct DeviceArchiveReview {
       .backgroundColor(AppColors.Surface)
       .border({ width: 1, color: AppColors.Divider })
       .onClick(() => {
-        this.backToWorkbench();
+        this.backToMainPage();
       })
     }
     .width('100%')
@@ -911,7 +911,7 @@ struct DeviceArchiveReview {
     return value < 10 ? `0${value}` : `${value}`;
   }
 
-  backToWorkbench(): void {
+  backToMainPage(): void {
     try {
       const router = this.getUIContext().getRouter();
       if (router.getState().index > 1) {
@@ -919,7 +919,7 @@ struct DeviceArchiveReview {
         return;
       }
 
-      router.replaceUrl({ url: 'pages/Workbench' });
+      router.replaceUrl({ url: 'pages/MainPage' });
     } catch (err) {
       try {
         this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });

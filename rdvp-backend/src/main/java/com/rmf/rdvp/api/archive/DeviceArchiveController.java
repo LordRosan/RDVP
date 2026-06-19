@@ -48,16 +48,20 @@ public class DeviceArchiveController {
     @GetMapping("/devices/by-code/{deviceCode}")
     public ResponseEntity<ApiResponse<DeviceArchiveResponse>> findByCode(
             @PathVariable String deviceCode,
+            Authentication authentication,
             HttpServletRequest request) {
         DeviceArchiveResponse response = DeviceArchiveResponse.from(archiveService.findByCode(deviceCode));
+        recordArchiveQuery(response, requireUser(authentication));
         return ResponseEntity.ok(ApiResponse.success(response, RequestIds.resolve(request)));
     }
 
     @GetMapping("/devices/{deviceId}")
     public ResponseEntity<ApiResponse<DeviceArchiveResponse>> findById(
             @PathVariable String deviceId,
+            Authentication authentication,
             HttpServletRequest request) {
         DeviceArchiveResponse response = DeviceArchiveResponse.from(archiveService.findById(deviceId));
+        recordArchiveQuery(response, requireUser(authentication));
         return ResponseEntity.ok(ApiResponse.success(response, RequestIds.resolve(request)));
     }
 
@@ -135,6 +139,15 @@ public class DeviceArchiveController {
                 target,
                 operator,
                 "设备二维码导出失败：%s。".formatted(errorCode.code()));
+    }
+
+    private void recordArchiveQuery(DeviceArchiveResponse response, AuthenticatedUser operator) {
+        auditLogService.recordSuccess(
+                AuditAction.DEVICE_ARCHIVE_QUERY,
+                response.id(),
+                response.deviceCode(),
+                operator,
+                "查询设备档案。");
     }
 }
 

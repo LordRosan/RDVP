@@ -82,6 +82,21 @@ public class JdbcAuditLogRepository implements AuditLogRepository {
         return new AuditLogPage(items, total == null ? 0 : total);
     }
 
+    @Override
+    public long countSuccessByAction(AuditAction action) {
+        Long count = jdbcTemplate.queryForObject(
+                """
+                        SELECT count(*)
+                        FROM audit_logs
+                        WHERE action = :action
+                          AND status = 'SUCCESS'
+                        """,
+                new MapSqlParameterSource()
+                        .addValue("action", action.name()),
+                Long.class);
+        return count == null ? 0 : count;
+    }
+
     private String buildWhereClause(AuditLogQuery query, MapSqlParameterSource parameters) {
         List<String> conditions = new ArrayList<>();
         if (query.action() != null) {

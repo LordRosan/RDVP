@@ -7,12 +7,12 @@ import { VerificationResult } from '../../../main/ets/models/operations/Verifica
 import { FaultReportService } from '../../../main/ets/services/operations/FaultReportService';
 import { DeviceVerificationService } from '../../../main/ets/services/operations/DeviceVerificationService';
 import { RepairTaskService } from '../../../main/ets/services/operations/RepairTaskService';
-import { WorkbenchService } from '../../../main/ets/services/app/WorkbenchService';
+import { MainPageService } from '../../../main/ets/services/app/MainPageService';
 
 export default function abilityTest() {
   describe('rdvpAbilityConfiguration', () => {
-    it('loadsWorkbenchConfiguration', 0, () => {
-      const actions = WorkbenchService.getActions();
+    it('loadsMainPageConfiguration', 0, () => {
+      const actions = MainPageService.getActions();
 
       expect(actions.length).assertEqual(7);
     });

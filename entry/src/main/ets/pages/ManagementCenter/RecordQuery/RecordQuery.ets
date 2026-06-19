@@ -1,6 +1,6 @@
 import { ActionTile } from '../../../components/ActionTile';
 import { StatusInfoRow } from '../../../components/StatusInfoRow';
-import { WorkbenchAction, WorkbenchActionId } from '../../../models/app/WorkbenchModels';
+import { MainPageAction, MainPageActionId } from '../../../models/app/MainPageModels';
 import { ManagementCenterRecordPermissions, PermissionCode } from '../../../models/identity/PermissionModels';
 import { SessionStore } from '../../../stores/SessionStore';
 import { AppColors } from '../../../styles/AppTheme';
@@ -11,7 +11,7 @@ import { PermissionTextFormatter } from '../../../utils/PermissionTextFormatter'
 @Component
 struct RecordQuery {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
-  @State actions: WorkbenchAction[] = this.createActions();
+  @State actions: MainPageAction[] = this.createActions();
   @State message: string = '';
   @State messageTargetId: string = '';
 
@@ -147,7 +147,7 @@ struct RecordQuery {
         .maxLines(1)
 
       Column({ space: 10 }) {
-        ForEach(this.actions, (item: WorkbenchAction) => {
+        ForEach(this.actions, (item: MainPageAction) => {
           Column({ space: 8 }) {
             if (this.messageTargetId === `${item.id}` && this.message.length > 0) {
               this.MessageText()
@@ -159,7 +159,7 @@ struct RecordQuery {
               })
           }
           .width('100%')
-        }, (item: WorkbenchAction) => item.id)
+        }, (item: MainPageAction) => item.id)
       }
       .width('100%')
     }
@@ -179,25 +179,25 @@ struct RecordQuery {
     }
   }
 
-  createActions(): WorkbenchAction[] {
-    const actions: WorkbenchAction[] = [];
+  createActions(): MainPageAction[] {
+    const actions: MainPageAction[] = [];
     if (SessionStore.hasPermission(PermissionCode.ManagementCenterArchiveRecordQuery)) {
       actions.push({
-        id: WorkbenchActionId.ArchiveRecordQuery,
+        id: MainPageActionId.ArchiveRecordQuery,
         title: '档案记录',
         tone: AppColors.Primary
       });
     }
     if (SessionStore.hasPermission(PermissionCode.ManagementCenterOperationRecordQuery)) {
       actions.push({
-        id: WorkbenchActionId.OperationRecordQuery,
+        id: MainPageActionId.OperationRecordQuery,
         title: '运维记录',
         tone: AppColors.Primary
       });
     }
     if (SessionStore.hasPermission(PermissionCode.ManagementCenterReviewRecordQuery)) {
       actions.push({
-        id: WorkbenchActionId.ReviewRecordQuery,
+        id: MainPageActionId.ReviewRecordQuery,
         title: '审核记录',
         tone: AppColors.Primary
       });
@@ -221,20 +221,20 @@ struct RecordQuery {
     return labels;
   }
 
-  openFeature(action: WorkbenchAction): void {
+  openFeature(action: MainPageAction): void {
     this.message = '';
     this.messageTargetId = '';
-    if (action.id === WorkbenchActionId.ArchiveRecordQuery) {
+    if (action.id === MainPageActionId.ArchiveRecordQuery) {
       this.openSubPage('pages/ManagementCenter/RecordQuery/ArchiveRecordQuery', '档案记录不可用', action.id);
       return;
     }
 
-    if (action.id === WorkbenchActionId.OperationRecordQuery) {
+    if (action.id === MainPageActionId.OperationRecordQuery) {
       this.openSubPage('pages/ManagementCenter/RecordQuery/OperationRecordQuery', '运维记录不可用', action.id);
       return;
     }
 
-    if (action.id === WorkbenchActionId.ReviewRecordQuery) {
+    if (action.id === MainPageActionId.ReviewRecordQuery) {
       this.openSubPage('pages/ManagementCenter/RecordQuery/ReviewRecordQuery', '审核记录不可用', action.id);
       return;
     }
@@ -243,7 +243,7 @@ struct RecordQuery {
     this.messageTargetId = `${action.id}`;
   }
 
-  openSubPage(url: string, errorMessage: string, actionId: WorkbenchActionId): void {
+  openSubPage(url: string, errorMessage: string, actionId: MainPageActionId): void {
     try {
       this.getUIContext().getRouter().pushUrl({ url });
     } catch (err) {

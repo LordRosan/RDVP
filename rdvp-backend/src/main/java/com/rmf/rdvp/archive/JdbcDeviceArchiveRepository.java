@@ -97,6 +97,19 @@ public class JdbcDeviceArchiveRepository implements DeviceArchiveRepository {
     }
 
     @Override
+    public long countActiveDevices() {
+        Long count = jdbcTemplate.queryForObject(
+                """
+                        SELECT count(*)
+                        FROM devices
+                        WHERE deleted_at IS NULL
+                        """,
+                Map.of(),
+                Long.class);
+        return count == null ? 0 : count;
+    }
+
+    @Override
     public boolean existsByCode(String deviceCode) {
         Integer count = jdbcTemplate.queryForObject(
                 """

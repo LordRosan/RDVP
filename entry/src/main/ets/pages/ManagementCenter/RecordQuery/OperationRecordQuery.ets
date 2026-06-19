@@ -320,7 +320,7 @@ struct OperationRecordQuery {
     try {
       const router = this.getUIContext().getRouter();
       if (router.getState().index > 1) { router.back(); return; }
-      router.replaceUrl({ url: 'pages/Workbench' });
+      router.replaceUrl({ url: 'pages/MainPage' });
     } catch (err) {
     }
   }

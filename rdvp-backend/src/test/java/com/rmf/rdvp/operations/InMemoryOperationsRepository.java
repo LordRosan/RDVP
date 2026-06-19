@@ -91,6 +91,21 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     }
 
     @Override
+    public long countTaskPoolItems() {
+        long pendingReinspectionPoolItems = faultReportsById.values()
+                .stream()
+                .filter(item -> item.status() == FaultStatus.PENDING_REINSPECTION)
+                .filter(item -> !hasActiveReinspectionTaskForFault(item.id()))
+                .count();
+        return countPendingAcceptanceFaults() + pendingReinspectionPoolItems;
+    }
+
+    @Override
+    public long countFaultReports() {
+        return faultReportsById.size();
+    }
+
+    @Override
     public boolean hasActiveRepairTaskForFault(String faultReportId) {
         return repairTasksById.values()
                 .stream()
@@ -216,6 +231,11 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     }
 
     @Override
+    public long countRepairReports() {
+        return repairReportsById.size();
+    }
+
+    @Override
     public Optional<RepairReportRecord> findLatestRepairReportByFaultReportId(String faultReportId) {
         return repairReportsById.values()
                 .stream()
@@ -304,6 +324,11 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     @Override
     public void createReinspectionRecord(ReinspectionRecordCreate create) {
         reinspectionRecordsById.put(create.id(), create);
+    }
+
+    @Override
+    public long countReinspectionRecords() {
+        return reinspectionRecordsById.size();
     }
 
     private TaskAcceptanceItem toTaskAcceptanceItem(FaultReportRecord fault, BigDecimal longitude, BigDecimal latitude) {

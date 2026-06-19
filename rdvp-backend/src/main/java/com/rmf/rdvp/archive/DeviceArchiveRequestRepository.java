@@ -11,6 +11,10 @@ public interface DeviceArchiveRequestRepository {
 
     long countPendingReview();
 
+    long countApprovedByType(DeviceArchiveRequestType type);
+
+    long countReviewed();
+
     boolean hasPendingByDeviceId(String deviceId);
 
     boolean hasPendingByTargetDeviceCode(String deviceCode);

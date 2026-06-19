@@ -3,24 +3,24 @@ import { ActionTile } from '../components/ActionTile';
 import { AppSectionTitle } from '../components/AppSectionTitle';
 import { HeroSurface } from '../components/HeroSurface';
 import { InlineMessageSurface } from '../components/InlineMessageSurface';
-import { WorkbenchAction, WorkbenchActionId } from '../models/app/WorkbenchModels';
+import { DashboardMetric, MainPageAction, MainPageActionId, MainPageDashboard } from '../models/app/MainPageModels';
 import { CurrentUserSnapshot } from '../models/identity/SessionModels';
-import { WorkbenchService } from '../services/app/WorkbenchService';
+import { MainPageService } from '../services/app/MainPageService';
 import { SessionStore } from '../stores/SessionStore';
 
 @Entry
 @Component
-struct Workbench {
+struct MainPage {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
-  @State actions: WorkbenchAction[] = WorkbenchService.getActions();
+  @State actions: MainPageAction[] = MainPageService.getActions();
+  @State dashboard: MainPageDashboard = MainPageService.getEmptyDashboard();
+  @State dashboardLoaded: boolean = false;
   @State currentUser: CurrentUserSnapshot = SessionStore.getCurrentUser();
   @State actionMessage: string = '';
   @State actionMessageTargetId: string = '';
-  @State personalCenterMessage: string = '';
   @State currentTabIndex: number = 0;
   @State logoutActionMessage: string = '';
   @State settingsMessage: string = '';
-  @StorageLink('rdvp_workbench_refresh_revision') workbenchRefreshRevision: number = 0;
 
   aboutToAppear(): void {
     if (!SessionStore.isAuthenticated()) {
@@ -28,26 +28,36 @@ struct Workbench {
       return;
     }
 
-    this.refreshWorkbenchState();
+    this.refreshMainPageState();
   }
 
   onPageShow(): void {
     if (SessionStore.isAuthenticated()) {
-      this.refreshWorkbenchState();
+      this.refreshMainPageState();
     }
   }
 
-  refreshWorkbenchState(): void {
-    this.applyWorkbenchState();
-    WorkbenchService.refreshSummaryRemoteFirst().then(() => {
-      this.applyWorkbenchState();
-    }).catch(() => {
-    });
+  refreshMainPageState(): void {
+    this.applyMainPageState();
+    this.refreshDashboard();
   }
 
-  applyWorkbenchState(): void {
-    this.actions = WorkbenchService.getActions();
+  applyMainPageState(): void {
+    this.actions = MainPageService.getActions();
     this.currentUser = SessionStore.getCurrentUser();
+  }
+
+  async refreshDashboard(): Promise<void> {
+    const response = await MainPageService.fetchDashboardRemoteFirst();
+    if (!SessionStore.isAuthenticated()) {
+      this.openLoginPage();
+      return;
+    }
+
+    if (response.success && response.data !== undefined) {
+      this.dashboard = response.data;
+      this.dashboardLoaded = true;
+    }
   }
 
   build() {
@@ -71,7 +81,7 @@ struct Workbench {
     .onChange((index: number) => {
       this.currentTabIndex = index;
       this.clearInlineMessages();
-      this.applyWorkbenchState();
+      this.applyMainPageState();
     })
     .height('100%')
     .width('100%')
@@ -83,9 +93,11 @@ struct Workbench {
     Scroll() {
       Column({ space: AppSpacing.Section }) {
         this.Header()
+        this.DashboardSection()
         this.ActionSection()
       }
       .alignItems(HorizontalAlign.Start)
+      .justifyContent(FlexAlign.Start)
       .padding({
         left: AppSpacing.PageX,
         right: AppSpacing.PageX,
@@ -93,6 +105,7 @@ struct Workbench {
         bottom: 26
       })
       .width('100%')
+      .constraintSize({ minHeight: '100%' })
     }
     .height('100%')
     .width('100%')
@@ -100,16 +113,219 @@ struct Workbench {
 
   @Builder
   Header() {
-    Column({ space: 12 }) {
-      HeroSurface({
-        eyebrow: this.getUserEyebrow(),
-        title: 'RDVP 工作台',
-        subtitle: this.getPermissionSummaryText(),
-        icon: $r('sys.symbol.square_grid_2x2'),
-        tone: AppColors.Primary
-      })
+    Column({ space: 14 }) {
+      Column({ space: 5 }) {
+        Text('RDVP')
+          .fontSize(38)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(AppColors.TextPrimary)
+          .maxLines(1)
 
-      this.PersonalCenterMessageText()
+        Text('Remote Device Verification Program')
+          .fontSize(13)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppColors.TextTertiary)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+
+      Row({ space: 12 }) {
+        Column({ space: 3 }) {
+          Text('欢迎您')
+            .fontSize(12)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(AppColors.TextTertiary)
+            .maxLines(1)
+
+          Text(this.getWelcomeName())
+            .fontSize(20)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(AppColors.TextPrimary)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+
+        Text(this.getRoleName())
+          .fontSize(13)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppColors.Primary)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .padding({
+            left: 12,
+            right: 12,
+            top: 7,
+            bottom: 7
+          })
+          .backgroundColor(AppColors.PrimarySurface)
+          .borderRadius(18)
+      }
+      .width('100%')
+      .padding({
+        left: 16,
+        right: 16,
+        top: 14,
+        bottom: 14
+      })
+      .backgroundColor(AppColors.Surface)
+      .borderRadius(24)
+      .border({
+        width: 1,
+        color: AppColors.Divider
+      })
+      .alignItems(VerticalAlign.Center)
+    }
+    .width('100%')
+    .padding({
+      left: 0,
+      right: 0,
+      top: 12,
+      bottom: 6
+    })
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  DashboardSection() {
+    if (this.dashboardLoaded && this.hasDashboardContent()) {
+      Column({ space: 12 }) {
+        AppSectionTitle({
+          title: '数据看板',
+          subtitle: ''
+        })
+
+        if (this.shouldShowArchiveDashboard()) {
+          this.DashboardCenterCard(
+            '档案中心',
+            '档案总量',
+            this.getArchivePrimaryValue(),
+            this.getArchiveDashboardMetrics(),
+            $r('sys.symbol.text_clipboard'),
+            AppColors.Primary)
+        }
+
+        if (this.shouldShowOperationsDashboard()) {
+          this.DashboardCenterCard(
+            '运维中心',
+            '任务数',
+            this.getOperationsPrimaryValue(),
+            this.getOperationsDashboardMetrics(),
+            $r('sys.symbol.wrench_and_screwdriver'),
+            AppColors.Success)
+        }
+
+        if (this.shouldShowManagementDashboard()) {
+          this.DashboardCenterCard(
+            '管理中心',
+            this.getManagementPrimaryLabel(),
+            this.getManagementPrimaryValue(),
+            this.getManagementDashboardMetrics(),
+            $r('sys.symbol.checkmark_shield'),
+            AppColors.Warning)
+        }
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+    }
+  }
+
+  @Builder
+  DashboardCenterCard(
+    title: string,
+    primaryLabel: string,
+    primaryValue: number,
+    metrics: DashboardMetric[],
+    icon: Resource,
+    tone: string
+  ) {
+    Column({ space: 16 }) {
+      Row({ space: 12 }) {
+        Stack() {
+          SymbolGlyph(icon)
+            .fontSize(24)
+            .fontColor([tone])
+        }
+        .width(46)
+        .height(46)
+        .borderRadius(16)
+        .backgroundColor(this.getDashboardToneSurface(tone))
+
+        Column({ space: 4 }) {
+          Text(title)
+            .fontSize(19)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(AppColors.TextPrimary)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+          Text(primaryLabel)
+            .fontSize(13)
+            .fontColor(AppColors.TextSecondary)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+
+        Column({ space: 2 }) {
+          Text(this.formatDashboardValue(primaryValue))
+            .fontSize(34)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(tone)
+            .maxLines(1)
+            .textAlign(TextAlign.End)
+        }
+        .alignItems(HorizontalAlign.End)
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+
+      if (metrics.length > 0) {
+        Divider()
+          .height(1)
+          .backgroundColor(AppColors.Divider)
+
+        Grid() {
+          ForEach(metrics, (metric: DashboardMetric) => {
+            GridItem() {
+              this.DashboardMetricCell(metric)
+            }
+          }, (metric: DashboardMetric) => metric.label)
+        }
+        .columnsTemplate('1fr 1fr')
+        .columnsGap(14)
+        .rowsGap(14)
+        .width('100%')
+      }
+    }
+    .width('100%')
+    .padding(18)
+    .backgroundColor(AppColors.SurfaceRaised)
+    .borderRadius(24)
+    .border({
+      width: 1,
+      color: AppColors.Divider
+    })
+  }
+
+  @Builder
+  DashboardMetricCell(metric: DashboardMetric) {
+    Column({ space: 4 }) {
+      Text(this.formatDashboardValue(metric.value))
+        .fontSize(22)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+
+      Text(metric.label)
+        .fontSize(12)
+        .fontColor(AppColors.TextSecondary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -124,7 +340,7 @@ struct Workbench {
       })
 
       Grid() {
-        ForEach(this.actions, (item: WorkbenchAction) => {
+        ForEach(this.actions, (item: MainPageAction) => {
           GridItem() {
             Column({ space: 8 }) {
               if (this.actionMessageTargetId === `${item.id}` && this.actionMessage.length > 0) {
@@ -143,7 +359,7 @@ struct Workbench {
             }
             .width('100%')
           }
-        }, (item: WorkbenchAction) => item.id)
+        }, (item: MainPageAction) => item.id)
       }
       .columnsTemplate('1fr')
       .rowsGap(10)
@@ -151,24 +367,6 @@ struct Workbench {
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
-  }
-
-  @Builder
-  PersonalCenterMessageText() {
-    if (this.personalCenterMessage.length > 0) {
-      InlineMessageSurface({
-        message: this.personalCenterMessage,
-        tone: AppColors.Danger
-      })
-    }
-  }
-
-  getUserEyebrow(): string {
-    if (this.currentUser.roleName.length > 0) {
-      return `${this.currentUser.roleName} 的业务入口`;
-    }
-
-    return '业务入口';
   }
 
   @Builder
@@ -396,31 +594,16 @@ struct Workbench {
     })
   }
 
-  getPermissionSummaryText(): string {
-    const count = this.actions.length;
-    if (count <= 0) {
-      return '当前账号暂无可访问中心';
-    }
-
-    return `当前账号可访问 ${count} 个中心`;
-  }
-
-  openPersonalCenter(): void {
-    this.currentTabIndex = 1;
-    this.clearInlineMessages();
-  }
-
-  openCenter(action: WorkbenchAction): void {
+  openCenter(action: MainPageAction): void {
     this.actionMessage = '';
     this.actionMessageTargetId = '';
-    this.personalCenterMessage = '';
 
     if (!SessionStore.isAuthenticated()) {
       this.openLoginPage();
       return;
     }
 
-    if (action.id === WorkbenchActionId.ArchiveCenter) {
+    if (action.id === MainPageActionId.ArchiveCenter) {
       try {
         this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/ArchiveCenter' });
       } catch (err) {
@@ -430,7 +613,7 @@ struct Workbench {
       return;
     }
 
-    if (action.id === WorkbenchActionId.OperationsCenter) {
+    if (action.id === MainPageActionId.OperationsCenter) {
       try {
         this.getUIContext().getRouter().pushUrl({ url: 'pages/OperationsCenter/OperationsCenter' });
       } catch (err) {
@@ -440,7 +623,7 @@ struct Workbench {
       return;
     }
 
-    if (action.id === WorkbenchActionId.ManagementCenter) {
+    if (action.id === MainPageActionId.ManagementCenter) {
       try {
         this.getUIContext().getRouter().pushUrl({ url: 'pages/ManagementCenter/ManagementCenter' });
       } catch (err) {
@@ -474,7 +657,6 @@ struct Workbench {
   }
 
   clearInlineMessages(): void {
-    this.personalCenterMessage = '';
     this.actionMessage = '';
     this.actionMessageTargetId = '';
     this.settingsMessage = '';
@@ -516,6 +698,158 @@ struct Workbench {
     }
 
     return '-';
+  }
+
+  getWelcomeName(): string {
+    if (this.currentUser.username !== undefined && this.currentUser.username.length > 0) {
+      return this.currentUser.username;
+    }
+
+    return this.getDisplayName();
+  }
+
+  getArchiveDashboardMetrics(): DashboardMetric[] {
+    const archive = this.dashboard.archive;
+    if (archive === undefined) {
+      return [];
+    }
+
+    return [
+      { label: '档案增加数', value: archive.archiveCreates },
+      { label: '档案删除数', value: archive.archiveDeletes },
+      { label: '档案修改数', value: archive.archiveUpdates },
+      { label: '档案查询数', value: archive.archiveQueries }
+    ];
+  }
+
+  getOperationsDashboardMetrics(): DashboardMetric[] {
+    const operations = this.dashboard.operations;
+    if (operations === undefined) {
+      return [];
+    }
+
+    return [
+      { label: '核验次数', value: operations.verifications },
+      { label: '报修次数', value: operations.faultReports },
+      { label: '维修数', value: operations.repairs },
+      { label: '复检数', value: operations.reinspections }
+    ];
+  }
+
+  getManagementDashboardMetrics(): DashboardMetric[] {
+    const management = this.dashboard.management;
+    if (management === undefined) {
+      return [];
+    }
+
+    const primaryKey = this.getManagementPrimaryKey();
+    const metrics: DashboardMetric[] = [];
+    if (management.pendingArchiveReviews !== undefined && primaryKey !== 'pendingArchiveReviews') {
+      metrics.push({ label: '档案待审核数', value: management.pendingArchiveReviews });
+    }
+    if (management.pendingOperationsReviews !== undefined && primaryKey !== 'pendingOperationsReviews') {
+      metrics.push({ label: '运维待审核数', value: management.pendingOperationsReviews });
+    }
+
+    return metrics;
+  }
+
+  hasDashboardContent(): boolean {
+    return this.shouldShowArchiveDashboard() ||
+      this.shouldShowOperationsDashboard() ||
+      this.shouldShowManagementDashboard();
+  }
+
+  shouldShowArchiveDashboard(): boolean {
+    return this.dashboard.archive !== undefined;
+  }
+
+  shouldShowOperationsDashboard(): boolean {
+    return this.dashboard.operations !== undefined;
+  }
+
+  shouldShowManagementDashboard(): boolean {
+    const management = this.dashboard.management;
+    return management !== undefined &&
+      (management.reviewedTotal !== undefined ||
+        management.pendingArchiveReviews !== undefined ||
+        management.pendingOperationsReviews !== undefined);
+  }
+
+  getArchivePrimaryValue(): number {
+    return this.dashboard.archive === undefined ? 0 : this.dashboard.archive.deviceTotal;
+  }
+
+  getOperationsPrimaryValue(): number {
+    return this.dashboard.operations === undefined ? 0 : this.dashboard.operations.taskPoolTotal;
+  }
+
+  getManagementPrimaryKey(): string {
+    const management = this.dashboard.management;
+    if (management === undefined) {
+      return '';
+    }
+
+    if (management.reviewedTotal !== undefined) {
+      return 'reviewedTotal';
+    }
+    if (management.pendingArchiveReviews !== undefined) {
+      return 'pendingArchiveReviews';
+    }
+    if (management.pendingOperationsReviews !== undefined) {
+      return 'pendingOperationsReviews';
+    }
+
+    return '';
+  }
+
+  getManagementPrimaryLabel(): string {
+    const primaryKey = this.getManagementPrimaryKey();
+    if (primaryKey === 'pendingArchiveReviews') {
+      return '档案待审核数';
+    }
+    if (primaryKey === 'pendingOperationsReviews') {
+      return '运维待审核数';
+    }
+
+    return '已审核数';
+  }
+
+  getManagementPrimaryValue(): number {
+    const management = this.dashboard.management;
+    if (management === undefined) {
+      return 0;
+    }
+
+    const primaryKey = this.getManagementPrimaryKey();
+    if (primaryKey === 'pendingArchiveReviews') {
+      return management.pendingArchiveReviews === undefined ? 0 : management.pendingArchiveReviews;
+    }
+    if (primaryKey === 'pendingOperationsReviews') {
+      return management.pendingOperationsReviews === undefined ? 0 : management.pendingOperationsReviews;
+    }
+
+    return management.reviewedTotal === undefined ? 0 : management.reviewedTotal;
+  }
+
+  formatDashboardValue(value: number): string {
+    if (!this.dashboardLoaded) {
+      return '--';
+    }
+
+    return `${value}`;
+  }
+
+  getDashboardToneSurface(tone: string): string {
+    if (tone === AppColors.Success) {
+      return AppColors.SuccessSurface;
+    }
+
+    if (tone === AppColors.Warning) {
+      return AppColors.WarningSurface;
+    }
+
+    return AppColors.PrimarySurface;
   }
 
   formatSessionExpiresAt(): string {
@@ -561,7 +895,7 @@ struct Workbench {
       }
 
       this.actionMessage = '登录页不可用';
-      this.actionMessageTargetId = `${WorkbenchActionId.ArchiveCenter}`;
+      this.actionMessageTargetId = `${MainPageActionId.ArchiveCenter}`;
     }
   }
 }

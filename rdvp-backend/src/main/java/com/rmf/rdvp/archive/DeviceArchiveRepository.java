@@ -8,6 +8,8 @@ public interface DeviceArchiveRepository {
 
     Optional<DeviceArchive> findById(String id);
 
+    long countActiveDevices();
+
     boolean existsByCode(String deviceCode);
 
     void create(DeviceArchiveCreate create);

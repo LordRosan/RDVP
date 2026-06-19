@@ -232,37 +232,80 @@ POST /api/v1/auth/logout
 }
 ```
 
-## 5.5 工作台概览接口
+### 5.5 主页数据看板
 
 ```text
-GET /api/v1/workbench/summary
+GET /api/v1/dashboard
 ```
 
-权限要求：登录用户。
+权限要求：登录用户。服务端会按当前用户权限裁剪响应字段。
 
-该接口为移动端工作台、档案中心、运维中心和管理中心提供概览计数。后端返回原始计数，客户端根据当前用户权限决定展示哪些指标。
+该接口为移动端首页数据看板提供真实业务统计，不返回后端服务状态、认证状态或旧版概览数据。用户无权查看的中心或字段会从响应中省略，客户端不得用 `0` 或占位内容补出未返回的数据。
 
 响应数据：
 
 ```json
 {
-  "pendingDeviceArchiveRequests": 1,
-  "taskAcceptanceItems": 2,
-  "repairTasks": 0,
-  "pendingReinspections": 0,
-  "offlineDrafts": 0
+  "archive": {
+    "deviceTotal": 3,
+    "archiveCreates": 1,
+    "archiveDeletes": 0,
+    "archiveUpdates": 2,
+    "archiveQueries": 8
+  },
+  "operations": {
+    "taskPoolTotal": 4,
+    "verifications": 12,
+    "faultReports": 3,
+    "repairs": 2,
+    "reinspections": 1
+  },
+  "management": {
+    "reviewedTotal": 5,
+    "pendingArchiveReviews": 1,
+    "pendingOperationsReviews": 0
+  }
 }
 ```
 
-字段说明：
+统计口径：
 
-| 字段 | 说明 |
+| 字段 | 口径 |
 | --- | --- |
-| `pendingDeviceArchiveRequests` | 待审核的设备档案添加、修改或删除申请数量 |
-| `taskAcceptanceItems` | 当前处于任务池中、可被接取的故障数量 |
-| `repairTasks` | 当前登录维修人员已接取且未提交维修报告的任务数量 |
-| `pendingReinspections` | 当前处于待复检状态的故障数量 |
-| `offlineDrafts` | 当前登录用户待同步的离线内容数量 |
+| `archive.deviceTotal` | 当前未删除设备档案总量 |
+| `archive.archiveCreates` | 已审核通过的新增档案申请数 |
+| `archive.archiveDeletes` | 已审核通过的删除档案申请数 |
+| `archive.archiveUpdates` | 已审核通过的修改档案申请数 |
+| `archive.archiveQueries` | 成功查询设备档案的审计记录数 |
+| `operations.taskPoolTotal` | 当前任务池中的维修任务与复检任务总数 |
+| `operations.verifications` | 设备核验记录总数 |
+| `operations.faultReports` | 故障报修记录总数 |
+| `operations.repairs` | 已提交维修报告总数 |
+| `operations.reinspections` | 已提交复检记录总数 |
+| `management.reviewedTotal` | 已完成审核的档案申请总数，后续包含运维审核 |
+| `management.pendingArchiveReviews` | 档案审核中的待审核申请数 |
+| `management.pendingOperationsReviews` | 运维审核中的待审核数；当前版本尚未启用运维审核，固定为 `0` |
+
+权限裁剪：
+
+| 数据 | 可见条件 |
+| --- | --- |
+| `archive` | 具备档案新增、修改、删除或二维码导出等档案业务权限 |
+| `operations` | 具备核验、报修、维修任务、维修报告、复检任务或复检报告等运维业务权限 |
+| `management.reviewedTotal` | 具备审核记录查询权限 |
+| `management.pendingArchiveReviews` | 具备档案申请审核权限 |
+| `management.pendingOperationsReviews` | 具备运维审核权限 |
+
+典型角色可见范围：
+
+| 角色 | 可见范围 |
+| --- | --- |
+| 超级管理员 | 全部中心和全部字段 |
+| 档案管理员 | 档案中心全部数据、管理中心的档案审核待审核数 |
+| 档案员 | 档案中心全部数据 |
+| 运维管理员 | 运维中心全部数据、管理中心的运维审核待审核数 |
+| 运维员 | 运维中心全部数据 |
+| 普通管理员 | 管理中心全部数据 |
 
 ## 6. 设备接口
 

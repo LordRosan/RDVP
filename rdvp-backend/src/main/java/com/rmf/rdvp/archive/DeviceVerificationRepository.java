@@ -7,4 +7,6 @@ public interface DeviceVerificationRepository {
     void create(DeviceVerificationRecordCreate create);
 
     Optional<DeviceVerificationRecord> findById(String id);
+
+    long countAll();
 }

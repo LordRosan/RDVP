@@ -51,7 +51,7 @@ struct PersonalCenter {
   }
 
   onBackPress(): boolean {
-    this.backToWorkbench();
+    this.backToMainPage();
     return true;
   }
 
@@ -71,7 +71,7 @@ struct PersonalCenter {
         color: AppColors.Divider
       })
       .onClick(() => {
-        this.backToWorkbench();
+        this.backToMainPage();
       })
     }
     .width('100%')
@@ -334,12 +334,12 @@ struct PersonalCenter {
     return value < 10 ? `0${value}` : `${value}`;
   }
 
-  backToWorkbench(): void {
+  backToMainPage(): void {
     try {
       this.getUIContext().getRouter().back();
     } catch (err) {
       try {
-        this.getUIContext().getRouter().replaceUrl({ url: 'pages/Workbench' });
+        this.getUIContext().getRouter().replaceUrl({ url: 'pages/MainPage' });
       } catch (innerErr) {
         try {
           this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });

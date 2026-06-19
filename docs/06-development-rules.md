@@ -66,7 +66,7 @@ RDVP/
 - `operations` 表示运维领域，是领域集合名，不按普通复数理解；设备核验、故障报修、维修任务和复检任务均归入该领域。
 - `management` 表示管理领域，用于档案审核、记录查询和后续管理能力。
 - `identity` 表示身份领域，用于认证、会话、角色和权限。
-- `app` 表示应用级能力，用于工作台、主题、应用设置等跨业务中心能力。
+- `app` 表示应用级能力，用于主页、主题、应用设置等跨业务中心能力。
 - `common` 表示通用基础能力，用于 API 响应、通用工具和跨领域基础模型。
 
 实体、页面、函数和变量命名应使用单数业务对象表达一个具体概念，例如 `RepairTask`、`RepairReport`、`ReinspectionReport`、`DeviceArchiveRequest`、`OperationRecordQuery`。只有当名称表达领域集合或列表结果时才使用集合语义，例如 `operations` 目录、`OperationsCenter` 页面、`RepairTaskList`。

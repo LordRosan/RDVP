@@ -78,6 +78,18 @@ public class JdbcDeviceVerificationRepository implements DeviceVerificationRepos
         return results.stream().findFirst();
     }
 
+    @Override
+    public long countAll() {
+        Long count = jdbcTemplate.queryForObject(
+                """
+                        SELECT count(*)
+                        FROM device_verification_records
+                        """,
+                Map.of(),
+                Long.class);
+        return count == null ? 0 : count;
+    }
+
     private DeviceVerificationRecord mapRecord(ResultSet resultSet, int rowNumber) throws SQLException {
         return new DeviceVerificationRecord(
                 resultSet.getString("id"),

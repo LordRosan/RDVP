@@ -1,0 +1,291 @@
+package com.rmf.rdvp.api.dashboard;
+
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.nio.charset.StandardCharsets;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+class DashboardControllerTests {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Test
+    void returnsDashboardStatsForAuthenticatedUser() throws Exception {
+        String token = login("admin", "password");
+
+        mockMvc.perform(get("/api/v1/dashboard")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.archive.deviceTotal").value(3))
+                .andExpect(jsonPath("$.data.archive.archiveCreates").value(0))
+                .andExpect(jsonPath("$.data.archive.archiveDeletes").value(0))
+                .andExpect(jsonPath("$.data.archive.archiveUpdates").value(0))
+                .andExpect(jsonPath("$.data.archive.archiveQueries").value(0))
+                .andExpect(jsonPath("$.data.operations.taskPoolTotal").value(0))
+                .andExpect(jsonPath("$.data.operations.verifications").value(0))
+                .andExpect(jsonPath("$.data.operations.faultReports").value(0))
+                .andExpect(jsonPath("$.data.operations.repairs").value(0))
+                .andExpect(jsonPath("$.data.operations.reinspections").value(0))
+                .andExpect(jsonPath("$.data.management.reviewedTotal").value(0))
+                .andExpect(jsonPath("$.data.management.pendingArchiveReviews").value(1))
+                .andExpect(jsonPath("$.data.management.pendingOperationsReviews").value(0));
+    }
+
+    @Test
+    void filtersDashboardStatsByCurrentUserPermissions() throws Exception {
+        String operationsStaffToken = login("operator", "password");
+        mockMvc.perform(get("/api/v1/dashboard")
+                        .header("Authorization", "Bearer " + operationsStaffToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.archive").doesNotExist())
+                .andExpect(jsonPath("$.data.operations.taskPoolTotal").value(0))
+                .andExpect(jsonPath("$.data.operations.verifications").value(0))
+                .andExpect(jsonPath("$.data.operations.faultReports").value(0))
+                .andExpect(jsonPath("$.data.operations.repairs").value(0))
+                .andExpect(jsonPath("$.data.operations.reinspections").value(0))
+                .andExpect(jsonPath("$.data.management").doesNotExist());
+
+        String operationsAdminToken = login("operationsadmin", "password");
+        mockMvc.perform(get("/api/v1/dashboard")
+                        .header("Authorization", "Bearer " + operationsAdminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.archive").doesNotExist())
+                .andExpect(jsonPath("$.data.operations.taskPoolTotal").value(0))
+                .andExpect(jsonPath("$.data.management.reviewedTotal").doesNotExist())
+                .andExpect(jsonPath("$.data.management.pendingArchiveReviews").doesNotExist())
+                .andExpect(jsonPath("$.data.management.pendingOperationsReviews").value(0));
+
+        String managerToken = login("manager", "password");
+        mockMvc.perform(get("/api/v1/dashboard")
+                        .header("Authorization", "Bearer " + managerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.archive").doesNotExist())
+                .andExpect(jsonPath("$.data.operations").doesNotExist())
+                .andExpect(jsonPath("$.data.management.reviewedTotal").value(0))
+                .andExpect(jsonPath("$.data.management.pendingArchiveReviews").value(1))
+                .andExpect(jsonPath("$.data.management.pendingOperationsReviews").value(0));
+
+        String archiveAdminToken = login("archiveadmin", "password");
+        mockMvc.perform(get("/api/v1/dashboard")
+                        .header("Authorization", "Bearer " + archiveAdminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.archive.deviceTotal").value(3))
+                .andExpect(jsonPath("$.data.operations").doesNotExist())
+                .andExpect(jsonPath("$.data.management.reviewedTotal").doesNotExist())
+                .andExpect(jsonPath("$.data.management.pendingArchiveReviews").value(1))
+                .andExpect(jsonPath("$.data.management.pendingOperationsReviews").doesNotExist());
+
+        String archiveStaffToken = login("archivist", "password");
+        mockMvc.perform(get("/api/v1/dashboard")
+                        .header("Authorization", "Bearer " + archiveStaffToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.archive.deviceTotal").value(3))
+                .andExpect(jsonPath("$.data.operations").doesNotExist())
+                .andExpect(jsonPath("$.data.management").doesNotExist());
+    }
+
+    @Test
+    void includesCompletedBusinessFlowCounts() throws Exception {
+        String archiveAdminToken = login("archiveadmin", "password");
+        String adminToken = login("admin", "password");
+        String operatorToken = login("operator", "password");
+
+        mockMvc.perform(post("/api/v1/device-archive-requests")
+                        .header("Authorization", "Bearer " + archiveAdminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "type": "CREATE",
+                                  "deviceCode": "RDVP-DEVICE-0099",
+                                  "reason": "新增现场控制柜。",
+                                  "changes": {
+                                    "name": {
+                                      "newValue": "现场控制柜Z-99"
+                                    }
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        String pendingResponse = mockMvc.perform(get("/api/v1/device-archive-requests?status=PENDING_REVIEW")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        String createRequestId = objectMapper.readTree(pendingResponse)
+                .path("data")
+                .path("items")
+                .findValues("id")
+                .stream()
+                .map(JsonNode::asText)
+                .filter(id -> !"DCR-LOCAL-0002".equals(id))
+                .findFirst()
+                .orElseThrow();
+
+        mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", createRequestId)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "decision": "APPROVED",
+                                  "reviewedAt": "2026-06-01T08:00:00Z",
+                                  "reviewComment": "信息完整，通过。"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        String faultId = createFaultReport(operatorToken);
+        String repairTaskId = acceptFaultReport(operatorToken, faultId);
+        mockMvc.perform(post("/api/v1/repair-tasks/{repairTaskId}/repair-reports", repairTaskId)
+                        .header("Authorization", "Bearer " + operatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "result": "REPAIRED",
+                                  "repairedAt": "2026-05-29T06:30:00Z",
+                                  "processDescription": "已完成维修并等待复检。",
+                                  "partsUsed": "Bearing assembly x1"
+                                }
+                                """))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/v1/reinspections/{faultReportId}/accept", faultId)
+                        .header("Authorization", "Bearer " + operatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "longitude": 114.1694,
+                                  "latitude": 22.3193
+                                }
+                                """))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-records", faultId)
+                        .header("Authorization", "Bearer " + operatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "result": "PASSED",
+                                  "reinspectedAt": "2026-05-29T07:00:00Z",
+                                  "description": "复检通过。"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records", "device-local-0002")
+                        .header("Authorization", "Bearer " + operatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "result": "NORMAL",
+                                  "description": "例行核验通过。",
+                                  "verifiedAt": "2026-06-03T08:30:00Z"
+                                }
+                                """))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/devices/by-code/RDVP-DEVICE-0001")
+                        .header("Authorization", "Bearer " + operatorToken))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/dashboard")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.archive.deviceTotal").value(4))
+                .andExpect(jsonPath("$.data.archive.archiveCreates").value(1))
+                .andExpect(jsonPath("$.data.archive.archiveQueries").value(greaterThanOrEqualTo(1)))
+                .andExpect(jsonPath("$.data.operations.verifications").value(1))
+                .andExpect(jsonPath("$.data.operations.faultReports").value(1))
+                .andExpect(jsonPath("$.data.operations.repairs").value(1))
+                .andExpect(jsonPath("$.data.operations.reinspections").value(1))
+                .andExpect(jsonPath("$.data.management.reviewedTotal").value(1));
+    }
+
+    @Test
+    void protectsDashboardEndpoint() throws Exception {
+        mockMvc.perform(get("/api/v1/dashboard"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
+    }
+
+    private String createFaultReport(String token) throws Exception {
+        String response = mockMvc.perform(post("/api/v1/fault-reports")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "deviceCode": "RDVP-DEVICE-0001",
+                                  "faultType": "HARDWARE_DAMAGE",
+                                  "severity": "SEVERE",
+                                  "occurredAt": "2026-05-29T04:00:00Z",
+                                  "description": "Primary bearing assembly is unstable.",
+                                  "sceneCondition": "Site has reduced load."
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+
+        return objectMapper.readTree(response).path("data").path("id").asText();
+    }
+
+    private String acceptFaultReport(String token, String faultId) throws Exception {
+        String response = mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/accept", faultId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "longitude": 114.1694,
+                                  "latitude": 22.3193
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+
+        return objectMapper.readTree(response).path("data").path("repairTaskId").asText();
+    }
+
+    private String login(String username, String password) throws Exception {
+        String response = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "%s",
+                                  "password": "%s",
+                                  "clientDeviceId": "test-device"
+                                }
+                                """.formatted(username, password)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+
+        return objectMapper.readTree(response).path("data").path("accessToken").asText();
+    }
+}

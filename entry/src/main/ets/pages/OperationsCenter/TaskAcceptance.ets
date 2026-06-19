@@ -89,7 +89,7 @@ struct TaskAcceptance {
   }
 
   onBackPress(): boolean {
-    this.backToWorkbench();
+    this.backToMainPage();
     return true;
   }
 
@@ -109,7 +109,7 @@ struct TaskAcceptance {
         color: AppColors.Divider
       })
       .onClick(() => {
-        this.backToWorkbench();
+        this.backToMainPage();
       })
     }
     .width('100%')
@@ -882,7 +882,7 @@ struct TaskAcceptance {
     });
   }
 
-  backToWorkbench(): void {
+  backToMainPage(): void {
     try {
       const router = this.getUIContext().getRouter();
       if (router.getState().index > 1) {
@@ -890,7 +890,7 @@ struct TaskAcceptance {
         return;
       }
 
-      router.replaceUrl({ url: 'pages/Workbench' });
+      router.replaceUrl({ url: 'pages/MainPage' });
     } catch (err) {
       try {
         this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });

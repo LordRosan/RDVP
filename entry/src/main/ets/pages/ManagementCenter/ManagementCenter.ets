@@ -7,8 +7,8 @@ import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { SummaryPanel } from '../../components/SummaryPanel';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { ManagementCenterPermissions, PermissionCode } from '../../models/identity/PermissionModels';
-import { WorkbenchAction, WorkbenchActionId } from '../../models/app/WorkbenchModels';
-import { WorkbenchService } from '../../services/app/WorkbenchService';
+import { MainPageAction, MainPageActionId } from '../../models/app/MainPageModels';
+import { MainPageService } from '../../services/app/MainPageService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { PermissionTextFormatter } from '../../utils/PermissionTextFormatter';
@@ -17,10 +17,9 @@ import { PermissionTextFormatter } from '../../utils/PermissionTextFormatter';
 @Component
 struct ManagementCenter {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
-  @State actions: WorkbenchAction[] = WorkbenchService.getManagementCenterActions();
+  @State actions: MainPageAction[] = MainPageService.getManagementCenterActions();
   @State message: string = '';
   @State messageTargetId: string = '';
-  @StorageLink('rdvp_workbench_refresh_revision') workbenchRefreshRevision: number = 0;
 
   aboutToAppear(): void {
     if (!AuthGuard.requireAnyPermission(this.getUIContext(), ManagementCenterPermissions)) {
@@ -67,7 +66,7 @@ struct ManagementCenter {
   }
 
   onBackPress(): boolean {
-    this.backToWorkbench();
+    this.backToMainPage();
     return true;
   }
 
@@ -76,7 +75,7 @@ struct ManagementCenter {
     CenterTitleBar({
       title: '管理中心',
       action: () => {
-        this.backToWorkbench();
+        this.backToMainPage();
       }
     })
   }
@@ -96,7 +95,7 @@ struct ManagementCenter {
   OverviewPanel() {
     SummaryPanel({
       title: '中心概览',
-      caption: '当前账号可执行的管理能力和待处理审核。'
+      caption: '当前账号可执行的管理能力。'
     }) {
       Column() {
         StatusInfoRow({
@@ -108,16 +107,6 @@ struct ManagementCenter {
           rowMinHeight: 72,
           verticalPadding: 8
         })
-        if (SessionStore.hasPermission(PermissionCode.ManagementCenterDeviceArchiveRequestReview)) {
-          this.CardDivider()
-        }
-        if (SessionStore.hasPermission(PermissionCode.ManagementCenterDeviceArchiveRequestReview)) {
-          StatusInfoRow({
-            label: '待审核申请数',
-            value: this.getPendingReviewText(),
-            tone: AppColors.Primary
-          })
-        }
       }
       .width('100%')
       .backgroundColor(AppColors.Surface)
@@ -134,7 +123,7 @@ struct ManagementCenter {
       })
 
       Column({ space: 10 }) {
-        ForEach(this.actions, (item: WorkbenchAction) => {
+        ForEach(this.actions, (item: MainPageAction) => {
           Column({ space: 8 }) {
             if (this.messageTargetId === `${item.id}` && this.message.length > 0) {
               InlineMessageSurface({
@@ -149,7 +138,7 @@ struct ManagementCenter {
               })
           }
           .width('100%')
-        }, (item: WorkbenchAction) => item.id)
+        }, (item: MainPageAction) => item.id)
       }
       .width('100%')
     }
@@ -179,18 +168,7 @@ struct ManagementCenter {
   }
 
   refreshCenterState(): void {
-    this.actions = WorkbenchService.getManagementCenterActions();
-    WorkbenchService.refreshSummaryRemoteFirst().then(() => {
-      this.actions = WorkbenchService.getManagementCenterActions();
-    });
-  }
-
-  getPendingReviewText(): string {
-    if (this.workbenchRefreshRevision < 0) {
-      return '-';
-    }
-
-    return `${WorkbenchService.getPendingArchiveRequestCount()}项`;
+    this.actions = MainPageService.getManagementCenterActions();
   }
 
   getPermissionSummaryText(): string {
@@ -214,21 +192,21 @@ struct ManagementCenter {
     return PermissionTextFormatter.formatTwoPerLine(parts);
   }
 
-  openFeature(action: WorkbenchAction): void {
+  openFeature(action: MainPageAction): void {
     this.message = '';
     this.messageTargetId = '';
-    if (action.id === WorkbenchActionId.DeviceArchiveReview) {
+    if (action.id === MainPageActionId.DeviceArchiveReview) {
       this.openPage('pages/ManagementCenter/DeviceArchiveReview', '档案审核不可用');
       return;
     }
 
-    if (action.id === WorkbenchActionId.OperationsReview) {
+    if (action.id === MainPageActionId.OperationsReview) {
       this.message = '运维审核功能后续开放';
       this.messageTargetId = `${action.id}`;
       return;
     }
 
-    if (action.id === WorkbenchActionId.RecordQuery) {
+    if (action.id === MainPageActionId.RecordQuery) {
       this.openPage('pages/ManagementCenter/RecordQuery/RecordQuery', '记录查询不可用');
       return;
     }
@@ -248,17 +226,17 @@ struct ManagementCenter {
 
   resolveActionIdByUrl(url: string): string {
     if (url === 'pages/ManagementCenter/DeviceArchiveReview') {
-      return `${WorkbenchActionId.DeviceArchiveReview}`;
+      return `${MainPageActionId.DeviceArchiveReview}`;
     }
 
     if (url === 'pages/ManagementCenter/RecordQuery/RecordQuery') {
-      return `${WorkbenchActionId.RecordQuery}`;
+      return `${MainPageActionId.RecordQuery}`;
     }
 
     return '';
   }
 
-  backToWorkbench(): void {
+  backToMainPage(): void {
     try {
       const router = this.getUIContext().getRouter();
       if (router.getState().index > 1) {
@@ -266,7 +244,7 @@ struct ManagementCenter {
         return;
       }
 
-      router.replaceUrl({ url: 'pages/Workbench' });
+      router.replaceUrl({ url: 'pages/MainPage' });
     } catch (err) {
       try {
         this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });

@@ -9,7 +9,7 @@ export struct HeroSurface {
   tone: string = AppColors.Primary;
 
   build() {
-    Column({ space: 18 }) {
+    Column() {
       Row() {
         Column({ space: 8 }) {
           if (this.eyebrow.length > 0) {
@@ -50,21 +50,6 @@ export struct HeroSurface {
       }
       .width('100%')
       .alignItems(VerticalAlign.Top)
-
-      Row({ space: 8 }) {
-        Stack()
-          .width(8)
-          .height(8)
-          .borderRadius(4)
-          .backgroundColor(this.tone)
-
-        Text('RDVP command surface')
-          .fontSize(12)
-          .fontColor(AppColors.TextTertiary)
-          .maxLines(1)
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
     }
     .width('100%')
     .padding({

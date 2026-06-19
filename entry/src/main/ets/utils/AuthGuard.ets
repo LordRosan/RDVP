@@ -27,7 +27,7 @@ export class AuthGuard {
     }
 
     try {
-      uiContext.getRouter().replaceUrl({ url: 'pages/Workbench' });
+      uiContext.getRouter().replaceUrl({ url: 'pages/MainPage' });
     } catch (err) {
     }
     return false;
@@ -43,7 +43,7 @@ export class AuthGuard {
     }
 
     try {
-      uiContext.getRouter().replaceUrl({ url: 'pages/Workbench' });
+      uiContext.getRouter().replaceUrl({ url: 'pages/MainPage' });
     } catch (err) {
     }
     return false;

@@ -7,8 +7,8 @@ import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { SummaryPanel } from '../../components/SummaryPanel';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { OperationsCenterPermissions, PermissionCode } from '../../models/identity/PermissionModels';
-import { WorkbenchAction, WorkbenchActionId } from '../../models/app/WorkbenchModels';
-import { WorkbenchService } from '../../services/app/WorkbenchService';
+import { MainPageAction, MainPageActionId } from '../../models/app/MainPageModels';
+import { MainPageService } from '../../services/app/MainPageService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { PermissionTextFormatter } from '../../utils/PermissionTextFormatter';
@@ -17,10 +17,9 @@ import { PermissionTextFormatter } from '../../utils/PermissionTextFormatter';
 @Component
 struct OperationsCenter {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
-  @State actions: WorkbenchAction[] = WorkbenchService.getOperationsCenterActions();
+  @State actions: MainPageAction[] = MainPageService.getOperationsCenterActions();
   @State message: string = '';
   @State messageTargetId: string = '';
-  @StorageLink('rdvp_workbench_refresh_revision') workbenchRefreshRevision: number = 0;
 
   aboutToAppear(): void {
     if (!AuthGuard.requireAnyPermission(this.getUIContext(), OperationsCenterPermissions)) {
@@ -67,7 +66,7 @@ struct OperationsCenter {
   }
 
   onBackPress(): boolean {
-    this.backToWorkbench();
+    this.backToMainPage();
     return true;
   }
 
@@ -76,7 +75,7 @@ struct OperationsCenter {
     CenterTitleBar({
       title: '运维中心',
       action: () => {
-        this.backToWorkbench();
+        this.backToMainPage();
       }
     })
   }
@@ -96,7 +95,7 @@ struct OperationsCenter {
   OverviewPanel() {
     SummaryPanel({
       title: '中心概览',
-      caption: '当前账号可处理的运维能力与任务数量。'
+      caption: '当前账号可处理的运维能力。'
     }) {
       Column() {
         StatusInfoRow({
@@ -108,22 +107,6 @@ struct OperationsCenter {
           rowMinHeight: 72,
           verticalPadding: 8
         })
-        this.CardDivider()
-        if (SessionStore.hasPermission(PermissionCode.OperationsCenterRepairReportSubmit)) {
-          StatusInfoRow({
-            label: '待维修任务数',
-            value: this.getActiveRepairTaskText(),
-            tone: AppColors.Warning
-          })
-          this.CardDivider()
-        }
-        if (SessionStore.hasPermission(PermissionCode.OperationsCenterReinspectionReportSubmit)) {
-          StatusInfoRow({
-            label: '待复检任务数',
-            value: this.getPendingReinspectionText(),
-            tone: AppColors.Primary
-          })
-        }
       }
       .width('100%')
       .backgroundColor(AppColors.Surface)
@@ -140,7 +123,7 @@ struct OperationsCenter {
       })
 
       Column({ space: 10 }) {
-        ForEach(this.actions, (item: WorkbenchAction) => {
+        ForEach(this.actions, (item: MainPageAction) => {
           Column({ space: 8 }) {
             if (this.messageTargetId === `${item.id}` && this.message.length > 0) {
               InlineMessageSurface({
@@ -155,7 +138,7 @@ struct OperationsCenter {
               })
           }
           .width('100%')
-        }, (item: WorkbenchAction) => item.id)
+        }, (item: MainPageAction) => item.id)
       }
       .width('100%')
     }
@@ -185,10 +168,7 @@ struct OperationsCenter {
   }
 
   refreshCenterState(): void {
-    this.actions = WorkbenchService.getOperationsCenterActions();
-    WorkbenchService.refreshSummaryRemoteFirst().then(() => {
-      this.actions = WorkbenchService.getOperationsCenterActions();
-    });
+    this.actions = MainPageService.getOperationsCenterActions();
   }
 
   getPermissionSummaryText(): string {
@@ -208,46 +188,30 @@ struct OperationsCenter {
     return PermissionTextFormatter.formatTwoPerLine(parts);
   }
 
-  getActiveRepairTaskText(): string {
-    return `${WorkbenchService.getActiveRepairTaskCount()}项`;
-  }
-
-  getPendingReinspectionCount(): number {
-    if (this.workbenchRefreshRevision < 0) {
-      return 0;
-    }
-
-    return WorkbenchService.getPendingReinspectionCount();
-  }
-
-  getPendingReinspectionText(): string {
-    return `${this.getPendingReinspectionCount()}项`;
-  }
-
-  openFeature(action: WorkbenchAction): void {
+  openFeature(action: MainPageAction): void {
     this.message = '';
     this.messageTargetId = '';
-    if (action.id === WorkbenchActionId.DeviceVerification) {
+    if (action.id === MainPageActionId.DeviceVerification) {
       this.openPage('pages/OperationsCenter/DeviceVerification', '核验与报修不可用');
       return;
     }
 
-    if (action.id === WorkbenchActionId.TaskAcceptance) {
+    if (action.id === MainPageActionId.TaskAcceptance) {
       this.openPage('pages/OperationsCenter/TaskAcceptance', '任务接取不可用');
       return;
     }
 
-    if (action.id === WorkbenchActionId.RepairReport) {
+    if (action.id === MainPageActionId.RepairReport) {
       this.openPage('pages/OperationsCenter/RepairReport', '维修任务不可用');
       return;
     }
 
-    if (action.id === WorkbenchActionId.ReinspectionReport) {
+    if (action.id === MainPageActionId.ReinspectionReport) {
       this.openPage('pages/OperationsCenter/ReinspectionReport', '复检任务不可用');
       return;
     }
 
-    if (action.id === WorkbenchActionId.OperationRecordQuery) {
+    if (action.id === MainPageActionId.OperationRecordQuery) {
       this.openPage('pages/ManagementCenter/RecordQuery/OperationRecordQuery', '运维记录不可用');
       return;
     }
@@ -267,29 +231,29 @@ struct OperationsCenter {
 
   resolveActionIdByUrl(url: string): string {
     if (url === 'pages/OperationsCenter/DeviceVerification') {
-      return `${WorkbenchActionId.DeviceVerification}`;
+      return `${MainPageActionId.DeviceVerification}`;
     }
 
     if (url === 'pages/OperationsCenter/TaskAcceptance') {
-      return `${WorkbenchActionId.TaskAcceptance}`;
+      return `${MainPageActionId.TaskAcceptance}`;
     }
 
     if (url === 'pages/OperationsCenter/RepairReport') {
-      return `${WorkbenchActionId.RepairReport}`;
+      return `${MainPageActionId.RepairReport}`;
     }
 
     if (url === 'pages/OperationsCenter/ReinspectionReport') {
-      return `${WorkbenchActionId.ReinspectionReport}`;
+      return `${MainPageActionId.ReinspectionReport}`;
     }
 
     if (url === 'pages/ManagementCenter/RecordQuery/OperationRecordQuery') {
-      return `${WorkbenchActionId.OperationRecordQuery}`;
+      return `${MainPageActionId.OperationRecordQuery}`;
     }
 
     return '';
   }
 
-  backToWorkbench(): void {
+  backToMainPage(): void {
     try {
       const router = this.getUIContext().getRouter();
       if (router.getState().index > 1) {
@@ -297,7 +261,7 @@ struct OperationsCenter {
         return;
       }
 
-      router.replaceUrl({ url: 'pages/Workbench' });
+      router.replaceUrl({ url: 'pages/MainPage' });
     } catch (err) {
       try {
         this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
