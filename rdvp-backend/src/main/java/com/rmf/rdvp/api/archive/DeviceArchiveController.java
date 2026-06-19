@@ -120,6 +120,51 @@ public class DeviceArchiveController {
         return ResponseEntity.ok(ApiResponse.success(response, RequestIds.resolve(request)));
     }
 
+    @PostMapping("/devices/{deviceId}/archive-export-verification")
+    public ResponseEntity<ApiResponse<DeviceArchiveExportVerificationResponse>> verifyArchiveDetailExport(
+            @PathVariable String deviceId,
+            @Valid @RequestBody DeviceArchiveExportVerificationRequest requestBody,
+            Authentication authentication,
+            HttpServletRequest request) {
+        AuthenticatedUser operator = requireUser(authentication);
+        DeviceArchiveResponse archive = null;
+        boolean verified;
+        try {
+            verified = authenticationService.verifyPassword(operator, requestBody.password());
+        } catch (BusinessException exception) {
+            recordArchiveExportVerificationFailure(deviceId, operator, exception.getErrorCode());
+            throw exception;
+        }
+
+        if (!verified) {
+            recordArchiveExportVerificationFailure(deviceId, operator, ErrorCode.INVALID_CREDENTIALS);
+            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
+        }
+
+        try {
+            archive = DeviceArchiveResponse.from(archiveService.findById(deviceId));
+            auditLogService.recordSuccess(
+                    AuditAction.DEVICE_ARCHIVE_EXPORT,
+                    archive.id(),
+                    archive.deviceCode(),
+                    operator,
+                    "导出设备档案详情。");
+            DeviceArchiveExportVerificationResponse response = new DeviceArchiveExportVerificationResponse(
+                    true,
+                    archive.id(),
+                    archive.deviceCode());
+            return ResponseEntity.ok(ApiResponse.success(response, RequestIds.resolve(request)));
+        } catch (BusinessException exception) {
+            auditLogService.recordFailure(
+                    AuditAction.DEVICE_ARCHIVE_EXPORT,
+                    archive == null ? normalizeAuditTarget(deviceId) : archive.id(),
+                    archive == null ? normalizeAuditTarget(deviceId) : archive.deviceCode(),
+                    operator,
+                    "设备档案详情导出失败：%s。".formatted(exception.getErrorCode().code()));
+            throw exception;
+        }
+    }
+
     private AuthenticatedUser requireUser(Authentication authentication) {
         if (authentication == null || !(authentication.getPrincipal() instanceof AuthenticatedUser user)) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
@@ -141,6 +186,19 @@ public class DeviceArchiveController {
                 "设备二维码导出失败：%s。".formatted(errorCode.code()));
     }
 
+    private void recordArchiveExportVerificationFailure(
+            String deviceId,
+            AuthenticatedUser operator,
+            ErrorCode errorCode) {
+        String target = normalizeAuditTarget(deviceId);
+        auditLogService.recordFailure(
+                AuditAction.DEVICE_ARCHIVE_EXPORT,
+                target,
+                target,
+                operator,
+                "设备档案详情导出失败：%s。".formatted(errorCode.code()));
+    }
+
     private void recordArchiveQuery(DeviceArchiveResponse response, AuthenticatedUser operator) {
         auditLogService.recordSuccess(
                 AuditAction.DEVICE_ARCHIVE_QUERY,
@@ -148,6 +206,11 @@ public class DeviceArchiveController {
                 response.deviceCode(),
                 operator,
                 "查询设备档案。");
+    }
+
+    private String normalizeAuditTarget(String value) {
+        String normalized = value == null ? "" : value.trim();
+        return normalized.isBlank() ? null : normalized;
     }
 }
 

@@ -252,6 +252,57 @@ class DeviceArchiveControllerTests {
     }
 
     @Test
+    void verifiesDeviceArchiveDetailExportAndRecordsAuditLog() throws Exception {
+        String token = login("operator", "password");
+
+        mockMvc.perform(post("/api/v1/devices/{deviceId}/archive-export-verification", "device-local-0001")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "password": "password"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.verified").value(true))
+                .andExpect(jsonPath("$.data.deviceCode").value("RDVP-DEVICE-0001"));
+
+        String managerToken = login("manager", "password");
+        mockMvc.perform(get("/api/v1/audit-logs?action=DEVICE_ARCHIVE_EXPORT&keyword=RDVP-DEVICE-0001")
+                        .header("Authorization", "Bearer " + managerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[*].status").value(hasItem("SUCCESS")))
+                .andExpect(jsonPath("$.data.items[*].targetNo").value(hasItem("RDVP-DEVICE-0001")))
+                .andExpect(jsonPath("$.data.items[*].actorName").value(hasItem("运维员")));
+    }
+
+    @Test
+    void rejectsDeviceArchiveDetailExportWhenPasswordIsInvalid() throws Exception {
+        String token = login("operator", "password");
+
+        mockMvc.perform(post("/api/v1/devices/{deviceId}/archive-export-verification", "device-local-0001")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "password": "wrong-password"
+                                }
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
+
+        String managerToken = login("manager", "password");
+        mockMvc.perform(get("/api/v1/audit-logs?action=DEVICE_ARCHIVE_EXPORT&keyword=device-local-0001")
+                        .header("Authorization", "Bearer " + managerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[*].status").value(hasItem("FAILED")))
+                .andExpect(jsonPath("$.data.items[*].targetId").value(hasItem("device-local-0001")))
+                .andExpect(jsonPath("$.data.items[*].actorName").value(hasItem("运维员")));
+    }
+
+    @Test
     void protectsDeviceQrCodeExportByPermission() throws Exception {
         String token = login("operator", "password");
 

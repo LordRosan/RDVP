@@ -183,13 +183,6 @@ struct DeviceArchiveCodeVerify {
               .fontColor(AppColors.TextPrimary)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-            Text(this.getResultReason())
-              .fontSize(13)
-              .fontColor(AppColors.TextSecondary)
-              .lineHeight(18)
-              .maxLines(2)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
           }
           .layoutWeight(1)
         }
@@ -200,7 +193,6 @@ struct DeviceArchiveCodeVerify {
           .backgroundColor(AppColors.Divider)
 
         this.ResultInfoRow('设备编号', DeviceService.normalizeDeviceCode(this.deviceCode), AppColors.TextSecondary)
-        this.ResultInfoRow('可用状态', this.result!.available ? '可用' : '不可用', this.getResultTone())
       }
       .width('100%')
       .padding({
@@ -218,7 +210,7 @@ struct DeviceArchiveCodeVerify {
       .alignItems(HorizontalAlign.Start)
 
       if (this.result!.available) {
-        this.ActionButton('继续添加档案', $r('sys.symbol.plus_circle'), () => {
+        this.ActionButton('添加设备档案', $r('sys.symbol.plus_circle'), () => {
           this.navigateToCreate();
         }, true)
       }
@@ -396,18 +388,6 @@ struct DeviceArchiveCodeVerify {
     }
 
     return AppColors.Danger;
-  }
-
-  getResultReason(): string {
-    if (this.result !== undefined && this.result.reason !== undefined && this.result.reason.length > 0) {
-      return this.result.reason;
-    }
-
-    if (this.result !== undefined && this.result.available) {
-      return '设备编号可用于添加档案';
-    }
-
-    return '设备编号暂不可用于添加档案';
   }
 
   backToArchiveCenter(): void {

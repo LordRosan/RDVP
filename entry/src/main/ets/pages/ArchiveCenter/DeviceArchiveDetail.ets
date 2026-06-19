@@ -1,9 +1,13 @@
-import { AppColors } from '../../styles/AppTheme';
+import { common } from '@kit.AbilityKit';
+import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
+import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { DeviceStatus, DeviceSummary } from '../../models/archive/DeviceModels';
+import { ApiErrorCode } from '../../models/common/ApiModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
 import { DeviceArchiveDeleteGuardService } from '../../services/archive/DeviceArchiveDeleteGuardService';
 import { ApiClient } from '../../services/common/ApiClient';
+import { DeviceArchiveExportService } from '../../services/archive/DeviceArchiveExportService';
 import {
   DeviceQrCodeExportResult,
   DeviceQrCodeExportService
@@ -12,6 +16,10 @@ import { DeviceService } from '../../services/archive/DeviceService';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
+
+const ARCHIVE_DETAIL_EXPORT_BODY_ID = 'rdvp_archive_detail_export_body';
+const EXPORT_MODE_ARCHIVE_DETAIL = 'ARCHIVE_DETAIL';
+const EXPORT_MODE_QR_CODE = 'QR_CODE';
 
 @Entry
 @Component
@@ -38,13 +46,15 @@ struct DeviceArchiveDetail {
   @State canChangeArchive: boolean = false;
   @State canDeleteArchive: boolean = false;
   @State canExportQrCode: boolean = false;
-  @State qrExportVisible: boolean = false;
-  @State qrExportPassword: string = '';
-  @State qrExportCaptcha: string = '';
-  @State qrExportCaptchaCode: string = DeviceArchiveDeleteGuardService.createCaptcha();
-  @State qrExportMessage: string = '';
-  @State qrExportMessageTone: string = AppColors.Danger;
-  @State qrExporting: boolean = false;
+  @State exportMenuVisible: boolean = false;
+  @State exportVisible: boolean = false;
+  @State exportMode: string = EXPORT_MODE_ARCHIVE_DETAIL;
+  @State exportPassword: string = '';
+  @State exportCaptcha: string = '';
+  @State exportCaptchaCode: string = DeviceArchiveDeleteGuardService.createCaptcha();
+  @State exportMessage: string = '';
+  @State exportMessageTone: string = AppColors.Danger;
+  @State exporting: boolean = false;
   @State qrExportResult: DeviceQrCodeExportResult | undefined = undefined;
 
   aboutToAppear(): void {
@@ -114,8 +124,7 @@ struct DeviceArchiveDetail {
           Column({ space: 18 }) {
             this.ModeHeader()
             if (this.hasDevice) {
-              this.ArchivePanel()
-              this.StatusPanel()
+              this.ArchiveExportBody()
               if (this.shouldShowActionPanel()) {
                 this.ActionPanel()
               }
@@ -126,10 +135,10 @@ struct DeviceArchiveDetail {
           .alignItems(HorizontalAlign.Start)
           .justifyContent(FlexAlign.Start)
           .padding({
-            left: 24,
-            right: 24,
+            left: AppSpacing.PageX,
+            right: AppSpacing.PageX,
             top: 0,
-            bottom: 28
+            bottom: AppSpacing.PageBottom
           })
           .width('100%')
         }
@@ -141,8 +150,12 @@ struct DeviceArchiveDetail {
       .height('100%')
       .width('100%')
 
-      if (this.qrExportVisible) {
-        this.QrExportOverlay()
+      if (this.exportMenuVisible) {
+        this.ExportMenuOverlay()
+      }
+
+      if (this.exportVisible) {
+        this.ExportOverlay()
       }
     }
     .height('100%')
@@ -151,8 +164,13 @@ struct DeviceArchiveDetail {
   }
 
   onBackPress(): boolean {
-    if (this.qrExportVisible) {
-      this.closeQrExportDialog();
+    if (this.exportMenuVisible) {
+      this.exportMenuVisible = false;
+      return true;
+    }
+
+    if (this.exportVisible) {
+      this.closeExportDialog();
       return true;
     }
 
@@ -200,8 +218,8 @@ struct DeviceArchiveDetail {
         .textOverflow({ overflow: TextOverflow.Ellipsis })
       .layoutWeight(1)
 
-      if (this.canExportQrCode && this.hasDevice) {
-        this.QrExportButton()
+      if (this.hasDevice) {
+        this.ExportButton()
       }
     }
     .width('100%')
@@ -210,6 +228,17 @@ struct DeviceArchiveDetail {
       top: 0,
       bottom: 2
     })
+  }
+
+  @Builder
+  ArchiveExportBody() {
+    Column({ space: 18 }) {
+      this.ArchivePanel()
+      this.StatusPanel()
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+    .id(ARCHIVE_DETAIL_EXPORT_BODY_ID)
   }
 
   @Builder
@@ -272,7 +301,7 @@ struct DeviceArchiveDetail {
       }
       .width('100%')
       .backgroundColor(AppColors.Surface)
-      .borderRadius(24)
+      .borderRadius(AppRadii.Large)
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
@@ -306,7 +335,7 @@ struct DeviceArchiveDetail {
       }
       .width('100%')
       .backgroundColor(AppColors.Surface)
-      .borderRadius(24)
+      .borderRadius(AppRadii.Large)
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
@@ -333,7 +362,7 @@ struct DeviceArchiveDetail {
     })
     .width('100%')
     .backgroundColor(AppColors.Surface)
-    .borderRadius(24)
+    .borderRadius(AppRadii.Large)
     .alignItems(HorizontalAlign.Start)
   }
 
@@ -350,16 +379,17 @@ struct DeviceArchiveDetail {
     })
     .width('100%')
     .backgroundColor(AppColors.Surface)
-    .borderRadius(24)
+    .borderRadius(AppRadii.Large)
     .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
-  QrExportButton() {
+  ExportButton() {
     Button({ type: ButtonType.Circle, stateEffect: true }) {
-      SymbolGlyph($r('sys.symbol.qrcode'))
-        .fontSize(30)
-        .fontColor([AppColors.TextPrimary])
+      Image($r('sys.media.ohos_ic_public_share'))
+        .width(24)
+        .height(24)
+        .fillColor(AppColors.TextPrimary)
     }
     .width(54)
     .height(54)
@@ -369,16 +399,16 @@ struct DeviceArchiveDetail {
       color: AppColors.Divider
     })
     .onClick(() => {
-      this.openQrExportDialog();
+      this.openExportMenu();
     })
   }
 
   @Builder
-  QrExportOverlay() {
+  ExportMenuOverlay() {
     Column() {
-      Column({ space: 16 }) {
+      Column({ space: 10 }) {
         Row() {
-          Text('导出设备二维码')
+          Text('导出')
             .fontSize(22)
             .fontWeight(FontWeight.Bold)
             .fontColor(AppColors.TextPrimary)
@@ -394,30 +424,127 @@ struct DeviceArchiveDetail {
           .height(40)
           .backgroundColor(AppColors.PageBackground)
           .onClick(() => {
-            this.closeQrExportDialog();
+            this.exportMenuVisible = false;
           })
         }
         .width('100%')
         .alignItems(VerticalAlign.Center)
 
-        this.QrExportPreview()
-        this.QrExportPasswordField()
-        this.QrExportCaptchaField()
+        this.ExportMenuItem('导出档案详情', $r('sys.symbol.text_clipboard'), () => {
+          this.exportMenuVisible = false;
+          this.openExportDialog(EXPORT_MODE_ARCHIVE_DETAIL);
+        })
+
+        if (this.canExportQrCode) {
+          this.ExportMenuItem('导出二维码', $r('sys.symbol.qrcode'), () => {
+            this.exportMenuVisible = false;
+            this.openExportDialog(EXPORT_MODE_QR_CODE);
+          })
+        }
+      }
+      .width('88%')
+      .padding({
+        left: 18,
+        right: 18,
+        top: 18,
+        bottom: 18
+      })
+      .backgroundColor(AppColors.Surface)
+      .borderRadius(AppRadii.Large)
+      .clip(true)
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor(AppColors.Scrim)
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+  }
+
+  @Builder
+  ExportMenuItem(label: string, icon: Resource, action: () => void) {
+    Button({ type: ButtonType.Normal, stateEffect: true }) {
+      Row({ space: 12 }) {
+        Column() {
+          SymbolGlyph(icon)
+            .fontSize(22)
+            .fontColor([AppColors.Primary])
+        }
+        .width(44)
+        .height(44)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(HorizontalAlign.Center)
+        .backgroundColor(AppColors.PrimarySurface)
+        .borderRadius(AppRadii.Medium)
+
+        Text(label)
+          .fontSize(17)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppColors.TextPrimary)
+          .maxLines(1)
+          .layoutWeight(1)
+
+        SymbolGlyph($r('sys.symbol.chevron_right'))
+          .fontSize(18)
+          .fontColor([AppColors.TextTertiary])
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+    }
+    .width('100%')
+    .height(60)
+    .padding({ left: 12, right: 12 })
+    .backgroundColor(AppColors.FieldBackground)
+    .borderRadius(AppRadii.Medium)
+    .onClick(() => {
+      action();
+    })
+  }
+
+  @Builder
+  ExportOverlay() {
+    Column() {
+      Column({ space: 16 }) {
+        Row() {
+          Text(this.getExportDialogTitle())
+            .fontSize(22)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(AppColors.TextPrimary)
+            .layoutWeight(1)
+            .maxLines(1)
+
+          Button({ type: ButtonType.Circle, stateEffect: true }) {
+            SymbolGlyph($r('sys.symbol.xmark'))
+              .fontSize(18)
+              .fontColor([AppColors.TextPrimary])
+          }
+          .width(40)
+          .height(40)
+          .backgroundColor(AppColors.PageBackground)
+          .onClick(() => {
+            this.closeExportDialog();
+          })
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+
+        this.ExportTargetCard()
+        this.ExportPasswordField()
+        this.ExportCaptchaField()
 
         Column({ space: 10 }) {
-          this.QrExportMessageText()
+          this.ExportMessageText()
 
           Row({ space: 10 }) {
             Column() {
-              this.QrExportSecondaryButton('取消', () => {
-                this.closeQrExportDialog();
+              this.ExportSecondaryButton('取消', () => {
+                this.closeExportDialog();
               })
             }
             .layoutWeight(1)
 
             Column() {
-              this.QrExportPrimaryButton(this.qrExporting ? '导出中' : '导出', () => {
-                this.confirmAndExportQrCode();
+              this.ExportPrimaryButton(this.exporting ? '导出中' : '导出', () => {
+                this.confirmAndExport();
               })
             }
             .layoutWeight(1)
@@ -435,7 +562,7 @@ struct DeviceArchiveDetail {
         bottom: 22
       })
       .backgroundColor(AppColors.Surface)
-      .borderRadius(28)
+      .borderRadius(AppRadii.Hero)
       .clip(true)
     }
     .width('100%')
@@ -443,6 +570,53 @@ struct DeviceArchiveDetail {
     .backgroundColor(AppColors.Scrim)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
+  }
+
+  @Builder
+  ExportTargetCard() {
+    if (this.exportMode === EXPORT_MODE_QR_CODE) {
+      this.QrExportPreview()
+    } else {
+      Column({ space: 10 }) {
+        Row({ space: 12 }) {
+          Column() {
+            SymbolGlyph($r('sys.symbol.text_clipboard'))
+              .fontSize(26)
+              .fontColor([AppColors.Primary])
+          }
+          .width(48)
+          .height(48)
+          .justifyContent(FlexAlign.Center)
+          .alignItems(HorizontalAlign.Center)
+          .backgroundColor(AppColors.PrimarySurface)
+          .borderRadius(AppRadii.Medium)
+
+          Column({ space: 4 }) {
+            Text('导出档案详情')
+              .fontSize(17)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(AppColors.TextPrimary)
+              .maxLines(1)
+
+            Text(this.device.deviceCode)
+              .fontSize(14)
+              .fontColor(AppColors.TextSecondary)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+          }
+          .layoutWeight(1)
+          .alignItems(HorizontalAlign.Start)
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+      }
+      .width('100%')
+      .padding(16)
+      .backgroundColor(AppColors.FieldBackground)
+      .borderRadius(AppRadii.Medium)
+      .border({ width: 1, color: AppColors.Border })
+      .alignItems(HorizontalAlign.Start)
+    }
   }
 
   @Builder
@@ -476,32 +650,32 @@ struct DeviceArchiveDetail {
       .aspectRatio(1)
       .padding(16)
       .backgroundColor(AppColors.FieldBackground)
-      .borderRadius(18)
+      .borderRadius(AppRadii.Medium)
       .border({ width: 1, color: AppColors.Border })
     }
     .width('100%')
   }
 
   @Builder
-  QrExportPasswordField() {
+  ExportPasswordField() {
     Column({ space: 8 }) {
-      this.QrExportFieldTitle('当前账号密码')
+      this.ExportFieldTitle('当前账号密码')
 
       TextInput({
         placeholder: '输入当前账号密码',
-        text: this.qrExportPassword
+        text: this.exportPassword
       })
         .type(InputType.Password)
         .height(54)
         .fontSize(16)
         .backgroundColor(AppColors.FieldBackground)
-        .borderRadius(18)
+        .borderRadius(AppRadii.Medium)
         .padding({ left: 16, right: 16 })
         .border({ width: 1, color: AppColors.Border })
-        .enabled(!this.qrExporting)
+        .enabled(!this.exporting)
         .onChange((value: string) => {
-          this.qrExportPassword = value;
-          this.clearQrExportMessageOnInput();
+          this.exportPassword = value;
+          this.clearExportMessageOnInput();
         })
     }
     .width('100%')
@@ -509,31 +683,31 @@ struct DeviceArchiveDetail {
   }
 
   @Builder
-  QrExportCaptchaField() {
+  ExportCaptchaField() {
     Column({ space: 8 }) {
-      this.QrExportFieldTitle('验证码')
+      this.ExportFieldTitle('验证码')
 
       Row({ space: 10 }) {
         TextInput({
           placeholder: '输入验证码',
-          text: this.qrExportCaptcha
+          text: this.exportCaptcha
         })
           .height(54)
           .fontSize(16)
           .backgroundColor(AppColors.FieldBackground)
-          .borderRadius(18)
+          .borderRadius(AppRadii.Medium)
           .padding({ left: 16, right: 16 })
           .border({ width: 1, color: AppColors.Border })
           .layoutWeight(1)
-          .enabled(!this.qrExporting)
+          .enabled(!this.exporting)
           .onChange((value: string) => {
-            this.qrExportCaptcha = value;
-            this.clearQrExportMessageOnInput();
+            this.exportCaptcha = value;
+            this.clearExportMessageOnInput();
           })
 
         Button({ type: ButtonType.Capsule, stateEffect: true }) {
           Row({ space: 6 }) {
-            Text(this.qrExportCaptchaCode)
+            Text(this.exportCaptchaCode)
               .fontSize(16)
               .fontWeight(FontWeight.Bold)
               .fontColor(AppColors.TextPrimary)
@@ -551,9 +725,9 @@ struct DeviceArchiveDetail {
         .height(54)
         .backgroundColor(AppColors.PageBackground)
         .border({ width: 1, color: AppColors.Border })
-        .enabled(!this.qrExporting)
+        .enabled(!this.exporting)
         .onClick(() => {
-          this.refreshQrExportCaptcha();
+          this.refreshExportCaptcha();
         })
       }
       .width('100%')
@@ -564,20 +738,15 @@ struct DeviceArchiveDetail {
   }
 
   @Builder
-  QrExportMessageText() {
-    if (this.qrExportMessage.length > 0) {
-      Text(this.qrExportMessage)
-        .fontSize(13)
-        .fontColor(this.qrExportMessageTone)
-        .lineHeight(18)
-        .maxLines(3)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
-    }
+  ExportMessageText() {
+    InlineMessageSurface({
+      message: this.exportMessage,
+      tone: this.exportMessageTone
+    })
   }
 
   @Builder
-  QrExportFieldTitle(title: string) {
+  ExportFieldTitle(title: string) {
     Text(title)
       .fontSize(14)
       .fontWeight(FontWeight.Medium)
@@ -586,8 +755,8 @@ struct DeviceArchiveDetail {
   }
 
   @Builder
-  QrExportPrimaryButton(label: string, action: () => void) {
-    Button({ type: ButtonType.Capsule, stateEffect: !this.qrExporting && !this.isQrExportLocked() }) {
+  ExportPrimaryButton(label: string, action: () => void) {
+    Button({ type: ButtonType.Capsule, stateEffect: !this.exporting && !this.isExportLocked() }) {
       Text(label)
         .fontSize(16)
         .fontWeight(FontWeight.Medium)
@@ -596,16 +765,16 @@ struct DeviceArchiveDetail {
     }
     .height(52)
     .width('100%')
-    .backgroundColor(this.qrExporting || this.isQrExportLocked() ? AppColors.Disabled : AppColors.Primary)
-    .enabled(!this.qrExporting && !this.isQrExportLocked())
+    .backgroundColor(this.exporting || this.isExportLocked() ? AppColors.Disabled : AppColors.Primary)
+    .enabled(!this.exporting && !this.isExportLocked())
     .onClick(() => {
       action();
     })
   }
 
   @Builder
-  QrExportSecondaryButton(label: string, action: () => void) {
-    Button({ type: ButtonType.Capsule, stateEffect: !this.qrExporting }) {
+  ExportSecondaryButton(label: string, action: () => void) {
+    Button({ type: ButtonType.Capsule, stateEffect: !this.exporting }) {
       Text(label)
         .fontSize(16)
         .fontWeight(FontWeight.Medium)
@@ -616,7 +785,7 @@ struct DeviceArchiveDetail {
     .width('100%')
     .backgroundColor(AppColors.FieldBackground)
     .border({ width: 1, color: AppColors.Border })
-    .enabled(!this.qrExporting)
+    .enabled(!this.exporting)
     .onClick(() => {
       action();
     })
@@ -624,38 +793,26 @@ struct DeviceArchiveDetail {
 
   @Builder
   DetailMessageText() {
-    if (this.detailMessage.length > 0) {
-      Text(this.detailMessage)
-        .fontSize(13)
-        .fontColor(this.detailMessageTone)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
-    }
+    InlineMessageSurface({
+      message: this.detailMessage,
+      tone: this.detailMessageTone
+    })
   }
 
   @Builder
   ChangeActionMessageText() {
-    if (this.changeActionMessage.length > 0) {
-      Text(this.changeActionMessage)
-        .fontSize(13)
-        .fontColor(this.changeActionMessageTone)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
-    }
+    InlineMessageSurface({
+      message: this.changeActionMessage,
+      tone: this.changeActionMessageTone
+    })
   }
 
   @Builder
   DeleteActionMessageText() {
-    if (this.deleteActionMessage.length > 0) {
-      Text(this.deleteActionMessage)
-        .fontSize(13)
-        .fontColor(this.deleteActionMessageTone)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
-    }
+    InlineMessageSurface({
+      message: this.deleteActionMessage,
+      tone: this.deleteActionMessageTone
+    })
   }
 
   @Builder
@@ -740,108 +897,169 @@ struct DeviceArchiveDetail {
     return SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveDeleteRequestSubmit);
   }
 
-  openQrExportDialog(): void {
-    if (!SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveQrCodeExport)) {
+  openExportMenu(): void {
+    if (!this.hasDevice) {
+      return;
+    }
+
+    this.exportMenuVisible = true;
+  }
+
+  openExportDialog(mode: string): void {
+    if (mode === EXPORT_MODE_QR_CODE && !SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveQrCodeExport)) {
       this.detailMessage = '当前账号无权导出设备二维码';
       this.detailMessageTone = AppColors.Danger;
       return;
     }
 
     if (ApiClient.getBaseUrl().length === 0) {
-      this.detailMessage = '后端服务地址未配置，无法导出设备二维码';
+      this.detailMessage = '导出功能暂不可用，请稍后重试';
       this.detailMessageTone = AppColors.Danger;
       return;
     }
 
-    if (DeviceArchiveDeleteGuardService.isQrExportLocked(this.device.deviceCode)) {
+    if (mode === EXPORT_MODE_QR_CODE && DeviceArchiveDeleteGuardService.isQrExportLocked(this.device.deviceCode)) {
       this.detailMessage = DeviceArchiveDeleteGuardService.getQrExportLockMessage(this.device.deviceCode);
       this.detailMessageTone = AppColors.Danger;
       return;
     }
 
-    this.qrExportVisible = true;
-    this.qrExportPassword = '';
-    this.qrExportCaptcha = '';
-    this.qrExportCaptchaCode = DeviceArchiveDeleteGuardService.createCaptcha();
-    this.qrExportMessage = '';
-    this.qrExportMessageTone = AppColors.Danger;
+    this.exportMode = mode;
+    this.exportVisible = true;
+    this.exportPassword = '';
+    this.exportCaptcha = '';
+    this.exportCaptchaCode = DeviceArchiveDeleteGuardService.createCaptcha();
+    this.exportMessage = '';
+    this.exportMessageTone = AppColors.Danger;
     this.qrExportResult = undefined;
   }
 
-  closeQrExportDialog(): void {
-    if (this.qrExporting) {
+  closeExportDialog(): void {
+    if (this.exporting) {
       return;
     }
 
-    this.qrExportVisible = false;
-    this.qrExportPassword = '';
-    this.qrExportCaptcha = '';
-    this.qrExportMessage = '';
+    this.exportVisible = false;
+    this.exportPassword = '';
+    this.exportCaptcha = '';
+    this.exportMessage = '';
     this.qrExportResult = undefined;
   }
 
-  refreshQrExportCaptcha(): void {
-    this.qrExportCaptchaCode = DeviceArchiveDeleteGuardService.createCaptcha();
-    this.qrExportCaptcha = '';
-    this.qrExportMessage = '';
+  refreshExportCaptcha(): void {
+    this.exportCaptchaCode = DeviceArchiveDeleteGuardService.createCaptcha();
+    this.exportCaptcha = '';
+    this.exportMessage = '';
     this.qrExportResult = undefined;
   }
 
-  clearQrExportMessageOnInput(): void {
-    this.qrExportMessage = '';
+  clearExportMessageOnInput(): void {
+    this.exportMessage = '';
     this.qrExportResult = undefined;
   }
 
-  async confirmAndExportQrCode(): Promise<void> {
-    if (this.qrExporting) {
+  async confirmAndExport(): Promise<void> {
+    if (this.exporting) {
       return;
     }
 
-    if (DeviceArchiveDeleteGuardService.isQrExportLocked(this.device.deviceCode)) {
-      this.qrExportMessage = DeviceArchiveDeleteGuardService.getQrExportLockMessage(this.device.deviceCode);
-      this.qrExportMessageTone = AppColors.Danger;
-      return;
-    }
-
-    if (this.qrExportCaptcha.trim().length === 0) {
-      this.qrExportMessage = '请输入验证码';
-      this.qrExportMessageTone = AppColors.Danger;
-      return;
-    }
-
-    if (this.qrExportCaptcha.trim() !== this.qrExportCaptchaCode.trim()) {
-      this.qrExportMessage = '验证码错误，请重新输入';
-      this.qrExportMessageTone = AppColors.Danger;
-      this.qrExportCaptcha = '';
-      this.qrExportCaptchaCode = DeviceArchiveDeleteGuardService.createCaptcha();
-      this.qrExportResult = undefined;
+    if (!this.validateExportForm()) {
       return;
     }
 
     const context = this.getUIContext().getHostContext();
     if (context === undefined) {
-      this.qrExportMessage = '无法获取页面上下文';
-      this.qrExportMessageTone = AppColors.Danger;
+      this.exportMessage = '导出功能暂不可用，请稍后重试';
+      this.exportMessageTone = AppColors.Danger;
       return;
     }
 
-    this.qrExporting = true;
+    this.exporting = true;
+    if (this.exportMode === EXPORT_MODE_QR_CODE) {
+      await this.confirmAndExportQrCode(context);
+      return;
+    }
+
+    await this.confirmAndExportArchiveDetail(context);
+  }
+
+  validateExportForm(): boolean {
+    if (this.exportMode === EXPORT_MODE_QR_CODE && DeviceArchiveDeleteGuardService.isQrExportLocked(this.device.deviceCode)) {
+      this.exportMessage = DeviceArchiveDeleteGuardService.getQrExportLockMessage(this.device.deviceCode);
+      this.exportMessageTone = AppColors.Danger;
+      return false;
+    }
+
+    if (this.exportCaptcha.trim().length === 0) {
+      this.exportMessage = '请输入验证码';
+      this.exportMessageTone = AppColors.Danger;
+      return false;
+    }
+
+    if (this.exportCaptcha.trim() !== this.exportCaptchaCode.trim()) {
+      this.exportMessage = '验证码错误，请重新输入';
+      this.exportMessageTone = AppColors.Danger;
+      this.exportCaptcha = '';
+      this.exportCaptchaCode = DeviceArchiveDeleteGuardService.createCaptcha();
+      this.qrExportResult = undefined;
+      return false;
+    }
+
+    return true;
+  }
+
+  async confirmAndExportArchiveDetail(context: common.Context): Promise<void> {
+    const verifyResponse = await DeviceArchiveExportService.verifyArchiveDetailExportRemoteFirst({
+      deviceId: this.device.id,
+      password: this.exportPassword
+    });
+    if (!verifyResponse.success || verifyResponse.data === undefined || !verifyResponse.data.verified) {
+      this.exportMessage = this.mapExportErrorMessage(verifyResponse.error === undefined ? '' : `${verifyResponse.error.code}`,
+        verifyResponse.error === undefined ? '' : verifyResponse.error.message);
+      this.exportMessageTone = AppColors.Danger;
+      this.exporting = false;
+      this.exportCaptcha = '';
+      this.exportCaptchaCode = DeviceArchiveDeleteGuardService.createCaptcha();
+      this.qrExportResult = undefined;
+      return;
+    }
+
+    const saveResponse = await DeviceArchiveExportService.saveArchiveSnapshotToGallery(
+      context,
+      this.getUIContext(),
+      ARCHIVE_DETAIL_EXPORT_BODY_ID,
+      verifyResponse.data.deviceCode
+    );
+    this.exporting = false;
+    if (!saveResponse.success) {
+      const error = saveResponse.error;
+      this.exportMessage = error ? error.message : '档案详情导出失败';
+      this.exportMessageTone = AppColors.Warning;
+      return;
+    }
+
+    this.exportMessage = `档案详情已导出到相册：${saveResponse.data}`;
+    this.exportMessageTone = AppColors.Success;
+  }
+
+  async confirmAndExportQrCode(context: common.Context): Promise<void> {
     const exportResponse = await DeviceQrCodeExportService.exportQrCodeRemoteFirst({
       deviceId: this.device.id,
-      password: this.qrExportPassword
+      password: this.exportPassword
     });
     if (!exportResponse.success || exportResponse.data === undefined) {
       const error = exportResponse.error;
       if (this.isQrExportPasswordError(error === undefined ? '' : `${error.code}`)) {
         const guardResult = DeviceArchiveDeleteGuardService.registerQrExportPasswordFailure(this.device.deviceCode);
-        this.qrExportMessage = guardResult.message;
+        this.exportMessage = guardResult.message;
       } else {
-        this.qrExportMessage = error ? error.message : '二维码导出失败';
+        this.exportMessage = this.mapExportErrorMessage(error === undefined ? '' : `${error.code}`,
+          error === undefined ? '' : error.message);
       }
-      this.qrExportMessageTone = AppColors.Danger;
-      this.qrExporting = false;
-      this.qrExportCaptcha = '';
-      this.qrExportCaptchaCode = DeviceArchiveDeleteGuardService.createCaptcha();
+      this.exportMessageTone = AppColors.Danger;
+      this.exporting = false;
+      this.exportCaptcha = '';
+      this.exportCaptchaCode = DeviceArchiveDeleteGuardService.createCaptcha();
       this.qrExportResult = undefined;
       return;
     }
@@ -849,16 +1067,16 @@ struct DeviceArchiveDetail {
     this.qrExportResult = exportResponse.data;
     DeviceArchiveDeleteGuardService.clearQrExportLock(this.device.deviceCode);
     const saveResponse = await DeviceQrCodeExportService.saveImageToGallery(context, exportResponse.data);
-    this.qrExporting = false;
+    this.exporting = false;
     if (!saveResponse.success) {
       const error = saveResponse.error;
-      this.qrExportMessage = error ? error.message : '二维码保存失败';
-      this.qrExportMessageTone = AppColors.Warning;
+      this.exportMessage = error ? error.message : '二维码保存失败';
+      this.exportMessageTone = AppColors.Warning;
       return;
     }
 
-    this.qrExportMessage = `二维码已导出到相册：${saveResponse.data}`;
-    this.qrExportMessageTone = AppColors.Success;
+    this.exportMessage = `二维码已导出到相册：${saveResponse.data}`;
+    this.exportMessageTone = AppColors.Success;
   }
 
   getQrExportImageDataUri(): string {
@@ -869,12 +1087,32 @@ struct DeviceArchiveDetail {
     return DeviceQrCodeExportService.getImageDataUri(this.qrExportResult);
   }
 
-  isQrExportLocked(): boolean {
-    return DeviceArchiveDeleteGuardService.isQrExportLocked(this.device.deviceCode);
+  isExportLocked(): boolean {
+    return this.exportMode === EXPORT_MODE_QR_CODE && DeviceArchiveDeleteGuardService.isQrExportLocked(this.device.deviceCode);
   }
 
   isQrExportPasswordError(errorCode: string): boolean {
     return errorCode === 'INVALID_CREDENTIALS' || errorCode === 'LOGIN_FAILED';
+  }
+
+  mapExportErrorMessage(errorCode: string, fallbackMessage: string): string {
+    if (errorCode === 'INVALID_CREDENTIALS' || errorCode === 'LOGIN_FAILED') {
+      return '当前账号密码错误，请重新输入';
+    }
+
+    if (errorCode === ApiErrorCode.ServiceUnavailable || errorCode === 'SERVICE_UNAVAILABLE') {
+      return '导出功能暂不可用，请稍后重试';
+    }
+
+    if (fallbackMessage.length > 0) {
+      return fallbackMessage;
+    }
+
+    return '导出功能暂不可用，请稍后重试';
+  }
+
+  getExportDialogTitle(): string {
+    return this.exportMode === EXPORT_MODE_QR_CODE ? '导出二维码' : '导出档案详情';
   }
 
   openChangePage(): void {
