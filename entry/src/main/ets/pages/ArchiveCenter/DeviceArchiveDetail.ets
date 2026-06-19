@@ -209,14 +209,24 @@ struct DeviceArchiveDetail {
 
   @Builder
   ModeHeader() {
-    Row({ space: 16 }) {
-      Text('设备档案详情')
-        .fontSize(34)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    Row({ space: 12 }) {
+      Column({ space: 5 }) {
+        Text('设备档案详情')
+          .fontSize(34)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(AppColors.TextPrimary)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+        Text('Device Archive Detail')
+          .fontSize(13)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppColors.TextTertiary)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
       .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
 
       if (this.hasDevice) {
         this.ExportButton()
@@ -225,8 +235,8 @@ struct DeviceArchiveDetail {
     .width('100%')
     .alignItems(VerticalAlign.Center)
     .padding({
-      top: 0,
-      bottom: 2
+      top: 12,
+      bottom: 6
     })
   }
 
@@ -243,9 +253,9 @@ struct DeviceArchiveDetail {
 
   @Builder
   ArchivePanel() {
-    Column({ space: 10 }) {
+    Column({ space: 12 }) {
       Text('档案信息')
-        .fontSize(22)
+        .fontSize(20)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
@@ -300,18 +310,25 @@ struct DeviceArchiveDetail {
         })
       }
       .width('100%')
-      .backgroundColor(AppColors.Surface)
-      .borderRadius(AppRadii.Large)
+      .backgroundColor(AppColors.SurfaceMuted)
+      .borderRadius(AppRadii.Medium)
     }
+    .padding(18)
     .alignItems(HorizontalAlign.Start)
     .width('100%')
+    .backgroundColor(AppColors.SurfaceRaised)
+    .borderRadius(AppRadii.Large)
+    .border({
+      width: 1,
+      color: AppColors.Divider
+    })
   }
 
   @Builder
   StatusPanel() {
-    Column({ space: 10 }) {
+    Column({ space: 12 }) {
       Text('状态信息')
-        .fontSize(22)
+        .fontSize(20)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
@@ -334,11 +351,18 @@ struct DeviceArchiveDetail {
         })
       }
       .width('100%')
-      .backgroundColor(AppColors.Surface)
-      .borderRadius(AppRadii.Large)
+      .backgroundColor(AppColors.SurfaceMuted)
+      .borderRadius(AppRadii.Medium)
     }
+    .padding(18)
     .alignItems(HorizontalAlign.Start)
     .width('100%')
+    .backgroundColor(AppColors.SurfaceRaised)
+    .borderRadius(AppRadii.Large)
+    .border({
+      width: 1,
+      color: AppColors.Divider
+    })
   }
 
   @Builder
@@ -361,8 +385,12 @@ struct DeviceArchiveDetail {
       bottom: 18
     })
     .width('100%')
-    .backgroundColor(AppColors.Surface)
+    .backgroundColor(AppColors.SurfaceRaised)
     .borderRadius(AppRadii.Large)
+    .border({
+      width: 1,
+      color: AppColors.Divider
+    })
     .alignItems(HorizontalAlign.Start)
   }
 
@@ -378,26 +406,39 @@ struct DeviceArchiveDetail {
       bottom: 18
     })
     .width('100%')
-    .backgroundColor(AppColors.Surface)
+    .backgroundColor(AppColors.SurfaceRaised)
     .borderRadius(AppRadii.Large)
+    .border({
+      width: 1,
+      color: AppColors.Divider
+    })
     .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
   ExportButton() {
-    Button({ type: ButtonType.Circle, stateEffect: true }) {
-      Image($r('sys.media.ohos_ic_public_share'))
-        .width(24)
-        .height(24)
-        .fillColor(AppColors.TextPrimary)
+    Button({ type: ButtonType.Capsule, stateEffect: true }) {
+      Row({ space: 6 }) {
+        Image($r('sys.media.ohos_save_button_line'))
+          .width(18)
+          .height(18)
+          .fillColor(AppColors.OnPrimary)
+
+        Text('导出')
+          .fontSize(15)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppColors.OnPrimary)
+          .maxLines(1)
+      }
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
     }
-    .width(54)
-    .height(54)
-    .backgroundColor(AppColors.Surface)
-    .border({
-      width: 1,
-      color: AppColors.Divider
+    .height(42)
+    .padding({
+      left: 16,
+      right: 16
     })
+    .backgroundColor(AppColors.Primary)
     .onClick(() => {
       this.openExportMenu();
     })
@@ -433,7 +474,7 @@ struct DeviceArchiveDetail {
         this.ExportMenuItem('导出档案详情', $r('sys.symbol.text_clipboard'), () => {
           this.exportMenuVisible = false;
           this.openExportDialog(EXPORT_MODE_ARCHIVE_DETAIL);
-        })
+        }, true)
 
         if (this.canExportQrCode) {
           this.ExportMenuItem('导出二维码', $r('sys.symbol.qrcode'), () => {
@@ -461,13 +502,20 @@ struct DeviceArchiveDetail {
   }
 
   @Builder
-  ExportMenuItem(label: string, icon: Resource, action: () => void) {
+  ExportMenuItem(label: string, icon: Resource, action: () => void, useExportIcon: boolean = false) {
     Button({ type: ButtonType.Normal, stateEffect: true }) {
       Row({ space: 12 }) {
         Column() {
-          SymbolGlyph(icon)
-            .fontSize(22)
-            .fontColor([AppColors.Primary])
+          if (useExportIcon) {
+            Image($r('sys.media.ohos_save_button_line'))
+              .width(22)
+              .height(22)
+              .fillColor(AppColors.Primary)
+          } else {
+            SymbolGlyph(icon)
+              .fontSize(22)
+              .fontColor([AppColors.Primary])
+          }
         }
         .width(44)
         .height(44)
@@ -580,9 +628,10 @@ struct DeviceArchiveDetail {
       Column({ space: 10 }) {
         Row({ space: 12 }) {
           Column() {
-            SymbolGlyph($r('sys.symbol.text_clipboard'))
-              .fontSize(26)
-              .fontColor([AppColors.Primary])
+            Image($r('sys.media.ohos_save_button_line'))
+              .width(24)
+              .height(24)
+              .fillColor(AppColors.Primary)
           }
           .width(48)
           .height(48)
@@ -659,10 +708,10 @@ struct DeviceArchiveDetail {
   @Builder
   ExportPasswordField() {
     Column({ space: 8 }) {
-      this.ExportFieldTitle('当前账号密码')
+      this.ExportFieldTitle('密码')
 
       TextInput({
-        placeholder: '输入当前账号密码',
+        placeholder: '请输入密码',
         text: this.exportPassword
       })
         .type(InputType.Password)
@@ -689,7 +738,7 @@ struct DeviceArchiveDetail {
 
       Row({ space: 10 }) {
         TextInput({
-          placeholder: '输入验证码',
+          placeholder: '请输入验证码',
           text: this.exportCaptcha
         })
           .height(54)
@@ -913,7 +962,7 @@ struct DeviceArchiveDetail {
     }
 
     if (ApiClient.getBaseUrl().length === 0) {
-      this.detailMessage = '导出功能暂不可用，请稍后重试';
+      this.detailMessage = '导出失败，请稍后重试';
       this.detailMessageTone = AppColors.Danger;
       return;
     }
@@ -969,7 +1018,7 @@ struct DeviceArchiveDetail {
 
     const context = this.getUIContext().getHostContext();
     if (context === undefined) {
-      this.exportMessage = '导出功能暂不可用，请稍后重试';
+      this.exportMessage = '导出失败，请稍后重试';
       this.exportMessageTone = AppColors.Danger;
       return;
     }
@@ -990,6 +1039,12 @@ struct DeviceArchiveDetail {
       return false;
     }
 
+    if (this.exportPassword.length === 0) {
+      this.exportMessage = '请输入密码';
+      this.exportMessageTone = AppColors.Danger;
+      return false;
+    }
+
     if (this.exportCaptcha.trim().length === 0) {
       this.exportMessage = '请输入验证码';
       this.exportMessageTone = AppColors.Danger;
@@ -997,7 +1052,7 @@ struct DeviceArchiveDetail {
     }
 
     if (this.exportCaptcha.trim() !== this.exportCaptchaCode.trim()) {
-      this.exportMessage = '验证码错误，请重新输入';
+      this.exportMessage = '验证码不正确，请重新输入';
       this.exportMessageTone = AppColors.Danger;
       this.exportCaptcha = '';
       this.exportCaptchaCode = DeviceArchiveDeleteGuardService.createCaptcha();
@@ -1032,13 +1087,12 @@ struct DeviceArchiveDetail {
     );
     this.exporting = false;
     if (!saveResponse.success) {
-      const error = saveResponse.error;
-      this.exportMessage = error ? error.message : '档案详情导出失败';
-      this.exportMessageTone = AppColors.Warning;
+      this.exportMessage = '导出失败，请稍后重试';
+      this.exportMessageTone = AppColors.Danger;
       return;
     }
 
-    this.exportMessage = `档案详情已导出到相册：${saveResponse.data}`;
+    this.exportMessage = '导出成功，已保存至图库';
     this.exportMessageTone = AppColors.Success;
   }
 
@@ -1051,7 +1105,7 @@ struct DeviceArchiveDetail {
       const error = exportResponse.error;
       if (this.isQrExportPasswordError(error === undefined ? '' : `${error.code}`)) {
         const guardResult = DeviceArchiveDeleteGuardService.registerQrExportPasswordFailure(this.device.deviceCode);
-        this.exportMessage = guardResult.message;
+        this.exportMessage = guardResult.lockedUntil === undefined ? '密码不正确，请重新输入' : guardResult.message;
       } else {
         this.exportMessage = this.mapExportErrorMessage(error === undefined ? '' : `${error.code}`,
           error === undefined ? '' : error.message);
@@ -1069,13 +1123,12 @@ struct DeviceArchiveDetail {
     const saveResponse = await DeviceQrCodeExportService.saveImageToGallery(context, exportResponse.data);
     this.exporting = false;
     if (!saveResponse.success) {
-      const error = saveResponse.error;
-      this.exportMessage = error ? error.message : '二维码保存失败';
-      this.exportMessageTone = AppColors.Warning;
+      this.exportMessage = '导出失败，请稍后重试';
+      this.exportMessageTone = AppColors.Danger;
       return;
     }
 
-    this.exportMessage = `二维码已导出到相册：${saveResponse.data}`;
+    this.exportMessage = '导出成功，已保存至图库';
     this.exportMessageTone = AppColors.Success;
   }
 
@@ -1097,18 +1150,18 @@ struct DeviceArchiveDetail {
 
   mapExportErrorMessage(errorCode: string, fallbackMessage: string): string {
     if (errorCode === 'INVALID_CREDENTIALS' || errorCode === 'LOGIN_FAILED') {
-      return '当前账号密码错误，请重新输入';
+      return '密码不正确，请重新输入';
     }
 
     if (errorCode === ApiErrorCode.ServiceUnavailable || errorCode === 'SERVICE_UNAVAILABLE') {
-      return '导出功能暂不可用，请稍后重试';
+      return '导出失败，请稍后重试';
     }
 
-    if (fallbackMessage.length > 0) {
+    if (errorCode === ApiErrorCode.ValidationFailed || errorCode === 'VALIDATION_FAILED') {
       return fallbackMessage;
     }
 
-    return '导出功能暂不可用，请稍后重试';
+    return '导出失败，请稍后重试';
   }
 
   getExportDialogTitle(): string {
