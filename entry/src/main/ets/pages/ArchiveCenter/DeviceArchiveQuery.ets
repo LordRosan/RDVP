@@ -1,52 +1,90 @@
-import { AppColors } from '../../styles/AppTheme';
 import { abilityAccessCtrl } from '@kit.AbilityKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { detectBarcode, scanBarcode, scanCore } from '@kit.ScanKit';
-import { PermissionCode } from '../../models/identity/PermissionModels';
-import { StatusInfoRow } from '../../components/StatusInfoRow';
+import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { DeviceArchiveQueryMode, DeviceSummary } from '../../models/archive/DeviceModels';
-import { ApiClient } from '../../services/common/ApiClient';
+import { ApiErrorCode } from '../../models/common/ApiModels';
+import { PermissionCode } from '../../models/identity/PermissionModels';
 import { DeviceService } from '../../services/archive/DeviceService';
+import { AppColors, AppSpacing } from '../../styles/AppTheme';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
 import { AuthGuard } from '../../utils/AuthGuard';
-import { HeaderCircleButton } from '../../components/HeaderCircleButton';
 
 @Entry
 @Component
 struct DeviceArchiveQuery {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   @State queryMode: DeviceArchiveQueryMode = DeviceArchiveQueryMode.Code;
+  @State currentTabIndex: number = 0;
   @State deviceCode: string = '';
   @State qrContent: string = '';
   @State codeQueryMessage: string = '';
   @State qrActionMessage: string = '';
   @State qrQueryMessage: string = '';
-  @State normalizedDeviceCode: string = '-';
   @State querying: boolean = false;
 
   aboutToAppear(): void {
     if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveCenterDeviceArchiveQuery)) {
       return;
     }
+
+    this.syncTabFromQueryMode();
   }
 
   build() {
+    Tabs({
+      barPosition: BarPosition.End,
+      index: this.currentTabIndex
+    }) {
+      TabContent() {
+        this.QueryTab(DeviceArchiveQueryMode.Code)
+      }
+      .tabBar(this.TabBarItem('编号', $r('sys.symbol.rename'), 0))
+
+      TabContent() {
+        this.QueryTab(DeviceArchiveQueryMode.Qr)
+      }
+      .tabBar(this.TabBarItem('扫码', $r('sys.symbol.circle_viewfinder'), 1))
+    }
+    .barMode(BarMode.Fixed)
+    .barHeight(78)
+    .scrollable(false)
+    .onChange((index: number) => {
+      this.currentTabIndex = index;
+      this.queryMode = index === 0 ? DeviceArchiveQueryMode.Code : DeviceArchiveQueryMode.Qr;
+      this.clearMessages();
+    })
+    .height('100%')
+    .width('100%')
+    .backgroundColor(AppColors.PageBackground)
+  }
+
+  onBackPress(): boolean {
+    this.backToMainPage();
+    return true;
+  }
+
+  @Builder
+  QueryTab(mode: DeviceArchiveQueryMode) {
     Scroll() {
       Column() {
         this.PageTitleBar()
 
-        Column({ space: 18 }) {
-          this.ModeHeader()
-          this.QueryPanel()
-          this.ResultPanel()
+        Column({ space: AppSpacing.Section }) {
+          this.Header(mode)
+          if (mode === DeviceArchiveQueryMode.Code) {
+            this.DeviceCodePanel()
+          } else {
+            this.QrQueryPanel()
+          }
         }
         .alignItems(HorizontalAlign.Start)
         .justifyContent(FlexAlign.Start)
         .padding({
-          left: 24,
-          right: 24,
+          left: AppSpacing.PageX,
+          right: AppSpacing.PageX,
           top: 0,
-          bottom: 28
+          bottom: AppSpacing.PageBottom
         })
         .width('100%')
       }
@@ -57,12 +95,6 @@ struct DeviceArchiveQuery {
     }
     .height('100%')
     .width('100%')
-    .backgroundColor(AppColors.PageBackground)
-  }
-
-  onBackPress(): boolean {
-    this.backToMainPage();
-    return true;
   }
 
   @Builder
@@ -75,7 +107,7 @@ struct DeviceArchiveQuery {
       }
       .width(44)
       .height(44)
-      .backgroundColor(AppColors.Surface)
+      .backgroundColor(AppColors.SurfaceRaised)
       .border({
         width: 1,
         color: AppColors.Divider
@@ -88,72 +120,44 @@ struct DeviceArchiveQuery {
     .height(60)
     .alignItems(VerticalAlign.Center)
     .padding({
-      left: 24,
-      right: 24
+      left: AppSpacing.PageX,
+      right: AppSpacing.PageX
     })
     .backgroundColor(AppColors.PageBackground)
   }
 
   @Builder
-  ModeHeader() {
-    Row({ space: 16 }) {
-      Column({ space: 6 }) {
-        Text('查询设备档案')
-          .fontSize(34)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TextPrimary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
+  Header(mode: DeviceArchiveQueryMode) {
+    Column({ space: 5 }) {
+      Text(mode === DeviceArchiveQueryMode.Code ? '设备编号查询' : '二维码查询')
+        .fontSize(34)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-        Text(this.getModeSubtitle())
-          .fontSize(15)
-          .fontColor(AppColors.TextSecondary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      }
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start)
-
-      this.ModeSwitchButton()
+      Text(mode === DeviceArchiveQueryMode.Code ? 'Device Code Lookup' : 'QR Code Lookup')
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextTertiary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .width('100%')
-    .alignItems(VerticalAlign.Center)
     .padding({
-      top: 0,
-      bottom: 2
+      left: 0,
+      right: 0,
+      top: 12,
+      bottom: 6
     })
-  }
-
-  @Builder
-  ModeSwitchButton() {
-    HeaderCircleButton({
-      icon: this.queryMode === DeviceArchiveQueryMode.Code ? $r('sys.symbol.circle_viewfinder') : $r('sys.symbol.rename'),
-      action: () => {
-        this.switchQueryMode();
-      }
-    })
-  }
-
-  @Builder
-  QueryPanel() {
-    if (this.queryMode === DeviceArchiveQueryMode.Code) {
-      this.DeviceCodePanel()
-    } else {
-      this.QrQueryPanel()
-    }
+    .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
   DeviceCodePanel() {
-    Column({ space: 14 }) {
-      Text('设备编号查询')
-        .fontSize(17)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
-
+    Column({ space: 16 }) {
       TextInput({
-        placeholder: '输入设备编号',
+        placeholder: 'RDVP-DEVICE-XXXX',
         text: this.deviceCode
       })
         .height(56)
@@ -171,10 +175,6 @@ struct DeviceArchiveQuery {
         .onChange((value: string) => {
           this.deviceCode = value;
           this.codeQueryMessage = '';
-          this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(value);
-          if (this.normalizedDeviceCode.length === 0) {
-            this.normalizedDeviceCode = '-';
-          }
         })
 
       this.CodeQueryMessageText()
@@ -189,42 +189,37 @@ struct DeviceArchiveQuery {
       bottom: 18
     })
     .width('100%')
-    .backgroundColor(AppColors.Surface)
+    .backgroundColor(AppColors.SurfaceRaised)
     .borderRadius(24)
+    .border({
+      width: 1,
+      color: AppColors.Divider
+    })
     .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
   QrQueryPanel() {
-    Column({ space: 14 }) {
-      Text('二维码查询')
-        .fontSize(17)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
-
+    Column({ space: 16 }) {
       Stack() {
         if (this.qrContent.length > 0) {
-          Column({ space: 14 }) {
+          Column({ space: 12 }) {
             SymbolGlyph($r('sys.symbol.qrcode'))
               .fontSize(52)
               .fontColor([AppColors.Primary])
 
-            Text('已识别二维码')
-              .fontSize(17)
-              .fontWeight(FontWeight.Medium)
+            Text('已获取二维码')
+              .fontSize(18)
+              .fontWeight(FontWeight.Bold)
               .fontColor(AppColors.TextPrimary)
               .maxLines(1)
 
-            Column({ space: 8 }) {
-              this.QrSummaryLine('设备编号', this.getQrDeviceCodeDisplay())
-              this.QrSummaryLine('签名指纹', this.getQrSignatureFingerprint())
-            }
-            .width('100%')
-            .padding({
-              left: 18,
-              right: 18
-            })
+            Text(this.getQrDeviceCodeDisplay())
+              .fontSize(15)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(AppColors.TextSecondary)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
           }
           .justifyContent(FlexAlign.Center)
           .alignItems(HorizontalAlign.Center)
@@ -236,9 +231,10 @@ struct DeviceArchiveQuery {
               .fontSize(56)
               .fontColor([AppColors.Disabled])
 
-            Text('未获取二维码内容')
-              .fontSize(15)
-              .fontColor(AppColors.TextTertiary)
+            Text('等待二维码')
+              .fontSize(18)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(AppColors.TextPrimary)
               .maxLines(1)
           }
           .justifyContent(FlexAlign.Center)
@@ -250,7 +246,7 @@ struct DeviceArchiveQuery {
       .width('100%')
       .aspectRatio(1)
       .backgroundColor(AppColors.FieldBackground)
-      .borderRadius(22)
+      .borderRadius(24)
       .border({
         width: 1,
         color: AppColors.Border
@@ -288,67 +284,43 @@ struct DeviceArchiveQuery {
       bottom: 18
     })
     .width('100%')
-    .backgroundColor(AppColors.Surface)
+    .backgroundColor(AppColors.SurfaceRaised)
     .borderRadius(24)
+    .border({
+      width: 1,
+      color: AppColors.Divider
+    })
     .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
   CodeQueryMessageText() {
     if (this.codeQueryMessage.length > 0) {
-      Text(this.codeQueryMessage)
-        .fontSize(13)
-        .fontColor(AppColors.Danger)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
+      InlineMessageSurface({
+        message: this.codeQueryMessage,
+        tone: AppColors.Danger
+      })
     }
   }
 
   @Builder
   QrActionMessageText() {
     if (this.qrActionMessage.length > 0) {
-      Text(this.qrActionMessage)
-        .fontSize(13)
-        .fontColor(AppColors.Danger)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
+      InlineMessageSurface({
+        message: this.qrActionMessage,
+        tone: AppColors.Danger
+      })
     }
   }
 
   @Builder
   QrQueryMessageText() {
     if (this.qrQueryMessage.length > 0) {
-      Text(this.qrQueryMessage)
-        .fontSize(13)
-        .fontColor(AppColors.Danger)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
+      InlineMessageSurface({
+        message: this.qrQueryMessage,
+        tone: AppColors.Danger
+      })
     }
-  }
-
-  @Builder
-  QrSummaryLine(label: string, value: string) {
-    Row({ space: 10 }) {
-      Text(label)
-        .fontSize(13)
-        .fontColor(AppColors.TextSecondary)
-        .maxLines(1)
-
-      Text(value)
-        .fontSize(14)
-        .fontColor(AppColors.TextSecondary)
-        .fontWeight(FontWeight.Medium)
-        .textAlign(TextAlign.End)
-        .layoutWeight(1)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
-    .width('100%')
-    .height(24)
-    .alignItems(VerticalAlign.Center)
   }
 
   @Builder
@@ -379,77 +351,32 @@ struct DeviceArchiveQuery {
   }
 
   @Builder
-  ResultPanel() {
-    Column({ space: 10 }) {
-      Text('功能状态')
-        .fontSize(22)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
+  TabBarItem(label: string, icon: Resource, index: number) {
+    Column({ space: 4 }) {
+      SymbolGlyph(icon)
+        .fontSize(25)
+        .fontColor([this.currentTabIndex === index ? AppColors.Primary : AppColors.TextTertiary])
 
-      Column() {
-        this.QueryMethodStatusRow()
-      }
-      .width('100%')
-      .backgroundColor(AppColors.Surface)
-      .borderRadius(24)
+      Text(label)
+        .fontSize(12)
+        .fontWeight(this.currentTabIndex === index ? FontWeight.Bold : FontWeight.Regular)
+        .fontColor(this.currentTabIndex === index ? AppColors.Primary : AppColors.TextSecondary)
+        .maxLines(1)
     }
-    .alignItems(HorizontalAlign.Start)
     .width('100%')
+    .height(62)
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
   }
 
-  @Builder
-  QueryMethodStatusRow() {
-    Row() {
-      Text('查询方式')
-        .fontSize(15)
-        .fontColor(AppColors.TextPrimary)
-        .fontWeight(FontWeight.Medium)
-        .layoutWeight(1)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-      Text(this.queryMode === DeviceArchiveQueryMode.Code ? '设备编号' : '二维码')
-        .fontSize(15)
-        .fontColor(AppColors.TextSecondary)
-        .fontWeight(FontWeight.Medium)
-        .textAlign(TextAlign.End)
-        .width('58%')
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
-    .height(54)
-    .padding({
-      left: 18,
-      right: 18
-    })
-    .width('100%')
+  syncTabFromQueryMode(): void {
+    this.currentTabIndex = this.queryMode === DeviceArchiveQueryMode.Code ? 0 : 1;
   }
 
-  @Builder
-  CardDivider() {
-    Divider()
-      .height(1)
-      .backgroundColor(AppColors.Divider)
-      .margin({
-        left: 18,
-        right: 18
-      })
-  }
-
-  switchQueryMode(): void {
+  clearMessages(): void {
     this.codeQueryMessage = '';
     this.qrActionMessage = '';
     this.qrQueryMessage = '';
-    this.queryMode = this.queryMode === DeviceArchiveQueryMode.Code ? DeviceArchiveQueryMode.Qr : DeviceArchiveQueryMode.Code;
-  }
-
-  getModeTitle(): string {
-    return '查询设备档案';
-  }
-
-  getModeSubtitle(): string {
-    return this.queryMode === DeviceArchiveQueryMode.Code ? '输入设备编号定位设备档案' : '扫描或上传二维码定位设备档案';
   }
 
   async submitDeviceCodeQuery(): Promise<void> {
@@ -457,9 +384,13 @@ struct DeviceArchiveQuery {
       return;
     }
 
-    this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(this.deviceCode);
-    if (this.normalizedDeviceCode.length === 0) {
-      this.normalizedDeviceCode = '-';
+    this.codeQueryMessage = '';
+    const validation = DeviceService.validateDeviceCodeQuery({
+      deviceCode: this.deviceCode
+    });
+    if (!validation.valid) {
+      this.codeQueryMessage = validation.message;
+      return;
     }
 
     this.querying = true;
@@ -470,11 +401,12 @@ struct DeviceArchiveQuery {
 
     if (!response.success) {
       const error = response.error;
-      this.codeQueryMessage = error ? error.message : '查询设备档案失败';
+      this.codeQueryMessage = this.normalizeCodeQueryError(error === undefined ? '' : `${error.code}`);
       return;
     }
 
     if (response.data !== undefined) {
+      this.deviceCode = response.data.deviceCode;
       this.openDeviceArchiveDetail(response.data);
     }
   }
@@ -484,14 +416,14 @@ struct DeviceArchiveQuery {
     this.qrQueryMessage = '';
     const context = this.getUIContext().getHostContext();
     if (context === undefined) {
-      this.qrActionMessage = '无法获取页面上下文';
+      this.qrActionMessage = '扫描取消或失败';
       return;
     }
 
     try {
       const cameraGranted = await this.ensureCameraPermission();
       if (!cameraGranted) {
-        this.qrActionMessage = '请授权相机权限后再扫描二维码';
+        this.qrActionMessage = '扫描取消或失败';
         return;
       }
 
@@ -499,9 +431,9 @@ struct DeviceArchiveQuery {
         scanTypes: [scanCore.ScanType.QR_CODE],
         enableAlbum: false
       });
-      this.applyQrContent(result.originalValue);
+      this.applyQrContent(result.originalValue, true);
     } catch (err) {
-      this.qrActionMessage = '扫码取消或失败';
+      this.qrActionMessage = '扫描取消或失败';
     }
   }
 
@@ -536,7 +468,7 @@ struct DeviceArchiveQuery {
       });
 
       if (selection.photoUris.length === 0) {
-        this.qrActionMessage = '未选择图片';
+        this.qrActionMessage = '上传取消或失败';
         return;
       }
 
@@ -548,13 +480,13 @@ struct DeviceArchiveQuery {
 
       if (results.length === 0) {
         this.qrContent = '';
-        this.qrActionMessage = '未识别到二维码，请重新上传';
+        this.qrActionMessage = '上传取消或失败';
         return;
       }
 
-      this.applyQrContent(results[0].originalValue);
+      this.applyQrContent(results[0].originalValue, false);
     } catch (err) {
-      this.qrActionMessage = '本地图片二维码识别失败';
+      this.qrActionMessage = '上传取消或失败';
     }
   }
 
@@ -564,7 +496,15 @@ struct DeviceArchiveQuery {
     }
 
     this.qrQueryMessage = '';
-    this.qrContent = DeviceService.normalizeQrContent(this.qrContent);
+    const validation = DeviceService.validateQrQuery({
+      qrContent: this.qrContent
+    });
+    if (!validation.valid) {
+      this.qrQueryMessage = validation.message;
+      this.qrContent = '';
+      return;
+    }
+
     this.querying = true;
     const response = await DeviceService.queryByQrContentRemoteFirst({
       qrContent: this.qrContent
@@ -573,11 +513,9 @@ struct DeviceArchiveQuery {
 
     if (!response.success) {
       const error = response.error;
-      if (error !== undefined && this.isQrValidationErrorCode(`${error.code}`)) {
-        this.qrQueryMessage = this.formatQrValidationErrorMessage(`${error.code}`);
+      this.qrQueryMessage = this.normalizeQrQueryError(error === undefined ? '' : `${error.code}`);
+      if (this.isQrValidationErrorCode(error === undefined ? '' : `${error.code}`)) {
         this.qrContent = '';
-      } else {
-        this.qrQueryMessage = error ? error.message : '二维码查询失败';
       }
       return;
     }
@@ -587,11 +525,11 @@ struct DeviceArchiveQuery {
     }
   }
 
-  applyQrContent(content: string): void {
+  applyQrContent(content: string, scanned: boolean): void {
     const qrContent = DeviceService.normalizeQrContent(content);
     if (qrContent.length === 0) {
       this.qrContent = '';
-      this.qrActionMessage = '二维码内容为空';
+      this.qrActionMessage = scanned ? '扫描取消或失败' : '上传取消或失败';
       return;
     }
 
@@ -600,7 +538,7 @@ struct DeviceArchiveQuery {
     });
     if (!validation.valid) {
       this.qrContent = '';
-      this.qrActionMessage = validation.message;
+      this.qrActionMessage = '二维码无效，请重新扫描或上传';
       return;
     }
 
@@ -609,20 +547,34 @@ struct DeviceArchiveQuery {
     this.qrQueryMessage = '';
   }
 
-  isQrValidationErrorCode(errorCode: string): boolean {
-    return errorCode.startsWith('QR_');
+  normalizeCodeQueryError(errorCode: string): string {
+    if (errorCode === 'DEVICE_CODE_INVALID' || errorCode === ApiErrorCode.BadRequest ||
+      errorCode === ApiErrorCode.ValidationFailed) {
+      return '设备编号无效，请重新输入';
+    }
+
+    if (errorCode === 'DEVICE_NOT_FOUND' || errorCode === ApiErrorCode.NotFound) {
+      return '未查询到对应设备，请重新输入';
+    }
+
+    return '查询功能暂不可用，请稍后重试';
   }
 
-  formatQrValidationErrorMessage(errorCode: string): string {
-    if (errorCode === 'QR_CODE_EXPIRED') {
-      return '二维码已过期，请重新获取有效二维码';
+  normalizeQrQueryError(errorCode: string): string {
+    if (errorCode === 'DEVICE_NOT_FOUND') {
+      return '未查询到对应设备，请重新扫描或上传';
     }
 
-    if (errorCode === 'QR_DEVICE_NOT_FOUND') {
-      return '二维码未关联设备档案';
+    if (this.isQrValidationErrorCode(errorCode) || errorCode === ApiErrorCode.BadRequest ||
+      errorCode === ApiErrorCode.ValidationFailed || errorCode === ApiErrorCode.NotFound) {
+      return '二维码无效，请重新扫描或上传';
     }
 
-    return '二维码内容无效';
+    return '查询功能暂不可用，请稍后重试';
+  }
+
+  isQrValidationErrorCode(errorCode: string): boolean {
+    return errorCode.startsWith('QR_');
   }
 
   getQrDeviceCodeDisplay(): string {
@@ -631,21 +583,7 @@ struct DeviceArchiveQuery {
       return DeviceService.normalizeDeviceCode(segments[2]);
     }
 
-    return '待校验';
-  }
-
-  getQrSignatureFingerprint(): string {
-    const segments = this.qrContent.split(':');
-    if (segments.length < 5) {
-      return '待校验';
-    }
-
-    const signature = segments[4].trim();
-    if (signature.length <= 8) {
-      return '****';
-    }
-
-    return `****${signature.substring(signature.length - 8)}`;
+    return '';
   }
 
   openDeviceArchiveDetail(device: DeviceSummary): void {
@@ -655,9 +593,9 @@ struct DeviceArchiveQuery {
       this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveDetail' });
     } catch (err) {
       if (this.queryMode === DeviceArchiveQueryMode.Code) {
-        this.codeQueryMessage = '设备档案详情不可用';
+        this.codeQueryMessage = '查询功能暂不可用，请稍后重试';
       } else {
-        this.qrQueryMessage = '设备档案详情不可用';
+        this.qrQueryMessage = '查询功能暂不可用，请稍后重试';
       }
     }
   }
@@ -680,5 +618,3 @@ struct DeviceArchiveQuery {
     }
   }
 }
-
-

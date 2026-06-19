@@ -244,6 +244,10 @@ struct Login {
       return '账号或密码不正确，请重新输入';
     }
 
+    if (errorCode === 'SERVICE_UNAVAILABLE' || errorCode === 'INTERNAL_ERROR' || errorCode.length === 0) {
+      return '登录功能暂不可用，请稍后重试';
+    }
+
     return fallbackMessage.length > 0 ? fallbackMessage : '登录失败';
   }
 

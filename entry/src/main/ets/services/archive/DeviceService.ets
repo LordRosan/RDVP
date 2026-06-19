@@ -41,7 +41,7 @@ export class DeviceService {
     if (!DEVICE_CODE_PATTERN.test(deviceCode)) {
       return {
         valid: false,
-        message: '设备编号格式应为 RDVP-DEVICE-0001'
+        message: '设备编号无效，请重新输入'
       };
     }
 
@@ -61,21 +61,21 @@ export class DeviceService {
     if (qrContent.length === 0) {
       return {
         valid: false,
-        message: '请先扫描或上传二维码'
+        message: '请扫描或上传二维码'
       };
     }
 
     if (qrContent.length > QR_CONTENT_MAX_LENGTH) {
       return {
         valid: false,
-        message: '二维码内容过长'
+        message: '二维码无效，请重新扫描或上传'
       };
     }
 
     if (!DeviceService.isValidQrContentStructure(qrContent)) {
       return {
         valid: false,
-        message: '二维码内容无效'
+        message: '二维码无效，请重新扫描或上传'
       };
     }
 
