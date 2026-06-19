@@ -2,16 +2,12 @@ import { AppColors, AppSpacing } from '../../styles/AppTheme';
 import { ActionTile } from '../../components/ActionTile';
 import { AppSectionTitle } from '../../components/AppSectionTitle';
 import { CenterTitleBar } from '../../components/CenterTitleBar';
-import { HeroSurface } from '../../components/HeroSurface';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
-import { SummaryPanel } from '../../components/SummaryPanel';
-import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { PermissionCode } from '../../models/identity/PermissionModels';
 import { MainPageAction, MainPageActionId } from '../../models/app/MainPageModels';
 import { MainPageService } from '../../services/app/MainPageService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
-import { PermissionTextFormatter } from '../../utils/PermissionTextFormatter';
 
 @Entry
 @Component
@@ -41,8 +37,8 @@ struct ArchiveCenter {
         this.PageTitleBar()
 
         Column({ space: AppSpacing.Section }) {
-          this.PageHero()
-          this.OverviewPanel()
+          this.Header()
+          this.PermissionSection()
           this.ActionSection()
         }
         .alignItems(HorizontalAlign.Start)
@@ -81,45 +77,109 @@ struct ArchiveCenter {
   }
 
   @Builder
-  PageHero() {
-    HeroSurface({
-      eyebrow: 'Archive command',
-      title: '档案中心',
-      subtitle: '围绕设备档案查询、新增申请和二维码可信核验组织入口。',
-      icon: $r('sys.symbol.text_clipboard'),
-      tone: AppColors.Primary
+  Header() {
+    Column({ space: 5 }) {
+      Text('档案中心')
+        .fontSize(34)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+
+      Text('Archive Center')
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextTertiary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .width('100%')
+    .padding({
+      left: 0,
+      right: 0,
+      top: 12,
+      bottom: 6
     })
+    .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
-  OverviewPanel() {
-    SummaryPanel({
-      title: '中心概览',
-      caption: '当前账号在档案中心的可用能力。'
-    }) {
-      Column() {
-        StatusInfoRow({
-          label: '功能权限',
-          value: this.getArchivePermissionText(),
-          tone: this.getArchivePermissionTone(),
-          valueWidth: '62%',
-          valueMaxLines: 3,
-          rowMinHeight: 72,
-          verticalPadding: 8
-        })
+  PermissionSection() {
+    Column({ space: 12 }) {
+      AppSectionTitle({
+        title: '功能权限',
+        subtitle: ''
+      })
+
+      Column({ space: 16 }) {
+        Grid() {
+          GridItem() {
+            this.PermissionCell('查询档案', this.canQueryArchive())
+          }
+
+          GridItem() {
+            this.PermissionCell('修改档案', this.canUpdateArchive())
+          }
+
+          GridItem() {
+            this.PermissionCell('删除档案', this.canDeleteArchive())
+          }
+
+          GridItem() {
+            this.PermissionCell('添加档案', this.canCreateArchive())
+          }
+        }
+        .columnsTemplate('1fr 1fr')
+        .columnsGap(14)
+        .rowsGap(14)
+        .width('100%')
       }
       .width('100%')
-      .backgroundColor(AppColors.Surface)
-      .borderRadius(18)
+      .padding(18)
+      .backgroundColor(AppColors.SurfaceRaised)
+      .borderRadius(24)
+      .border({
+        width: 1,
+        color: AppColors.Divider
+      })
     }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  PermissionCell(label: string, available: boolean) {
+    Row({ space: 8 }) {
+      Text(label)
+        .fontSize(15)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .layoutWeight(1)
+
+      Text('')
+        .width(8)
+        .height(8)
+        .backgroundColor(available ? AppColors.Success : AppColors.Danger)
+        .borderRadius(4)
+    }
+    .width('100%')
+    .height(40)
+    .padding({
+      left: 12,
+      right: 12
+    })
+    .backgroundColor(AppColors.SurfaceMuted)
+    .borderRadius(16)
+    .alignItems(VerticalAlign.Center)
   }
 
   @Builder
   ActionSection() {
     Column({ space: 12 }) {
       AppSectionTitle({
-        title: '功能入口',
-        subtitle: '进入查询或新增申请流程。'
+        title: '业务功能',
+        subtitle: ''
       })
 
       Column({ space: 10 }) {
@@ -146,56 +206,24 @@ struct ArchiveCenter {
     .width('100%')
   }
 
-  @Builder
-  MessageText() {
-    if (this.message.length > 0) {
-      InlineMessageSurface({
-        message: this.message,
-        tone: AppColors.Danger
-      })
-    }
-  }
-
-  @Builder
-  CardDivider() {
-    Divider()
-      .height(1)
-      .backgroundColor(AppColors.Divider)
-      .margin({
-        left: 18,
-        right: 18
-      })
-  }
-
   refreshCenterState(): void {
     this.actions = MainPageService.getArchiveCenterActions();
   }
 
-  getArchivePermissionText(): string {
-    const permissions: string[] = [];
-    if (SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveQuery)) {
-      permissions.push('可查询');
-    }
-
-    if (SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveUpdateRequestSubmit)) {
-      permissions.push('可修改');
-    }
-
-    if (SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveDeleteRequestSubmit)) {
-      permissions.push('可删除');
-    }
-
-    if (SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveCreateRequestSubmit)) {
-      permissions.push('可添加');
-    }
-
-    return PermissionTextFormatter.formatTwoPerLine(permissions.length > 0 ? permissions : ['仅查询']);
+  canQueryArchive(): boolean {
+    return SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveQuery);
   }
 
-  getArchivePermissionTone(): string {
-    return SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveUpdateRequestSubmit) ||
-      SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveCreateRequestSubmit) ||
-      SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveDeleteRequestSubmit) ? AppColors.Primary : AppColors.TextSecondary;
+  canUpdateArchive(): boolean {
+    return SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveUpdateRequestSubmit);
+  }
+
+  canDeleteArchive(): boolean {
+    return SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveDeleteRequestSubmit);
+  }
+
+  canCreateArchive(): boolean {
+    return SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveCreateRequestSubmit);
   }
 
   openFeature(action: MainPageAction): void {
