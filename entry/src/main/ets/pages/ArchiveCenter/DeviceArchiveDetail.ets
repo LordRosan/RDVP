@@ -1,5 +1,6 @@
 import { common } from '@kit.AbilityKit';
 import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
+import { AppSectionTitle } from '../../components/AppSectionTitle';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { DeviceStatus, DeviceSummary } from '../../models/archive/DeviceModels';
@@ -209,31 +210,32 @@ struct DeviceArchiveDetail {
 
   @Builder
   ModeHeader() {
-    Row({ space: 12 }) {
-      Column({ space: 5 }) {
+    Column({ space: 5 }) {
+      Row({ space: 8 }) {
         Text('设备档案详情')
           .fontSize(34)
           .fontWeight(FontWeight.Bold)
           .fontColor(AppColors.TextPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .constraintSize({ maxWidth: '82%' })
 
-        Text('Device Archive Detail')
-          .fontSize(13)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(AppColors.TextTertiary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        if (this.hasDevice) {
+          this.ExportButton()
+        }
       }
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start)
+      .alignItems(VerticalAlign.Center)
 
-      if (this.hasDevice) {
-        this.ExportButton()
-      }
+      Text('Device Archive Detail')
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextTertiary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+
     }
     .width('100%')
-    .alignItems(VerticalAlign.Center)
+    .alignItems(HorizontalAlign.Start)
     .padding({
       top: 12,
       bottom: 6
@@ -254,11 +256,10 @@ struct DeviceArchiveDetail {
   @Builder
   ArchivePanel() {
     Column({ space: 12 }) {
-      Text('档案信息')
-        .fontSize(20)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
+      AppSectionTitle({
+        title: '档案信息',
+        subtitle: ''
+      })
 
       Column() {
         StatusInfoRow({
@@ -310,28 +311,24 @@ struct DeviceArchiveDetail {
         })
       }
       .width('100%')
-      .backgroundColor(AppColors.SurfaceMuted)
-      .borderRadius(AppRadii.Medium)
+      .backgroundColor(AppColors.SurfaceRaised)
+      .borderRadius(AppRadii.Large)
+      .border({
+        width: 1,
+        color: AppColors.Divider
+      })
     }
-    .padding(18)
     .alignItems(HorizontalAlign.Start)
     .width('100%')
-    .backgroundColor(AppColors.SurfaceRaised)
-    .borderRadius(AppRadii.Large)
-    .border({
-      width: 1,
-      color: AppColors.Divider
-    })
   }
 
   @Builder
   StatusPanel() {
     Column({ space: 12 }) {
-      Text('状态信息')
-        .fontSize(20)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
+      AppSectionTitle({
+        title: '状态信息',
+        subtitle: ''
+      })
 
       Column() {
         StatusInfoRow({
@@ -351,18 +348,15 @@ struct DeviceArchiveDetail {
         })
       }
       .width('100%')
-      .backgroundColor(AppColors.SurfaceMuted)
-      .borderRadius(AppRadii.Medium)
+      .backgroundColor(AppColors.SurfaceRaised)
+      .borderRadius(AppRadii.Large)
+      .border({
+        width: 1,
+        color: AppColors.Divider
+      })
     }
-    .padding(18)
     .alignItems(HorizontalAlign.Start)
     .width('100%')
-    .backgroundColor(AppColors.SurfaceRaised)
-    .borderRadius(AppRadii.Large)
-    .border({
-      width: 1,
-      color: AppColors.Divider
-    })
   }
 
   @Builder
@@ -371,27 +365,69 @@ struct DeviceArchiveDetail {
       this.DetailMessageText()
       if (this.canViewChangeArchiveAction()) {
         this.ChangeActionMessageText()
-        this.ChangeArchiveButton()
+        this.DetailActionTile('修改设备档案', $r('sys.symbol.text_clipboard'), AppColors.Primary,
+          AppColors.PrimarySurface, this.canChangeArchive, () => {
+            this.openChangePage();
+          })
       }
       if (this.canViewDeleteArchiveAction()) {
         this.DeleteActionMessageText()
-        this.DeleteArchiveButton()
+        this.DetailActionTile('删除设备档案', $r('sys.symbol.trash'), AppColors.Danger,
+          AppColors.DangerSurface, this.canDeleteArchive, () => {
+            this.openDeletePage();
+          })
       }
     }
-    .padding({
-      left: 18,
-      right: 18,
-      top: 18,
-      bottom: 18
-    })
     .width('100%')
-    .backgroundColor(AppColors.SurfaceRaised)
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  DetailActionTile(title: string, icon: Resource, tone: string, surfaceTone: string, enabled: boolean, action: () => void) {
+    Row({ space: 14 }) {
+      Stack() {
+        SymbolGlyph(icon)
+          .fontSize(24)
+          .fontColor([enabled ? tone : AppColors.Disabled])
+      }
+      .width(48)
+      .height(48)
+      .borderRadius(18)
+      .backgroundColor(enabled ? surfaceTone : AppColors.SurfaceMuted)
+
+      Column({ space: 4 }) {
+        Text(title)
+          .fontSize(18)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(enabled ? AppColors.TextPrimary : AppColors.TextTertiary)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+
+      SymbolGlyph($r('sys.symbol.chevron_right'))
+        .fontSize(17)
+        .fontColor([enabled ? AppColors.TextTertiary : AppColors.Disabled])
+    }
+    .width('100%')
+    .height(74)
+    .alignItems(VerticalAlign.Center)
+    .padding({
+      left: 16,
+      right: 14
+    })
+    .backgroundColor(enabled ? AppColors.SurfaceRaised : AppColors.SurfaceMuted)
     .borderRadius(AppRadii.Large)
     .border({
       width: 1,
       color: AppColors.Divider
     })
-    .alignItems(HorizontalAlign.Start)
+    .onClick(() => {
+      if (enabled) {
+        action();
+      }
+    })
   }
 
   @Builder
@@ -417,28 +453,19 @@ struct DeviceArchiveDetail {
 
   @Builder
   ExportButton() {
-    Button({ type: ButtonType.Capsule, stateEffect: true }) {
-      Row({ space: 6 }) {
-        Image($r('sys.media.ohos_save_button_line'))
-          .width(18)
-          .height(18)
-          .fillColor(AppColors.OnPrimary)
-
-        Text('导出')
-          .fontSize(15)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(AppColors.OnPrimary)
-          .maxLines(1)
-      }
-      .justifyContent(FlexAlign.Center)
-      .alignItems(VerticalAlign.Center)
+    Button({ type: ButtonType.Circle, stateEffect: true }) {
+      Image($r('sys.media.ohos_save_button_line'))
+        .width(20)
+        .height(20)
+        .fillColor(AppColors.TextPrimary)
     }
-    .height(42)
-    .padding({
-      left: 16,
-      right: 16
+    .width(44)
+    .height(44)
+    .backgroundColor(AppColors.Surface)
+    .border({
+      width: 1,
+      color: AppColors.Divider
     })
-    .backgroundColor(AppColors.Primary)
     .onClick(() => {
       this.openExportMenu();
     })
@@ -862,64 +889,6 @@ struct DeviceArchiveDetail {
       message: this.deleteActionMessage,
       tone: this.deleteActionMessageTone
     })
-  }
-
-  @Builder
-  ChangeArchiveButton() {
-    if (this.canViewChangeArchiveAction()) {
-      Button({ type: ButtonType.Capsule, stateEffect: this.canChangeArchive }) {
-        Row({ space: 8 }) {
-          SymbolGlyph($r('sys.symbol.text_clipboard'))
-            .fontSize(20)
-            .fontColor([AppColors.OnPrimary])
-
-          Text('修改设备档案')
-            .fontSize(17)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(AppColors.OnPrimary)
-            .maxLines(1)
-        }
-        .width('100%')
-        .justifyContent(FlexAlign.Center)
-        .alignItems(VerticalAlign.Center)
-      }
-      .height(54)
-      .width('100%')
-      .backgroundColor(this.canChangeArchive ? AppColors.Primary : AppColors.Disabled)
-      .enabled(this.canChangeArchive)
-      .onClick(() => {
-        this.openChangePage();
-      })
-    }
-  }
-
-  @Builder
-  DeleteArchiveButton() {
-    if (this.canViewDeleteArchiveAction()) {
-      Button({ type: ButtonType.Capsule, stateEffect: this.canDeleteArchive }) {
-        Row({ space: 8 }) {
-          SymbolGlyph($r('sys.symbol.trash'))
-            .fontSize(20)
-            .fontColor([AppColors.OnPrimary])
-
-          Text('删除设备档案')
-            .fontSize(17)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(AppColors.OnPrimary)
-            .maxLines(1)
-        }
-        .width('100%')
-        .justifyContent(FlexAlign.Center)
-        .alignItems(VerticalAlign.Center)
-      }
-      .height(54)
-      .width('100%')
-      .backgroundColor(this.canDeleteArchive ? AppColors.Danger : AppColors.Disabled)
-      .enabled(this.canDeleteArchive)
-      .onClick(() => {
-        this.openDeletePage();
-      })
-    }
   }
 
   @Builder
