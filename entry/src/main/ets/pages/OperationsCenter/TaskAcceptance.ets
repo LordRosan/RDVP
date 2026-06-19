@@ -14,6 +14,7 @@ import { FaultReportService } from '../../services/operations/FaultReportService
 import { LocationService, LocationResolutionResult } from '../../services/operations/LocationService';
 import { RepairTaskService } from '../../services/operations/RepairTaskService';
 import { AuthGuard } from '../../utils/AuthGuard';
+import { MainPageNavigator } from '../../utils/MainPageNavigator';
 
 const REFRESH_TIMEOUT_MS = 5000;
 const TASK_ACCEPTANCE_TYPE_FILTER_OPTIONS: string[] = ['全部类型', '运行异常', '部件损坏', '通信故障', '逻辑故障', '能源故障', '外部因素', '其他'];
@@ -883,15 +884,7 @@ struct TaskAcceptance {
   }
 
   backToMainPage(): void {
-    try {
-      const router = this.getUIContext().getRouter();
-      if (router.getState().index > 1) {
-        router.back();
-        return;
-      }
-
-      router.replaceUrl({ url: 'pages/MainPage' });
-    } catch (err) {
+    if (!MainPageNavigator.replaceToMainPage(this.getUIContext())) {
       try {
         this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
       } catch (toastErr) {

@@ -9,6 +9,7 @@ import { DeviceVerificationService } from '../../services/operations/DeviceVerif
 import { FaultReportService } from '../../services/operations/FaultReportService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
+import { MainPageNavigator } from '../../utils/MainPageNavigator';
 
 @Entry
 @Component
@@ -913,15 +914,7 @@ struct DeviceVerification {
   }
 
   backToMainPage(): void {
-    try {
-      const router = this.getUIContext().getRouter();
-      if (router.getState().index > 1) {
-        router.back();
-        return;
-      }
-
-      router.replaceUrl({ url: 'pages/MainPage' });
-    } catch (err) {
+    if (!MainPageNavigator.replaceToMainPage(this.getUIContext())) {
       try {
         this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
       } catch (toastErr) {

@@ -6,12 +6,15 @@ import { InlineMessageSurface } from '../components/InlineMessageSurface';
 import { DashboardMetric, MainPageAction, MainPageActionId, MainPageDashboard } from '../models/app/MainPageModels';
 import { CurrentUserSnapshot } from '../models/identity/SessionModels';
 import { MainPageService } from '../services/app/MainPageService';
+import { DashboardRefreshStore } from '../stores/DashboardRefreshStore';
 import { SessionStore } from '../stores/SessionStore';
 
 @Entry
 @Component
 struct MainPage {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
+  @Watch('onDashboardRefreshRevisionChanged')
+  @StorageLink(DashboardRefreshStore.StorageKey) dashboardRefreshRevision: number = 0;
   @State actions: MainPageAction[] = MainPageService.getActions();
   @State dashboard: MainPageDashboard = MainPageService.getEmptyDashboard();
   @State dashboardLoaded: boolean = false;
@@ -21,14 +24,22 @@ struct MainPage {
   @State currentTabIndex: number = 0;
   @State logoutActionMessage: string = '';
   @State settingsMessage: string = '';
+  private dashboardRequestVersion: number = 0;
 
   aboutToAppear(): void {
+    DashboardRefreshStore.ensureInitialized();
     if (!SessionStore.isAuthenticated()) {
       this.openLoginPage();
       return;
     }
 
     this.refreshMainPageState();
+  }
+
+  onDashboardRefreshRevisionChanged(): void {
+    if (SessionStore.isAuthenticated()) {
+      this.refreshMainPageState();
+    }
   }
 
   onPageShow(): void {
@@ -48,7 +59,13 @@ struct MainPage {
   }
 
   async refreshDashboard(): Promise<void> {
+    const refreshVersion = this.dashboardRequestVersion + 1;
+    this.dashboardRequestVersion = refreshVersion;
     const response = await MainPageService.fetchDashboardRemoteFirst();
+    if (refreshVersion !== this.dashboardRequestVersion) {
+      return;
+    }
+
     if (!SessionStore.isAuthenticated()) {
       this.openLoginPage();
       return;

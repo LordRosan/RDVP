@@ -1,5 +1,6 @@
 import { http } from '@kit.NetworkKit';
 import { ApiErrorCode, ApiRequestOptions, ApiResponse } from '../../models/common/ApiModels';
+import { DashboardRefreshStore } from '../../stores/DashboardRefreshStore';
 import { SessionStore } from '../../stores/SessionStore';
 import { SecureRandomService } from './SecureRandomService';
 
@@ -95,7 +96,12 @@ export class ApiClient {
         SessionStore.clearSession();
       }
 
-      return ApiClient.parseResponse<T>(response.responseCode, `${response.result}`);
+      const parsedResponse = ApiClient.parseResponse<T>(response.responseCode, `${response.result}`);
+      if (parsedResponse.success && DashboardRefreshStore.shouldRefreshAfterRequest(path, method)) {
+        DashboardRefreshStore.notifyChanged();
+      }
+
+      return parsedResponse;
     } catch (err) {
       return {
         success: false,

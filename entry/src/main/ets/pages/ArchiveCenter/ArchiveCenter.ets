@@ -8,6 +8,7 @@ import { MainPageAction, MainPageActionId } from '../../models/app/MainPageModel
 import { MainPageService } from '../../services/app/MainPageService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
+import { MainPageNavigator } from '../../utils/MainPageNavigator';
 
 @Entry
 @Component
@@ -253,15 +254,7 @@ struct ArchiveCenter {
   }
 
   backToMainPage(): void {
-    try {
-      const router = this.getUIContext().getRouter();
-      if (router.getState().index > 1) {
-        router.back();
-        return;
-      }
-
-      router.replaceUrl({ url: 'pages/MainPage' });
-    } catch (err) {
+    if (!MainPageNavigator.replaceToMainPage(this.getUIContext())) {
       try {
         this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
       } catch (toastErr) {

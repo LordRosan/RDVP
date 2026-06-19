@@ -1,6 +1,5 @@
 package com.rmf.rdvp.api.dashboard;
 
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -25,6 +24,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class DashboardControllerTests {
+
+    private static final String VALID_QR_CONTENT =
+            "RDVP:1:RDVP-DEVICE-0001:nonce-rdvp-device-0001:F36D5F8B2A520071A5955968704A6DD4017A01E6457F573527867E47813C2807";
 
     @Autowired
     private MockMvc mockMvc;
@@ -215,12 +217,52 @@ class DashboardControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.archive.deviceTotal").value(4))
                 .andExpect(jsonPath("$.data.archive.archiveCreates").value(1))
-                .andExpect(jsonPath("$.data.archive.archiveQueries").value(greaterThanOrEqualTo(1)))
+                .andExpect(jsonPath("$.data.archive.archiveQueries").value(1))
                 .andExpect(jsonPath("$.data.operations.verifications").value(1))
                 .andExpect(jsonPath("$.data.operations.faultReports").value(1))
                 .andExpect(jsonPath("$.data.operations.repairs").value(1))
                 .andExpect(jsonPath("$.data.operations.reinspections").value(1))
                 .andExpect(jsonPath("$.data.management.reviewedTotal").value(1));
+    }
+
+    @Test
+    void incrementsArchiveQueryCountForEverySuccessfulArchiveLookupPath() throws Exception {
+        String token = login("admin", "password");
+
+        mockMvc.perform(get("/api/v1/dashboard")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.archive.archiveQueries").value(0));
+
+        mockMvc.perform(get("/api/v1/devices/by-code/RDVP-DEVICE-0001")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/dashboard")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.archive.archiveQueries").value(1));
+
+        mockMvc.perform(get("/api/v1/devices/device-local-0001")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/dashboard")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.archive.archiveQueries").value(2));
+
+        mockMvc.perform(post("/api/v1/device-qrcodes/verify")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "qrContent": "%s"
+                                }
+                                """.formatted(VALID_QR_CONTENT)))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/dashboard")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.archive.archiveQueries").value(3));
     }
 
     @Test

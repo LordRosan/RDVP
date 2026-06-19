@@ -9,6 +9,7 @@ import { ApiClient } from '../../services/common/ApiClient';
 import { ReinspectionService } from '../../services/operations/ReinspectionService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
+import { MainPageNavigator } from '../../utils/MainPageNavigator';
 
 @Entry
 @Component
@@ -720,15 +721,7 @@ struct ReinspectionReport {
   }
 
   backToMainPage(): void {
-    try {
-      const router = this.getUIContext().getRouter();
-      if (router.getState().index > 1) {
-        router.back();
-        return;
-      }
-
-      router.replaceUrl({ url: 'pages/MainPage' });
-    } catch (err) {
+    if (!MainPageNavigator.replaceToMainPage(this.getUIContext())) {
       try {
         this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
       } catch (toastErr) {

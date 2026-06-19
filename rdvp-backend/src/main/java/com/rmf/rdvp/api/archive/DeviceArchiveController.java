@@ -90,8 +90,10 @@ public class DeviceArchiveController {
     @PostMapping("/device-qrcodes/verify")
     public ResponseEntity<ApiResponse<QrVerificationResponse>> verifyQrCode(
             @Valid @RequestBody QrVerifyRequest requestBody,
+            Authentication authentication,
             HttpServletRequest request) {
         QrVerificationResponse response = QrVerificationResponse.from(archiveService.verifyQrCode(requestBody.qrContent()));
+        recordArchiveQuery(response.device(), requireUser(authentication));
         return ResponseEntity.ok(ApiResponse.success(response, RequestIds.resolve(request)));
     }
 

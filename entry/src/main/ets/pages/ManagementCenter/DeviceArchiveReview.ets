@@ -12,6 +12,7 @@ import { ApiClient } from '../../services/common/ApiClient';
 import { DeviceArchiveReviewService } from '../../services/management/DeviceArchiveReviewService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
+import { MainPageNavigator } from '../../utils/MainPageNavigator';
 
 const REVIEW_TYPE_FILTER_OPTIONS: string[] = ['全部类型', '添加档案', '删除档案', '修改档案'];
 const REVIEW_TYPE_FILTER_VALUES: string[] = ['', 'CREATE', 'DELETE', 'UPDATE'];
@@ -912,15 +913,7 @@ struct DeviceArchiveReview {
   }
 
   backToMainPage(): void {
-    try {
-      const router = this.getUIContext().getRouter();
-      if (router.getState().index > 1) {
-        router.back();
-        return;
-      }
-
-      router.replaceUrl({ url: 'pages/MainPage' });
-    } catch (err) {
+    if (!MainPageNavigator.replaceToMainPage(this.getUIContext())) {
       try {
         this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
       } catch (toastErr) {

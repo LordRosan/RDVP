@@ -24,7 +24,7 @@ export class MainPageService {
   }
 
   static async fetchDashboardRemoteFirst(): Promise<ApiResponse<MainPageDashboard>> {
-    const response = await ApiClient.request<MainPageDashboard>('/api/v1/dashboard', 'GET', true);
+    const response = await ApiClient.request<MainPageDashboard>(`/api/v1/dashboard?_=${Date.now()}`, 'GET', true);
     if (!response.success || response.data === undefined) {
       return response;
     }
