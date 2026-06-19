@@ -39,17 +39,22 @@ struct DeviceArchiveQuery {
       TabContent() {
         this.QueryTab(DeviceArchiveQueryMode.Code)
       }
-      .tabBar(this.TabBarItem('编号', $r('sys.symbol.rename'), 0))
+      .tabBar(this.TabBarItem('设备编号查询', $r('sys.symbol.rename'), 0))
 
       TabContent() {
         this.QueryTab(DeviceArchiveQueryMode.Qr)
       }
-      .tabBar(this.TabBarItem('扫码', $r('sys.symbol.circle_viewfinder'), 1))
+      .tabBar(this.TabBarItem('二维码查询', $r('sys.symbol.circle_viewfinder'), 1))
     }
     .barMode(BarMode.Fixed)
     .barHeight(78)
     .scrollable(false)
     .onChange((index: number) => {
+      if (this.querying) {
+        this.syncTabFromQueryMode();
+        return;
+      }
+
       this.currentTabIndex = index;
       this.queryMode = index === 0 ? DeviceArchiveQueryMode.Code : DeviceArchiveQueryMode.Qr;
       this.clearMessages();
@@ -172,15 +177,20 @@ struct DeviceArchiveQuery {
           width: 1,
           color: AppColors.Border
         })
+        .enabled(!this.querying)
         .onChange((value: string) => {
+          if (this.querying) {
+            return;
+          }
+
           this.deviceCode = value;
           this.codeQueryMessage = '';
         })
 
       this.CodeQueryMessageText()
-      this.ActionButton(this.querying ? '查询中' : '查询', $r('sys.symbol.magnifyingglass'), () => {
+      this.QuerySubmitButton(() => {
         this.submitDeviceCodeQuery();
-      }, !this.querying)
+      })
     }
     .padding({
       left: 18,
@@ -231,7 +241,7 @@ struct DeviceArchiveQuery {
               .fontSize(56)
               .fontColor([AppColors.Disabled])
 
-            Text('等待二维码')
+            Text('请扫描或上传二维码')
               .fontSize(18)
               .fontWeight(FontWeight.Bold)
               .fontColor(AppColors.TextPrimary)
@@ -256,16 +266,16 @@ struct DeviceArchiveQuery {
 
       Row({ space: 10 }) {
         Column() {
-          this.ActionButton('扫描', $r('sys.symbol.circle_viewfinder'), () => {
+          this.QrSourceButton('扫描', $r('sys.symbol.circle_viewfinder'), () => {
             this.scanQrCode();
-          }, !this.querying)
+          })
         }
         .layoutWeight(1)
 
         Column() {
-          this.ActionButton('上传', $r('sys.symbol.picture'), () => {
+          this.QrSourceButton('上传', $r('sys.symbol.picture'), () => {
             this.uploadQrImage();
-          }, !this.querying)
+          })
         }
         .layoutWeight(1)
       }
@@ -273,9 +283,9 @@ struct DeviceArchiveQuery {
       .alignItems(VerticalAlign.Center)
 
       this.QrQueryMessageText()
-      this.ActionButton(this.querying ? '查询中' : '查询', $r('sys.symbol.magnifyingglass'), () => {
+      this.QuerySubmitButton(() => {
         this.submitQrQuery();
-      }, !this.querying)
+      })
     }
     .padding({
       left: 18,
@@ -324,7 +334,34 @@ struct DeviceArchiveQuery {
   }
 
   @Builder
-  ActionButton(label: string, icon: Resource, action: () => void, enabled: boolean) {
+  QuerySubmitButton(action: () => void) {
+    Button({ type: ButtonType.Capsule, stateEffect: true }) {
+      Row({ space: 8 }) {
+        SymbolGlyph($r('sys.symbol.magnifyingglass'))
+          .fontSize(20)
+          .fontColor([AppColors.OnPrimary])
+
+        Text(this.querying ? '查询中' : '查询')
+          .fontSize(17)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppColors.OnPrimary)
+          .maxLines(1)
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+    }
+    .height(54)
+    .width('100%')
+    .backgroundColor(this.querying ? AppColors.Disabled : AppColors.Primary)
+    .enabled(!this.querying)
+    .onClick(() => {
+      action();
+    })
+  }
+
+  @Builder
+  QrSourceButton(label: string, icon: Resource, action: () => void) {
     Button({ type: ButtonType.Capsule, stateEffect: true }) {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
@@ -343,8 +380,8 @@ struct DeviceArchiveQuery {
     }
     .height(54)
     .width('100%')
-    .backgroundColor(enabled ? AppColors.Primary : AppColors.Disabled)
-    .enabled(enabled)
+    .backgroundColor(this.querying ? AppColors.Disabled : AppColors.Primary)
+    .enabled(!this.querying)
     .onClick(() => {
       action();
     })
@@ -394,24 +431,31 @@ struct DeviceArchiveQuery {
     }
 
     this.querying = true;
-    const response = await DeviceService.queryByCodeRemoteFirst({
-      deviceCode: this.deviceCode
-    });
-    this.querying = false;
+    try {
+      const response = await DeviceService.queryByCodeRemoteFirst({
+        deviceCode: this.deviceCode
+      });
 
-    if (!response.success) {
-      const error = response.error;
-      this.codeQueryMessage = this.normalizeCodeQueryError(error === undefined ? '' : `${error.code}`);
-      return;
-    }
+      if (!response.success) {
+        const error = response.error;
+        this.codeQueryMessage = this.normalizeCodeQueryError(error === undefined ? '' : `${error.code}`);
+        return;
+      }
 
-    if (response.data !== undefined) {
-      this.deviceCode = response.data.deviceCode;
-      this.openDeviceArchiveDetail(response.data);
+      if (response.data !== undefined) {
+        this.deviceCode = response.data.deviceCode;
+        this.openDeviceArchiveDetail(response.data);
+      }
+    } finally {
+      this.querying = false;
     }
   }
 
   async scanQrCode(): Promise<void> {
+    if (this.querying) {
+      return;
+    }
+
     this.qrActionMessage = '';
     this.qrQueryMessage = '';
     const context = this.getUIContext().getHostContext();
@@ -457,6 +501,10 @@ struct DeviceArchiveQuery {
   }
 
   async uploadQrImage(): Promise<void> {
+    if (this.querying) {
+      return;
+    }
+
     this.qrActionMessage = '';
     this.qrQueryMessage = '';
 
@@ -506,22 +554,25 @@ struct DeviceArchiveQuery {
     }
 
     this.querying = true;
-    const response = await DeviceService.queryByQrContentRemoteFirst({
-      qrContent: this.qrContent
-    });
-    this.querying = false;
+    try {
+      const response = await DeviceService.queryByQrContentRemoteFirst({
+        qrContent: this.qrContent
+      });
 
-    if (!response.success) {
-      const error = response.error;
-      this.qrQueryMessage = this.normalizeQrQueryError(error === undefined ? '' : `${error.code}`);
-      if (this.isQrValidationErrorCode(error === undefined ? '' : `${error.code}`)) {
-        this.qrContent = '';
+      if (!response.success) {
+        const error = response.error;
+        this.qrQueryMessage = this.normalizeQrQueryError(error === undefined ? '' : `${error.code}`);
+        if (this.isQrValidationErrorCode(error === undefined ? '' : `${error.code}`)) {
+          this.qrContent = '';
+        }
+        return;
       }
-      return;
-    }
 
-    if (response.data !== undefined) {
-      this.openDeviceArchiveDetail(response.data);
+      if (response.data !== undefined) {
+        this.openDeviceArchiveDetail(response.data);
+      }
+    } finally {
+      this.querying = false;
     }
   }
 

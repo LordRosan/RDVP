@@ -23,13 +23,15 @@ export struct CenterTitleBar {
         this.action();
       })
 
-      Text(this.title)
-        .fontSize(17)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .layoutWeight(1)
+      if (this.title.length > 0) {
+        Text(this.title)
+          .fontSize(17)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppColors.TextPrimary)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .layoutWeight(1)
+      }
     }
     .width('100%')
     .height(60)

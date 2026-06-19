@@ -1,4 +1,5 @@
 import { AppColors, AppRadii, AppSpacing } from '../styles/AppTheme';
+import { InlineMessageSurface } from '../components/InlineMessageSurface';
 import { AuthService } from '../services/identity/AuthService';
 import { SessionStore } from '../stores/SessionStore';
 
@@ -8,7 +9,6 @@ struct Login {
   @State username: string = '';
   @State password: string = '';
   @State message: string = '';
-  @State messageTone: string = AppColors.Danger;
   @State submitting: boolean = false;
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
 
@@ -125,6 +125,7 @@ struct Login {
         .fontSize(16)
         .backgroundColor(AppColors.FieldBackground)
         .borderRadius(AppRadii.Medium)
+        .enabled(!this.submitting)
         .padding({
           left: 16,
           right: 16
@@ -134,13 +135,16 @@ struct Login {
           color: AppColors.Border
         })
         .onChange((value: string) => {
+          if (this.submitting) {
+            return;
+          }
+
           if (secure) {
             this.password = value;
           } else {
             this.username = value;
           }
           this.message = '';
-          this.messageTone = AppColors.Danger;
         })
     }
     .width('100%')
@@ -150,13 +154,10 @@ struct Login {
   @Builder
   MessageText() {
     if (this.message.length > 0) {
-      Text(this.message)
-        .fontSize(13)
-        .fontColor(this.messageTone)
-        .lineHeight(18)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
+      InlineMessageSurface({
+        message: this.message,
+        tone: AppColors.Danger
+      })
     }
   }
 
@@ -196,7 +197,6 @@ struct Login {
     const validationMessage = this.validateBeforeRemoteLogin();
     if (validationMessage.length > 0) {
       this.message = validationMessage;
-      this.messageTone = AppColors.Danger;
       this.submitting = false;
       return;
     }
@@ -210,7 +210,6 @@ struct Login {
     if (!response.success) {
       const error = response.error;
       this.message = this.normalizeLoginErrorMessage(error === undefined ? '' : `${error.code}`, error === undefined ? '' : error.message);
-      this.messageTone = AppColors.Danger;
       return;
     }
 

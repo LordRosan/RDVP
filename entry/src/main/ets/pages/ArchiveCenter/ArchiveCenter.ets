@@ -69,7 +69,6 @@ struct ArchiveCenter {
   @Builder
   PageTitleBar() {
     CenterTitleBar({
-      title: '档案中心',
       action: () => {
         this.backToMainPage();
       }

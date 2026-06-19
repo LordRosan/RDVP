@@ -1,7 +1,9 @@
-import { AppColors } from '../../styles/AppTheme';
+import { InlineMessageSurface } from '../../components/InlineMessageSurface';
+import { ApiErrorCode } from '../../models/common/ApiModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
 import { ApiClient } from '../../services/common/ApiClient';
 import { DeviceService } from '../../services/archive/DeviceService';
+import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
 import { AuthGuard } from '../../utils/AuthGuard';
 
 interface CodeAvailabilityResult {
@@ -15,7 +17,6 @@ struct DeviceArchiveCodeVerify {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   @State deviceCode: string = '';
   @State message: string = '';
-  @State messageTone: string = AppColors.TextSecondary;
   @State verifying: boolean = false;
   @State result: CodeAvailabilityResult | undefined = undefined;
 
@@ -30,7 +31,7 @@ struct DeviceArchiveCodeVerify {
       Column() {
         this.PageTitleBar()
 
-        Column({ space: 18 }) {
+        Column({ space: AppSpacing.Section }) {
           this.ModeHeader()
           this.VerifyForm()
           if (this.result !== undefined) {
@@ -40,10 +41,10 @@ struct DeviceArchiveCodeVerify {
         .alignItems(HorizontalAlign.Start)
         .justifyContent(FlexAlign.Start)
         .padding({
-          left: 24,
-          right: 24,
+          left: AppSpacing.PageX,
+          right: AppSpacing.PageX,
           top: 0,
-          bottom: 28
+          bottom: AppSpacing.PageBottom
         })
         .width('100%')
       }
@@ -72,7 +73,7 @@ struct DeviceArchiveCodeVerify {
       }
       .width(44)
       .height(44)
-      .backgroundColor(AppColors.Surface)
+      .backgroundColor(AppColors.SurfaceRaised)
       .border({ width: 1, color: AppColors.Divider })
       .onClick(() => {
         this.backToArchiveCenter();
@@ -81,34 +82,45 @@ struct DeviceArchiveCodeVerify {
     .width('100%')
     .height(60)
     .alignItems(VerticalAlign.Center)
-    .padding({ left: 24, right: 24 })
+    .padding({
+      left: AppSpacing.PageX,
+      right: AppSpacing.PageX
+    })
     .backgroundColor(AppColors.PageBackground)
   }
 
   @Builder
   ModeHeader() {
-    Text('设备编号核验')
-      .fontSize(34)
-      .fontWeight(FontWeight.Bold)
-      .fontColor(AppColors.TextPrimary)
-      .maxLines(1)
-      .textOverflow({ overflow: TextOverflow.Ellipsis })
+    Column({ space: 5 }) {
+      Text('设备编号核验')
+        .fontSize(34)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+      Text('Device Code Verification')
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextTertiary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
     .width('100%')
-    .alignSelf(ItemAlign.Start)
-    .padding({ top: 0, bottom: 2 })
+    .padding({
+      left: 0,
+      right: 0,
+      top: 12,
+      bottom: 6
+    })
+    .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
   VerifyForm() {
-    Column({ space: 14 }) {
-      Text('输入设备编号')
-        .fontSize(17)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
-
+    Column({ space: 16 }) {
       TextInput({
-        placeholder: '例如 RDVP-DEVICE-0100',
+        placeholder: 'RDVP-DEVICE-XXXX',
         text: this.deviceCode
       })
         .height(56)
@@ -117,16 +129,21 @@ struct DeviceArchiveCodeVerify {
         .borderRadius(18)
         .padding({ left: 16, right: 16 })
         .border({ width: 1, color: AppColors.Border })
+        .enabled(!this.verifying)
         .onChange((value: string) => {
+          if (this.verifying) {
+            return;
+          }
+
           this.deviceCode = value;
           this.message = '';
           this.result = undefined;
         })
 
       this.MessageText()
-      this.ActionButton(this.verifying ? '核验中' : '核验', () => {
+      this.VerifySubmitButton(() => {
         this.verifyDeviceCode();
-      }, !this.verifying)
+      })
     }
     .padding({
       left: 18,
@@ -135,73 +152,73 @@ struct DeviceArchiveCodeVerify {
       bottom: 18
     })
     .width('100%')
-    .backgroundColor(AppColors.Surface)
-    .borderRadius(24)
+    .backgroundColor(AppColors.SurfaceRaised)
+    .borderRadius(AppRadii.Large)
+    .border({
+      width: 1,
+      color: AppColors.Divider
+    })
     .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
   ResultPanel() {
-    Column({ space: 10 }) {
+    Column({ space: 12 }) {
       Text('核验结果')
-        .fontSize(22)
+        .fontSize(20)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
-      Column({ space: 16 }) {
-        Row() {
-          Text('可用状态')
-            .fontSize(15)
-            .fontColor(AppColors.TextPrimary)
-            .fontWeight(FontWeight.Medium)
-            .layoutWeight(1)
-            .maxLines(1)
+      Column({ space: 14 }) {
+        Row({ space: 12 }) {
+          SymbolGlyph(this.getResultIcon())
+            .fontSize(28)
+            .fontColor([this.getResultTone()])
 
-          Text(this.result!.available ? '可用' : '不可用')
-            .fontSize(15)
-            .fontColor(this.result!.available ? AppColors.Success : AppColors.Danger)
-            .fontWeight(FontWeight.Medium)
-            .maxLines(1)
-        }
-        .width('100%')
-        .height(54)
-        .padding({ left: 18, right: 18 })
-
-        if (this.result!.reason !== undefined && this.result!.reason.length > 0) {
-          Divider()
-            .height(1)
-            .backgroundColor(AppColors.Divider)
-            .margin({ left: 18, right: 18 })
-
-          Row() {
-            Text('说明')
-              .fontSize(15)
+          Column({ space: 4 }) {
+            Text(this.result!.available ? '设备编号可用' : '设备编号不可用')
+              .fontSize(17)
+              .fontWeight(FontWeight.Bold)
               .fontColor(AppColors.TextPrimary)
-              .fontWeight(FontWeight.Medium)
-              .layoutWeight(1)
               .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-            Text(this.result!.reason)
-              .fontSize(15)
+            Text(this.getResultReason())
+              .fontSize(13)
               .fontColor(AppColors.TextSecondary)
-              .fontWeight(FontWeight.Medium)
-              .textAlign(TextAlign.End)
-              .width('58%')
+              .lineHeight(18)
               .maxLines(2)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
           }
-          .width('100%')
-          .padding({ left: 18, right: 18 })
+          .layoutWeight(1)
         }
+        .width('100%')
+
+        Divider()
+          .height(1)
+          .backgroundColor(AppColors.Divider)
+
+        this.ResultInfoRow('设备编号', DeviceService.normalizeDeviceCode(this.deviceCode), AppColors.TextSecondary)
+        this.ResultInfoRow('可用状态', this.result!.available ? '可用' : '不可用', this.getResultTone())
       }
       .width('100%')
-      .backgroundColor(AppColors.Surface)
-      .borderRadius(24)
+      .padding({
+        left: 18,
+        right: 18,
+        top: 18,
+        bottom: 18
+      })
+      .backgroundColor(AppColors.SurfaceRaised)
+      .borderRadius(AppRadii.Large)
+      .border({
+        width: 1,
+        color: AppColors.Divider
+      })
       .alignItems(HorizontalAlign.Start)
 
       if (this.result!.available) {
-        this.ActionButton('继续添加档案', () => {
+        this.ActionButton('继续添加档案', $r('sys.symbol.plus_circle'), () => {
           this.navigateToCreate();
         }, true)
       }
@@ -213,23 +230,80 @@ struct DeviceArchiveCodeVerify {
   @Builder
   MessageText() {
     if (this.message.length > 0) {
-      Text(this.message)
-        .fontSize(13)
-        .fontColor(this.messageTone)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
+      InlineMessageSurface({
+        message: this.message,
+        tone: AppColors.Danger
+      })
     }
   }
 
   @Builder
-  ActionButton(label: string, action: () => void, enabled: boolean) {
-    Button({ type: ButtonType.Capsule, stateEffect: enabled }) {
+  ResultInfoRow(label: string, value: string, tone: string) {
+    Row() {
       Text(label)
-        .fontSize(17)
+        .fontSize(15)
+        .fontColor(AppColors.TextSecondary)
         .fontWeight(FontWeight.Medium)
-        .fontColor(AppColors.OnPrimary)
         .maxLines(1)
+        .layoutWeight(1)
+
+      Text(value.length > 0 ? value : '-')
+        .fontSize(15)
+        .fontColor(tone)
+        .fontWeight(FontWeight.Medium)
+        .textAlign(TextAlign.End)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('56%')
+    }
+    .width('100%')
+    .alignItems(VerticalAlign.Center)
+  }
+
+  @Builder
+  VerifySubmitButton(action: () => void) {
+    Button({ type: ButtonType.Capsule, stateEffect: true }) {
+      Row({ space: 8 }) {
+        SymbolGlyph($r('sys.symbol.checkmark_circle'))
+          .fontSize(20)
+          .fontColor([AppColors.OnPrimary])
+
+        Text(this.verifying ? '核验中' : '核验')
+          .fontSize(17)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppColors.OnPrimary)
+          .maxLines(1)
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+    }
+    .height(54)
+    .width('100%')
+    .backgroundColor(this.verifying ? AppColors.Disabled : AppColors.Primary)
+    .enabled(!this.verifying)
+    .onClick(() => {
+      action();
+    })
+  }
+
+  @Builder
+  ActionButton(label: string, icon: Resource, action: () => void, enabled: boolean) {
+    Button({ type: ButtonType.Capsule, stateEffect: true }) {
+      Row({ space: 8 }) {
+        SymbolGlyph(icon)
+          .fontSize(20)
+          .fontColor([AppColors.OnPrimary])
+
+        Text(label)
+          .fontSize(17)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppColors.OnPrimary)
+          .maxLines(1)
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
     }
     .height(54)
     .width('100%')
@@ -245,51 +319,44 @@ struct DeviceArchiveCodeVerify {
       return;
     }
 
+    this.message = '';
+    this.result = undefined;
+    const validation = DeviceService.validateDeviceCodeQuery({
+      deviceCode: this.deviceCode
+    });
+    if (!validation.valid) {
+      this.message = validation.message;
+      return;
+    }
+
     const deviceCode = DeviceService.normalizeDeviceCode(this.deviceCode);
-    if (deviceCode.length === 0) {
-      this.message = '请输入设备编号';
-      this.messageTone = AppColors.Danger;
-      return;
-    }
-
-    if (!/^RDVP-DEVICE-\d{4}$/.test(deviceCode)) {
-      this.message = '设备编号格式应为 RDVP-DEVICE-0001';
-      this.messageTone = AppColors.Danger;
-      return;
-    }
-
+    this.deviceCode = deviceCode;
     if (!ApiClient.isConfigured()) {
-      this.message = '后端服务地址未配置，无法核验设备编号';
-      this.messageTone = AppColors.Danger;
+      this.message = '核验功能暂不可用，请稍后重试';
       return;
     }
 
     this.verifying = true;
-    this.result = undefined;
-    const code = encodeURIComponent(deviceCode);
-    const response = await ApiClient.request<CodeAvailabilityResult>(
-      `/api/v1/device-codes/${code}/availability`, 'GET', true);
-    this.verifying = false;
+    try {
+      const code = encodeURIComponent(deviceCode);
+      const response = await ApiClient.request<CodeAvailabilityResult>(
+        `/api/v1/device-codes/${code}/availability`, 'GET', true);
 
-    if (!response.success) {
-      const error = response.error;
-      this.message = error ? error.message : '设备编号核验失败';
-      this.messageTone = AppColors.Danger;
-      return;
-    }
+      if (!response.success) {
+        const error = response.error;
+        this.message = this.normalizeVerifyErrorMessage(error === undefined ? '' : `${error.code}`);
+        return;
+      }
 
-    if (response.data === undefined) {
-      this.message = '核验响应无效';
-      this.messageTone = AppColors.Danger;
-      return;
-    }
+      if (response.data === undefined) {
+        this.message = '核验功能暂不可用，请稍后重试';
+        return;
+      }
 
-    this.result = response.data;
-    if (this.result!.available) {
+      this.result = response.data;
       this.message = '';
-    } else {
-      this.message = this.result!.reason ? this.result!.reason : '设备编号不可用';
-      this.messageTone = AppColors.Danger;
+    } finally {
+      this.verifying = false;
     }
   }
 
@@ -303,8 +370,44 @@ struct DeviceArchiveCodeVerify {
       });
     } catch (err) {
       this.message = '添加设备档案页面不可用';
-      this.messageTone = AppColors.Danger;
     }
+  }
+
+  normalizeVerifyErrorMessage(errorCode: string): string {
+    if (errorCode === 'DEVICE_CODE_INVALID' || errorCode === ApiErrorCode.BadRequest ||
+      errorCode === ApiErrorCode.ValidationFailed) {
+      return '设备编号无效，请重新输入';
+    }
+
+    return '核验功能暂不可用，请稍后重试';
+  }
+
+  getResultIcon(): Resource {
+    if (this.result !== undefined && this.result.available) {
+      return $r('sys.symbol.checkmark_circle');
+    }
+
+    return $r('sys.symbol.exclamationmark_circle');
+  }
+
+  getResultTone(): string {
+    if (this.result !== undefined && this.result.available) {
+      return AppColors.Success;
+    }
+
+    return AppColors.Danger;
+  }
+
+  getResultReason(): string {
+    if (this.result !== undefined && this.result.reason !== undefined && this.result.reason.length > 0) {
+      return this.result.reason;
+    }
+
+    if (this.result !== undefined && this.result.available) {
+      return '设备编号可用于添加档案';
+    }
+
+    return '设备编号暂不可用于添加档案';
   }
 
   backToArchiveCenter(): void {
