@@ -11,6 +11,7 @@ import { DeviceArchiveUpdateService } from '../../services/archive/DeviceArchive
 import { DeviceService } from '../../services/archive/DeviceService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
+import { MainPageNavigator } from '../../utils/MainPageNavigator';
 
 @Entry
 @Component
@@ -521,15 +522,7 @@ struct DeviceArchiveCreate {
   }
 
   backToArchiveCenter(): void {
-    try {
-      const router = this.getUIContext().getRouter();
-      if (router.getState().index > 1) {
-        router.back();
-        return;
-      }
-
-      router.replaceUrl({ url: 'pages/ArchiveCenter/ArchiveCenter' });
-    } catch (err) {
+    if (!MainPageNavigator.backOrReplace(this.getUIContext(), 'pages/ArchiveCenter/ArchiveCenter')) {
       try {
         this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
       } catch (toastErr) {

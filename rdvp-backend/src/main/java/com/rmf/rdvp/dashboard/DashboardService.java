@@ -5,7 +5,6 @@ import org.springframework.stereotype.Service;
 import com.rmf.rdvp.archive.DeviceArchiveRepository;
 import com.rmf.rdvp.archive.DeviceArchiveRequestRepository;
 import com.rmf.rdvp.archive.DeviceArchiveRequestType;
-import com.rmf.rdvp.archive.DeviceVerificationRepository;
 import com.rmf.rdvp.audit.AuditAction;
 import com.rmf.rdvp.audit.AuditLogRepository;
 import com.rmf.rdvp.identity.AuthenticatedUser;
@@ -17,19 +16,16 @@ public class DashboardService {
 
     private final DeviceArchiveRepository archiveRepository;
     private final DeviceArchiveRequestRepository archiveRequestRepository;
-    private final DeviceVerificationRepository verificationRepository;
     private final OperationsRepository operationsRepository;
     private final AuditLogRepository auditLogRepository;
 
     public DashboardService(
             DeviceArchiveRepository archiveRepository,
             DeviceArchiveRequestRepository archiveRequestRepository,
-            DeviceVerificationRepository verificationRepository,
             OperationsRepository operationsRepository,
             AuditLogRepository auditLogRepository) {
         this.archiveRepository = archiveRepository;
         this.archiveRequestRepository = archiveRequestRepository;
-        this.verificationRepository = verificationRepository;
         this.operationsRepository = operationsRepository;
         this.auditLogRepository = auditLogRepository;
     }
@@ -53,10 +49,10 @@ public class DashboardService {
     private OperationsDashboardStats operationsStats() {
         return new OperationsDashboardStats(
                 operationsRepository.countTaskPoolItems(),
-                verificationRepository.countAll(),
-                operationsRepository.countFaultReports(),
-                operationsRepository.countRepairReports(),
-                operationsRepository.countReinspectionRecords());
+                0,
+                0,
+                0,
+                0);
     }
 
     private ManagementDashboardStats managementStats(AuthenticatedUser user) {

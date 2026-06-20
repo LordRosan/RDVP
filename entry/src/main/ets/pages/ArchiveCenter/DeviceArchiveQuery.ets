@@ -66,7 +66,7 @@ struct DeviceArchiveQuery {
   }
 
   onBackPress(): boolean {
-    this.backToMainPage();
+    this.backToArchiveCenter();
     return true;
   }
 
@@ -119,7 +119,7 @@ struct DeviceArchiveQuery {
         color: AppColors.Divider
       })
       .onClick(() => {
-        this.backToMainPage();
+        this.backToArchiveCenter();
       })
     }
     .width('100%')
@@ -652,9 +652,9 @@ struct DeviceArchiveQuery {
     }
   }
 
-  backToMainPage(): void {
+  backToArchiveCenter(): void {
     DeviceArchiveFlowStore.clearFlow();
-    if (!MainPageNavigator.replaceToMainPage(this.getUIContext())) {
+    if (!MainPageNavigator.backOrReplace(this.getUIContext(), 'pages/ArchiveCenter/ArchiveCenter')) {
       try {
         this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
       } catch (toastErr) {

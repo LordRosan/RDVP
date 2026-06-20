@@ -111,7 +111,7 @@ class DashboardControllerTests {
     }
 
     @Test
-    void includesCompletedBusinessFlowCounts() throws Exception {
+    void includesCompletedArchiveFlowAndKeepsOperationsApprovalCountsZeroWithoutReviewFlow() throws Exception {
         String archiveAdminToken = login("archiveadmin", "password");
         String adminToken = login("admin", "password");
         String operatorToken = login("operator", "password");
@@ -218,15 +218,167 @@ class DashboardControllerTests {
                 .andExpect(jsonPath("$.data.archive.deviceTotal").value(4))
                 .andExpect(jsonPath("$.data.archive.archiveCreates").value(1))
                 .andExpect(jsonPath("$.data.archive.archiveQueries").value(1))
-                .andExpect(jsonPath("$.data.operations.verifications").value(1))
-                .andExpect(jsonPath("$.data.operations.faultReports").value(1))
-                .andExpect(jsonPath("$.data.operations.repairs").value(1))
-                .andExpect(jsonPath("$.data.operations.reinspections").value(1))
+                .andExpect(jsonPath("$.data.operations.verifications").value(0))
+                .andExpect(jsonPath("$.data.operations.faultReports").value(0))
+                .andExpect(jsonPath("$.data.operations.repairs").value(0))
+                .andExpect(jsonPath("$.data.operations.reinspections").value(0))
                 .andExpect(jsonPath("$.data.management.reviewedTotal").value(1));
     }
 
     @Test
-    void incrementsArchiveQueryCountForEverySuccessfulArchiveLookupPath() throws Exception {
+    void countsArchiveMutationsOnlyAfterApproval() throws Exception {
+        String archiveAdminToken = login("archiveadmin", "password");
+        String adminToken = login("admin", "password");
+
+        String createResponse = mockMvc.perform(post("/api/v1/device-archive-requests")
+                        .header("Authorization", "Bearer " + archiveAdminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "type": "CREATE",
+                                  "deviceCode": "RDVP-DEVICE-0101",
+                                  "reason": "新增测试设备。",
+                                  "changes": {
+                                    "name": {
+                                      "newValue": "测试设备0101"
+                                    }
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        String createRequestId = objectMapper.readTree(createResponse).path("data").path("id").asText();
+
+        mockMvc.perform(get("/api/v1/dashboard")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.archive.archiveCreates").value(0))
+                .andExpect(jsonPath("$.data.archive.archiveUpdates").value(0))
+                .andExpect(jsonPath("$.data.archive.archiveDeletes").value(0))
+                .andExpect(jsonPath("$.data.management.reviewedTotal").value(0));
+
+        mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", createRequestId)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "decision": "APPROVED",
+                                  "reviewedAt": "2026-06-01T08:00:00Z",
+                                  "reviewComment": "通过。"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/dashboard")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.archive.archiveCreates").value(1))
+                .andExpect(jsonPath("$.data.archive.archiveUpdates").value(0))
+                .andExpect(jsonPath("$.data.archive.archiveDeletes").value(0))
+                .andExpect(jsonPath("$.data.management.reviewedTotal").value(1));
+
+        String updateResponse = mockMvc.perform(post("/api/v1/device-archive-requests")
+                        .header("Authorization", "Bearer " + archiveAdminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "type": "UPDATE",
+                                  "deviceId": "device-local-0001",
+                                  "reason": "修正部署位置。",
+                                  "changes": {
+                                    "location.address": {
+                                      "oldValue": "一号厂房动力区",
+                                      "newValue": "一号厂房动力区A段"
+                                    }
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        String updateRequestId = objectMapper.readTree(updateResponse).path("data").path("id").asText();
+
+        String createdDeviceResponse = mockMvc.perform(get("/api/v1/devices/by-code/RDVP-DEVICE-0101")
+                        .header("Authorization", "Bearer " + archiveAdminToken))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        String createdDeviceId = objectMapper.readTree(createdDeviceResponse).path("data").path("id").asText();
+
+        verifyPassword(archiveAdminToken, "password");
+        String deleteResponse = mockMvc.perform(post("/api/v1/device-archive-requests")
+                        .header("Authorization", "Bearer " + archiveAdminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "type": "DELETE",
+                                  "deviceId": "%s",
+                                  "reason": "测试退役。"
+                                }
+                                """.formatted(createdDeviceId)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        String deleteRequestId = objectMapper.readTree(deleteResponse).path("data").path("id").asText();
+
+        mockMvc.perform(get("/api/v1/dashboard")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.archive.archiveCreates").value(1))
+                .andExpect(jsonPath("$.data.archive.archiveUpdates").value(0))
+                .andExpect(jsonPath("$.data.archive.archiveDeletes").value(0))
+                .andExpect(jsonPath("$.data.management.reviewedTotal").value(1));
+
+        mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", updateRequestId)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "decision": "APPROVED",
+                                  "reviewedAt": "2026-06-01T08:05:00Z",
+                                  "reviewComment": "通过。"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("APPROVED"));
+
+        mockMvc.perform(get("/api/v1/dashboard")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.archive.archiveCreates").value(1))
+                .andExpect(jsonPath("$.data.archive.archiveUpdates").value(1))
+                .andExpect(jsonPath("$.data.archive.archiveDeletes").value(0))
+                .andExpect(jsonPath("$.data.management.reviewedTotal").value(2));
+
+        mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", deleteRequestId)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "decision": "APPROVED",
+                                  "reviewedAt": "2026-06-01T08:10:00Z",
+                                  "reviewComment": "通过。"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("APPROVED"));
+
+        mockMvc.perform(get("/api/v1/dashboard")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.archive.archiveCreates").value(1))
+                .andExpect(jsonPath("$.data.archive.archiveUpdates").value(1))
+                .andExpect(jsonPath("$.data.archive.archiveDeletes").value(1))
+                .andExpect(jsonPath("$.data.management.reviewedTotal").value(3));
+    }
+
+    @Test
+    void incrementsArchiveQueryCountOnlyForUserFacingArchiveQueries() throws Exception {
         String token = login("admin", "password");
 
         mockMvc.perform(get("/api/v1/dashboard")
@@ -248,7 +400,7 @@ class DashboardControllerTests {
         mockMvc.perform(get("/api/v1/dashboard")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.archive.archiveQueries").value(2));
+                .andExpect(jsonPath("$.data.archive.archiveQueries").value(1));
 
         mockMvc.perform(post("/api/v1/device-qrcodes/verify")
                         .header("Authorization", "Bearer " + token)
@@ -262,7 +414,7 @@ class DashboardControllerTests {
         mockMvc.perform(get("/api/v1/dashboard")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.archive.archiveQueries").value(3));
+                .andExpect(jsonPath("$.data.archive.archiveQueries").value(2));
     }
 
     @Test
@@ -311,6 +463,18 @@ class DashboardControllerTests {
                 .getContentAsString(StandardCharsets.UTF_8);
 
         return objectMapper.readTree(response).path("data").path("repairTaskId").asText();
+    }
+
+    private void verifyPassword(String token, String password) throws Exception {
+        mockMvc.perform(post("/api/v1/auth/password-verification")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "password": "%s"
+                                }
+                                """.formatted(password)))
+                .andExpect(status().isOk());
     }
 
     private String login(String username, String password) throws Exception {

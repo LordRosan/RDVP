@@ -81,7 +81,7 @@ struct DeviceArchiveReview {
   }
 
   onBackPress(): boolean {
-    this.backToMainPage();
+    this.backToManagementCenter();
     return true;
   }
 
@@ -98,7 +98,7 @@ struct DeviceArchiveReview {
       .backgroundColor(AppColors.Surface)
       .border({ width: 1, color: AppColors.Divider })
       .onClick(() => {
-        this.backToMainPage();
+        this.backToManagementCenter();
       })
     }
     .width('100%')
@@ -912,8 +912,8 @@ struct DeviceArchiveReview {
     return value < 10 ? `0${value}` : `${value}`;
   }
 
-  backToMainPage(): void {
-    if (!MainPageNavigator.replaceToMainPage(this.getUIContext())) {
+  backToManagementCenter(): void {
+    if (!MainPageNavigator.backOrReplace(this.getUIContext(), 'pages/ManagementCenter/ManagementCenter')) {
       try {
         this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
       } catch (toastErr) {

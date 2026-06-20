@@ -7,6 +7,7 @@ import { DashboardMetric, MainPageAction, MainPageActionId, MainPageDashboard } 
 import { CurrentUserSnapshot } from '../models/identity/SessionModels';
 import { MainPageService } from '../services/app/MainPageService';
 import { DashboardRefreshStore } from '../stores/DashboardRefreshStore';
+import { MainPageViewportStore } from '../stores/MainPageViewportStore';
 import { SessionStore } from '../stores/SessionStore';
 
 @Entry
@@ -25,9 +26,13 @@ struct MainPage {
   @State logoutActionMessage: string = '';
   @State settingsMessage: string = '';
   private dashboardRequestVersion: number = 0;
+  private homeScroller: Scroller = new Scroller();
+  private homeScrollRestoreCount: number = 0;
+  private readonly maxHomeScrollRestoreCount: number = 2;
 
   aboutToAppear(): void {
     DashboardRefreshStore.ensureInitialized();
+    MainPageViewportStore.ensureInitialized();
     if (!SessionStore.isAuthenticated()) {
       this.openLoginPage();
       return;
@@ -74,6 +79,7 @@ struct MainPage {
     if (response.success && response.data !== undefined) {
       this.dashboard = response.data;
       this.dashboardLoaded = true;
+      this.restoreHomeScrollPosition();
     }
   }
 
@@ -107,7 +113,7 @@ struct MainPage {
 
   @Builder
   HomeTab() {
-    Scroll() {
+    Scroll(this.homeScroller) {
       Column({ space: AppSpacing.Section }) {
         this.Header()
         this.DashboardSection()
@@ -126,6 +132,12 @@ struct MainPage {
     }
     .height('100%')
     .width('100%')
+    .onScrollStop(() => {
+      this.saveHomeScrollPosition();
+    })
+    .onAppear(() => {
+      this.restoreHomeScrollPosition();
+    })
   }
 
   @Builder
@@ -218,7 +230,7 @@ struct MainPage {
         if (this.shouldShowArchiveDashboard()) {
           this.DashboardCenterCard(
             '档案中心',
-            '档案总量',
+            '档案数',
             this.getArchivePrimaryValue(),
             this.getArchiveDashboardMetrics(),
             $r('sys.symbol.text_clipboard'),
@@ -614,6 +626,7 @@ struct MainPage {
   openCenter(action: MainPageAction): void {
     this.actionMessage = '';
     this.actionMessageTargetId = '';
+    this.saveHomeScrollPosition();
 
     if (!SessionStore.isAuthenticated()) {
       this.openLoginPage();
@@ -680,6 +693,37 @@ struct MainPage {
     this.logoutActionMessage = '';
   }
 
+  saveHomeScrollPosition(): void {
+    try {
+      const offset = this.homeScroller.currentOffset();
+      MainPageViewportStore.setHomeScrollY(offset.yOffset);
+    } catch (err) {
+    }
+  }
+
+  restoreHomeScrollPosition(): void {
+    if (this.homeScrollRestoreCount >= this.maxHomeScrollRestoreCount) {
+      return;
+    }
+
+    const yOffset = MainPageViewportStore.getHomeScrollY();
+    if (yOffset <= 0) {
+      return;
+    }
+
+    this.homeScrollRestoreCount += 1;
+    setTimeout(() => {
+      try {
+        this.homeScroller.scrollTo({
+          xOffset: 0,
+          yOffset: yOffset,
+          animation: false
+        });
+      } catch (err) {
+      }
+    }, 0);
+  }
+
   getProfileEyebrow(): string {
     if (this.currentUser.roleName.length > 0) {
       return this.currentUser.roleName;
@@ -732,10 +776,10 @@ struct MainPage {
     }
 
     return [
-      { label: '档案增加数', value: archive.archiveCreates },
-      { label: '档案删除数', value: archive.archiveDeletes },
-      { label: '档案修改数', value: archive.archiveUpdates },
-      { label: '档案查询数', value: archive.archiveQueries }
+      { label: '档案添加', value: archive.archiveCreates },
+      { label: '档案删除', value: archive.archiveDeletes },
+      { label: '档案修改', value: archive.archiveUpdates },
+      { label: '档案查询', value: archive.archiveQueries }
     ];
   }
 
@@ -746,10 +790,10 @@ struct MainPage {
     }
 
     return [
-      { label: '核验次数', value: operations.verifications },
-      { label: '报修次数', value: operations.faultReports },
-      { label: '维修数', value: operations.repairs },
-      { label: '复检数', value: operations.reinspections }
+      { label: '核验', value: operations.verifications },
+      { label: '报修', value: operations.faultReports },
+      { label: '维修', value: operations.repairs },
+      { label: '复检', value: operations.reinspections }
     ];
   }
 
@@ -762,10 +806,10 @@ struct MainPage {
     const primaryKey = this.getManagementPrimaryKey();
     const metrics: DashboardMetric[] = [];
     if (management.pendingArchiveReviews !== undefined && primaryKey !== 'pendingArchiveReviews') {
-      metrics.push({ label: '档案待审核数', value: management.pendingArchiveReviews });
+      metrics.push({ label: '待审核档案操作', value: management.pendingArchiveReviews });
     }
     if (management.pendingOperationsReviews !== undefined && primaryKey !== 'pendingOperationsReviews') {
-      metrics.push({ label: '运维待审核数', value: management.pendingOperationsReviews });
+      metrics.push({ label: '待审核运维操作', value: management.pendingOperationsReviews });
     }
 
     return metrics;
@@ -823,13 +867,13 @@ struct MainPage {
   getManagementPrimaryLabel(): string {
     const primaryKey = this.getManagementPrimaryKey();
     if (primaryKey === 'pendingArchiveReviews') {
-      return '档案待审核数';
+      return '待审核档案操作';
     }
     if (primaryKey === 'pendingOperationsReviews') {
-      return '运维待审核数';
+      return '待审核运维操作';
     }
 
-    return '已审核数';
+    return '审核数';
   }
 
   getManagementPrimaryValue(): number {

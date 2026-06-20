@@ -4,6 +4,7 @@ import { PermissionCode } from '../../../models/identity/PermissionModels';
 import { RecordCategory, RecordItem, RecordQueryFilter } from '../../../models/management/RecordQueryModels';
 import { RecordQueryService } from '../../../services/management/RecordQueryService';
 import { AuthGuard } from '../../../utils/AuthGuard';
+import { MainPageNavigator } from '../../../utils/MainPageNavigator';
 
 const OPERATION_RECORD_TYPE_OPTIONS: string[] = ['全部', '核验', '报修', '接取', '维修', '复检'];
 const OPERATION_RECORD_TYPE_VALUES: string[] = ['', 'DEVICE_VERIFICATION', 'FAULT_REPORT',
@@ -317,11 +318,11 @@ struct OperationRecordQuery {
   }
 
   backToParent(): void {
-    try {
-      const router = this.getUIContext().getRouter();
-      if (router.getState().index > 1) { router.back(); return; }
-      router.replaceUrl({ url: 'pages/MainPage' });
-    } catch (err) {
+    if (!MainPageNavigator.backOrReplace(this.getUIContext(), 'pages/ManagementCenter/RecordQuery/RecordQuery')) {
+      try {
+        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+      } catch (toastErr) {
+      }
     }
   }
 }

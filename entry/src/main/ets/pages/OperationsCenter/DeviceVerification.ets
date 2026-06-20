@@ -67,7 +67,7 @@ struct DeviceVerification {
   }
 
   onBackPress(): boolean {
-    this.backToMainPage();
+    this.backToOperationsCenter();
     return true;
   }
 
@@ -87,7 +87,7 @@ struct DeviceVerification {
         color: AppColors.Divider
       })
       .onClick(() => {
-        this.backToMainPage();
+        this.backToOperationsCenter();
       })
     }
     .width('100%')
@@ -913,8 +913,8 @@ struct DeviceVerification {
     return value < 10 ? `0${value}` : `${value}`;
   }
 
-  backToMainPage(): void {
-    if (!MainPageNavigator.replaceToMainPage(this.getUIContext())) {
+  backToOperationsCenter(): void {
+    if (!MainPageNavigator.backOrReplace(this.getUIContext(), 'pages/OperationsCenter/OperationsCenter')) {
       try {
         this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
       } catch (toastErr) {

@@ -5,6 +5,7 @@ import { ApiClient } from '../../services/common/ApiClient';
 import { DeviceService } from '../../services/archive/DeviceService';
 import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
 import { AuthGuard } from '../../utils/AuthGuard';
+import { MainPageNavigator } from '../../utils/MainPageNavigator';
 
 interface CodeAvailabilityResult {
   available: boolean;
@@ -391,15 +392,7 @@ struct DeviceArchiveCodeVerify {
   }
 
   backToArchiveCenter(): void {
-    try {
-      const router = this.getUIContext().getRouter();
-      if (router.getState().index > 1) {
-        router.back();
-        return;
-      }
-
-      router.replaceUrl({ url: 'pages/ArchiveCenter/ArchiveCenter' });
-    } catch (err) {
+    if (!MainPageNavigator.backOrReplace(this.getUIContext(), 'pages/ArchiveCenter/ArchiveCenter')) {
       try {
         this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
       } catch (toastErr) {

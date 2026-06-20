@@ -61,7 +61,6 @@ public class DeviceArchiveController {
             Authentication authentication,
             HttpServletRequest request) {
         DeviceArchiveResponse response = DeviceArchiveResponse.from(archiveService.findById(deviceId));
-        recordArchiveQuery(response, requireUser(authentication));
         return ResponseEntity.ok(ApiResponse.success(response, RequestIds.resolve(request)));
     }
 

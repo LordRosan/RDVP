@@ -4,6 +4,7 @@ import { PermissionCode } from '../../../models/identity/PermissionModels';
 import { RecordCategory, RecordItem, RecordQueryFilter } from '../../../models/management/RecordQueryModels';
 import { RecordQueryService } from '../../../services/management/RecordQueryService';
 import { AuthGuard } from '../../../utils/AuthGuard';
+import { MainPageNavigator } from '../../../utils/MainPageNavigator';
 
 const ARCHIVE_TYPE_OPTIONS: string[] = ['全部', '添加档案', '修改档案', '删除档案'];
 const ARCHIVE_TYPE_VALUES: string[] = ['', 'CREATE', 'UPDATE', 'DELETE'];
@@ -316,11 +317,11 @@ struct ArchiveRecordQuery {
   }
 
   backToParent(): void {
-    try {
-      const router = this.getUIContext().getRouter();
-      if (router.getState().index > 1) { router.back(); return; }
-      router.replaceUrl({ url: 'pages/MainPage' });
-    } catch (err) {
+    if (!MainPageNavigator.backOrReplace(this.getUIContext(), 'pages/ManagementCenter/RecordQuery/RecordQuery')) {
+      try {
+        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+      } catch (toastErr) {
+      }
     }
   }
 }
