@@ -25,6 +25,7 @@ struct MainPage {
   @State currentTabIndex: number = 0;
   @State logoutActionMessage: string = '';
   @State settingsMessage: string = '';
+  @State dashboardRenderRevision: number = 0;
   private dashboardRequestVersion: number = 0;
   private homeScroller: Scroller = new Scroller();
   private homeScrollRestoreCount: number = 0;
@@ -79,6 +80,7 @@ struct MainPage {
     if (response.success && response.data !== undefined) {
       this.dashboard = response.data;
       this.dashboardLoaded = true;
+      this.dashboardRenderRevision += 1;
       this.restoreHomeScrollPosition();
     }
   }
@@ -221,45 +223,52 @@ struct MainPage {
   @Builder
   DashboardSection() {
     if (this.dashboardLoaded && this.hasDashboardContent()) {
-      Column({ space: 12 }) {
-        AppSectionTitle({
-          title: '数据看板',
-          subtitle: ''
-        })
-
-        if (this.shouldShowArchiveDashboard()) {
-          this.DashboardCenterCard(
-            '档案中心',
-            '档案数',
-            this.getArchivePrimaryValue(),
-            this.getArchiveDashboardMetrics(),
-            $r('sys.symbol.text_clipboard'),
-            AppColors.Primary)
-        }
-
-        if (this.shouldShowOperationsDashboard()) {
-          this.DashboardCenterCard(
-            '运维中心',
-            '任务数',
-            this.getOperationsPrimaryValue(),
-            this.getOperationsDashboardMetrics(),
-            $r('sys.symbol.wrench_and_screwdriver'),
-            AppColors.Success)
-        }
-
-        if (this.shouldShowManagementDashboard()) {
-          this.DashboardCenterCard(
-            '管理中心',
-            this.getManagementPrimaryLabel(),
-            this.getManagementPrimaryValue(),
-            this.getManagementDashboardMetrics(),
-            $r('sys.symbol.checkmark_shield'),
-            AppColors.Warning)
-        }
-      }
-      .width('100%')
-      .alignItems(HorizontalAlign.Start)
+      ForEach([this.dashboardRenderRevision], () => {
+        this.DashboardContent()
+      }, (revision: number) => `${revision}`)
     }
+  }
+
+  @Builder
+  DashboardContent() {
+    Column({ space: 12 }) {
+      AppSectionTitle({
+        title: '数据看板',
+        subtitle: ''
+      })
+
+      if (this.shouldShowArchiveDashboard()) {
+        this.DashboardCenterCard(
+          '档案中心',
+          '档案数',
+          this.getArchivePrimaryValue(),
+          this.getArchiveDashboardMetrics(),
+          $r('sys.symbol.text_clipboard'),
+          AppColors.Primary)
+      }
+
+      if (this.shouldShowOperationsDashboard()) {
+        this.DashboardCenterCard(
+          '运维中心',
+          '任务数',
+          this.getOperationsPrimaryValue(),
+          this.getOperationsDashboardMetrics(),
+          $r('sys.symbol.wrench_and_screwdriver'),
+          AppColors.Success)
+      }
+
+      if (this.shouldShowManagementDashboard()) {
+        this.DashboardCenterCard(
+          '管理中心',
+          this.getManagementPrimaryLabel(),
+          this.getManagementPrimaryValue(),
+          this.getManagementDashboardMetrics(),
+          $r('sys.symbol.checkmark_shield'),
+          AppColors.Warning)
+      }
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
@@ -323,7 +332,7 @@ struct MainPage {
             GridItem() {
               this.DashboardMetricCell(metric)
             }
-          }, (metric: DashboardMetric) => metric.label)
+          }, (metric: DashboardMetric) => `${metric.label}-${metric.value}`)
         }
         .columnsTemplate('1fr 1fr')
         .columnsGap(14)

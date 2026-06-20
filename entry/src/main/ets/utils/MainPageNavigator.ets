@@ -21,10 +21,13 @@ export class MainPageNavigator {
   }
 
   static replaceToMainPage(uiContext: UIContext): boolean {
-    DashboardRefreshStore.notifyChanged();
     try {
       const router = uiContext.getRouter();
-      router.clear();
+      if (router.getState().index > 1) {
+        router.back({ url: 'pages/MainPage' });
+        return true;
+      }
+
       router.replaceUrl({ url: 'pages/MainPage' });
       return true;
     } catch (err) {
