@@ -18,6 +18,8 @@ public interface OperationsRepository {
             int radiusKm,
             BigDecimal longitude,
             BigDecimal latitude,
+            boolean includeRepairTasks,
+            boolean includeReinspectionTasks,
             int limit);
 
     long countPendingAcceptanceFaults();

@@ -26,6 +26,7 @@ import com.rmf.rdvp.audit.AuditLogService;
 import com.rmf.rdvp.domain.common.BusinessException;
 import com.rmf.rdvp.domain.common.ErrorCode;
 import com.rmf.rdvp.identity.AuthenticatedUser;
+import com.rmf.rdvp.identity.PermissionCode;
 
 @Service
 public class OperationsService {
@@ -284,12 +285,19 @@ public class OperationsService {
 
         RepairerWorkloadSnapshot workload = currentWorkload(maintainer.id());
         validateWorkloadForRefresh(workload, normalizedRadiusKm);
+        boolean canAcceptRepairTasks = hasPermission(maintainer, PermissionCode.OPERATIONS_CENTER_REPAIR_TASK_ACCEPT);
+        boolean canAcceptReinspectionTasks = hasPermission(maintainer, PermissionCode.OPERATIONS_CENTER_REINSPECTION_TASK_ACCEPT);
+        if (!canAcceptRepairTasks && !canAcceptReinspectionTasks) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
 
         var items = operationsRepository.listTaskAcceptance(
                         severity,
                         normalizedRadiusKm,
                         normalizedLongitude,
                         normalizedLatitude,
+                        canAcceptRepairTasks,
+                        canAcceptReinspectionTasks,
                         MAX_TASK_ACCEPTANCE_CANDIDATES)
                 .stream()
                 .limit(MAX_OPERATION_LIST_ITEMS)
@@ -966,6 +974,10 @@ public class OperationsService {
         }
 
         return value;
+    }
+
+    private boolean hasPermission(AuthenticatedUser user, PermissionCode permission) {
+        return user.permissions() != null && user.permissions().contains(permission);
     }
 
     private boolean isHighSeverity(FaultSeverity severity) {

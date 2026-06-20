@@ -52,7 +52,10 @@ struct TaskAcceptance {
   @State taskTypeFilterIndex: number = 0;
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.OperationsCenterRepairTaskAccept)) {
+    if (!AuthGuard.requireAnyPermission(this.getUIContext(), [
+      PermissionCode.OperationsCenterRepairTaskAccept,
+      PermissionCode.OperationsCenterReinspectionTaskAccept
+    ])) {
       return;
     }
 
@@ -529,26 +532,6 @@ struct TaskAcceptance {
     this.acceptActionTaskId = '';
     this.hasCurrentLocation = false;
     try {
-      const workloadResponse = await this.withRefreshTimeout<RepairerWorkloadSnapshot>(
-        RepairTaskService.getCurrentWorkloadSnapshotRemoteFirst(),
-        '维修负载状态刷新超时，请稍后手动刷新'
-      );
-      if (!workloadResponse.success || workloadResponse.data === undefined) {
-        const error = workloadResponse.error;
-        this.message = error ? error.message : '维修负载状态刷新失败';
-        this.messageTone = AppColors.Danger;
-        return;
-      }
-
-      this.applyWorkloadSnapshot(workloadResponse.data);
-      if (!this.workloadSnapshot.canAccept) {
-        this.allTaskItems = [];
-        this.taskItems = [];
-        this.message = this.workloadSnapshot.message;
-        this.messageTone = AppColors.Danger;
-        return;
-      }
-
       const query: TaskAcceptanceQuery = {
         radiusKm: this.radiusKm
       };
@@ -621,15 +604,6 @@ struct TaskAcceptance {
     this.acceptActionMessageTone = AppColors.Danger;
     this.taskListMessage = '';
     try {
-      const workloadResponse = await RepairTaskService.getCurrentWorkloadSnapshotRemoteFirst();
-      if (!workloadResponse.success || workloadResponse.data === undefined) {
-        const error = workloadResponse.error;
-        this.acceptActionMessage = error ? error.message : '维修负载状态刷新失败';
-        this.acceptActionMessageTone = AppColors.Danger;
-        return;
-      }
-
-      this.applyWorkloadSnapshot(workloadResponse.data);
       const selectedTask = this.findTaskItem(taskId);
       if (selectedTask !== undefined && selectedTask.distanceKm === undefined) {
         this.acceptActionMessage = '任务距离未定位，暂不可接取。请授权位置并刷新后再操作。';
@@ -654,15 +628,16 @@ struct TaskAcceptance {
         return;
       }
 
-      const response = await RepairTaskService.acceptRepairTaskRemoteFirst(
+      const response = await RepairTaskService.acceptTaskRemoteFirst(
         taskId,
+        selectedTask === undefined ? 'REPAIR' : selectedTask.taskType,
         this.hasCurrentLocation ? this.currentLongitude : undefined,
         this.hasCurrentLocation ? this.currentLatitude : undefined
       );
 
       if (!response.success) {
         const error = response.error;
-        this.acceptActionMessage = error ? error.message : '维修任务接取失败';
+        this.acceptActionMessage = error ? error.message : '任务接取失败';
         this.acceptActionMessageTone = AppColors.Danger;
         return;
       }
@@ -673,14 +648,13 @@ struct TaskAcceptance {
       this.applyTaskFilters();
       this.acceptActionMessage = '';
       this.acceptActionTaskId = '';
-      this.taskListMessage = '维修任务已接取，可在维修任务中处理';
+      this.taskListMessage = selectedTask !== undefined && selectedTask.taskType === 'REINSPECTION' ?
+        '复检任务已接取，可在复检任务中处理' :
+        '维修任务已接取，可在维修任务中处理';
       this.taskListMessageTone = AppColors.Success;
-      const nextWorkloadResponse = await RepairTaskService.getCurrentWorkloadSnapshotRemoteFirst();
-      if (nextWorkloadResponse.success && nextWorkloadResponse.data !== undefined) {
-        this.applyWorkloadSnapshot(nextWorkloadResponse.data);
-      }
+      this.applyWorkloadSnapshot(RepairTaskService.createWorkloadSnapshot(this.workloadSnapshot.activeTaskCount + 1));
     } catch (err) {
-      this.acceptActionMessage = '维修任务接取失败，请稍后重试';
+      this.acceptActionMessage = '任务接取失败，请稍后重试';
       this.acceptActionMessageTone = AppColors.Danger;
     } finally {
       this.acceptingTaskId = '';

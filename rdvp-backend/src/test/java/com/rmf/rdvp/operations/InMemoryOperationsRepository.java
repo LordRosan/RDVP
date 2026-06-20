@@ -70,10 +70,14 @@ public class InMemoryOperationsRepository implements OperationsRepository {
             int radiusKm,
             BigDecimal longitude,
             BigDecimal latitude,
+            boolean includeRepairTasks,
+            boolean includeReinspectionTasks,
             int limit) {
         return faultReportsById.values()
                 .stream()
-                .filter(item -> item.status() == FaultStatus.PENDING_ACCEPTANCE)
+                .filter(item -> (includeRepairTasks && item.status() == FaultStatus.PENDING_ACCEPTANCE)
+                        || (includeReinspectionTasks && item.status() == FaultStatus.PENDING_REINSPECTION
+                        && !hasActiveReinspectionTaskForFault(item.id())))
                 .filter(item -> severity == null || item.severity() == severity)
                 .map(item -> toTaskAcceptanceItem(item, longitude, latitude))
                 .filter(item -> item.distanceKm() == null || item.distanceKm().compareTo(BigDecimal.valueOf(radiusKm)) <= 0)
@@ -345,7 +349,7 @@ public class InMemoryOperationsRepository implements OperationsRepository {
                 new TaskAcceptanceItem.DeviceLocation(device.address(), device.longitude(), device.latitude()),
                 fault.createdAt(),
                 RepairTaskStatus.AVAILABLE,
-                "REPAIR");
+                fault.status() == FaultStatus.PENDING_REINSPECTION ? "REINSPECTION" : "REPAIR");
     }
 
     private BigDecimal calculateDistanceKm(

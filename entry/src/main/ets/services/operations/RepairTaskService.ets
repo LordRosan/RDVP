@@ -249,22 +249,8 @@ export class RepairTaskService {
     query: TaskAcceptanceQuery,
     workloadSnapshot?: RepairerWorkloadSnapshot
   ): Promise<ApiResponse<TaskAcceptanceListResult>> {
-    let workload = workloadSnapshot;
-    if (workload === undefined) {
-      const workloadResponse = await RepairTaskService.getCurrentWorkloadSnapshotRemoteFirst();
-      if (!workloadResponse.success || workloadResponse.data === undefined) {
-        return {
-          success: false,
-          error: workloadResponse.error,
-          requestId: workloadResponse.requestId,
-          timestamp: workloadResponse.timestamp
-        };
-      }
-
-      workload = workloadResponse.data;
-    }
-
-    const validation = RepairTaskService.validateTaskAcceptanceQuery(query, workload);
+    const workload = workloadSnapshot;
+    const validation = RepairTaskService.validateTaskAcceptanceQuery(query);
     if (!validation.valid) {
       return {
         success: false,
@@ -318,6 +304,15 @@ export class RepairTaskService {
     longitude?: number,
     latitude?: number
   ): Promise<ApiResponse<RepairTaskAcceptResult>> {
+    return RepairTaskService.acceptTaskRemoteFirst(taskId, 'REPAIR', longitude, latitude);
+  }
+
+  static async acceptTaskRemoteFirst(
+    taskId: string,
+    taskType: string,
+    longitude?: number,
+    latitude?: number
+  ): Promise<ApiResponse<RepairTaskAcceptResult>> {
     const validation = RepairTaskService.validateRepairTaskId(taskId);
     if (!validation.valid) {
       return {
@@ -326,29 +321,6 @@ export class RepairTaskService {
           code: 'REPAIR_TASK_ACCEPT_INVALID',
           message: validation.message
         }
-      };
-    }
-
-    const workloadResponse = await RepairTaskService.getCurrentWorkloadSnapshotRemoteFirst();
-    if (!workloadResponse.success || workloadResponse.data === undefined) {
-      return {
-        success: false,
-        error: workloadResponse.error,
-        requestId: workloadResponse.requestId,
-        timestamp: workloadResponse.timestamp
-      };
-    }
-
-    const workloadValidation = RepairTaskService.validateRepairerCanAccept(workloadResponse.data);
-    if (!workloadValidation.valid) {
-      return {
-        success: false,
-        error: {
-          code: 'REPAIRER_WORKLOAD_BLOCKED',
-          message: workloadValidation.message
-        },
-        requestId: workloadResponse.requestId,
-        timestamp: workloadResponse.timestamp
       };
     }
 
@@ -363,8 +335,11 @@ export class RepairTaskService {
     }
 
     const faultReportId = encodeURIComponent(taskId.trim());
+    const endpoint = taskType === 'REINSPECTION' ?
+      `/api/v1/reinspections/${faultReportId}/accept` :
+      `/api/v1/fault-reports/${faultReportId}/accept`;
     const response = await ApiClient.request<RepairTaskAcceptApiResult>(
-      `/api/v1/fault-reports/${faultReportId}/accept`,
+      endpoint,
       'POST',
       true,
       JSON.stringify(requestBody)
@@ -384,7 +359,7 @@ export class RepairTaskService {
         success: false,
         error: {
           code: 'REPAIR_TASK_ACCEPT_RESPONSE_INVALID',
-          message: '维修任务接取响应无效'
+          message: '任务接取响应无效'
         },
         requestId: response.requestId,
         timestamp: response.timestamp
@@ -559,14 +534,14 @@ export class RepairTaskService {
     if (taskId.trim().length === 0) {
       return {
         valid: false,
-        message: '请选择需要接取的维修任务'
+        message: '请选择需要接取的任务'
       };
     }
 
     if (taskId.trim().length > 64) {
       return {
         valid: false,
-        message: '维修任务标识不能超过64字'
+        message: '任务标识不能超过64字'
       };
     }
 

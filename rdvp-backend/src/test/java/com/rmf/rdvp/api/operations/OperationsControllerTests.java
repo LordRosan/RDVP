@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,12 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rmf.rdvp.identity.AuthenticatedUser;
+import com.rmf.rdvp.identity.PermissionCode;
+import com.rmf.rdvp.identity.RoleCode;
+import com.rmf.rdvp.identity.UserStatus;
+import com.rmf.rdvp.operations.OperationsService;
+import com.rmf.rdvp.operations.TaskAcceptanceItem;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -37,6 +44,9 @@ class OperationsControllerTests {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private OperationsService operationsService;
 
     @Test
     void createsAcceptsAndReportsRepairWorkflow() throws Exception {
@@ -496,6 +506,13 @@ class OperationsControllerTests {
                 .andExpect(jsonPath("$.data.items[0].faultReportId").value(faultId))
                 .andExpect(jsonPath("$.data.items[0].severity").value("SEVERE"));
 
+        mockMvc.perform(get("/api/v1/operation-tasks/available?radiusKm=10")
+                        .header("Authorization", "Bearer " + operatorReinspectToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items[0].faultReportId").value(faultId))
+                .andExpect(jsonPath("$.data.items[0].taskType").value("REINSPECTION"));
+
         mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-records", faultId)
                         .header("Authorization", "Bearer " + operatorReinspectToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -520,6 +537,44 @@ class OperationsControllerTests {
                         .header("Authorization", "Bearer " + operatorToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("NORMAL"));
+    }
+
+    @Test
+    void filtersUnifiedTaskAcceptanceByTaskAcceptPermission() throws Exception {
+        String operatorToken = login("operator", "password");
+        String operatorWorkerToken = login("operator", "password");
+
+        String faultId = createFaultReport(
+                operatorToken,
+                "RDVP-DEVICE-0001",
+                "HARDWARE_DAMAGE",
+                "SEVERE",
+                "Primary bearing assembly is unstable.");
+        String repairTaskId = acceptFaultReport(operatorWorkerToken, faultId);
+        submitRepairReport(operatorWorkerToken, repairTaskId);
+
+        var reinspectionOnlyUser = new AuthenticatedUser(
+                "usr-reinspection-only",
+                "reinspectiononly",
+                "复检员",
+                UserStatus.ACTIVE,
+                Set.of(RoleCode.OPERATIONS_STAFF),
+                Set.of(PermissionCode.OPERATIONS_CENTER_REINSPECTION_TASK_ACCEPT));
+        var repairOnlyUser = new AuthenticatedUser(
+                "usr-repair-only",
+                "repaironly",
+                "维修员",
+                UserStatus.ACTIVE,
+                Set.of(RoleCode.OPERATIONS_STAFF),
+                Set.of(PermissionCode.OPERATIONS_CENTER_REPAIR_TASK_ACCEPT));
+
+        var reinspectionTasks = operationsService.listTaskAcceptance(10, null, null, null, reinspectionOnlyUser);
+        org.assertj.core.api.Assertions.assertThat(reinspectionTasks.items())
+                .extracting(TaskAcceptanceItem::taskType)
+                .containsExactly("REINSPECTION");
+
+        var repairTasks = operationsService.listTaskAcceptance(10, null, null, null, repairOnlyUser);
+        org.assertj.core.api.Assertions.assertThat(repairTasks.items()).isEmpty();
     }
 
     @Test

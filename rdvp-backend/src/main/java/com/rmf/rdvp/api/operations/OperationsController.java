@@ -57,7 +57,7 @@ public class OperationsController {
     }
 
     @GetMapping("/operation-tasks/available")
-    @PreAuthorize("hasAuthority('OPERATIONS_CENTER_REPAIR_TASK_ACCEPT')")
+    @PreAuthorize("hasAnyAuthority('OPERATIONS_CENTER_REPAIR_TASK_ACCEPT','OPERATIONS_CENTER_REINSPECTION_TASK_ACCEPT')")
     public ResponseEntity<ApiResponse<TaskAcceptanceListResponse>> listTaskAcceptance(
             @RequestParam(defaultValue = "10") int radiusKm,
             @RequestParam(required = false) String severity,

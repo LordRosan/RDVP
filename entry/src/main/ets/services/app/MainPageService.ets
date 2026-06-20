@@ -96,7 +96,7 @@ export class MainPageService {
       actions.push(MainPageService.createAction(MainPageActionId.DeviceVerification, '核验与报修', AppColors.Primary));
     }
 
-    if (SessionStore.hasPermission(PermissionCode.OperationsCenterRepairTaskAccept)) {
+    if (MainPageService.canAcceptAnyOperationTask()) {
       actions.push(MainPageService.createAction(MainPageActionId.TaskAcceptance, '任务接取', AppColors.Primary));
     }
 
@@ -106,10 +106,6 @@ export class MainPageService {
 
     if (SessionStore.hasPermission(PermissionCode.OperationsCenterReinspectionReportSubmit)) {
       actions.push(MainPageService.createAction(MainPageActionId.ReinspectionReport, '复检任务', AppColors.Primary));
-    }
-
-    if (SessionStore.hasPermission(PermissionCode.ManagementCenterOperationRecordQuery)) {
-      actions.push(MainPageService.createAction(MainPageActionId.OperationRecordQuery, '运维记录', AppColors.Primary));
     }
 
     return actions;
@@ -162,6 +158,11 @@ export class MainPageService {
 
   static canQueryAnyManagementRecord(): boolean {
     return SessionStore.hasAnyPermission(ManagementCenterRecordPermissions);
+  }
+
+  static canAcceptAnyOperationTask(): boolean {
+    return SessionStore.hasPermission(PermissionCode.OperationsCenterRepairTaskAccept) ||
+      SessionStore.hasPermission(PermissionCode.OperationsCenterReinspectionTaskAccept);
   }
 
   private static createAction(id: MainPageActionId, title: string, tone: string): MainPageAction {

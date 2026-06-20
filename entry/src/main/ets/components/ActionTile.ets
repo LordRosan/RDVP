@@ -53,9 +53,7 @@ export struct ActionTile {
 
   getIcon(): Resource {
     if (this.action.id === MainPageActionId.ArchiveCenter ||
-      this.action.id === MainPageActionId.DeviceArchiveQuery ||
-      this.action.id === MainPageActionId.ArchiveRecordQuery ||
-      this.action.id === MainPageActionId.RecordQuery) {
+      this.action.id === MainPageActionId.DeviceArchiveQuery) {
       return $r('sys.symbol.text_clipboard');
     }
     if (this.action.id === MainPageActionId.DeviceArchiveCreateRequest) {
@@ -80,6 +78,12 @@ export struct ActionTile {
     if (this.action.id === MainPageActionId.OperationRecordQuery) {
       return $r('sys.symbol.clock');
     }
+    if (this.action.id === MainPageActionId.ArchiveRecordQuery) {
+      return $r('sys.symbol.text_clipboard');
+    }
+    if (this.action.id === MainPageActionId.RecordQuery) {
+      return $r('sys.symbol.clock');
+    }
     return $r('sys.symbol.checkmark_shield');
   }
 
@@ -94,6 +98,7 @@ export struct ActionTile {
     if (this.action.id === MainPageActionId.ManagementCenter ||
       this.action.id === MainPageActionId.DeviceArchiveReview ||
       this.action.id === MainPageActionId.OperationsReview ||
+      this.action.id === MainPageActionId.ArchiveRecordQuery ||
       this.action.id === MainPageActionId.OperationRecordQuery ||
       this.action.id === MainPageActionId.ReviewRecordQuery ||
       this.action.id === MainPageActionId.RecordQuery) {

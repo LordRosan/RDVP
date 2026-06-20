@@ -2,17 +2,13 @@ import { AppColors, AppSpacing } from '../../styles/AppTheme';
 import { ActionTile } from '../../components/ActionTile';
 import { AppSectionTitle } from '../../components/AppSectionTitle';
 import { CenterTitleBar } from '../../components/CenterTitleBar';
-import { HeroSurface } from '../../components/HeroSurface';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
-import { SummaryPanel } from '../../components/SummaryPanel';
-import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { OperationsCenterPermissions, PermissionCode } from '../../models/identity/PermissionModels';
 import { MainPageAction, MainPageActionId } from '../../models/app/MainPageModels';
 import { MainPageService } from '../../services/app/MainPageService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
-import { PermissionTextFormatter } from '../../utils/PermissionTextFormatter';
 
 @Entry
 @Component
@@ -42,8 +38,8 @@ struct OperationsCenter {
         this.PageTitleBar()
 
         Column({ space: AppSpacing.Section }) {
-          this.PageHero()
-          this.OverviewPanel()
+          this.Header()
+          this.PermissionSection()
           this.ActionSection()
         }
         .alignItems(HorizontalAlign.Start)
@@ -74,7 +70,6 @@ struct OperationsCenter {
   @Builder
   PageTitleBar() {
     CenterTitleBar({
-      title: '运维中心',
       action: () => {
         this.backToMainPage();
       }
@@ -82,45 +77,113 @@ struct OperationsCenter {
   }
 
   @Builder
-  PageHero() {
-    HeroSurface({
-      eyebrow: 'Operations command',
-      title: '运维中心',
-      subtitle: '围绕现场核验、任务接取、维修上报和复检闭环组织工作。',
-      icon: $r('sys.symbol.wrench_and_screwdriver'),
-      tone: AppColors.Success
+  Header() {
+    Column({ space: 5 }) {
+      Text('运维中心')
+        .fontSize(34)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+
+      Text('Operations Center')
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextTertiary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .width('100%')
+    .padding({
+      left: 0,
+      right: 0,
+      top: 12,
+      bottom: 6
     })
+    .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
-  OverviewPanel() {
-    SummaryPanel({
-      title: '中心概览',
-      caption: '当前账号可处理的运维能力。'
-    }) {
-      Column() {
-        StatusInfoRow({
-          label: '功能权限',
-          value: this.getPermissionSummaryText(),
-          tone: AppColors.Primary,
-          valueWidth: '62%',
-          valueMaxLines: 3,
-          rowMinHeight: 72,
-          verticalPadding: 8
-        })
+  PermissionSection() {
+    Column({ space: 12 }) {
+      AppSectionTitle({
+        title: '功能权限',
+        subtitle: ''
+      })
+
+      Column({ space: 16 }) {
+        Grid() {
+          GridItem() {
+            this.PermissionCell('设备核验', this.canVerifyDevice())
+          }
+
+          GridItem() {
+            this.PermissionCell('提交报修', this.canSubmitFaultReport())
+          }
+
+          GridItem() {
+            this.PermissionCell('任务接取', this.canAcceptTask())
+          }
+
+          GridItem() {
+            this.PermissionCell('维修任务', this.canSubmitRepairReport())
+          }
+
+          GridItem() {
+            this.PermissionCell('复检任务', this.canSubmitReinspectionReport())
+          }
+        }
+        .columnsTemplate('1fr 1fr')
+        .columnsGap(14)
+        .rowsGap(14)
+        .width('100%')
       }
       .width('100%')
-      .backgroundColor(AppColors.Surface)
-      .borderRadius(18)
+      .padding(18)
+      .backgroundColor(AppColors.SurfaceRaised)
+      .borderRadius(24)
+      .border({
+        width: 1,
+        color: AppColors.Divider
+      })
     }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  PermissionCell(label: string, available: boolean) {
+    Row({ space: 8 }) {
+      Text(label)
+        .fontSize(15)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .layoutWeight(1)
+
+      Text('')
+        .width(8)
+        .height(8)
+        .backgroundColor(available ? AppColors.Success : AppColors.Danger)
+        .borderRadius(4)
+    }
+    .width('100%')
+    .height(40)
+    .padding({
+      left: 12,
+      right: 12
+    })
+    .backgroundColor(AppColors.SurfaceMuted)
+    .borderRadius(16)
+    .alignItems(VerticalAlign.Center)
   }
 
   @Builder
   ActionSection() {
     Column({ space: 12 }) {
       AppSectionTitle({
-        title: '功能入口',
-        subtitle: '选择任务或记录入口继续处理。'
+        title: '业务功能',
+        subtitle: ''
       })
 
       Column({ space: 10 }) {
@@ -147,46 +210,29 @@ struct OperationsCenter {
     .width('100%')
   }
 
-  @Builder
-  MessageText() {
-    if (this.message.length > 0) {
-      InlineMessageSurface({
-        message: this.message,
-        tone: AppColors.Danger
-      })
-    }
-  }
-
-  @Builder
-  CardDivider() {
-    Divider()
-      .height(1)
-      .backgroundColor(AppColors.Divider)
-      .margin({
-        left: 18,
-        right: 18
-      })
-  }
-
   refreshCenterState(): void {
     this.actions = MainPageService.getOperationsCenterActions();
   }
 
-  getPermissionSummaryText(): string {
-    const parts: string[] = [];
-    if (SessionStore.hasPermission(PermissionCode.OperationsCenterDeviceVerificationSubmit)) {
-      parts.push('可核验');
-    }
-    if (SessionStore.hasPermission(PermissionCode.OperationsCenterRepairTaskAccept)) {
-      parts.push('可接取');
-    }
-    if (SessionStore.hasPermission(PermissionCode.OperationsCenterRepairReportSubmit)) {
-      parts.push('可维修');
-    }
-    if (SessionStore.hasPermission(PermissionCode.OperationsCenterReinspectionReportSubmit)) {
-      parts.push('可复检');
-    }
-    return PermissionTextFormatter.formatTwoPerLine(parts);
+  canVerifyDevice(): boolean {
+    return SessionStore.hasPermission(PermissionCode.OperationsCenterDeviceVerificationSubmit);
+  }
+
+  canSubmitFaultReport(): boolean {
+    return SessionStore.hasPermission(PermissionCode.OperationsCenterDeviceFaultReportSubmit);
+  }
+
+  canAcceptTask(): boolean {
+    return SessionStore.hasPermission(PermissionCode.OperationsCenterRepairTaskAccept) ||
+      SessionStore.hasPermission(PermissionCode.OperationsCenterReinspectionTaskAccept);
+  }
+
+  canSubmitRepairReport(): boolean {
+    return SessionStore.hasPermission(PermissionCode.OperationsCenterRepairReportSubmit);
+  }
+
+  canSubmitReinspectionReport(): boolean {
+    return SessionStore.hasPermission(PermissionCode.OperationsCenterReinspectionReportSubmit);
   }
 
   openFeature(action: MainPageAction): void {
@@ -209,11 +255,6 @@ struct OperationsCenter {
 
     if (action.id === MainPageActionId.ReinspectionReport) {
       this.openPage('pages/OperationsCenter/ReinspectionReport', '复检任务不可用');
-      return;
-    }
-
-    if (action.id === MainPageActionId.OperationRecordQuery) {
-      this.openPage('pages/ManagementCenter/RecordQuery/OperationRecordQuery', '运维记录不可用');
       return;
     }
 
@@ -245,10 +286,6 @@ struct OperationsCenter {
 
     if (url === 'pages/OperationsCenter/ReinspectionReport') {
       return `${MainPageActionId.ReinspectionReport}`;
-    }
-
-    if (url === 'pages/ManagementCenter/RecordQuery/OperationRecordQuery') {
-      return `${MainPageActionId.OperationRecordQuery}`;
     }
 
     return '';

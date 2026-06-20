@@ -124,6 +124,8 @@ public class JdbcOperationsRepository implements OperationsRepository {
             int radiusKm,
             BigDecimal longitude,
             BigDecimal latitude,
+            boolean includeRepairTasks,
+            boolean includeReinspectionTasks,
             int limit) {
         List<String> repairConditions = new ArrayList<>();
         MapSqlParameterSource parameters = new MapSqlParameterSource()
@@ -226,9 +228,18 @@ public class JdbcOperationsRepository implements OperationsRepository {
 
         String reinspectionWhere = " WHERE " + String.join(" AND ", reinspectionConditions);
 
-        String sql = repairSelect + repairWhere
-                + " UNION ALL "
-                + reinspectionSelect + reinspectionWhere
+        List<String> selectParts = new ArrayList<>();
+        if (includeRepairTasks) {
+            selectParts.add(repairSelect + repairWhere);
+        }
+        if (includeReinspectionTasks) {
+            selectParts.add(reinspectionSelect + reinspectionWhere);
+        }
+        if (selectParts.isEmpty()) {
+            return List.of();
+        }
+
+        String sql = String.join(" UNION ALL ", selectParts)
                 + " ORDER BY distance_km ASC NULLS LAST, created_at DESC"
                 + " LIMIT :limit";
 
