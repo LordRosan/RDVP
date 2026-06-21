@@ -24,7 +24,8 @@ public record DashboardResponse(
             long archiveCreates,
             long archiveDeletes,
             long archiveUpdates,
-            long archiveQueries) {
+            long archiveQueries,
+            long archiveExports) {
 
         public static ArchiveStatsResponse from(ArchiveDashboardStats stats) {
             if (stats == null) {
@@ -36,7 +37,8 @@ public record DashboardResponse(
                     stats.archiveCreates(),
                     stats.archiveDeletes(),
                     stats.archiveUpdates(),
-                    stats.archiveQueries());
+                    stats.archiveQueries(),
+                    stats.archiveExports());
         }
     }
 

@@ -11,6 +11,8 @@
     "pages/ArchiveCenter/DeviceArchiveCodeVerify",
     "pages/ArchiveCenter/DeviceArchiveCreate",
     "pages/ArchiveCenter/DeviceArchiveDetail",
+    "pages/ArchiveCenter/DeviceArchiveExportVerify",
+    "pages/ArchiveCenter/DeviceArchiveExport",
     "pages/ArchiveCenter/DeviceArchiveUpdate",
     "pages/ArchiveCenter/DeviceArchiveDelete",
     "pages/OperationsCenter/DeviceVerification",

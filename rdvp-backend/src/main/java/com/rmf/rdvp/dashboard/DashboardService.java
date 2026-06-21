@@ -43,7 +43,8 @@ public class DashboardService {
                 archiveRequestRepository.countApprovedByType(DeviceArchiveRequestType.CREATE),
                 archiveRequestRepository.countApprovedByType(DeviceArchiveRequestType.DELETE),
                 archiveRequestRepository.countApprovedByType(DeviceArchiveRequestType.UPDATE),
-                auditLogRepository.countSuccessByAction(AuditAction.DEVICE_ARCHIVE_QUERY));
+                auditLogRepository.countSuccessByAction(AuditAction.DEVICE_ARCHIVE_QUERY),
+                auditLogRepository.countSuccessByAction(AuditAction.DEVICE_ARCHIVE_EXPORT));
     }
 
     private OperationsDashboardStats operationsStats() {
@@ -75,7 +76,7 @@ public class DashboardService {
                 PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_CREATE_REQUEST_SUBMIT,
                 PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_UPDATE_REQUEST_SUBMIT,
                 PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_DELETE_REQUEST_SUBMIT,
-                PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_QR_CODE_EXPORT);
+                PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_EXPORT);
     }
 
     private boolean canViewOperationsStats(AuthenticatedUser user) {

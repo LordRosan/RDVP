@@ -28,6 +28,7 @@ export interface ArchiveDashboardStats {
   archiveDeletes: number;
   archiveUpdates: number;
   archiveQueries: number;
+  archiveExports: number;
 }
 
 export interface OperationsDashboardStats {

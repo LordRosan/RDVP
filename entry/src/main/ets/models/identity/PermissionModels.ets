@@ -3,7 +3,7 @@ export enum PermissionCode {
   ArchiveCenterDeviceArchiveCreateRequestSubmit = 'ARCHIVE_CENTER_DEVICE_ARCHIVE_CREATE_REQUEST_SUBMIT',
   ArchiveCenterDeviceArchiveUpdateRequestSubmit = 'ARCHIVE_CENTER_DEVICE_ARCHIVE_UPDATE_REQUEST_SUBMIT',
   ArchiveCenterDeviceArchiveDeleteRequestSubmit = 'ARCHIVE_CENTER_DEVICE_ARCHIVE_DELETE_REQUEST_SUBMIT',
-  ArchiveCenterDeviceArchiveQrCodeExport = 'ARCHIVE_CENTER_DEVICE_ARCHIVE_QR_CODE_EXPORT',
+  ArchiveCenterDeviceArchiveExport = 'ARCHIVE_CENTER_DEVICE_ARCHIVE_EXPORT',
   OperationsCenterDeviceVerificationSubmit = 'OPERATIONS_CENTER_DEVICE_VERIFICATION_SUBMIT',
   OperationsCenterDeviceFaultReportSubmit = 'OPERATIONS_CENTER_DEVICE_FAULT_REPORT_SUBMIT',
   OperationsCenterRepairTaskAccept = 'OPERATIONS_CENTER_REPAIR_TASK_ACCEPT',
@@ -22,7 +22,7 @@ export const ArchiveCenterPermissions: string[] = [
   PermissionCode.ArchiveCenterDeviceArchiveCreateRequestSubmit,
   PermissionCode.ArchiveCenterDeviceArchiveUpdateRequestSubmit,
   PermissionCode.ArchiveCenterDeviceArchiveDeleteRequestSubmit,
-  PermissionCode.ArchiveCenterDeviceArchiveQrCodeExport
+  PermissionCode.ArchiveCenterDeviceArchiveExport
 ];
 
 export const OperationsCenterPermissions: string[] = [
@@ -53,7 +53,7 @@ export const AllPermissionCodes: string[] = [
   PermissionCode.ArchiveCenterDeviceArchiveCreateRequestSubmit,
   PermissionCode.ArchiveCenterDeviceArchiveUpdateRequestSubmit,
   PermissionCode.ArchiveCenterDeviceArchiveDeleteRequestSubmit,
-  PermissionCode.ArchiveCenterDeviceArchiveQrCodeExport,
+  PermissionCode.ArchiveCenterDeviceArchiveExport,
   PermissionCode.OperationsCenterDeviceVerificationSubmit,
   PermissionCode.OperationsCenterDeviceFaultReportSubmit,
   PermissionCode.OperationsCenterRepairTaskAccept,

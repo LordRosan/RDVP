@@ -47,6 +47,7 @@ class DashboardControllerTests {
                 .andExpect(jsonPath("$.data.archive.archiveDeletes").value(0))
                 .andExpect(jsonPath("$.data.archive.archiveUpdates").value(0))
                 .andExpect(jsonPath("$.data.archive.archiveQueries").value(0))
+                .andExpect(jsonPath("$.data.archive.archiveExports").value(0))
                 .andExpect(jsonPath("$.data.operations.taskPoolTotal").value(0))
                 .andExpect(jsonPath("$.data.operations.verifications").value(0))
                 .andExpect(jsonPath("$.data.operations.faultReports").value(0))
@@ -415,6 +416,34 @@ class DashboardControllerTests {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.archive.archiveQueries").value(2));
+    }
+
+    @Test
+    void countsArchiveExportsAfterSuccessfulExportAndConsumesPasswordVerification() throws Exception {
+        String token = login("archiveadmin", "password");
+
+        mockMvc.perform(get("/api/v1/dashboard")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.archive.archiveExports").value(0));
+
+        verifyPassword(token, "password");
+        mockMvc.perform(post("/api/v1/devices/{deviceId}/archive-export-verification", "device-local-0001")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.verified").value(true));
+
+        mockMvc.perform(get("/api/v1/dashboard")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.archive.archiveExports").value(1));
+
+        mockMvc.perform(post("/api/v1/devices/{deviceId}/archive-export-verification", "device-local-0001")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("SENSITIVE_OPERATION_VERIFICATION_REQUIRED"));
     }
 
     @Test

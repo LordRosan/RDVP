@@ -788,7 +788,8 @@ struct MainPage {
       { label: '档案添加', value: archive.archiveCreates },
       { label: '档案删除', value: archive.archiveDeletes },
       { label: '档案修改', value: archive.archiveUpdates },
-      { label: '档案查询', value: archive.archiveQueries }
+      { label: '档案查询', value: archive.archiveQueries },
+      { label: '档案导出', value: archive.archiveExports }
     ];
   }
 

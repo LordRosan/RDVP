@@ -139,6 +139,11 @@ public class AuthenticationService {
         }
     }
 
+    public void consumeRecentPasswordVerification(AuthenticatedUser authenticatedUser) {
+        requireRecentPasswordVerification(authenticatedUser);
+        passwordVerificationAttemptStore.clear(authenticatedUser.id());
+    }
+
     public void logout(String token) {
         tokenSessionStore.remove(token);
     }

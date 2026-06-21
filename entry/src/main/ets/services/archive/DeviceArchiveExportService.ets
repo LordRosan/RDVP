@@ -3,6 +3,7 @@ import { fileIo, fileUri } from '@kit.CoreFileKit';
 import { image } from '@kit.ImageKit';
 import { UIContext } from '@kit.ArkUI';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
+import { util } from '@kit.ArkTS';
 import { ApiErrorCode, ApiResponse } from '../../models/common/ApiModels';
 import { ApiClient } from '../common/ApiClient';
 
@@ -10,7 +11,6 @@ const MEDIA_WRITE_PERMISSION: Permissions = 'ohos.permission.WRITE_IMAGEVIDEO';
 
 export interface DeviceArchiveExportVerificationForm {
   deviceId: string;
-  password: string;
 }
 
 export interface DeviceArchiveExportVerificationResult {
@@ -44,9 +44,7 @@ export class DeviceArchiveExportService {
       `/api/v1/devices/${deviceId}/archive-export-verification`,
       'POST',
       true,
-      JSON.stringify({
-        password: form.password
-      }),
+      undefined,
       false
     );
   }
@@ -67,7 +65,7 @@ export class DeviceArchiveExportService {
     try {
       const mediaWriteGranted = await DeviceArchiveExportService.requestMediaWritePermission(context);
       if (!mediaWriteGranted) {
-        return DeviceArchiveExportService.createFailureResponse('请授权相册写入权限后再导出档案详情');
+        return DeviceArchiveExportService.createFailureResponse('导出功能暂不可用，请稍后重试');
       }
 
       pixelMap = await uiContext.getComponentSnapshot().get(componentId, {
@@ -123,16 +121,61 @@ export class DeviceArchiveExportService {
     }
   }
 
+  static async captureArchiveSnapshotPreview(
+    uiContext: UIContext,
+    componentId: string
+  ): Promise<ApiResponse<string>> {
+    if (componentId.trim().length === 0) {
+      return DeviceArchiveExportService.createFailureResponse('档案详情预览失败');
+    }
+
+    let pixelMap: image.PixelMap | undefined = undefined;
+    let packer: image.ImagePacker | undefined = undefined;
+    try {
+      pixelMap = await uiContext.getComponentSnapshot().get(componentId, {
+        scale: 1,
+        waitUntilRenderFinished: true
+      });
+      packer = image.createImagePacker();
+      const bytes = await packer.packToData(pixelMap, {
+        format: 'image/png',
+        quality: 90
+      });
+      return {
+        success: true,
+        data: DeviceArchiveExportService.bytesToDataUri(bytes),
+        requestId: 'local-archive-detail-export-preview',
+        timestamp: new Date().toISOString()
+      };
+    } catch (err) {
+      return DeviceArchiveExportService.createFailureResponse('档案详情预览失败');
+    } finally {
+      if (packer !== undefined) {
+        try {
+          await packer.release();
+        } catch (err) {
+        }
+      }
+      if (pixelMap !== undefined) {
+        try {
+          await pixelMap.release();
+        } catch (err) {
+        }
+      }
+    }
+  }
+
   private static validateVerificationForm(form: DeviceArchiveExportVerificationForm): string {
     if (form.deviceId.trim().length === 0) {
       return '未获取设备档案';
     }
 
-    if (form.password.length === 0) {
-      return '请输入当前账号密码';
-    }
-
     return '';
+  }
+
+  private static bytesToDataUri(bytes: ArrayBuffer): string {
+    const base64 = new util.Base64Helper();
+    return `data:image/png;base64,${base64.encodeToStringSync(new Uint8Array(bytes))}`;
   }
 
   private static normalizeFileName(fileName: string): string {

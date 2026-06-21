@@ -97,50 +97,26 @@ public class DeviceArchiveController {
     }
 
     @PostMapping("/devices/{deviceId}/qrcode-export")
-    @PreAuthorize("hasAuthority('ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY') and hasAuthority('ARCHIVE_CENTER_DEVICE_ARCHIVE_QR_CODE_EXPORT')")
+    @PreAuthorize("hasAuthority('ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY') and hasAuthority('ARCHIVE_CENTER_DEVICE_ARCHIVE_EXPORT')")
     public ResponseEntity<ApiResponse<DeviceQrCodeExportResponse>> exportQrCode(
             @PathVariable String deviceId,
-            @Valid @RequestBody DeviceQrCodeExportRequest requestBody,
             Authentication authentication,
             HttpServletRequest request) {
         AuthenticatedUser operator = requireUser(authentication);
-        boolean verified;
-        try {
-            verified = authenticationService.verifyPassword(operator, requestBody.password());
-        } catch (BusinessException exception) {
-            recordQrCodeExportVerificationFailure(deviceId, operator, exception.getErrorCode());
-            throw exception;
-        }
-
-        if (!verified) {
-            recordQrCodeExportVerificationFailure(deviceId, operator, ErrorCode.INVALID_CREDENTIALS);
-            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
-        }
-
+        authenticationService.consumeRecentPasswordVerification(operator);
         DeviceQrCodeExportResponse response = DeviceQrCodeExportResponse.from(archiveService.exportQrCode(deviceId, operator));
         return ResponseEntity.ok(ApiResponse.success(response, RequestIds.resolve(request)));
     }
 
     @PostMapping("/devices/{deviceId}/archive-export-verification")
+    @PreAuthorize("hasAuthority('ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY') and hasAuthority('ARCHIVE_CENTER_DEVICE_ARCHIVE_EXPORT')")
     public ResponseEntity<ApiResponse<DeviceArchiveExportVerificationResponse>> verifyArchiveDetailExport(
             @PathVariable String deviceId,
-            @Valid @RequestBody DeviceArchiveExportVerificationRequest requestBody,
             Authentication authentication,
             HttpServletRequest request) {
         AuthenticatedUser operator = requireUser(authentication);
         DeviceArchiveResponse archive = null;
-        boolean verified;
-        try {
-            verified = authenticationService.verifyPassword(operator, requestBody.password());
-        } catch (BusinessException exception) {
-            recordArchiveExportVerificationFailure(deviceId, operator, exception.getErrorCode());
-            throw exception;
-        }
-
-        if (!verified) {
-            recordArchiveExportVerificationFailure(deviceId, operator, ErrorCode.INVALID_CREDENTIALS);
-            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
-        }
+        authenticationService.consumeRecentPasswordVerification(operator);
 
         try {
             archive = DeviceArchiveResponse.from(archiveService.findById(deviceId));
@@ -172,32 +148,6 @@ public class DeviceArchiveController {
         }
 
         return user;
-    }
-
-    private void recordQrCodeExportVerificationFailure(
-            String deviceId,
-            AuthenticatedUser operator,
-            ErrorCode errorCode) {
-        String target = deviceId == null ? "" : deviceId.trim();
-        auditLogService.recordFailure(
-                AuditAction.DEVICE_QRCODE_EXPORT,
-                target,
-                target,
-                operator,
-                "设备二维码导出失败：%s。".formatted(errorCode.code()));
-    }
-
-    private void recordArchiveExportVerificationFailure(
-            String deviceId,
-            AuthenticatedUser operator,
-            ErrorCode errorCode) {
-        String target = normalizeAuditTarget(deviceId);
-        auditLogService.recordFailure(
-                AuditAction.DEVICE_ARCHIVE_EXPORT,
-                target,
-                target,
-                operator,
-                "设备档案详情导出失败：%s。".formatted(errorCode.code()));
     }
 
     private void recordArchiveQuery(DeviceArchiveResponse response, AuthenticatedUser operator) {

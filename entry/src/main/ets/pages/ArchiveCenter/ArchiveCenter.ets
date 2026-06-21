@@ -127,6 +127,10 @@ struct ArchiveCenter {
           GridItem() {
             this.PermissionCell('添加档案', this.canCreateArchive())
           }
+
+          GridItem() {
+            this.PermissionCell('导出档案', this.canExportArchive())
+          }
         }
         .columnsTemplate('1fr 1fr')
         .columnsGap(14)
@@ -224,6 +228,10 @@ struct ArchiveCenter {
 
   canCreateArchive(): boolean {
     return SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveCreateRequestSubmit);
+  }
+
+  canExportArchive(): boolean {
+    return SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveExport);
   }
 
   openFeature(action: MainPageAction): void {

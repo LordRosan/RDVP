@@ -25,7 +25,7 @@ final class BootstrapUserDefinitions {
                         PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_CREATE_REQUEST_SUBMIT,
                         PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_UPDATE_REQUEST_SUBMIT,
                         PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_DELETE_REQUEST_SUBMIT,
-                        PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_QR_CODE_EXPORT,
+                        PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_EXPORT,
                         PermissionCode.MANAGEMENT_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW,
                         PermissionCode.MANAGEMENT_CENTER_ARCHIVE_RECORD_QUERY),
                 create(
@@ -39,7 +39,7 @@ final class BootstrapUserDefinitions {
                         PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_CREATE_REQUEST_SUBMIT,
                         PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_UPDATE_REQUEST_SUBMIT,
                         PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_DELETE_REQUEST_SUBMIT,
-                        PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_QR_CODE_EXPORT),
+                        PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_EXPORT),
                 create(
                         passwordEncoder,
                         defaultPassword,

@@ -5,5 +5,6 @@ public record ArchiveDashboardStats(
         long archiveCreates,
         long archiveDeletes,
         long archiveUpdates,
-        long archiveQueries) {
+        long archiveQueries,
+        long archiveExports) {
 }

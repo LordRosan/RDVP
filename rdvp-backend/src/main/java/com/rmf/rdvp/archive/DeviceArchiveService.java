@@ -126,7 +126,7 @@ public class DeviceArchiveService {
                     sha256Hex(qrContent),
                     exportedAt);
             auditLogService.recordSuccess(
-                    AuditAction.DEVICE_QRCODE_EXPORT,
+                    AuditAction.DEVICE_ARCHIVE_EXPORT,
                     device.id(),
                     device.deviceCode(),
                     operator,
@@ -134,7 +134,7 @@ public class DeviceArchiveService {
             return export;
         } catch (BusinessException exception) {
             auditLogService.recordFailure(
-                    AuditAction.DEVICE_QRCODE_EXPORT,
+                    AuditAction.DEVICE_ARCHIVE_EXPORT,
                     device == null ? normalizeAuditTarget(deviceId) : device.id(),
                     device == null ? normalizeAuditTarget(deviceId) : device.deviceCode(),
                     operator,

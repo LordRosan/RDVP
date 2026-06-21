@@ -2,8 +2,8 @@ import { AppColors, AppRadii } from '../styles/AppTheme';
 
 @Component
 export struct InlineMessageSurface {
-  message: string = '';
-  tone: string = AppColors.Danger;
+  @Prop message: string = '';
+  @Prop tone: string = AppColors.Danger;
 
   build() {
     if (this.message.length > 0) {

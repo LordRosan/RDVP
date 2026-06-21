@@ -194,7 +194,8 @@ export class MainPageService {
       archiveCreates: MainPageService.toSafeCount(stats?.archiveCreates),
       archiveDeletes: MainPageService.toSafeCount(stats?.archiveDeletes),
       archiveUpdates: MainPageService.toSafeCount(stats?.archiveUpdates),
-      archiveQueries: MainPageService.toSafeCount(stats?.archiveQueries)
+      archiveQueries: MainPageService.toSafeCount(stats?.archiveQueries),
+      archiveExports: MainPageService.toSafeCount(stats?.archiveExports)
     };
   }
 

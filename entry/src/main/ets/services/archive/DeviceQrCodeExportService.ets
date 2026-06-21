@@ -9,7 +9,6 @@ const MEDIA_WRITE_PERMISSION: Permissions = 'ohos.permission.WRITE_IMAGEVIDEO';
 
 export interface DeviceQrCodeExportForm {
   deviceId: string;
-  password: string;
 }
 
 export interface DeviceQrCodeExportResult {
@@ -43,9 +42,7 @@ export class DeviceQrCodeExportService {
       `/api/v1/devices/${deviceId}/qrcode-export`,
       'POST',
       true,
-      JSON.stringify({
-        password: form.password
-      }),
+      undefined,
       false
     );
   }
@@ -113,10 +110,6 @@ export class DeviceQrCodeExportService {
   private static validateForm(form: DeviceQrCodeExportForm): string {
     if (form.deviceId.trim().length === 0) {
       return '未获取设备档案';
-    }
-
-    if (form.password.length === 0) {
-      return '请输入当前账号密码';
     }
 
     return '';

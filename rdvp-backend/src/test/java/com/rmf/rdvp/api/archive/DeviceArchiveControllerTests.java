@@ -220,15 +220,11 @@ class DeviceArchiveControllerTests {
     @Test
     void exportsDeviceQrCodeAfterPasswordVerification() throws Exception {
         String token = login("archiveadmin", "password");
+        verifyPassword(token, "password");
 
         mockMvc.perform(post("/api/v1/devices/{deviceId}/qrcode-export", "device-local-0001")
                         .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "password": "password"
-                                }
-                                """))
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.deviceCode").value("RDVP-DEVICE-0001"))
@@ -238,14 +234,14 @@ class DeviceArchiveControllerTests {
                 .andExpect(jsonPath("$.data.qrContent").doesNotExist());
 
         String managerToken = login("manager", "password");
-        mockMvc.perform(get("/api/v1/audit-logs?action=DEVICE_QRCODE_EXPORT&keyword=RDVP-DEVICE-0001")
+        mockMvc.perform(get("/api/v1/audit-logs?action=DEVICE_ARCHIVE_EXPORT&keyword=RDVP-DEVICE-0001")
                         .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items[*].status").value(hasItem("SUCCESS")))
                 .andExpect(jsonPath("$.data.items[*].targetNo").value(hasItem("RDVP-DEVICE-0001")))
                 .andExpect(jsonPath("$.data.items[*].actorName").value(hasItem("档案管理员")));
 
-        mockMvc.perform(get("/api/v1/audit-logs?action=DEVICE_QRCODE_EXPORT&keyword=RDVP-DEVICE-9999")
+        mockMvc.perform(get("/api/v1/audit-logs?action=DEVICE_ARCHIVE_EXPORT&keyword=RDVP-DEVICE-9999")
                         .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(0));
@@ -253,16 +249,12 @@ class DeviceArchiveControllerTests {
 
     @Test
     void verifiesDeviceArchiveDetailExportAndRecordsAuditLog() throws Exception {
-        String token = login("operator", "password");
+        String token = login("archiveadmin", "password");
+        verifyPassword(token, "password");
 
         mockMvc.perform(post("/api/v1/devices/{deviceId}/archive-export-verification", "device-local-0001")
                         .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "password": "password"
-                                }
-                                """))
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.verified").value(true))
@@ -274,14 +266,14 @@ class DeviceArchiveControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items[*].status").value(hasItem("SUCCESS")))
                 .andExpect(jsonPath("$.data.items[*].targetNo").value(hasItem("RDVP-DEVICE-0001")))
-                .andExpect(jsonPath("$.data.items[*].actorName").value(hasItem("运维员")));
+                .andExpect(jsonPath("$.data.items[*].actorName").value(hasItem("档案管理员")));
     }
 
     @Test
     void rejectsDeviceArchiveDetailExportWhenPasswordIsInvalid() throws Exception {
-        String token = login("operator", "password");
+        String token = login("archiveadmin", "password");
 
-        mockMvc.perform(post("/api/v1/devices/{deviceId}/archive-export-verification", "device-local-0001")
+        mockMvc.perform(post("/api/v1/auth/password-verification")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -294,26 +286,21 @@ class DeviceArchiveControllerTests {
                 .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
 
         String managerToken = login("manager", "password");
-        mockMvc.perform(get("/api/v1/audit-logs?action=DEVICE_ARCHIVE_EXPORT&keyword=device-local-0001")
+        mockMvc.perform(get("/api/v1/audit-logs?action=AUTH_PASSWORD_VERIFY&keyword=archiveadmin")
                         .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items[*].status").value(hasItem("FAILED")))
-                .andExpect(jsonPath("$.data.items[*].targetId").value(hasItem("device-local-0001")))
-                .andExpect(jsonPath("$.data.items[*].actorName").value(hasItem("运维员")));
+                .andExpect(jsonPath("$.data.items[*].actorName").value(hasItem("档案管理员")));
     }
 
     @Test
     void protectsDeviceQrCodeExportByPermission() throws Exception {
         String token = login("operator", "password");
+        verifyPassword(token, "password");
 
         mockMvc.perform(post("/api/v1/devices/{deviceId}/qrcode-export", "device-local-0001")
                         .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "password": "password"
-                                }
-                                """))
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("FORBIDDEN"));
@@ -323,7 +310,7 @@ class DeviceArchiveControllerTests {
     void rejectsDeviceQrCodeExportWhenPasswordIsInvalid() throws Exception {
         String token = login("archiveadmin", "password");
 
-        mockMvc.perform(post("/api/v1/devices/{deviceId}/qrcode-export", "device-local-0001")
+        mockMvc.perform(post("/api/v1/auth/password-verification")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -336,11 +323,10 @@ class DeviceArchiveControllerTests {
                 .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
 
         String managerToken = login("manager", "password");
-        mockMvc.perform(get("/api/v1/audit-logs?action=DEVICE_QRCODE_EXPORT&keyword=device-local-0001")
+        mockMvc.perform(get("/api/v1/audit-logs?action=AUTH_PASSWORD_VERIFY&keyword=archiveadmin")
                         .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items[*].status").value(hasItem("FAILED")))
-                .andExpect(jsonPath("$.data.items[*].targetId").value(hasItem("device-local-0001")))
                 .andExpect(jsonPath("$.data.items[*].actorName").value(hasItem("档案管理员")));
     }
 
@@ -349,7 +335,7 @@ class DeviceArchiveControllerTests {
         String token = login("admin", "password");
 
         for (int index = 0; index < 5; index++) {
-            mockMvc.perform(post("/api/v1/devices/{deviceId}/qrcode-export", "device-local-0001")
+            mockMvc.perform(post("/api/v1/auth/password-verification")
                             .header("Authorization", "Bearer " + token)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
@@ -362,7 +348,7 @@ class DeviceArchiveControllerTests {
                     .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
         }
 
-        mockMvc.perform(post("/api/v1/devices/{deviceId}/qrcode-export", "device-local-0001")
+        mockMvc.perform(post("/api/v1/auth/password-verification")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -428,6 +414,18 @@ class DeviceArchiveControllerTests {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
+    }
+
+    private void verifyPassword(String token, String password) throws Exception {
+        mockMvc.perform(post("/api/v1/auth/password-verification")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "password": "%s"
+                                }
+                                """.formatted(password)))
+                .andExpect(status().isOk());
     }
 
     private String login(String username, String password) throws Exception {
