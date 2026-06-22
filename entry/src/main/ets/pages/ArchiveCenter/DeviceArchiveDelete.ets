@@ -1,15 +1,16 @@
-import { AppColors } from '../../styles/AppTheme';
+import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
+import { AppSectionTitle } from '../../components/AppSectionTitle';
+import { CenterTitleBar } from '../../components/CenterTitleBar';
+import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { DeviceArchiveRequestStatus } from '../../models/archive/DeviceArchiveRequestModels';
 import { DeviceStatus, DeviceSummary } from '../../models/archive/DeviceModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
-import { ApiClient } from '../../services/common/ApiClient';
 import { DeviceArchiveDeleteGuardService } from '../../services/archive/DeviceArchiveDeleteGuardService';
 import { DeviceArchiveRequestService } from '../../services/archive/DeviceArchiveRequestService';
-import { DeviceArchiveUpdateService } from '../../services/archive/DeviceArchiveUpdateService';
 import { DeviceService } from '../../services/archive/DeviceService';
+import { AuthService } from '../../services/identity/AuthService';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
-import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 
 @Entry
@@ -34,11 +35,7 @@ struct DeviceArchiveDelete {
   @State messageTone: string = AppColors.Danger;
   @State requestStatus: DeviceArchiveRequestStatus = DeviceArchiveRequestStatus.Draft;
   @State submitting: boolean = false;
-  @State confirmVisible: boolean = false;
-  @State confirmPassword: string = '';
-  @State confirmCaptcha: string = '';
-  @State confirmCaptchaCode: string = DeviceArchiveDeleteGuardService.createCaptcha();
-  @State confirmMessage: string = '';
+  @State password: string = '';
 
   aboutToAppear(): void {
     if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveCenterDeviceArchiveDeleteRequestSubmit)) {
@@ -49,42 +46,32 @@ struct DeviceArchiveDelete {
   }
 
   build() {
-    Stack() {
-      Scroll() {
-        Column() {
-          this.PageTitleBar()
+    Scroll() {
+      Column() {
+        this.PageTitleBar()
 
-          Column({ space: 18 }) {
-            this.ModeHeader()
-            if (this.hasDevice) {
-              this.ArchivePanel()
-              this.DeleteForm()
-              this.StatusPanel()
-            } else {
-              this.EmptyPanel()
-            }
+        Column({ space: 18 }) {
+          this.ModeHeader()
+          if (this.hasDevice) {
+            this.DeleteForm()
+          } else {
+            this.EmptyPanel()
           }
-          .alignItems(HorizontalAlign.Start)
-          .justifyContent(FlexAlign.Start)
-          .padding({
-            left: 24,
-            right: 24,
-            top: 0,
-            bottom: 28
-          })
-          .width('100%')
         }
-        .width('100%')
-        .constraintSize({ minHeight: '100%' })
         .alignItems(HorizontalAlign.Start)
         .justifyContent(FlexAlign.Start)
+        .padding({
+          left: AppSpacing.PageX,
+          right: AppSpacing.PageX,
+          top: 0,
+          bottom: AppSpacing.PageBottom
+        })
+        .width('100%')
       }
-      .height('100%')
       .width('100%')
-
-      if (this.confirmVisible) {
-        this.ConfirmOverlay()
-      }
+      .constraintSize({ minHeight: '100%' })
+      .alignItems(HorizontalAlign.Start)
+      .justifyContent(FlexAlign.Start)
     }
     .height('100%')
     .width('100%')
@@ -92,61 +79,50 @@ struct DeviceArchiveDelete {
   }
 
   onBackPress(): boolean {
-    if (this.confirmVisible) {
-      this.closeConfirmOverlay();
-      return true;
-    }
-
     this.backToDetail();
     return true;
   }
 
   @Builder
   PageTitleBar() {
-    Row({ space: 12 }) {
-      Button({ type: ButtonType.Circle, stateEffect: true }) {
-        SymbolGlyph($r('sys.symbol.chevron_backward'))
-          .fontSize(22)
-          .fontColor([AppColors.TextPrimary])
-      }
-      .width(44)
-      .height(44)
-      .backgroundColor(AppColors.Surface)
-      .border({ width: 1, color: AppColors.Divider })
-      .onClick(() => {
+    CenterTitleBar({
+      action: () => {
         this.backToDetail();
-      })
-    }
-    .width('100%')
-    .height(60)
-    .alignItems(VerticalAlign.Center)
-    .padding({ left: 24, right: 24 })
-    .backgroundColor(AppColors.PageBackground)
+      }
+    })
   }
 
   @Builder
   ModeHeader() {
-    Text('删除设备档案')
-      .fontSize(34)
-      .fontWeight(FontWeight.Bold)
-      .fontColor(AppColors.TextPrimary)
-      .maxLines(1)
-      .textOverflow({ overflow: TextOverflow.Ellipsis })
-    .width('100%')
-    .alignSelf(ItemAlign.Start)
-    .padding({ top: 0, bottom: 2 })
-  }
-
-  @Builder
-  ArchivePanel() {
-    Column({ space: 10 }) {
-      Text('档案信息')
-        .fontSize(22)
+    Column({ space: 5 }) {
+      Text('删除设备档案')
+        .fontSize(34)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      Column() {
+      Text('Device Archive Delete')
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextTertiary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+    .padding({ top: 12, bottom: 6 })
+  }
+
+  @Builder
+  DeleteForm() {
+    Column({ space: 12 }) {
+      AppSectionTitle({
+        title: '删除信息',
+        subtitle: ''
+      })
+
+      Column({ space: 16 }) {
         StatusInfoRow({ label: '设备编号', value: this.device.deviceCode, tone: AppColors.TextSecondary, valueMaxLines: 2 })
         this.CardDivider()
         StatusInfoRow({ label: '设备名称', value: this.device.name, tone: AppColors.TextSecondary, valueMaxLines: 2 })
@@ -158,34 +134,60 @@ struct DeviceArchiveDelete {
         StatusInfoRow({ label: '设备位置', value: this.device.location.address, tone: AppColors.TextSecondary, valueMaxLines: 2 })
         this.CardDivider()
         StatusInfoRow({ label: '最近核验', value: DeviceService.formatTimestampForDisplay(this.device.lastVerificationTime), tone: AppColors.TextSecondary, valueMaxLines: 2 })
+        this.CardDivider()
+        this.DeleteTimeField()
+        this.ReasonField()
       }
+      .padding({
+        left: 18,
+        right: 18,
+        top: 18,
+        bottom: 18
+      })
       .width('100%')
-      .backgroundColor(AppColors.Surface)
-      .borderRadius(24)
+      .backgroundColor(AppColors.SurfaceRaised)
+      .borderRadius(AppRadii.Large)
+      .border({ width: 1, color: AppColors.Divider })
+      .alignItems(HorizontalAlign.Start)
+
+      this.PasswordField()
+      this.MessageText()
+      this.ActionButton(this.getSubmitButtonLabel(), $r('sys.symbol.trash'), this.canSubmitDelete(), () => {
+        this.submitDeleteRequest();
+      })
     }
-    .alignItems(HorizontalAlign.Start)
     .width('100%')
+    .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
-  DeleteForm() {
-    Column({ space: 16 }) {
-      this.DeleteTimeField()
-      this.ReasonField()
-      this.MessageText()
-      this.ActionButton(this.getSubmitButtonLabel(), $r('sys.symbol.trash'), this.canOpenConfirmation(), () => {
-        this.prepareDeleteConfirmation();
+  PasswordField() {
+    Column({ space: 10 }) {
+      this.FieldTitle('密码')
+
+      TextInput({
+        placeholder: '请输入密码',
+        text: this.password
       })
+        .type(InputType.Password)
+        .height(56)
+        .fontSize(16)
+        .backgroundColor(AppColors.FieldBackground)
+        .borderRadius(18)
+        .padding({ left: 16, right: 16 })
+        .border({ width: 1, color: AppColors.Border })
+        .enabled(!this.submitting && !this.isSubmitted() && !this.isDeleteLocked())
+        .onChange((value: string) => {
+          if (this.submitting || this.isSubmitted() || this.isDeleteLocked()) {
+            return;
+          }
+
+          this.password = value;
+          this.message = '';
+          this.messageTone = AppColors.Danger;
+        })
     }
-    .padding({
-      left: 18,
-      right: 18,
-      top: 18,
-      bottom: 18
-    })
     .width('100%')
-    .backgroundColor(AppColors.Surface)
-    .borderRadius(24)
     .alignItems(HorizontalAlign.Start)
   }
 
@@ -199,7 +201,7 @@ struct DeviceArchiveDelete {
           .fontSize(20)
           .fontColor([AppColors.TextPrimary])
 
-        Text(this.deleteTime.length > 0 ? this.deleteTime : '选择删除时间')
+        Text(this.deleteTime.length > 0 ? this.deleteTime : '请选择删除时间')
           .fontSize(16)
           .fontColor(this.deleteTime.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
           .layoutWeight(1)
@@ -234,7 +236,7 @@ struct DeviceArchiveDelete {
       this.FieldTitle('删除原因')
 
       TextArea({
-        placeholder: '填写设备退役、撤场、误建档或其他删除依据',
+        placeholder: '请输入删除原因',
         text: this.reason
       })
         .height(126)
@@ -266,34 +268,6 @@ struct DeviceArchiveDelete {
   }
 
   @Builder
-  StatusPanel() {
-    Column({ space: 10 }) {
-      Text('提交摘要')
-        .fontSize(22)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
-
-      Column() {
-        StatusInfoRow({ label: '标准设备编号', value: this.device.deviceCode, tone: AppColors.TextSecondary })
-        this.CardDivider()
-        StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: AppColors.TextSecondary })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '申请状态',
-          value: DeviceArchiveUpdateService.formatRequestStatus(this.requestStatus),
-          tone: this.getStatusTone(this.requestStatus)
-        })
-      }
-      .width('100%')
-      .backgroundColor(AppColors.Surface)
-      .borderRadius(24)
-    }
-    .alignItems(HorizontalAlign.Start)
-    .width('100%')
-  }
-
-  @Builder
   EmptyPanel() {
     Column({ space: 12 }) {
       this.MessageText()
@@ -305,178 +279,10 @@ struct DeviceArchiveDelete {
       bottom: 18
     })
     .width('100%')
-    .backgroundColor(AppColors.Surface)
-    .borderRadius(24)
+    .backgroundColor(AppColors.SurfaceRaised)
+    .borderRadius(AppRadii.Large)
+    .border({ width: 1, color: AppColors.Divider })
     .alignItems(HorizontalAlign.Start)
-  }
-
-  @Builder
-  ConfirmOverlay() {
-    Column() {
-      Column({ space: 16 }) {
-        Row() {
-          Text('确认删除')
-            .fontSize(22)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(AppColors.TextPrimary)
-            .layoutWeight(1)
-            .maxLines(1)
-
-          Button({ type: ButtonType.Circle, stateEffect: true }) {
-            SymbolGlyph($r('sys.symbol.xmark'))
-              .fontSize(18)
-              .fontColor([AppColors.TextPrimary])
-          }
-          .width(40)
-          .height(40)
-          .backgroundColor(AppColors.PageBackground)
-          .onClick(() => {
-            this.closeConfirmOverlay();
-          })
-        }
-        .width('100%')
-        .alignItems(VerticalAlign.Center)
-
-        this.ConfirmPasswordField()
-        this.ConfirmCaptchaField()
-
-        Row({ space: 10 }) {
-          Column() {
-            this.ConfirmSecondaryButton('取消', () => {
-              this.closeConfirmOverlay();
-            })
-          }
-          .layoutWeight(1)
-
-          Column({ space: 8 }) {
-            this.ConfirmMessageText()
-            this.ConfirmPrimaryButton(this.submitting ? '提交中' : '确认提交', () => {
-              this.confirmAndSubmitDeleteRequest();
-            })
-          }
-          .layoutWeight(1)
-        }
-        .width('100%')
-      }
-      .width('88%')
-      .padding({
-        left: 22,
-        right: 22,
-        top: 22,
-        bottom: 22
-      })
-      .backgroundColor(AppColors.Surface)
-      .borderRadius(28)
-      .clip(true)
-    }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(AppColors.Scrim)
-    .justifyContent(FlexAlign.Center)
-    .alignItems(HorizontalAlign.Center)
-  }
-
-  @Builder
-  ConfirmPasswordField() {
-    Column({ space: 8 }) {
-      this.ConfirmFieldTitle('当前账号密码')
-
-      TextInput({
-        placeholder: '输入当前账号密码',
-        text: this.confirmPassword
-      })
-        .type(InputType.Password)
-        .height(54)
-        .fontSize(16)
-        .backgroundColor(AppColors.FieldBackground)
-        .borderRadius(18)
-        .padding({ left: 16, right: 16 })
-        .border({ width: 1, color: AppColors.Border })
-        .enabled(!this.submitting)
-        .onChange((value: string) => {
-          this.confirmPassword = value;
-          this.clearConfirmMessageWhenUserReenters(value);
-        })
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-  }
-
-  @Builder
-  ConfirmCaptchaField() {
-    Column({ space: 8 }) {
-      this.ConfirmFieldTitle('验证码')
-
-      Row({ space: 10 }) {
-        TextInput({
-          placeholder: '输入验证码',
-          text: this.confirmCaptcha
-        })
-          .height(54)
-          .fontSize(16)
-          .backgroundColor(AppColors.FieldBackground)
-          .borderRadius(18)
-          .padding({ left: 16, right: 16 })
-          .border({ width: 1, color: AppColors.Border })
-          .layoutWeight(1)
-          .enabled(!this.submitting)
-          .onChange((value: string) => {
-            this.confirmCaptcha = value;
-            this.clearConfirmMessageWhenUserReenters(value);
-          })
-
-        Button({ type: ButtonType.Capsule, stateEffect: true }) {
-          Row({ space: 6 }) {
-            Text(this.confirmCaptchaCode)
-              .fontSize(16)
-              .fontWeight(FontWeight.Bold)
-              .fontColor(AppColors.TextPrimary)
-              .maxLines(1)
-
-            SymbolGlyph($r('sys.symbol.arrow_clockwise'))
-              .fontSize(16)
-              .fontColor([AppColors.TextPrimary])
-          }
-          .justifyContent(FlexAlign.Center)
-          .alignItems(VerticalAlign.Center)
-          .width('100%')
-        }
-        .width(116)
-        .height(54)
-        .backgroundColor(AppColors.PageBackground)
-        .border({ width: 1, color: AppColors.Border })
-        .enabled(!this.submitting)
-        .onClick(() => {
-          this.refreshCaptcha();
-        })
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-  }
-
-  @Builder
-  ConfirmMessageText() {
-    if (this.confirmMessage.length > 0) {
-      Text(this.confirmMessage)
-        .fontSize(13)
-        .fontColor(AppColors.Danger)
-        .lineHeight(18)
-        .maxLines(3)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
-    }
-  }
-
-  @Builder
-  ConfirmFieldTitle(title: string) {
-    Text(title)
-      .fontSize(14)
-      .fontWeight(FontWeight.Medium)
-      .fontColor(AppColors.TextPrimary)
-      .maxLines(1)
   }
 
   @Builder
@@ -491,13 +297,10 @@ struct DeviceArchiveDelete {
   @Builder
   MessageText() {
     if (this.message.length > 0) {
-      Text(this.message)
-        .fontSize(13)
-        .fontColor(this.messageTone)
-        .lineHeight(18)
-        .maxLines(3)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
+      InlineMessageSurface({
+        message: this.message,
+        tone: this.messageTone
+      })
     }
   }
 
@@ -523,43 +326,6 @@ struct DeviceArchiveDelete {
     .width('100%')
     .backgroundColor(enabled ? AppColors.Danger : AppColors.Disabled)
     .enabled(enabled)
-    .onClick(() => {
-      action();
-    })
-  }
-
-  @Builder
-  ConfirmPrimaryButton(label: string, action: () => void) {
-    Button({ type: ButtonType.Capsule, stateEffect: !this.submitting }) {
-      Text(label)
-        .fontSize(16)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(AppColors.OnPrimary)
-        .maxLines(1)
-    }
-    .height(52)
-    .width('100%')
-    .backgroundColor(this.submitting ? AppColors.Disabled : AppColors.Danger)
-    .enabled(!this.submitting)
-    .onClick(() => {
-      action();
-    })
-  }
-
-  @Builder
-  ConfirmSecondaryButton(label: string, action: () => void) {
-    Button({ type: ButtonType.Capsule, stateEffect: !this.submitting }) {
-      Text(label)
-        .fontSize(16)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
-    }
-    .height(52)
-    .width('100%')
-    .backgroundColor(AppColors.FieldBackground)
-    .border({ width: 1, color: AppColors.Border })
-    .enabled(!this.submitting)
     .onClick(() => {
       action();
     })
@@ -596,10 +362,15 @@ struct DeviceArchiveDelete {
     }
   }
 
-  prepareDeleteConfirmation(): void {
+  async submitDeleteRequest(): Promise<void> {
+    if (this.submitting) {
+      return;
+    }
+
     const validation = DeviceArchiveRequestService.validateDeleteRequestForm({
       device: this.device,
-      reason: this.reason
+      reason: this.reason,
+      initiatedAt: this.deleteTime
     });
     if (!validation.valid) {
       this.message = validation.message;
@@ -613,80 +384,78 @@ struct DeviceArchiveDelete {
       return;
     }
 
-    this.confirmPassword = '';
-    this.confirmCaptcha = '';
-    this.confirmCaptchaCode = DeviceArchiveDeleteGuardService.createCaptcha();
-    this.confirmMessage = '';
-    this.confirmVisible = true;
-  }
-
-  async confirmAndSubmitDeleteRequest(): Promise<void> {
-    if (this.submitting) {
+    if (this.password.length === 0) {
+      this.message = '请输入密码';
+      this.messageTone = AppColors.Danger;
       return;
     }
 
     this.submitting = true;
-    const confirmation = await DeviceArchiveDeleteGuardService.verifyConfirmation({
-      deviceCode: this.device.deviceCode,
-      password: this.confirmPassword,
-      captcha: this.confirmCaptcha,
-      expectedCaptcha: this.confirmCaptchaCode
-    });
-    if (!confirmation.verified) {
+    try {
+      const verified = await this.verifyPasswordForSubmit(this.password);
+      if (!verified) {
+        return;
+      }
+
+      const response = await DeviceArchiveRequestService.submitDeleteRequestRemoteFirst({
+        device: this.device,
+        reason: this.reason,
+        initiatedAt: this.deleteTime
+      });
+
+      if (!response.success) {
+        this.message = '删除功能暂不可用，请稍后重试';
+        this.messageTone = AppColors.Danger;
+        return;
+      }
+
+      this.requestStatus = response.data === undefined ? DeviceArchiveRequestStatus.PendingReview : response.data.status;
+      DeviceArchiveFlowStore.markArchiveRequestPending(response.data ? response.data.id : '', undefined, this.requestStatus);
+      const pendingDevice = DeviceArchiveFlowStore.getCurrentDevice();
+      if (pendingDevice !== undefined) {
+        this.device = pendingDevice;
+      }
+      this.password = '';
+      this.message = '提交成功，等待审核';
+      this.messageTone = AppColors.Success;
+    } finally {
       this.submitting = false;
-      this.confirmMessage = confirmation.message;
-      this.refreshCaptcha();
-      return;
-    }
-
-    const response = await DeviceArchiveRequestService.submitDeleteRequestRemoteFirst({
-      device: this.device,
-      reason: this.reason,
-      initiatedAt: this.deleteTime
-    });
-    this.submitting = false;
-
-    if (!response.success) {
-      const error = response.error;
-      this.confirmMessage = error ? error.message : '删除申请提交失败';
-      this.refreshCaptcha();
-      return;
-    }
-
-    this.requestStatus = response.data === undefined ? DeviceArchiveRequestStatus.PendingReview : response.data.status;
-    DeviceArchiveFlowStore.markArchiveRequestPending(response.data ? response.data.id : '', undefined, this.requestStatus);
-    const pendingDevice = DeviceArchiveFlowStore.getCurrentDevice();
-    if (pendingDevice !== undefined) {
-      this.device = pendingDevice;
-    }
-    this.confirmVisible = false;
-    this.message = '删除申请已提交，等待管理员审核';
-    this.messageTone = AppColors.Success;
-  }
-
-  refreshCaptcha(): void {
-    this.confirmCaptchaCode = DeviceArchiveDeleteGuardService.createCaptcha();
-    this.confirmCaptcha = '';
-  }
-
-  clearConfirmMessageWhenUserReenters(value: string): void {
-    if (value.length > 0) {
-      this.confirmMessage = '';
     }
   }
 
-  closeConfirmOverlay(): void {
-    if (this.submitting) {
-      return;
+  async verifyPasswordForSubmit(password: string): Promise<boolean> {
+    const response = await AuthService.verifyCurrentUserPasswordRemoteFirst(password);
+    if (response.success && response.data === true) {
+      DeviceArchiveDeleteGuardService.clearDeleteLock(this.device.deviceCode);
+      return true;
     }
 
-    this.confirmVisible = false;
-    this.confirmPassword = '';
-    this.confirmCaptcha = '';
-    this.confirmMessage = '';
+    if (DeviceArchiveDeleteGuardService.isPasswordIncorrectResponse(response)) {
+      const result = DeviceArchiveDeleteGuardService.registerDeletePasswordFailure(this.device.deviceCode);
+      this.message = result.lockedUntil === undefined ? '密码不正确，请重新输入' : result.message;
+      this.messageTone = AppColors.Danger;
+      return false;
+    }
+
+    const errorCode = response.error === undefined ? '' : `${response.error.code}`;
+    this.message = this.mapPasswordVerifyErrorMessage(errorCode);
+    this.messageTone = AppColors.Danger;
+    return false;
   }
 
-  canOpenConfirmation(): boolean {
+  mapPasswordVerifyErrorMessage(errorCode: string): string {
+    if (errorCode === 'PASSWORD_REQUIRED') {
+      return '请输入密码';
+    }
+
+    if (errorCode === 'INVALID_CREDENTIALS' || errorCode === 'LOGIN_FAILED' || errorCode === 'UNAUTHORIZED') {
+      return '密码不正确，请重新输入';
+    }
+
+    return '删除功能暂不可用，请稍后重试';
+  }
+
+  canSubmitDelete(): boolean {
     return this.hasDevice && !this.submitting && !this.isSubmitted() && !this.isDeleteLocked();
   }
 
@@ -710,25 +479,14 @@ struct DeviceArchiveDelete {
     return '提交申请';
   }
 
-  getStatusTone(status: DeviceArchiveRequestStatus): string {
-    switch (status) {
-      case DeviceArchiveRequestStatus.PendingReview:
-        return AppColors.Warning;
-      case DeviceArchiveRequestStatus.Approved:
-        return AppColors.Success;
-      case DeviceArchiveRequestStatus.Rejected:
-        return AppColors.Danger;
-      case DeviceArchiveRequestStatus.Withdrawn:
-        return AppColors.TextSecondary;
-      case DeviceArchiveRequestStatus.Draft:
-      default:
-        return AppColors.TextSecondary;
-    }
-  }
-
   backToDetail(): void {
     try {
       const router = this.getUIContext().getRouter();
+      if (router.getState().index > 1) {
+        router.back();
+        return;
+      }
+
       router.replaceUrl({ url: 'pages/ArchiveCenter/DeviceArchiveDetail' });
     } catch (err) {
       try {

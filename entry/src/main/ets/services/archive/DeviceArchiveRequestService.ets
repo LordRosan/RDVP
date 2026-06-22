@@ -102,6 +102,14 @@ export class DeviceArchiveRequestService {
   }
 
   static validateDeleteRequestForm(form: DeviceArchiveDeleteRequestForm): DeviceArchiveRequestValidationResult {
+    if (form.initiatedAt === undefined || form.initiatedAt.trim().length === 0) {
+      return {
+        valid: false,
+        message: '请选择删除时间',
+        normalizedDeviceCode: form.device.deviceCode
+      };
+    }
+
     const reason = DeviceArchiveRequestService.normalizeText(form.reason);
     if (reason.length === 0) {
       return {

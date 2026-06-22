@@ -1,4 +1,7 @@
-import { AppColors } from '../../styles/AppTheme';
+import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
+import { AppSectionTitle } from '../../components/AppSectionTitle';
+import { CenterTitleBar } from '../../components/CenterTitleBar';
+import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import {
   DeviceArchiveUpdateBaseline,
   DeviceArchiveUpdateDraft,
@@ -6,12 +9,10 @@ import {
   DeviceArchiveRequestStatus
 } from '../../models/archive/DeviceArchiveRequestModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
-import { ApiClient } from '../../services/common/ApiClient';
-import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { DeviceArchiveUpdateService } from '../../services/archive/DeviceArchiveUpdateService';
 import { DeviceService } from '../../services/archive/DeviceService';
+import { AuthService } from '../../services/identity/AuthService';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
-import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 
 @Entry
@@ -29,6 +30,7 @@ struct DeviceArchiveUpdate {
   @State normalizedDeviceCode: string = '-';
   @State updatedFieldCount: number = 0;
   @State initiatedAt: string = '';
+  @State password: string = '';
   @State requestStatus: DeviceArchiveRequestStatus = DeviceArchiveRequestStatus.Draft;
   @State hasDevice: boolean = false;
   @State submitting: boolean = false;
@@ -51,15 +53,14 @@ struct DeviceArchiveUpdate {
         Column({ space: 18 }) {
           this.ModeHeader()
           this.UpdateForm()
-          this.StatusPanel()
         }
         .alignItems(HorizontalAlign.Start)
         .justifyContent(FlexAlign.Start)
         .padding({
-          left: 24,
-          right: 24,
+          left: AppSpacing.PageX,
+          right: AppSpacing.PageX,
           top: 0,
-          bottom: 28
+          bottom: AppSpacing.PageBottom
         })
         .width('100%')
       }
@@ -80,74 +81,75 @@ struct DeviceArchiveUpdate {
 
   @Builder
   PageTitleBar() {
-    Row({ space: 12 }) {
-      Button({ type: ButtonType.Circle, stateEffect: true }) {
-        SymbolGlyph($r('sys.symbol.chevron_backward'))
-          .fontSize(22)
-          .fontColor([AppColors.TextPrimary])
-      }
-      .width(44)
-      .height(44)
-      .backgroundColor(AppColors.Surface)
-      .border({
-        width: 1,
-        color: AppColors.Divider
-      })
-      .onClick(() => {
+    CenterTitleBar({
+      action: () => {
         this.backToDetail();
-      })
-    }
-    .width('100%')
-    .height(60)
-    .alignItems(VerticalAlign.Center)
-    .padding({
-      left: 24,
-      right: 24
+      }
     })
-    .backgroundColor(AppColors.PageBackground)
   }
 
   @Builder
   ModeHeader() {
-    Text('修改设备档案')
-      .fontSize(34)
-      .fontWeight(FontWeight.Bold)
-      .fontColor(AppColors.TextPrimary)
-      .maxLines(1)
-      .textOverflow({ overflow: TextOverflow.Ellipsis })
+    Column({ space: 5 }) {
+      Text('修改设备档案')
+        .fontSize(34)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+      Text('Device Archive Update')
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextTertiary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
     .width('100%')
-    .alignSelf(ItemAlign.Start)
+    .alignItems(HorizontalAlign.Start)
     .padding({
-      top: 0,
-      bottom: 2
+      top: 12,
+      bottom: 6
     })
   }
 
   @Builder
   UpdateForm() {
-    Column({ space: 16 }) {
-      this.DeviceCodeField()
-      this.DeviceNameField()
-      this.DeviceModelField()
-      this.ManufacturerField()
-      this.LocationAddressField()
-      this.InitiatedAtField()
-      this.ReasonField()
+    Column({ space: 12 }) {
+      AppSectionTitle({
+        title: '修改信息',
+        subtitle: ''
+      })
+
+      Column({ space: 16 }) {
+        this.DeviceCodeField()
+        this.DeviceNameField()
+        this.DeviceModelField()
+        this.ManufacturerField()
+        this.LocationAddressField()
+        this.InitiatedAtField()
+        this.ReasonField()
+      }
+      .padding({
+        left: 18,
+        right: 18,
+        top: 18,
+        bottom: 18
+      })
+      .width('100%')
+      .backgroundColor(AppColors.SurfaceRaised)
+      .borderRadius(AppRadii.Large)
+      .border({ width: 1, color: AppColors.Divider })
+      .alignItems(HorizontalAlign.Start)
+
+      this.PasswordField()
       this.MessageText()
       this.ActionButton(this.getSubmitButtonLabel(), $r('sys.symbol.checkmark_circle'),
         this.hasDevice && !this.submitting && !this.isUpdateSubmitted(), () => {
           this.submitUpdateRequest();
         })
     }
-    .padding({
-      left: 18,
-      right: 18,
-      top: 18,
-      bottom: 18
-    })
     .width('100%')
-    .backgroundColor(AppColors.Surface)
-    .borderRadius(24)
     .alignItems(HorizontalAlign.Start)
   }
 
@@ -341,7 +343,7 @@ struct DeviceArchiveUpdate {
           .fontSize(20)
           .fontColor([AppColors.TextPrimary])
 
-        Text(this.initiatedAt.length > 0 ? this.initiatedAt : '选择修改时间')
+        Text(this.initiatedAt.length > 0 ? this.initiatedAt : '请选择修改时间')
           .fontSize(16)
           .fontColor(this.initiatedAt.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
           .layoutWeight(1)
@@ -382,7 +384,7 @@ struct DeviceArchiveUpdate {
       this.FieldTitle('修改原因')
 
       TextArea({
-        placeholder: '填写修改依据、现场情况或补充说明',
+        placeholder: '请输入修改原因',
         text: this.reason
       })
         .height(118)
@@ -414,6 +416,37 @@ struct DeviceArchiveUpdate {
   }
 
   @Builder
+  PasswordField() {
+    Column({ space: 10 }) {
+      this.FieldTitle('密码')
+
+      TextInput({
+        placeholder: '请输入密码',
+        text: this.password
+      })
+        .type(InputType.Password)
+        .height(56)
+        .fontSize(16)
+        .backgroundColor(AppColors.FieldBackground)
+        .borderRadius(18)
+        .padding({ left: 16, right: 16 })
+        .border({ width: 1, color: AppColors.Border })
+        .enabled(!this.submitting && !this.isUpdateSubmitted())
+        .onChange((value: string) => {
+          if (this.submitting || this.isUpdateSubmitted()) {
+            return;
+          }
+
+          this.password = value;
+          this.message = '';
+          this.messageTone = AppColors.Danger;
+        })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
   FieldTitle(title: string) {
     Text(title)
       .fontSize(17)
@@ -425,12 +458,10 @@ struct DeviceArchiveUpdate {
   @Builder
   MessageText() {
     if (this.message.length > 0) {
-      Text(this.message)
-        .fontSize(13)
-        .fontColor(this.messageTone)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
+      InlineMessageSurface({
+        message: this.message,
+        tone: this.messageTone
+      })
     }
   }
 
@@ -461,45 +492,6 @@ struct DeviceArchiveUpdate {
     })
   }
 
-  @Builder
-  StatusPanel() {
-    Column({ space: 10 }) {
-      Text('提交摘要')
-        .fontSize(22)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
-
-      Column() {
-        StatusInfoRow({ label: '标准设备编号', value: this.normalizedDeviceCode, tone: AppColors.TextSecondary })
-        this.CardDivider()
-        StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: AppColors.TextSecondary })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '申请状态',
-          value: DeviceArchiveUpdateService.formatRequestStatus(this.requestStatus),
-          tone: this.getStatusTone(this.requestStatus)
-        })
-      }
-      .width('100%')
-      .backgroundColor(AppColors.Surface)
-      .borderRadius(24)
-    }
-    .alignItems(HorizontalAlign.Start)
-    .width('100%')
-  }
-
-  @Builder
-  CardDivider() {
-    Divider()
-      .height(1)
-      .backgroundColor(AppColors.Divider)
-      .margin({
-        left: 18,
-        right: 18
-      })
-  }
-
   async submitUpdateRequest(): Promise<void> {
     if (this.submitting) {
       return;
@@ -521,24 +513,61 @@ struct DeviceArchiveUpdate {
       return;
     }
 
-    this.submitting = true;
-    const response = await DeviceArchiveUpdateService.submitUpdateRequestRemoteFirst(form);
-    this.submitting = false;
-
-    if (!response.success) {
-      const error = response.error;
-      this.message = error ? error.message : '修改申请提交失败';
+    if (this.password.length === 0) {
+      this.message = '请输入密码';
       this.messageTone = AppColors.Danger;
       return;
     }
 
-    const submittedDraft = this.buildDraft();
-    this.requestStatus = response.data === undefined ? DeviceArchiveRequestStatus.PendingReview : response.data.status;
-    DeviceArchiveFlowStore.markArchiveRequestPending(response.data ? response.data.id : '', submittedDraft, this.requestStatus);
-    this.applyDraft(submittedDraft);
-    this.updatedFieldCount = DeviceArchiveUpdateService.countUpdatedFields(this.buildForm());
-    this.message = '修改申请已提交，等待管理员审核';
-    this.messageTone = AppColors.Success;
+    this.submitting = true;
+    try {
+      const verified = await this.verifyPasswordForSubmit(this.password);
+      if (!verified) {
+        return;
+      }
+
+      const response = await DeviceArchiveUpdateService.submitUpdateRequestRemoteFirst(form);
+      if (!response.success) {
+        this.message = '修改功能暂不可用，请稍后重试';
+        this.messageTone = AppColors.Danger;
+        return;
+      }
+
+      const submittedDraft = this.buildDraft();
+      this.requestStatus = response.data === undefined ? DeviceArchiveRequestStatus.PendingReview : response.data.status;
+      DeviceArchiveFlowStore.markArchiveRequestPending(response.data ? response.data.id : '', submittedDraft, this.requestStatus);
+      this.applyDraft(submittedDraft);
+      this.updatedFieldCount = DeviceArchiveUpdateService.countUpdatedFields(this.buildForm());
+      this.password = '';
+      this.message = '提交成功，等待审核';
+      this.messageTone = AppColors.Success;
+    } finally {
+      this.submitting = false;
+    }
+  }
+
+  async verifyPasswordForSubmit(password: string): Promise<boolean> {
+    const response = await AuthService.verifyCurrentUserPasswordRemoteFirst(password);
+    if (response.success && response.data === true) {
+      return true;
+    }
+
+    const errorCode = response.error === undefined ? '' : `${response.error.code}`;
+    this.message = this.mapPasswordVerifyErrorMessage(errorCode);
+    this.messageTone = AppColors.Danger;
+    return false;
+  }
+
+  mapPasswordVerifyErrorMessage(errorCode: string): string {
+    if (errorCode === 'PASSWORD_REQUIRED') {
+      return '请输入密码';
+    }
+
+    if (errorCode === 'INVALID_CREDENTIALS' || errorCode === 'LOGIN_FAILED' || errorCode === 'UNAUTHORIZED') {
+      return '密码不正确，请重新输入';
+    }
+
+    return '修改功能暂不可用，请稍后重试';
   }
 
   buildForm(): DeviceArchiveUpdateRequestForm {
@@ -624,7 +653,7 @@ struct DeviceArchiveUpdate {
       this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(this.deviceCode);
       this.updatedFieldCount = DeviceArchiveUpdateService.countUpdatedFields(this.buildForm());
       this.requestStatus = DeviceArchiveFlowStore.getPendingRequestStatus();
-      this.message = '修改申请已提交，等待管理员审核';
+      this.message = '提交成功，等待审核';
       this.messageTone = AppColors.Success;
       return;
     }

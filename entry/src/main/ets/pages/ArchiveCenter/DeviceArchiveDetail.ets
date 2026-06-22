@@ -322,6 +322,13 @@ struct DeviceArchiveDetail {
   ActionPanel() {
     Column({ space: 12 }) {
       this.DetailMessageText()
+      if (this.canViewExportArchiveAction()) {
+        this.ExportActionMessageText()
+        this.DetailActionTile('导出设备档案', $r('sys.media.ohos_save_button_line'), AppColors.Primary,
+          AppColors.PrimarySurface, this.canExportArchive, () => {
+            this.openExportVerifyPage();
+          }, true)
+      }
       if (this.canViewChangeArchiveAction()) {
         this.ChangeActionMessageText()
         this.DetailActionTile('修改设备档案', $r('sys.symbol.text_clipboard'), AppColors.Primary,
@@ -335,13 +342,6 @@ struct DeviceArchiveDetail {
           AppColors.DangerSurface, this.canDeleteArchive, () => {
             this.openDeletePage();
           })
-      }
-      if (this.canViewExportArchiveAction()) {
-        this.ExportActionMessageText()
-        this.DetailActionTile('导出设备档案', $r('sys.media.ohos_save_button_line'), AppColors.Primary,
-          AppColors.PrimarySurface, this.canExportArchive, () => {
-            this.openExportVerifyPage();
-          }, true)
       }
     }
     .width('100%')
@@ -549,7 +549,7 @@ struct DeviceArchiveDetail {
     }
 
     try {
-      this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveExportVerify' });
+      this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveExport' });
     } catch (err) {
       this.exportActionMessage = '导出设备档案不可用';
       this.exportActionMessageTone = AppColors.Danger;
@@ -560,16 +560,15 @@ struct DeviceArchiveDetail {
     try {
       DeviceArchiveFlowStore.clearFlow();
       const router = this.getUIContext().getRouter();
-      if (router.getState().index > 1) {
-        router.back();
-        return;
-      }
-
-      router.replaceUrl({ url: 'pages/ArchiveCenter/DeviceArchiveQuery' });
+      router.back({ url: 'pages/ArchiveCenter/DeviceArchiveQuery' });
     } catch (err) {
       try {
-        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
-      } catch (toastErr) {
+        this.getUIContext().getRouter().replaceUrl({ url: 'pages/ArchiveCenter/DeviceArchiveQuery' });
+      } catch (replaceErr) {
+        try {
+          this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+        } catch (toastErr) {
+        }
       }
     }
   }

@@ -1,6 +1,4 @@
-import { AuthService } from '../identity/AuthService';
 import { DeviceService } from './DeviceService';
-import { SecureRandomService } from '../common/SecureRandomService';
 import { ApiResponse } from '../../models/common/ApiModels';
 
 const DELETE_LOCK_STORAGE_KEY = 'rdvp_archive_delete_locks';
@@ -8,14 +6,7 @@ const QR_EXPORT_LOCK_STORAGE_KEY = 'rdvp_archive_qrcode_export_locks';
 const MAX_PASSWORD_FAILURES = 5;
 const DELETE_LOCK_DURATION_MS = 6 * 60 * 60 * 1000;
 
-export interface DeviceArchiveDeleteConfirmationForm {
-  deviceCode: string;
-  password: string;
-  captcha: string;
-  expectedCaptcha: string;
-}
-
-export interface DeviceArchiveDeleteConfirmationResult {
+export interface DeviceArchivePasswordGuardResult {
   verified: boolean;
   message: string;
   lockedUntil?: string;
@@ -29,10 +20,6 @@ interface DeviceArchiveDeleteLockRecord {
 }
 
 export class DeviceArchiveDeleteGuardService {
-  static createCaptcha(): string {
-    return SecureRandomService.createSixDigitCode();
-  }
-
   static isDeleteLocked(deviceCode: string): boolean {
     const record = DeviceArchiveDeleteGuardService.findRecord(DELETE_LOCK_STORAGE_KEY, deviceCode);
     if (record === undefined) {
@@ -79,72 +66,6 @@ export class DeviceArchiveDeleteGuardService {
     return `二维码导出已锁定，${DeviceArchiveDeleteGuardService.formatDateTime(record.lockedUntil)} 后可再次尝试`;
   }
 
-  static async verifyConfirmation(
-    form: DeviceArchiveDeleteConfirmationForm
-  ): Promise<DeviceArchiveDeleteConfirmationResult> {
-    const normalizedDeviceCode = DeviceService.normalizeDeviceCode(form.deviceCode);
-    if (DeviceArchiveDeleteGuardService.isDeleteLocked(normalizedDeviceCode)) {
-      return {
-        verified: false,
-        message: DeviceArchiveDeleteGuardService.getDeleteLockMessage(normalizedDeviceCode),
-        lockedUntil: DeviceArchiveDeleteGuardService.getLockedUntil(normalizedDeviceCode)
-      };
-    }
-
-    if (form.captcha.trim().length === 0) {
-      return {
-        verified: false,
-        message: '请输入验证码'
-      };
-    }
-
-    if (form.captcha.trim() !== form.expectedCaptcha.trim()) {
-      return {
-        verified: false,
-        message: '验证码错误，请重新输入'
-      };
-    }
-
-    if (form.password.length === 0) {
-      return {
-        verified: false,
-        message: '请输入当前账号密码'
-      };
-    }
-
-    const response = await AuthService.verifyCurrentUserPasswordRemoteFirst(form.password);
-    if (response.success && response.data === true) {
-      DeviceArchiveDeleteGuardService.clearRecord(DELETE_LOCK_STORAGE_KEY, normalizedDeviceCode);
-      return {
-        verified: true,
-        message: ''
-      };
-    }
-
-    if (DeviceArchiveDeleteGuardService.isPasswordIncorrectResponse(response)) {
-      const record = DeviceArchiveDeleteGuardService.registerPasswordFailure(DELETE_LOCK_STORAGE_KEY, normalizedDeviceCode);
-      if (DeviceArchiveDeleteGuardService.isLocked(record)) {
-        return {
-          verified: false,
-          message: DeviceArchiveDeleteGuardService.getDeleteLockMessage(normalizedDeviceCode),
-          lockedUntil: record.lockedUntil,
-          failedPasswordAttempts: record.failedPasswordAttempts
-        };
-      }
-
-      return {
-        verified: false,
-        message: `密码错误，还可尝试${MAX_PASSWORD_FAILURES - record.failedPasswordAttempts}次`,
-        failedPasswordAttempts: record.failedPasswordAttempts
-      };
-    }
-
-    return {
-      verified: false,
-      message: response.error ? response.error.message : '账号密码校验失败'
-    };
-  }
-
   static isPasswordIncorrectResponse(response: ApiResponse<boolean>): boolean {
     if (response.success) {
       return response.data !== true;
@@ -158,7 +79,7 @@ export class DeviceArchiveDeleteGuardService {
     return errorCode === 'INVALID_CREDENTIALS' || errorCode === 'LOGIN_FAILED';
   }
 
-  static registerQrExportPasswordFailure(deviceCode: string): DeviceArchiveDeleteConfirmationResult {
+  static registerQrExportPasswordFailure(deviceCode: string): DeviceArchivePasswordGuardResult {
     const normalizedDeviceCode = DeviceService.normalizeDeviceCode(deviceCode);
     const record = DeviceArchiveDeleteGuardService.registerPasswordFailure(QR_EXPORT_LOCK_STORAGE_KEY, normalizedDeviceCode);
     if (DeviceArchiveDeleteGuardService.isLocked(record)) {
@@ -175,6 +96,29 @@ export class DeviceArchiveDeleteGuardService {
       message: `密码错误，还可尝试${MAX_PASSWORD_FAILURES - record.failedPasswordAttempts}次`,
       failedPasswordAttempts: record.failedPasswordAttempts
     };
+  }
+
+  static registerDeletePasswordFailure(deviceCode: string): DeviceArchivePasswordGuardResult {
+    const normalizedDeviceCode = DeviceService.normalizeDeviceCode(deviceCode);
+    const record = DeviceArchiveDeleteGuardService.registerPasswordFailure(DELETE_LOCK_STORAGE_KEY, normalizedDeviceCode);
+    if (DeviceArchiveDeleteGuardService.isLocked(record)) {
+      return {
+        verified: false,
+        message: DeviceArchiveDeleteGuardService.getDeleteLockMessage(normalizedDeviceCode),
+        lockedUntil: record.lockedUntil,
+        failedPasswordAttempts: record.failedPasswordAttempts
+      };
+    }
+
+    return {
+      verified: false,
+      message: `密码错误，还可尝试${MAX_PASSWORD_FAILURES - record.failedPasswordAttempts}次`,
+      failedPasswordAttempts: record.failedPasswordAttempts
+    };
+  }
+
+  static clearDeleteLock(deviceCode: string): void {
+    DeviceArchiveDeleteGuardService.clearRecord(DELETE_LOCK_STORAGE_KEY, deviceCode);
   }
 
   static clearQrExportLock(deviceCode: string): void {

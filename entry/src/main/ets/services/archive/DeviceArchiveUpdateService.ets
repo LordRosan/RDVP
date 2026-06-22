@@ -41,7 +41,16 @@ export class DeviceArchiveUpdateService {
     if (updatedFieldCount === 0) {
       return {
         valid: false,
-        message: '请至少填写一项需要修改的信息',
+        message: '请修改档案信息',
+        normalizedDeviceCode,
+        fieldCount: updatedFieldCount
+      };
+    }
+
+    if (form.initiatedAt === undefined || form.initiatedAt.trim().length === 0) {
+      return {
+        valid: false,
+        message: '请选择修改时间',
         normalizedDeviceCode,
         fieldCount: updatedFieldCount
       };

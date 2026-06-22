@@ -9,6 +9,7 @@ import {
   DeviceQrCodeExportService
 } from '../../services/archive/DeviceQrCodeExportService';
 import { DeviceService } from '../../services/archive/DeviceService';
+import { AuthService } from '../../services/identity/AuthService';
 import { DashboardRefreshStore } from '../../stores/DashboardRefreshStore';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
 import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
@@ -36,17 +37,23 @@ struct DeviceArchiveExport {
   };
   @State hasDevice: boolean = false;
   @State activeTab: string = EXPORT_TAB_DETAIL;
+  @State currentTabIndex: number = 0;
+  @State detailPassword: string = '';
+  @State qrPassword: string = '';
   @State message: string = '';
   @State messageTone: string = AppColors.Danger;
   @State exporting: boolean = false;
   @State detailPreviewDataUri: string = '';
   @State qrExportResult: DeviceQrCodeExportResult | undefined = undefined;
+  private clearingDetailPasswordAfterSuccess: boolean = false;
+  private clearingQrPasswordAfterSuccess: boolean = false;
 
   aboutToAppear(): void {
     if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveCenterDeviceArchiveExport)) {
       return;
     }
 
+    this.syncTabFromActiveTab();
     this.loadArchiveContext();
   }
 
@@ -58,39 +65,39 @@ struct DeviceArchiveExport {
 
   build() {
     Stack() {
-      Scroll() {
-        Column() {
-          this.PageTitleBar()
-
-          Column({ space: 18 }) {
-            this.ModeHeader()
-            if (this.hasDevice) {
-              this.ExportWorkspace()
-            } else {
-              this.EmptyPanel()
-            }
-          }
-          .alignItems(HorizontalAlign.Start)
-          .justifyContent(FlexAlign.Start)
-          .padding({
-            left: AppSpacing.PageX,
-            right: AppSpacing.PageX,
-            top: 0,
-            bottom: 120
-          })
-          .width('100%')
+      Tabs({
+        barPosition: BarPosition.End,
+        index: this.currentTabIndex
+      }) {
+        TabContent() {
+          this.ExportTab(EXPORT_TAB_DETAIL)
         }
-        .width('100%')
-        .constraintSize({ minHeight: '100%' })
-        .alignItems(HorizontalAlign.Start)
-        .justifyContent(FlexAlign.Start)
+        .tabBar(this.TabBarItem('导出详情', $r('sys.symbol.text_clipboard'), 0))
+
+        TabContent() {
+          this.ExportTab(EXPORT_TAB_QR)
+        }
+        .tabBar(this.TabBarItem('导出二维码', $r('sys.symbol.qrcode'), 1))
       }
+      .barMode(BarMode.Fixed)
+      .barHeight(78)
+      .scrollable(false)
+      .onChange((index: number) => {
+        if (this.exporting) {
+          this.syncTabFromActiveTab();
+          return;
+        }
+
+        this.currentTabIndex = index;
+        this.activeTab = index === 0 ? EXPORT_TAB_DETAIL : EXPORT_TAB_QR;
+        this.message = '';
+        this.messageTone = AppColors.Danger;
+      })
       .height('100%')
       .width('100%')
 
       if (this.hasDevice) {
         this.HiddenDetailSnapshot()
-        this.BottomTabs()
       }
     }
     .height('100%')
@@ -101,6 +108,39 @@ struct DeviceArchiveExport {
   onBackPress(): boolean {
     this.backToDetail();
     return true;
+  }
+
+  @Builder
+  ExportTab(tab: string) {
+    Scroll() {
+      Column() {
+        this.PageTitleBar()
+
+        Column({ space: 18 }) {
+          this.ModeHeader(tab)
+          if (this.hasDevice) {
+            this.ExportWorkspace(tab)
+          } else {
+            this.EmptyPanel()
+          }
+        }
+        .alignItems(HorizontalAlign.Start)
+        .justifyContent(FlexAlign.Start)
+        .padding({
+          left: AppSpacing.PageX,
+          right: AppSpacing.PageX,
+          top: 0,
+          bottom: AppSpacing.PageBottom
+        })
+        .width('100%')
+      }
+      .width('100%')
+      .constraintSize({ minHeight: '100%' })
+      .alignItems(HorizontalAlign.Start)
+      .justifyContent(FlexAlign.Start)
+    }
+    .height('100%')
+    .width('100%')
   }
 
   @Builder
@@ -130,16 +170,16 @@ struct DeviceArchiveExport {
   }
 
   @Builder
-  ModeHeader() {
+  ModeHeader(tab: string) {
     Column({ space: 5 }) {
-      Text('导出设备档案')
+      Text(tab === EXPORT_TAB_DETAIL ? '导出详情' : '导出二维码')
         .fontSize(34)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      Text('Device Archive Export')
+      Text(tab === EXPORT_TAB_DETAIL ? 'Archive Detail Export' : 'Archive QR Code Export')
         .fontSize(13)
         .fontWeight(FontWeight.Medium)
         .fontColor(AppColors.TextTertiary)
@@ -157,11 +197,12 @@ struct DeviceArchiveExport {
   }
 
   @Builder
-  ExportWorkspace() {
+  ExportWorkspace(tab: string) {
     Column({ space: 16 }) {
-      this.PreviewPanel()
+      this.PreviewPanel(tab)
+      this.PasswordField(tab)
       this.MessageText()
-      this.ExportButton()
+      this.ExportButton(tab)
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -224,21 +265,27 @@ struct DeviceArchiveExport {
   }
 
   @Builder
-  PreviewPanel() {
+  PreviewPanel(tab: string) {
     Column({ space: 12 }) {
+      Text('导出预览')
+        .fontSize(17)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+
       Stack() {
-        if (this.activeTab === EXPORT_TAB_DETAIL && this.detailPreviewDataUri.length > 0) {
+        if (tab === EXPORT_TAB_DETAIL && this.detailPreviewDataUri.length > 0) {
           Image(this.detailPreviewDataUri)
             .width('100%')
             .height('100%')
             .objectFit(ImageFit.Contain)
-        } else if (this.activeTab === EXPORT_TAB_QR && this.getQrExportImageDataUri().length > 0) {
+        } else if (tab === EXPORT_TAB_QR && this.getQrExportImageDataUri().length > 0) {
           Image(this.getQrExportImageDataUri())
             .width('100%')
             .height('100%')
             .objectFit(ImageFit.Contain)
         } else {
-          SymbolGlyph(this.activeTab === EXPORT_TAB_DETAIL ? $r('sys.symbol.text_clipboard') : $r('sys.symbol.qrcode'))
+          SymbolGlyph(tab === EXPORT_TAB_DETAIL ? $r('sys.symbol.text_clipboard') : $r('sys.symbol.qrcode'))
             .fontSize(58)
             .fontColor([AppColors.TextSecondary])
         }
@@ -257,6 +304,50 @@ struct DeviceArchiveExport {
   }
 
   @Builder
+  PasswordField(tab: string) {
+    Column({ space: 10 }) {
+      Text('密码')
+        .fontSize(17)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+
+      TextInput({
+        placeholder: '请输入密码',
+        text: tab === EXPORT_TAB_DETAIL ? this.detailPassword : this.qrPassword
+      })
+        .type(InputType.Password)
+        .height(56)
+        .fontSize(16)
+        .backgroundColor(AppColors.FieldBackground)
+        .borderRadius(18)
+        .padding({ left: 16, right: 16 })
+        .border({ width: 1, color: AppColors.Border })
+        .enabled(!this.exporting)
+        .onChange((value: string) => {
+          if (this.exporting) {
+            return;
+          }
+
+          if (this.isClearingPasswordAfterSuccess(tab)) {
+            this.clearPasswordAfterSuccessFlag(tab);
+            this.setPassword(tab, value);
+            if (value.length === 0) {
+              return;
+            }
+          }
+
+          this.setPassword(tab, value);
+          this.message = '';
+          this.messageTone = AppColors.Danger;
+          this.clearExportPreviews();
+        })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
   MessageText() {
     if (this.message.length > 0) {
       InlineMessageSurface({
@@ -267,7 +358,7 @@ struct DeviceArchiveExport {
   }
 
   @Builder
-  ExportButton() {
+  ExportButton(tab: string) {
     Button({ type: ButtonType.Capsule, stateEffect: !this.exporting }) {
       Row({ space: 8 }) {
         Image($r('sys.media.ohos_save_button_line'))
@@ -290,7 +381,7 @@ struct DeviceArchiveExport {
     .backgroundColor(this.exporting ? AppColors.Disabled : AppColors.Primary)
     .enabled(!this.exporting)
     .onClick(() => {
-      this.exportCurrentTab();
+      this.exportByTab(tab);
     })
   }
 
@@ -316,68 +407,22 @@ struct DeviceArchiveExport {
   }
 
   @Builder
-  BottomTabs() {
-    Column() {
-      Row({ space: 10 }) {
-        this.TabButton(EXPORT_TAB_DETAIL, '导出详情', $r('sys.symbol.text_clipboard'))
-        this.TabButton(EXPORT_TAB_QR, '导出二维码', $r('sys.symbol.qrcode'))
-      }
-      .width('100%')
-      .padding({
-        left: 10,
-        right: 10,
-        top: 10,
-        bottom: 10
-      })
-      .backgroundColor(AppColors.SurfaceRaised)
-      .borderRadius(AppRadii.Large)
-      .border({
-        width: 1,
-        color: AppColors.Divider
-      })
+  TabBarItem(label: string, icon: Resource, index: number) {
+    Column({ space: 4 }) {
+      SymbolGlyph(icon)
+        .fontSize(25)
+        .fontColor([this.currentTabIndex === index ? AppColors.Primary : AppColors.TextTertiary])
+
+      Text(label)
+        .fontSize(12)
+        .fontWeight(this.currentTabIndex === index ? FontWeight.Bold : FontWeight.Regular)
+        .fontColor(this.currentTabIndex === index ? AppColors.Primary : AppColors.TextSecondary)
+        .maxLines(1)
     }
     .width('100%')
-    .height('100%')
-    .justifyContent(FlexAlign.End)
-    .padding({
-      left: AppSpacing.PageX,
-      right: AppSpacing.PageX,
-      bottom: 20
-    })
-    .hitTestBehavior(HitTestMode.Transparent)
-  }
-
-  @Builder
-  TabButton(tab: string, label: string, icon: Resource) {
-    Button({ type: ButtonType.Capsule, stateEffect: !this.exporting }) {
-      Row({ space: 8 }) {
-        SymbolGlyph(icon)
-          .fontSize(18)
-          .fontColor([this.activeTab === tab ? AppColors.OnPrimary : AppColors.TextSecondary])
-
-        Text(label)
-          .fontSize(15)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(this.activeTab === tab ? AppColors.OnPrimary : AppColors.TextSecondary)
-          .maxLines(1)
-      }
-      .width('100%')
-      .justifyContent(FlexAlign.Center)
-      .alignItems(VerticalAlign.Center)
-    }
-    .layoutWeight(1)
-    .height(48)
-    .backgroundColor(this.activeTab === tab ? AppColors.Primary : AppColors.FieldBackground)
-    .enabled(!this.exporting)
-    .onClick(() => {
-      if (this.exporting) {
-        return;
-      }
-
-      this.activeTab = tab;
-      this.message = '';
-      this.messageTone = AppColors.Danger;
-    })
+    .height(62)
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
   }
 
   @Builder
@@ -404,8 +449,19 @@ struct DeviceArchiveExport {
     this.hasDevice = true;
   }
 
-  async exportCurrentTab(): Promise<void> {
+  syncTabFromActiveTab(): void {
+    this.currentTabIndex = this.activeTab === EXPORT_TAB_DETAIL ? 0 : 1;
+  }
+
+  async exportByTab(tab: string): Promise<void> {
     if (this.exporting || !this.hasDevice) {
+      return;
+    }
+
+    const password = this.getPassword(tab);
+    if (password.length === 0) {
+      this.message = '请输入密码';
+      this.messageTone = AppColors.Danger;
       return;
     }
 
@@ -418,12 +474,32 @@ struct DeviceArchiveExport {
     this.exporting = true;
     this.message = '';
     this.messageTone = AppColors.Danger;
-    if (this.activeTab === EXPORT_TAB_DETAIL) {
-      await this.exportDetail(context);
-    } else {
-      await this.exportQrCode(context);
+    try {
+      const verified = await this.verifyPasswordForExport(password);
+      if (!verified) {
+        return;
+      }
+
+      if (tab === EXPORT_TAB_DETAIL) {
+        await this.exportDetail(context);
+      } else {
+        await this.exportQrCode(context);
+      }
+    } finally {
+      this.exporting = false;
     }
-    this.exporting = false;
+  }
+
+  async verifyPasswordForExport(password: string): Promise<boolean> {
+    const response = await AuthService.verifyCurrentUserPasswordRemoteFirst(password);
+    if (!response.success || response.data !== true) {
+      const errorCode = response.error === undefined ? '' : `${response.error.code}`;
+      this.message = this.mapPasswordVerifyErrorMessage(errorCode);
+      this.messageTone = AppColors.Danger;
+      return false;
+    }
+
+    return true;
   }
 
   async exportDetail(context: common.Context): Promise<void> {
@@ -439,8 +515,9 @@ struct DeviceArchiveExport {
       this.getUIContext(),
       ARCHIVE_EXPORT_PREVIEW_BODY_ID
     );
-    if (previewResponse.success && previewResponse.data !== undefined) {
-      this.detailPreviewDataUri = previewResponse.data;
+    if (!previewResponse.success || previewResponse.data === undefined) {
+      this.handleExportFailure(previewResponse.error === undefined ? '' : `${previewResponse.error.code}`);
+      return;
     }
 
     const saveResponse = await DeviceArchiveExportService.saveArchiveSnapshotToGallery(
@@ -454,7 +531,8 @@ struct DeviceArchiveExport {
       return;
     }
 
-    this.handleExportSuccess();
+    this.detailPreviewDataUri = previewResponse.data;
+    this.handleExportSuccess(EXPORT_TAB_DETAIL);
   }
 
   async exportQrCode(context: common.Context): Promise<void> {
@@ -473,10 +551,12 @@ struct DeviceArchiveExport {
     }
 
     this.qrExportResult = exportResponse.data;
-    this.handleExportSuccess();
+    this.handleExportSuccess(EXPORT_TAB_QR);
   }
 
-  handleExportSuccess(): void {
+  handleExportSuccess(tab: string): void {
+    this.markPasswordClearingAfterSuccess(tab);
+    this.setPassword(tab, '');
     this.message = '导出成功，已保存至图库';
     this.messageTone = AppColors.Success;
     DashboardRefreshStore.notifyChanged();
@@ -490,6 +570,58 @@ struct DeviceArchiveExport {
     }
 
     this.setExportUnavailableMessage();
+  }
+
+  clearExportPreviews(): void {
+    this.detailPreviewDataUri = '';
+    this.qrExportResult = undefined;
+  }
+
+  getPassword(tab: string): string {
+    return tab === EXPORT_TAB_DETAIL ? this.detailPassword : this.qrPassword;
+  }
+
+  setPassword(tab: string, value: string): void {
+    if (tab === EXPORT_TAB_DETAIL) {
+      this.detailPassword = value;
+      return;
+    }
+
+    this.qrPassword = value;
+  }
+
+  markPasswordClearingAfterSuccess(tab: string): void {
+    if (tab === EXPORT_TAB_DETAIL) {
+      this.clearingDetailPasswordAfterSuccess = true;
+      return;
+    }
+
+    this.clearingQrPasswordAfterSuccess = true;
+  }
+
+  isClearingPasswordAfterSuccess(tab: string): boolean {
+    return tab === EXPORT_TAB_DETAIL ? this.clearingDetailPasswordAfterSuccess : this.clearingQrPasswordAfterSuccess;
+  }
+
+  clearPasswordAfterSuccessFlag(tab: string): void {
+    if (tab === EXPORT_TAB_DETAIL) {
+      this.clearingDetailPasswordAfterSuccess = false;
+      return;
+    }
+
+    this.clearingQrPasswordAfterSuccess = false;
+  }
+
+  mapPasswordVerifyErrorMessage(errorCode: string): string {
+    if (errorCode === 'PASSWORD_REQUIRED') {
+      return '请输入密码';
+    }
+
+    if (errorCode === 'INVALID_CREDENTIALS' || errorCode === 'LOGIN_FAILED' || errorCode === 'UNAUTHORIZED') {
+      return '密码不正确，请重新输入';
+    }
+
+    return '导出功能暂不可用，请稍后重试';
   }
 
   setExportUnavailableMessage(): void {
