@@ -1,5 +1,6 @@
 import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
 import { AppSectionTitle } from '../../components/AppSectionTitle';
+import { DeviceArchiveInfoCard } from '../../components/DeviceArchiveInfoCard';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { DeviceStatus, DeviceSummary } from '../../models/archive/DeviceModels';
@@ -220,61 +221,8 @@ struct DeviceArchiveDetail {
         subtitle: ''
       })
 
-      Column() {
-        StatusInfoRow({
-          label: '设备编号',
-          value: this.device.deviceCode,
-          tone: AppColors.TextSecondary,
-          valueMaxLines: 2,
-          verticalPadding: 12
-        })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '设备名称',
-          value: this.device.name,
-          tone: AppColors.TextSecondary,
-          valueMaxLines: 2,
-          verticalPadding: 12
-        })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '设备型号',
-          value: this.device.model,
-          tone: AppColors.TextSecondary,
-          valueMaxLines: 2,
-          verticalPadding: 12
-        })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '生产厂商',
-          value: this.device.manufacturer,
-          tone: AppColors.TextSecondary,
-          valueMaxLines: 2,
-          verticalPadding: 12
-        })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '设备位置',
-          value: this.device.location.address,
-          tone: AppColors.TextSecondary,
-          valueMaxLines: 2,
-          verticalPadding: 12
-        })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '最近核验',
-          value: DeviceService.formatTimestampForDisplay(this.device.lastVerificationTime),
-          tone: AppColors.TextSecondary,
-          valueMaxLines: 2,
-          verticalPadding: 12
-        })
-      }
-      .width('100%')
-      .backgroundColor(AppColors.SurfaceRaised)
-      .borderRadius(AppRadii.Large)
-      .border({
-        width: 1,
-        color: AppColors.Divider
+      DeviceArchiveInfoCard({
+        device: this.device
       })
     }
     .alignItems(HorizontalAlign.Start)

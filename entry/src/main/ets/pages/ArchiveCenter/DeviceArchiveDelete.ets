@@ -1,8 +1,8 @@
 import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
 import { AppSectionTitle } from '../../components/AppSectionTitle';
 import { CenterTitleBar } from '../../components/CenterTitleBar';
+import { DeviceArchiveInfoCard } from '../../components/DeviceArchiveInfoCard';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
-import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { DeviceArchiveRequestStatus } from '../../models/archive/DeviceArchiveRequestModels';
 import { DeviceStatus, DeviceSummary } from '../../models/archive/DeviceModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
@@ -122,19 +122,11 @@ struct DeviceArchiveDelete {
         subtitle: ''
       })
 
+      DeviceArchiveInfoCard({
+        device: this.device
+      })
+
       Column({ space: 16 }) {
-        StatusInfoRow({ label: '设备编号', value: this.device.deviceCode, tone: AppColors.TextSecondary, valueMaxLines: 2 })
-        this.CardDivider()
-        StatusInfoRow({ label: '设备名称', value: this.device.name, tone: AppColors.TextSecondary, valueMaxLines: 2 })
-        this.CardDivider()
-        StatusInfoRow({ label: '设备型号', value: this.device.model, tone: AppColors.TextSecondary, valueMaxLines: 2 })
-        this.CardDivider()
-        StatusInfoRow({ label: '生产厂商', value: this.device.manufacturer, tone: AppColors.TextSecondary, valueMaxLines: 2 })
-        this.CardDivider()
-        StatusInfoRow({ label: '设备位置', value: this.device.location.address, tone: AppColors.TextSecondary, valueMaxLines: 2 })
-        this.CardDivider()
-        StatusInfoRow({ label: '最近核验', value: DeviceService.formatTimestampForDisplay(this.device.lastVerificationTime), tone: AppColors.TextSecondary, valueMaxLines: 2 })
-        this.CardDivider()
         this.DeleteTimeField()
         this.ReasonField()
       }
@@ -329,14 +321,6 @@ struct DeviceArchiveDelete {
     .onClick(() => {
       action();
     })
-  }
-
-  @Builder
-  CardDivider() {
-    Divider()
-      .height(1)
-      .backgroundColor(AppColors.Divider)
-      .margin({ left: 18, right: 18 })
   }
 
   loadArchiveContext(): void {
