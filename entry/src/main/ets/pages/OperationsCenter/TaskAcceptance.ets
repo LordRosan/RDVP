@@ -3,6 +3,7 @@ import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
 import { AppSectionTitle } from '../../components/AppSectionTitle';
 import { CenterTitleBar } from '../../components/CenterTitleBar';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
+import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { FaultSeverity, FaultType } from '../../models/operations/FaultModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
 import {
@@ -27,8 +28,11 @@ const TASK_ACCEPTANCE_TYPE_FILTER_VALUES: string[] = ['', `${FaultType.Operation
 const TASK_ACCEPTANCE_SEVERITY_FILTER_OPTIONS: string[] = ['全部', '紧急', '严重', '一般', '轻微'];
 const TASK_ACCEPTANCE_SEVERITY_FILTER_VALUES: string[] = ['', `${FaultSeverity.Emergency}`, `${FaultSeverity.Severe}`,
   `${FaultSeverity.General}`, `${FaultSeverity.Minor}`];
-const TASK_TYPE_CHIP_OPTIONS: string[] = ['全部类型', '维修任务', '复检任务'];
+const TASK_TYPE_CHIP_OPTIONS: string[] = ['全部', '维修任务', '复检任务'];
 const TASK_TYPE_CHIP_VALUES: string[] = ['', 'REPAIR', 'REINSPECTION'];
+const TASK_FILTER_ROW_HEIGHT = 40;
+const TASK_FILTER_TOP_OFFSET = 8;
+const TASK_FILTER_AREA_HEIGHT = TASK_FILTER_ROW_HEIGHT * 3 + TASK_FILTER_TOP_OFFSET;
 
 @Entry
 @Component
@@ -139,21 +143,8 @@ struct TaskAcceptance {
         subtitle: ''
       })
 
-      Column({ space: 16 }) {
-        this.WorkStatusForm()
-        this.RadiusPicker()
-      }
-      .padding({
-        left: 18,
-        right: 18,
-        top: 18,
-        bottom: 18
-      })
-      .width('100%')
-      .backgroundColor(AppColors.SurfaceRaised)
-      .borderRadius(AppRadii.Large)
-      .border({ width: 1, color: AppColors.Divider })
-      .alignItems(HorizontalAlign.Start)
+      this.WorkStatusForm()
+      this.RadiusPicker()
 
       this.MessageText()
       this.ActionButton(this.refreshing ? '刷新中' : '刷新任务', $r('sys.symbol.arrow_clockwise'), this.isRefreshEnabled(),
@@ -168,53 +159,31 @@ struct TaskAcceptance {
   @Builder
   WorkStatusForm() {
     Column() {
-      this.StatusInfoLine('状态', RepairTaskService.formatWorkloadStatus(this.workloadSnapshot.status),
-        RepairTaskService.getWorkloadStatusTone(this.workloadSnapshot.status), this.getWorkloadSymbol())
+      StatusInfoRow({
+        label: '当前状态',
+        value: RepairTaskService.formatWorkloadStatus(this.workloadSnapshot.status),
+        tone: RepairTaskService.getWorkloadStatusTone(this.workloadSnapshot.status),
+        valueMaxLines: 1
+      })
       this.CardDivider()
-      this.StatusInfoLine('已接取任务',
-        `${this.workloadSnapshot.activeTaskCount}/${this.workloadSnapshot.maxActiveTaskCount}`,
-        AppColors.Primary, $r('sys.symbol.wrench_and_screwdriver'))
+      StatusInfoRow({
+        label: '已接取任务',
+        value: `${this.workloadSnapshot.activeTaskCount}/${this.workloadSnapshot.maxActiveTaskCount}`,
+        tone: AppColors.Primary,
+        valueMaxLines: 1
+      })
       this.CardDivider()
-      this.StatusInfoLine('可接取半径', this.getAvailableRadiusText(),
-        this.workloadSnapshot.canAccept ? AppColors.Primary : AppColors.Danger, $r('sys.symbol.location_up'))
+      StatusInfoRow({
+        label: '可接取半径',
+        value: this.getAvailableRadiusText(),
+        tone: this.workloadSnapshot.canAccept ? AppColors.Primary : AppColors.Danger,
+        valueMaxLines: 1
+      })
     }
     .width('100%')
-    .backgroundColor(AppColors.FieldBackground)
-    .borderRadius(18)
-    .border({ width: 1, color: AppColors.Border })
-  }
-
-  @Builder
-  StatusInfoLine(label: string, value: string, tone: string, icon: Resource) {
-    Row({ space: 10 }) {
-      Stack() {
-        SymbolGlyph(icon)
-          .fontSize(18)
-          .fontColor([tone])
-      }
-      .width(34)
-      .height(34)
-      .borderRadius(17)
-      .backgroundColor(this.getMetricSurface(tone))
-
-      Text(label)
-        .fontSize(15)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(AppColors.TextSecondary)
-        .layoutWeight(1)
-        .maxLines(1)
-
-      Text(value)
-        .fontSize(16)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(tone)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
-    .height(58)
-    .width('100%')
-    .padding({ left: 14, right: 14 })
-    .alignItems(VerticalAlign.Center)
+    .backgroundColor(AppColors.SurfaceRaised)
+    .borderRadius(AppRadii.Large)
+    .border({ width: 1, color: AppColors.Divider })
   }
 
   @Builder
@@ -275,18 +244,56 @@ struct TaskAcceptance {
         subtitle: ''
       })
 
-      Filter({
-        multiFilters: this.getTaskFilterParams(),
-        onFilterChanged: (filterResults: FilterResult[]) => {
-          this.applyTaskFilterResults(filterResults);
-        },
-        filterType: FilterType.LIST_FILTER
-      }) {
-        this.TaskFilterResultList()
-      }
+      this.TaskFilterRows()
+      this.TaskFilterResultList()
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
+  }
+
+  @Builder
+  TaskFilterRows() {
+    Row({ space: 12 }) {
+      Column({ space: 0 }) {
+        this.TaskFilterLabel('任务类型')
+        this.TaskFilterLabel('故障类型')
+        this.TaskFilterLabel('故障等级')
+      }
+      .width(68)
+      .height(TASK_FILTER_AREA_HEIGHT)
+      .padding({ top: TASK_FILTER_TOP_OFFSET })
+
+      Column() {
+        Filter({
+          multiFilters: this.getTaskFilterParams(),
+          onFilterChanged: (filterResults: FilterResult[]) => {
+            this.applyTaskFilterResults(filterResults);
+          },
+          filterType: FilterType.LIST_FILTER
+        }) {
+          Column() {
+          }
+          .height(0)
+        }
+      }
+      .height(TASK_FILTER_AREA_HEIGHT)
+      .layoutWeight(1)
+    }
+    .width('100%')
+    .height(TASK_FILTER_AREA_HEIGHT)
+    .alignItems(VerticalAlign.Top)
+  }
+
+  @Builder
+  TaskFilterLabel(label: string) {
+    Text(label)
+      .height(TASK_FILTER_ROW_HEIGHT)
+      .width(68)
+      .fontSize(14)
+      .fontWeight(FontWeight.Medium)
+      .fontColor(AppColors.TextSecondary)
+      .maxLines(1)
+      .textAlign(TextAlign.Start)
   }
 
   @Builder
@@ -731,22 +738,6 @@ struct TaskAcceptance {
     return `1-${this.workloadSnapshot.maxRadiusKm} km`;
   }
 
-  getWorkloadSymbol(): Resource {
-    if (this.workloadSnapshot.status === RepairerWorkloadStatus.Busy) {
-      return $r('sys.symbol.exclamationmark_circle');
-    }
-
-    if (this.workloadSnapshot.status === RepairerWorkloadStatus.MediumLoad) {
-      return $r('sys.symbol.exclamationmark_message');
-    }
-
-    if (this.workloadSnapshot.status === RepairerWorkloadStatus.LowLoad) {
-      return $r('sys.symbol.wrench_and_screwdriver');
-    }
-
-    return $r('sys.symbol.checkmark_circle');
-  }
-
   isRefreshEnabled(): boolean {
     return !this.refreshing && this.acceptingTaskId.length === 0;
   }
@@ -765,8 +756,8 @@ struct TaskAcceptance {
       .height(1)
       .backgroundColor(AppColors.Divider)
       .margin({
-        left: 14,
-        right: 14
+        left: 18,
+        right: 18
       })
   }
 
@@ -802,19 +793,6 @@ struct TaskAcceptance {
         });
       });
     });
-  }
-
-  getMetricSurface(tone: string): string {
-    if (tone === AppColors.Success) {
-      return AppColors.SuccessSurface;
-    }
-    if (tone === AppColors.Warning) {
-      return AppColors.WarningSurface;
-    }
-    if (tone === AppColors.Danger) {
-      return AppColors.DangerSurface;
-    }
-    return AppColors.PrimarySurface;
   }
 
   async resolveCurrentLocation(): Promise<LocationResolutionResult> {

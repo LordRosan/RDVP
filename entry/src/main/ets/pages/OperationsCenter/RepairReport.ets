@@ -108,30 +108,15 @@ struct RepairReport {
     Column({ space: 10 }) {
       this.TaskMessageText()
 
-      Row() {
-        Column() {
-          AppSectionTitle({
-            title: '维修任务列表',
-            subtitle: ''
-          })
-        }
-        .layoutWeight(1)
+      AppSectionTitle({
+        title: '维修任务列表',
+        subtitle: ''
+      })
 
-        Button({ type: ButtonType.Circle, stateEffect: true }) {
-          SymbolGlyph($r('sys.symbol.arrow_clockwise'))
-            .fontSize(22)
-            .fontColor([AppColors.OnPrimary])
-        }
-        .width(44)
-        .height(44)
-        .backgroundColor(this.refreshing || this.submitting ? AppColors.Disabled : AppColors.Primary)
-        .enabled(!this.refreshing && !this.submitting)
-        .onClick(() => {
+      this.ActionButton(this.refreshing ? '刷新中' : '刷新任务', $r('sys.symbol.arrow_clockwise'),
+        !this.refreshing && !this.submitting, () => {
           this.refreshTasks();
         })
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
 
       if (this.taskItems.length === 0) {
         this.EmptyTaskState()
