@@ -137,7 +137,7 @@ struct DeviceVerification {
 
       this.PasswordSection()
       this.MessageText()
-      this.ActionButton(this.getSubmitButtonLabel(), this.getSubmitIcon(), !this.submitting && !this.submitted,
+      this.ActionButton(this.getSubmitButtonLabel(), this.getSubmitIcon(),!this.submitting && !this.submitted,
         () => {
           this.submitVerification();
         })
@@ -763,7 +763,8 @@ struct DeviceVerification {
   }
 
   getSelectedResultTone(): string {
-    return this.verificationResult.length === 0 ? AppColors.TextSecondary : this.getResultTone(this.verificationResult as VerificationResult);
+    return this.verificationResult.length === 0 ? AppColors.TextSecondary :
+      this.getResultTone(this.verificationResult as VerificationResult);
   }
 
   getResultTone(result: VerificationResult): string {

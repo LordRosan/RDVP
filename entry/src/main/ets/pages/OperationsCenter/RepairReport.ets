@@ -300,18 +300,18 @@ struct RepairReport {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
-        .height(56)
-        .width('100%')
-        .backgroundColor(AppColors.FieldBackground)
-        .borderRadius(18)
-        .padding({
-          left: 16,
-          right: 16
-        })
-        .border({
-          width: 1,
-          color: AppColors.Border
-        })
+      .height(56)
+      .width('100%')
+      .backgroundColor(AppColors.FieldBackground)
+      .borderRadius(18)
+      .padding({
+        left: 16,
+        right: 16
+      })
+      .border({
+        width: 1,
+        color: AppColors.Border
+      })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)

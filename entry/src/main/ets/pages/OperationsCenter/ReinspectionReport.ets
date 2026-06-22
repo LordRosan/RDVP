@@ -4,7 +4,9 @@ import { CenterTitleBar } from '../../components/CenterTitleBar';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { FaultSeverity } from '../../models/operations/FaultModels';
 import {
-  ReinspectionResult, ReinspectionTaskStatus, ReinspectionTaskSummary
+  ReinspectionResult,
+  ReinspectionTaskStatus,
+  ReinspectionTaskSummary
 } from '../../models/operations/ReinspectionModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
 import { ApiClient } from '../../services/common/ApiClient';
@@ -305,18 +307,18 @@ struct ReinspectionReport {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
-        .height(56)
-        .width('100%')
-        .backgroundColor(AppColors.FieldBackground)
-        .borderRadius(18)
-        .padding({
-          left: 16,
-          right: 16
-        })
-        .border({
-          width: 1,
-          color: AppColors.Border
-        })
+      .height(56)
+      .width('100%')
+      .backgroundColor(AppColors.FieldBackground)
+      .borderRadius(18)
+      .padding({
+        left: 16,
+        right: 16
+      })
+      .border({
+        width: 1,
+        color: AppColors.Border
+      })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -358,7 +360,8 @@ struct ReinspectionReport {
     }
     .height(42)
     .layoutWeight(1)
-    .backgroundColor(this.result === `${result}` ? ReinspectionService.getResultTone(result) : AppColors.FieldBackground)
+    .backgroundColor(
+      this.result === `${result}` ? ReinspectionService.getResultTone(result) : AppColors.FieldBackground)
     .border({
       width: 1,
       color: this.result === `${result}` ? ReinspectionService.getResultTone(result) : AppColors.Border
