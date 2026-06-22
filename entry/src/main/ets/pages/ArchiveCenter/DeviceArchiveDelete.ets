@@ -142,9 +142,9 @@ struct DeviceArchiveDelete {
       .border({ width: 1, color: AppColors.Divider })
       .alignItems(HorizontalAlign.Start)
 
-      this.PasswordField()
+      this.PasswordSection()
       this.MessageText()
-      this.ActionButton(this.getSubmitButtonLabel(), $r('sys.symbol.trash'), this.canSubmitDelete(), () => {
+      this.ActionButton(this.getSubmitButtonLabel(), this.getSubmitIcon(), this.canSubmitDelete(), () => {
         this.submitDeleteRequest();
       })
     }
@@ -153,9 +153,12 @@ struct DeviceArchiveDelete {
   }
 
   @Builder
-  PasswordField() {
-    Column({ space: 10 }) {
-      this.FieldTitle('密码')
+  PasswordSection() {
+    Column({ space: 12 }) {
+      AppSectionTitle({
+        title: '密码',
+        subtitle: ''
+      })
 
       TextInput({
         placeholder: '请输入密码',
@@ -461,6 +464,10 @@ struct DeviceArchiveDelete {
     }
 
     return '提交申请';
+  }
+
+  getSubmitIcon(): Resource {
+    return $r('sys.symbol.checkmark_circle');
   }
 
   backToDetail(): void {

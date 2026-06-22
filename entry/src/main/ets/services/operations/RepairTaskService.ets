@@ -604,7 +604,7 @@ export class RepairTaskService {
       maxActiveTaskCount: MAX_ACTIVE_REPAIR_TASK_COUNT,
       maxRadiusKm: 0,
       recommendedRadiusKm: 0,
-      message: '后端服务地址未配置，请先配置后再刷新维修任务。',
+      message: '任务接取功能暂不可用，请稍后重试',
       canAccept: false
     };
   }

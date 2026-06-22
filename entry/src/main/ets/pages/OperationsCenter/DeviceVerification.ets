@@ -1,4 +1,7 @@
-import { AppColors } from '../../styles/AppTheme';
+import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
+import { AppSectionTitle } from '../../components/AppSectionTitle';
+import { CenterTitleBar } from '../../components/CenterTitleBar';
+import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { FaultSeverity, FaultType } from '../../models/operations/FaultModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
@@ -49,10 +52,10 @@ struct DeviceVerification {
         .alignItems(HorizontalAlign.Start)
         .justifyContent(FlexAlign.Start)
         .padding({
-          left: 24,
-          right: 24,
+          left: AppSpacing.PageX,
+          right: AppSpacing.PageX,
           top: 0,
-          bottom: 28
+          bottom: AppSpacing.PageBottom
         })
         .width('100%')
       }
@@ -73,73 +76,70 @@ struct DeviceVerification {
 
   @Builder
   PageTitleBar() {
-    Row({ space: 12 }) {
-      Button({ type: ButtonType.Circle, stateEffect: true }) {
-        SymbolGlyph($r('sys.symbol.chevron_backward'))
-          .fontSize(22)
-          .fontColor([AppColors.TextPrimary])
-      }
-      .width(44)
-      .height(44)
-      .backgroundColor(AppColors.Surface)
-      .border({
-        width: 1,
-        color: AppColors.Divider
-      })
-      .onClick(() => {
+    CenterTitleBar({
+      action: () => {
         this.backToOperationsCenter();
-      })
-    }
-    .width('100%')
-    .height(60)
-    .alignItems(VerticalAlign.Center)
-    .padding({
-      left: 24,
-      right: 24
+      }
     })
-    .backgroundColor(AppColors.PageBackground)
   }
 
   @Builder
   ModeHeader() {
+    Column({ space: 5 }) {
       Text('核验与报修')
         .fontSize(34)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+      Text('Verification and Repair')
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextTertiary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
     .width('100%')
-    .alignSelf(ItemAlign.Start)
-    .padding({
-      top: 0,
-      bottom: 2
-    })
+    .alignItems(HorizontalAlign.Start)
+    .padding({ top: 12, bottom: 6 })
   }
 
   @Builder
   VerificationForm() {
-    Column({ space: 16 }) {
-      this.DeviceCodeField()
-      this.ResultSelector()
-      this.DescriptionField()
-      if (this.requiresFaultReport()) {
-        this.FaultReportSection()
+    Column({ space: 12 }) {
+      AppSectionTitle({
+        title: '核验信息',
+        subtitle: ''
+      })
+
+      Column({ space: 16 }) {
+        this.DeviceCodeField()
+        this.ResultSelector()
+        this.DescriptionField()
+        if (this.requiresFaultReport()) {
+          this.FaultReportSection()
+        }
       }
+      .padding({
+        left: 18,
+        right: 18,
+        top: 18,
+        bottom: 18
+      })
+      .width('100%')
+      .backgroundColor(AppColors.SurfaceRaised)
+      .borderRadius(AppRadii.Large)
+      .border({ width: 1, color: AppColors.Divider })
+      .alignItems(HorizontalAlign.Start)
+
       this.MessageText()
-      this.ActionButton(this.getSubmitButtonLabel(), $r('sys.symbol.checkmark_circle'), !this.submitting && !this.submitted,
+      this.ActionButton(this.getSubmitButtonLabel(), this.getSubmitIcon(), !this.submitting && !this.submitted,
         () => {
           this.submitVerification();
         })
     }
-    .padding({
-      left: 18,
-      right: 18,
-      top: 18,
-      bottom: 18
-    })
     .width('100%')
-    .backgroundColor(AppColors.Surface)
-    .borderRadius(24)
     .alignItems(HorizontalAlign.Start)
   }
 
@@ -149,7 +149,7 @@ struct DeviceVerification {
       this.FieldTitle('设备编号')
 
       TextInput({
-        placeholder: '输入设备编号',
+        placeholder: '请输入设备编号',
         text: this.deviceCode
       })
         .height(56)
@@ -232,7 +232,7 @@ struct DeviceVerification {
       this.FieldTitle('现场描述')
 
       TextArea({
-        placeholder: '填写现场状态、异常现象或核验依据',
+        placeholder: '请输入现场描述',
         text: this.description
       })
         .height(118)
@@ -265,19 +265,10 @@ struct DeviceVerification {
   @Builder
   FaultReportSection() {
     Column({ space: 16 }) {
-      Row({ space: 8 }) {
-        SymbolGlyph($r('sys.symbol.exclamationmark_message'))
-          .fontSize(20)
-          .fontColor([AppColors.Danger])
-
-        Text('报修信息')
-          .fontSize(20)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TextPrimary)
-          .maxLines(1)
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
+      AppSectionTitle({
+        title: '报修信息',
+        subtitle: ''
+      })
 
       this.FaultTypeSelector()
       this.SeveritySelector()
@@ -286,18 +277,6 @@ struct DeviceVerification {
       this.SceneConditionField()
     }
     .width('100%')
-    .padding({
-      left: 14,
-      right: 14,
-      top: 14,
-      bottom: 14
-    })
-    .backgroundColor(AppColors.FieldBackground)
-    .borderRadius(18)
-    .border({
-      width: 1,
-      color: AppColors.Border
-    })
     .alignItems(HorizontalAlign.Start)
   }
 
@@ -390,7 +369,7 @@ struct DeviceVerification {
     }
     .height(42)
     .width('100%')
-    .backgroundColor(this.faultType === `${type}` ? AppColors.Primary : AppColors.Surface)
+    .backgroundColor(this.faultType === `${type}` ? AppColors.Primary : AppColors.FieldBackground)
     .border({
       width: 1,
       color: this.faultType === `${type}` ? AppColors.Primary : AppColors.Border
@@ -448,7 +427,7 @@ struct DeviceVerification {
     }
     .height(42)
     .layoutWeight(1)
-    .backgroundColor(this.severity === `${severity}` ? this.getSeverityTone(severity) : AppColors.Surface)
+    .backgroundColor(this.severity === `${severity}` ? this.getSeverityTone(severity) : AppColors.FieldBackground)
     .border({
       width: 1,
       color: this.severity === `${severity}` ? this.getSeverityTone(severity) : AppColors.Border
@@ -470,7 +449,7 @@ struct DeviceVerification {
           .fontSize(20)
           .fontColor([AppColors.TextPrimary])
 
-        Text(this.occurredAt.length > 0 ? this.occurredAt : '选择发生时间')
+        Text(this.occurredAt.length > 0 ? this.occurredAt : '请选择故障时间')
           .fontSize(16)
           .fontColor(this.occurredAt.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
           .layoutWeight(1)
@@ -483,7 +462,7 @@ struct DeviceVerification {
       }
       .height(56)
       .width('100%')
-      .backgroundColor(AppColors.Surface)
+      .backgroundColor(AppColors.FieldBackground)
       .borderRadius(18)
       .padding({
         left: 16,
@@ -511,7 +490,7 @@ struct DeviceVerification {
       this.FieldTitle('故障描述')
 
       TextArea({
-        placeholder: '填写故障现象、影响范围和发现过程',
+        placeholder: '请输入故障描述',
         text: this.faultDescription
       })
         .height(128)
@@ -519,7 +498,7 @@ struct DeviceVerification {
         .fontSize(15)
         .lineHeight(22)
         .maxLength(800)
-        .backgroundColor(AppColors.Surface)
+        .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
         .padding({
           left: 14,
@@ -547,7 +526,7 @@ struct DeviceVerification {
       this.FieldTitle('备注')
 
       TextArea({
-        placeholder: '填写备注信息',
+        placeholder: '请输入备注',
         text: this.sceneCondition
       })
         .height(96)
@@ -555,7 +534,7 @@ struct DeviceVerification {
         .fontSize(15)
         .lineHeight(22)
         .maxLength(500)
-        .backgroundColor(AppColors.Surface)
+        .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
         .padding({
           left: 14,
@@ -589,12 +568,10 @@ struct DeviceVerification {
   @Builder
   MessageText() {
     if (this.message.length > 0) {
-      Text(this.message)
-        .fontSize(13)
-        .fontColor(this.messageTone)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
+      InlineMessageSurface({
+        message: this.message,
+        tone: this.messageTone
+      })
     }
   }
 
@@ -627,12 +604,11 @@ struct DeviceVerification {
 
   @Builder
   StatusPanel() {
-    Column({ space: 10 }) {
-      Text('提交摘要')
-        .fontSize(22)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
+    Column({ space: 12 }) {
+      AppSectionTitle({
+        title: '提交摘要',
+        subtitle: ''
+      })
 
       Column() {
         StatusInfoRow({ label: '标准设备编号', value: this.normalizedDeviceCode, tone: AppColors.TextSecondary })
@@ -664,8 +640,9 @@ struct DeviceVerification {
         })
       }
       .width('100%')
-      .backgroundColor(AppColors.Surface)
-      .borderRadius(24)
+      .backgroundColor(AppColors.SurfaceRaised)
+      .borderRadius(AppRadii.Large)
+      .border({ width: 1, color: AppColors.Divider })
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
@@ -793,6 +770,10 @@ struct DeviceVerification {
     }
 
     return this.requiresFaultReport() ? '提交核验与报修' : '提交核验';
+  }
+
+  getSubmitIcon(): Resource {
+    return $r('sys.symbol.checkmark_circle');
   }
 
   getFaultReportStatusText(): string {

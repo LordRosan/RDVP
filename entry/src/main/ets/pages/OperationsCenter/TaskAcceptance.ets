@@ -1,5 +1,8 @@
 import { Filter, FilterParams, FilterResult, FilterType } from '@kit.ArkUI';
-import { AppColors } from '../../styles/AppTheme';
+import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
+import { AppSectionTitle } from '../../components/AppSectionTitle';
+import { CenterTitleBar } from '../../components/CenterTitleBar';
+import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { FaultSeverity, FaultType } from '../../models/operations/FaultModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
 import {
@@ -75,10 +78,10 @@ struct TaskAcceptance {
         .alignItems(HorizontalAlign.Start)
         .justifyContent(FlexAlign.Start)
         .padding({
-          left: 24,
-          right: 24,
+          left: AppSpacing.PageX,
+          right: AppSpacing.PageX,
           top: 0,
-          bottom: 28
+          bottom: AppSpacing.PageBottom
         })
         .width('100%')
       }
@@ -99,57 +102,59 @@ struct TaskAcceptance {
 
   @Builder
   PageTitleBar() {
-    Row({ space: 12 }) {
-      Button({ type: ButtonType.Circle, stateEffect: true }) {
-        SymbolGlyph($r('sys.symbol.chevron_backward'))
-          .fontSize(22)
-          .fontColor([AppColors.TextPrimary])
-      }
-      .width(44)
-      .height(44)
-      .backgroundColor(AppColors.Surface)
-      .border({
-        width: 1,
-        color: AppColors.Divider
-      })
-      .onClick(() => {
+    CenterTitleBar({
+      action: () => {
         this.backToOperationsCenter();
-      })
-    }
-    .width('100%')
-    .height(60)
-    .alignItems(VerticalAlign.Center)
-    .padding({
-      left: 24,
-      right: 24
+      }
     })
-    .backgroundColor(AppColors.PageBackground)
   }
 
   @Builder
   ModeHeader() {
+    Column({ space: 5 }) {
       Text('任务接取')
         .fontSize(34)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+      Text('Task Acceptance')
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextTertiary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
     .width('100%')
-    .alignSelf(ItemAlign.Start)
-    .padding({
-      top: 0,
-      bottom: 2
-    })
+    .alignItems(HorizontalAlign.Start)
+    .padding({ top: 12, bottom: 6 })
   }
 
   @Builder
   FilterPanel() {
-    Column({ space: 16 }) {
-      this.FieldTitle('查询任务')
-      this.RadiusPicker()
+    Column({ space: 12 }) {
+      AppSectionTitle({
+        title: '查询任务',
+        subtitle: ''
+      })
 
-      this.FieldTitle('工作状态')
-      this.WorkloadSnapshotPanel()
+      Column({ space: 16 }) {
+        this.RadiusPicker()
+        this.FieldTitle('工作状态')
+        this.WorkloadSnapshotPanel()
+      }
+      .padding({
+        left: 18,
+        right: 18,
+        top: 18,
+        bottom: 18
+      })
+      .width('100%')
+      .backgroundColor(AppColors.SurfaceRaised)
+      .borderRadius(AppRadii.Large)
+      .border({ width: 1, color: AppColors.Divider })
+      .alignItems(HorizontalAlign.Start)
 
       this.MessageText()
       this.ActionButton(this.refreshing ? '刷新中' : '刷新任务', $r('sys.symbol.arrow_clockwise'), this.isRefreshEnabled(),
@@ -157,15 +162,7 @@ struct TaskAcceptance {
           this.refreshTasks();
         })
     }
-    .padding({
-      left: 18,
-      right: 18,
-      top: 18,
-      bottom: 18
-    })
     .width('100%')
-    .backgroundColor(AppColors.Surface)
-    .borderRadius(24)
     .alignItems(HorizontalAlign.Start)
   }
 
@@ -221,13 +218,11 @@ struct TaskAcceptance {
         .borderRadius(18)
       }
 
-      Text(`可用范围：${this.getAvailableRadiusText()}`)
-        .fontSize(13)
-        .fontColor(this.workloadSnapshot.canAccept ? AppColors.Primary : AppColors.Danger)
-        .fontWeight(FontWeight.Medium)
-        .width('100%')
-        .textAlign(TextAlign.Center)
-        .maxLines(1)
+      Row({ space: 8 }) {
+        this.RangeChip(this.getAvailableRadiusText(), this.workloadSnapshot.canAccept ? AppColors.Primary : AppColors.Danger)
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.Center)
     }
     .width('100%')
     .padding({
@@ -246,21 +241,31 @@ struct TaskAcceptance {
 
   @Builder
   WorkloadSnapshotPanel() {
-    Column({ space: 10 }) {
-      Row({ space: 10 }) {
-        SymbolGlyph(this.getWorkloadSymbol())
-          .fontSize(21)
-          .fontColor([RepairTaskService.getWorkloadStatusTone(this.workloadSnapshot.status)])
+    Row({ space: 10 }) {
+      this.WorkloadMetric('状态', RepairTaskService.formatWorkloadStatus(this.workloadSnapshot.status),
+        this.getWorkloadSymbol(), RepairTaskService.getWorkloadStatusTone(this.workloadSnapshot.status))
+      this.WorkloadMetric('任务', `${this.workloadSnapshot.activeTaskCount}/${this.workloadSnapshot.maxActiveTaskCount}`,
+        $r('sys.symbol.wrench_and_screwdriver'), AppColors.Primary)
+    }
+    .width('100%')
+    .alignItems(VerticalAlign.Center)
+  }
 
-        Text(RepairTaskService.formatWorkloadStatus(this.workloadSnapshot.status))
-          .fontSize(17)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(RepairTaskService.getWorkloadStatusTone(this.workloadSnapshot.status))
-          .maxLines(1)
+  @Builder
+  WorkloadMetric(label: string, value: string, icon: Resource, tone: string) {
+    Column({ space: 8 }) {
+      Row({ space: 8 }) {
+        Stack() {
+          SymbolGlyph(icon)
+            .fontSize(18)
+            .fontColor([tone])
+        }
+        .width(34)
+        .height(34)
+        .borderRadius(17)
+        .backgroundColor(this.getMetricSurface(tone))
 
-        Blank()
-
-        Text(`${this.workloadSnapshot.activeTaskCount}/${this.workloadSnapshot.maxActiveTaskCount}`)
+        Text(label)
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
           .fontColor(AppColors.TextSecondary)
@@ -269,14 +274,15 @@ struct TaskAcceptance {
       .width('100%')
       .alignItems(VerticalAlign.Center)
 
-      Text(this.workloadSnapshot.message)
-        .fontSize(13)
-        .fontColor(AppColors.TextSecondary)
-        .lineHeight(19)
-        .maxLines(3)
+      Text(value)
+        .fontSize(18)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(tone)
+        .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
-    .width('100%')
+    .height(92)
+    .layoutWeight(1)
     .padding({
       left: 14,
       right: 14,
@@ -292,15 +298,28 @@ struct TaskAcceptance {
   }
 
   @Builder
+  RangeChip(value: string, tone: string) {
+    Text(value)
+      .fontSize(13)
+      .fontWeight(FontWeight.Medium)
+      .fontColor(tone)
+      .height(30)
+      .padding({ left: 12, right: 12 })
+      .backgroundColor(this.getMetricSurface(tone))
+      .borderRadius(15)
+      .maxLines(1)
+      .textOverflow({ overflow: TextOverflow.Ellipsis })
+  }
+
+  @Builder
   TaskListPanel() {
     Column({ space: 10 }) {
       this.TaskListMessageText()
 
-      Text('可接取任务')
-        .fontSize(22)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
+      AppSectionTitle({
+        title: '可接取任务',
+        subtitle: ''
+      })
 
       Filter({
         multiFilters: this.getTaskFilterParams(),
@@ -348,12 +367,6 @@ struct TaskAcceptance {
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
-
-      Text(this.getEmptyTaskHint())
-        .fontSize(13)
-        .fontColor(AppColors.TextSecondary)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .width('100%')
     .padding({
@@ -362,8 +375,9 @@ struct TaskAcceptance {
       top: 28,
       bottom: 28
     })
-    .backgroundColor(AppColors.Surface)
-    .borderRadius(24)
+    .backgroundColor(AppColors.SurfaceRaised)
+    .borderRadius(AppRadii.Large)
+    .border({ width: 1, color: AppColors.Divider })
     .alignItems(HorizontalAlign.Center)
   }
 
@@ -438,8 +452,9 @@ struct TaskAcceptance {
     }
     .padding(16)
     .width('100%')
-    .backgroundColor(AppColors.Surface)
-    .borderRadius(24)
+    .backgroundColor(AppColors.SurfaceRaised)
+    .borderRadius(AppRadii.Large)
+    .border({ width: 1, color: AppColors.Divider })
   }
 
   @Builder
@@ -454,36 +469,30 @@ struct TaskAcceptance {
   @Builder
   MessageText() {
     if (this.message.length > 0) {
-      Text(this.message)
-        .fontSize(13)
-        .fontColor(this.messageTone)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
+      InlineMessageSurface({
+        message: this.message,
+        tone: this.messageTone
+      })
     }
   }
 
   @Builder
   TaskListMessageText() {
     if (this.taskListMessage.length > 0) {
-      Text(this.taskListMessage)
-        .fontSize(13)
-        .fontColor(this.taskListMessageTone)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
+      InlineMessageSurface({
+        message: this.taskListMessage,
+        tone: this.taskListMessageTone
+      })
     }
   }
 
   @Builder
   AcceptActionMessageText() {
     if (this.acceptActionMessage.length > 0) {
-      Text(this.acceptActionMessage)
-        .fontSize(13)
-        .fontColor(this.acceptActionMessageTone)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
+      InlineMessageSurface({
+        message: this.acceptActionMessage,
+        tone: this.acceptActionMessageTone
+      })
     }
   }
 
@@ -585,7 +594,7 @@ struct TaskAcceptance {
   clearTaskListForUnavailableOnlineMode(): void {
     this.allTaskItems = [];
     this.taskItems = [];
-    this.message = '请先配置后端服务地址，再刷新任务。';
+    this.message = '任务接取功能暂不可用，请稍后重试';
     this.messageTone = AppColors.Danger;
     this.taskListMessage = '';
     this.acceptActionMessage = '';
@@ -800,14 +809,6 @@ struct TaskAcceptance {
     return item.distanceKm === undefined ? '待定位' : `${item.distanceKm.toFixed(1)} km`;
   }
 
-  getEmptyTaskHint(): string {
-    if (!ApiClient.isConfigured()) {
-      return '请先配置后端服务地址';
-    }
-
-    return '可手动刷新任务';
-  }
-
   withRefreshTimeout<T>(request: Promise<ApiResponse<T>>, timeoutMessage: string): Promise<ApiResponse<T>> {
     return new Promise<ApiResponse<T>>((resolve: (value: ApiResponse<T>) => void) => {
       const timerId = setTimeout(() => {
@@ -836,6 +837,19 @@ struct TaskAcceptance {
         });
       });
     });
+  }
+
+  getMetricSurface(tone: string): string {
+    if (tone === AppColors.Success) {
+      return AppColors.SuccessSurface;
+    }
+    if (tone === AppColors.Warning) {
+      return AppColors.WarningSurface;
+    }
+    if (tone === AppColors.Danger) {
+      return AppColors.DangerSurface;
+    }
+    return AppColors.PrimarySurface;
   }
 
   async resolveCurrentLocation(): Promise<LocationResolutionResult> {

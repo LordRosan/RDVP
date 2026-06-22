@@ -1,4 +1,7 @@
-import { AppColors } from '../../styles/AppTheme';
+import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
+import { AppSectionTitle } from '../../components/AppSectionTitle';
+import { CenterTitleBar } from '../../components/CenterTitleBar';
+import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { FaultSeverity } from '../../models/operations/FaultModels';
 import {
@@ -54,10 +57,10 @@ struct ReinspectionReport {
         .alignItems(HorizontalAlign.Start)
         .justifyContent(FlexAlign.Start)
         .padding({
-          left: 24,
-          right: 24,
+          left: AppSpacing.PageX,
+          right: AppSpacing.PageX,
           top: 0,
-          bottom: 28
+          bottom: AppSpacing.PageBottom
         })
         .width('100%')
       }
@@ -78,47 +81,33 @@ struct ReinspectionReport {
 
   @Builder
   PageTitleBar() {
-    Row({ space: 12 }) {
-      Button({ type: ButtonType.Circle, stateEffect: true }) {
-        SymbolGlyph($r('sys.symbol.chevron_backward'))
-          .fontSize(22)
-          .fontColor([AppColors.TextPrimary])
-      }
-      .width(44)
-      .height(44)
-      .backgroundColor(AppColors.Surface)
-      .border({
-        width: 1,
-        color: AppColors.Divider
-      })
-      .onClick(() => {
+    CenterTitleBar({
+      action: () => {
         this.backToOperationsCenter();
-      })
-    }
-    .width('100%')
-    .height(60)
-    .alignItems(VerticalAlign.Center)
-    .padding({
-      left: 24,
-      right: 24
+      }
     })
-    .backgroundColor(AppColors.PageBackground)
   }
 
   @Builder
   ModeHeader() {
+    Column({ space: 5 }) {
       Text('复检任务')
         .fontSize(34)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+      Text('Reinspection Report')
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextTertiary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
     .width('100%')
-    .alignSelf(ItemAlign.Start)
-    .padding({
-      top: 0,
-      bottom: 2
-    })
+    .alignItems(HorizontalAlign.Start)
+    .padding({ top: 12, bottom: 6 })
   }
 
   @Builder
@@ -127,12 +116,13 @@ struct ReinspectionReport {
       this.TaskMessageText()
 
       Row() {
-        Text('复检任务列表')
-          .fontSize(22)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TextPrimary)
-          .layoutWeight(1)
-          .maxLines(1)
+        Column() {
+          AppSectionTitle({
+            title: '复检任务列表',
+            subtitle: ''
+          })
+        }
+        .layoutWeight(1)
 
         Button({ type: ButtonType.Circle, stateEffect: true }) {
           SymbolGlyph($r('sys.symbol.arrow_clockwise'))
@@ -191,8 +181,9 @@ struct ReinspectionReport {
       top: 28,
       bottom: 28
     })
-    .backgroundColor(AppColors.Surface)
-    .borderRadius(24)
+    .backgroundColor(AppColors.SurfaceRaised)
+    .borderRadius(AppRadii.Large)
+    .border({ width: 1, color: AppColors.Divider })
     .alignItems(HorizontalAlign.Center)
   }
 
@@ -277,33 +268,44 @@ struct ReinspectionReport {
     }
     .padding(16)
     .width('100%')
-    .backgroundColor(AppColors.Surface)
-    .borderRadius(24)
+    .backgroundColor(AppColors.SurfaceRaised)
+    .borderRadius(AppRadii.Large)
+    .border({ width: 1, color: AppColors.Divider })
   }
 
   @Builder
   RecordForm() {
-    Column({ space: 16 }) {
-      this.FieldTitle('复检记录')
-      this.TaskIdField()
-      this.ResultSelector()
-      this.ReinspectedAtField()
-      this.DescriptionField()
+    Column({ space: 12 }) {
+      AppSectionTitle({
+        title: '复检记录',
+        subtitle: ''
+      })
+
+      Column({ space: 16 }) {
+        this.TaskIdField()
+        this.ResultSelector()
+        this.ReinspectedAtField()
+        this.DescriptionField()
+      }
+      .padding({
+        left: 18,
+        right: 18,
+        top: 18,
+        bottom: 18
+      })
+      .width('100%')
+      .backgroundColor(AppColors.SurfaceRaised)
+      .borderRadius(AppRadii.Large)
+      .border({ width: 1, color: AppColors.Divider })
+      .alignItems(HorizontalAlign.Start)
+
       this.RecordMessageText()
-      this.ActionButton(this.getSubmitButtonLabel(), $r('sys.symbol.checkmark_circle'), this.canSubmitRecord(),
+      this.ActionButton(this.getSubmitButtonLabel(), this.getSubmitIcon(), this.canSubmitRecord(),
         () => {
           this.submitRecord();
         })
     }
-    .padding({
-      left: 18,
-      right: 18,
-      top: 18,
-      bottom: 18
-    })
     .width('100%')
-    .backgroundColor(AppColors.Surface)
-    .borderRadius(24)
     .alignItems(HorizontalAlign.Start)
   }
 
@@ -313,7 +315,7 @@ struct ReinspectionReport {
       this.FieldTitle('复检任务编号')
 
       TextInput({
-        placeholder: '输入复检任务编号',
+        placeholder: '请输入复检任务编号',
         text: this.taskId
       })
         .height(56)
@@ -405,7 +407,7 @@ struct ReinspectionReport {
           .fontSize(20)
           .fontColor([AppColors.TextPrimary])
 
-        Text(this.reinspectedAt.length > 0 ? this.reinspectedAt : '选择复检时间')
+        Text(this.reinspectedAt.length > 0 ? this.reinspectedAt : '请选择复检时间')
           .fontSize(16)
           .fontColor(this.reinspectedAt.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
           .layoutWeight(1)
@@ -448,7 +450,7 @@ struct ReinspectionReport {
       this.FieldTitle('复检说明')
 
       TextArea({
-        placeholder: '填写复检依据、现场状态、验证结果和遗留风险',
+        placeholder: '请输入复检说明',
         text: this.description
       })
         .height(132)
@@ -481,12 +483,11 @@ struct ReinspectionReport {
 
   @Builder
   StatusPanel() {
-    Column({ space: 10 }) {
-      Text('提交摘要')
-        .fontSize(22)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
+    Column({ space: 12 }) {
+      AppSectionTitle({
+        title: '提交摘要',
+        subtitle: ''
+      })
 
       Column() {
         StatusInfoRow({ label: '标准任务编号', value: this.normalizedTaskId, tone: AppColors.TextSecondary })
@@ -500,8 +501,9 @@ struct ReinspectionReport {
         })
       }
       .width('100%')
-      .backgroundColor(AppColors.Surface)
-      .borderRadius(24)
+      .backgroundColor(AppColors.SurfaceRaised)
+      .borderRadius(AppRadii.Large)
+      .border({ width: 1, color: AppColors.Divider })
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
@@ -519,24 +521,20 @@ struct ReinspectionReport {
   @Builder
   TaskMessageText() {
     if (this.taskMessage.length > 0) {
-      Text(this.taskMessage)
-        .fontSize(13)
-        .fontColor(AppColors.Danger)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
+      InlineMessageSurface({
+        message: this.taskMessage,
+        tone: AppColors.Danger
+      })
     }
   }
 
   @Builder
   RecordMessageText() {
     if (this.recordMessage.length > 0) {
-      Text(this.recordMessage)
-        .fontSize(13)
-        .fontColor(this.recordMessageTone)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
+      InlineMessageSurface({
+        message: this.recordMessage,
+        tone: this.recordMessageTone
+      })
     }
   }
 
@@ -645,6 +643,10 @@ struct ReinspectionReport {
     }
 
     return '提交报告';
+  }
+
+  getSubmitIcon(): Resource {
+    return $r('sys.symbol.checkmark_circle');
   }
 
   canSubmitRecord(): boolean {

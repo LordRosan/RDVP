@@ -1,4 +1,5 @@
 import { common } from '@kit.AbilityKit';
+import { AppSectionTitle } from '../../components/AppSectionTitle';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { DeviceStatus, DeviceSummary } from '../../models/archive/DeviceModels';
@@ -267,11 +268,10 @@ struct DeviceArchiveExport {
   @Builder
   PreviewPanel(tab: string) {
     Column({ space: 12 }) {
-      Text('导出预览')
-        .fontSize(17)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
+      AppSectionTitle({
+        title: '导出预览',
+        subtitle: ''
+      })
 
       Stack() {
         if (tab === EXPORT_TAB_DETAIL && this.detailPreviewDataUri.length > 0) {
@@ -305,12 +305,11 @@ struct DeviceArchiveExport {
 
   @Builder
   PasswordField(tab: string) {
-    Column({ space: 10 }) {
-      Text('密码')
-        .fontSize(17)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
+    Column({ space: 12 }) {
+      AppSectionTitle({
+        title: '密码',
+        subtitle: ''
+      })
 
       TextInput({
         placeholder: '请输入密码',

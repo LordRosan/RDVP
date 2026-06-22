@@ -1,4 +1,7 @@
-import { AppColors } from '../../styles/AppTheme';
+import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
+import { AppSectionTitle } from '../../components/AppSectionTitle';
+import { CenterTitleBar } from '../../components/CenterTitleBar';
+import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { FaultSeverity } from '../../models/operations/FaultModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
@@ -51,10 +54,10 @@ struct RepairReport {
         .alignItems(HorizontalAlign.Start)
         .justifyContent(FlexAlign.Start)
         .padding({
-          left: 24,
-          right: 24,
+          left: AppSpacing.PageX,
+          right: AppSpacing.PageX,
           top: 0,
-          bottom: 28
+          bottom: AppSpacing.PageBottom
         })
         .width('100%')
       }
@@ -75,47 +78,33 @@ struct RepairReport {
 
   @Builder
   PageTitleBar() {
-    Row({ space: 12 }) {
-      Button({ type: ButtonType.Circle, stateEffect: true }) {
-        SymbolGlyph($r('sys.symbol.chevron_backward'))
-          .fontSize(22)
-          .fontColor([AppColors.TextPrimary])
-      }
-      .width(44)
-      .height(44)
-      .backgroundColor(AppColors.Surface)
-      .border({
-        width: 1,
-        color: AppColors.Divider
-      })
-      .onClick(() => {
+    CenterTitleBar({
+      action: () => {
         this.backToOperationsCenter();
-      })
-    }
-    .width('100%')
-    .height(60)
-    .alignItems(VerticalAlign.Center)
-    .padding({
-      left: 24,
-      right: 24
+      }
     })
-    .backgroundColor(AppColors.PageBackground)
   }
 
   @Builder
   ModeHeader() {
+    Column({ space: 5 }) {
       Text('维修任务')
         .fontSize(34)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+      Text('Repair Task Report')
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextTertiary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
     .width('100%')
-    .alignSelf(ItemAlign.Start)
-    .padding({
-      top: 0,
-      bottom: 2
-    })
+    .alignItems(HorizontalAlign.Start)
+    .padding({ top: 12, bottom: 6 })
   }
 
   @Builder
@@ -124,12 +113,13 @@ struct RepairReport {
       this.TaskMessageText()
 
       Row() {
-        Text('维修任务列表')
-          .fontSize(22)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TextPrimary)
-          .layoutWeight(1)
-          .maxLines(1)
+        Column() {
+          AppSectionTitle({
+            title: '维修任务列表',
+            subtitle: ''
+          })
+        }
+        .layoutWeight(1)
 
         Button({ type: ButtonType.Circle, stateEffect: true }) {
           SymbolGlyph($r('sys.symbol.arrow_clockwise'))
@@ -180,12 +170,6 @@ struct RepairReport {
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
-
-      Text('接取故障后可在此填写维修报告')
-        .fontSize(13)
-        .fontColor(AppColors.TextSecondary)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .width('100%')
     .padding({
@@ -194,8 +178,9 @@ struct RepairReport {
       top: 28,
       bottom: 28
     })
-    .backgroundColor(AppColors.Surface)
-    .borderRadius(24)
+    .backgroundColor(AppColors.SurfaceRaised)
+    .borderRadius(AppRadii.Large)
+    .border({ width: 1, color: AppColors.Divider })
     .alignItems(HorizontalAlign.Center)
   }
 
@@ -279,8 +264,8 @@ struct RepairReport {
     }
     .padding(16)
     .width('100%')
-    .backgroundColor(AppColors.Surface)
-    .borderRadius(24)
+    .backgroundColor(AppColors.SurfaceRaised)
+    .borderRadius(AppRadii.Large)
     .border({
       width: this.isTaskSelected(item) ? 2 : 0,
       color: this.isTaskSelected(item) ? AppColors.Primary : AppColors.Transparent
@@ -289,27 +274,37 @@ struct RepairReport {
 
   @Builder
   ReportForm() {
-    Column({ space: 16 }) {
-      this.FieldTitle('维修报告')
-      this.TaskIdField()
-      this.ResultSelector()
-      this.RepairedAtField()
-      this.ProcessDescriptionField()
+    Column({ space: 12 }) {
+      AppSectionTitle({
+        title: '维修报告',
+        subtitle: ''
+      })
+
+      Column({ space: 16 }) {
+        this.TaskIdField()
+        this.ResultSelector()
+        this.RepairedAtField()
+        this.ProcessDescriptionField()
+      }
+      .padding({
+        left: 18,
+        right: 18,
+        top: 18,
+        bottom: 18
+      })
+      .width('100%')
+      .backgroundColor(AppColors.SurfaceRaised)
+      .borderRadius(AppRadii.Large)
+      .border({ width: 1, color: AppColors.Divider })
+      .alignItems(HorizontalAlign.Start)
+
       this.ReportMessageText()
-      this.ActionButton(this.getSubmitButtonLabel(), $r('sys.symbol.text_clipboard'), this.canSubmitRepairReport(),
+      this.ActionButton(this.getSubmitButtonLabel(), this.getSubmitIcon(), this.canSubmitRepairReport(),
         () => {
           this.submitRepairReport();
         })
     }
-    .padding({
-      left: 18,
-      right: 18,
-      top: 18,
-      bottom: 18
-    })
     .width('100%')
-    .backgroundColor(AppColors.Surface)
-    .borderRadius(24)
     .alignItems(HorizontalAlign.Start)
   }
 
@@ -319,7 +314,7 @@ struct RepairReport {
       this.FieldTitle('维修任务编号')
 
       TextInput({
-        placeholder: '输入维修任务编号',
+        placeholder: '请输入维修任务编号',
         text: this.taskId
       })
         .height(56)
@@ -412,7 +407,7 @@ struct RepairReport {
           .fontSize(20)
           .fontColor([AppColors.TextPrimary])
 
-        Text(this.repairedAt.length > 0 ? this.repairedAt : '选择维修时间')
+        Text(this.repairedAt.length > 0 ? this.repairedAt : '请选择维修时间')
           .fontSize(16)
           .fontColor(this.repairedAt.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
           .layoutWeight(1)
@@ -455,7 +450,7 @@ struct RepairReport {
       this.FieldTitle('维修说明')
 
       TextArea({
-        placeholder: '填写故障定位、处理过程、更换部件和验证结果',
+        placeholder: '请输入维修说明',
         text: this.processDescription
       })
         .height(132)
@@ -488,12 +483,11 @@ struct RepairReport {
 
   @Builder
   StatusPanel() {
-    Column({ space: 10 }) {
-      Text('提交摘要')
-        .fontSize(22)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
+    Column({ space: 12 }) {
+      AppSectionTitle({
+        title: '提交摘要',
+        subtitle: ''
+      })
 
       Column() {
         StatusInfoRow({ label: '标准任务编号', value: this.normalizedTaskId, tone: AppColors.TextSecondary })
@@ -507,8 +501,9 @@ struct RepairReport {
         })
       }
       .width('100%')
-      .backgroundColor(AppColors.Surface)
-      .borderRadius(24)
+      .backgroundColor(AppColors.SurfaceRaised)
+      .borderRadius(AppRadii.Large)
+      .border({ width: 1, color: AppColors.Divider })
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
@@ -526,24 +521,20 @@ struct RepairReport {
   @Builder
   TaskMessageText() {
     if (this.taskMessage.length > 0) {
-      Text(this.taskMessage)
-        .fontSize(13)
-        .fontColor(AppColors.Danger)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
+      InlineMessageSurface({
+        message: this.taskMessage,
+        tone: AppColors.Danger
+      })
     }
   }
 
   @Builder
   ReportMessageText() {
     if (this.reportMessage.length > 0) {
-      Text(this.reportMessage)
-        .fontSize(13)
-        .fontColor(this.reportMessageTone)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
+      InlineMessageSurface({
+        message: this.reportMessage,
+        tone: this.reportMessageTone
+      })
     }
   }
 
@@ -653,6 +644,10 @@ struct RepairReport {
     }
 
     return '提交报告';
+  }
+
+  getSubmitIcon(): Resource {
+    return $r('sys.symbol.checkmark_circle');
   }
 
   canSubmitRepairReport(): boolean {

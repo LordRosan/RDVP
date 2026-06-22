@@ -161,146 +161,154 @@ struct DeviceArchiveQuery {
 
   @Builder
   DeviceCodePanel() {
-    Column({ space: 16 }) {
-      TextInput({
-        placeholder: 'RDVP-DEVICE-XXXX',
-        text: this.deviceCode
-      })
-        .height(56)
-        .fontSize(16)
-        .backgroundColor(AppColors.FieldBackground)
-        .borderRadius(18)
-        .padding({
-          left: 16,
-          right: 16
+    Column({ space: 12 }) {
+      Column({ space: 16 }) {
+        TextInput({
+          placeholder: 'RDVP-DEVICE-XXXX',
+          text: this.deviceCode
         })
-        .border({
-          width: 1,
-          color: AppColors.Border
-        })
-        .enabled(!this.querying)
-        .onChange((value: string) => {
-          if (this.querying) {
-            return;
-          }
+          .height(56)
+          .fontSize(16)
+          .backgroundColor(AppColors.FieldBackground)
+          .borderRadius(18)
+          .padding({
+            left: 16,
+            right: 16
+          })
+          .border({
+            width: 1,
+            color: AppColors.Border
+          })
+          .enabled(!this.querying)
+          .onChange((value: string) => {
+            if (this.querying) {
+              return;
+            }
 
-          this.deviceCode = value;
-          this.codeQueryMessage = '';
-        })
+            this.deviceCode = value;
+            this.codeQueryMessage = '';
+          })
+      }
+      .padding({
+        left: 18,
+        right: 18,
+        top: 18,
+        bottom: 18
+      })
+      .width('100%')
+      .backgroundColor(AppColors.SurfaceRaised)
+      .borderRadius(24)
+      .border({
+        width: 1,
+        color: AppColors.Divider
+      })
+      .alignItems(HorizontalAlign.Start)
 
       this.CodeQueryMessageText()
       this.QuerySubmitButton(() => {
         this.submitDeviceCodeQuery();
       })
     }
-    .padding({
-      left: 18,
-      right: 18,
-      top: 18,
-      bottom: 18
-    })
     .width('100%')
-    .backgroundColor(AppColors.SurfaceRaised)
-    .borderRadius(24)
-    .border({
-      width: 1,
-      color: AppColors.Divider
-    })
     .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
   QrQueryPanel() {
-    Column({ space: 16 }) {
-      Stack() {
-        if (this.qrContent.length > 0) {
-          Column({ space: 12 }) {
-            SymbolGlyph($r('sys.symbol.qrcode'))
-              .fontSize(52)
-              .fontColor([AppColors.Primary])
+    Column({ space: 12 }) {
+      Column({ space: 16 }) {
+        Stack() {
+          if (this.qrContent.length > 0) {
+            Column({ space: 12 }) {
+              SymbolGlyph($r('sys.symbol.qrcode'))
+                .fontSize(52)
+                .fontColor([AppColors.Primary])
 
-            Text('已获取二维码')
-              .fontSize(18)
-              .fontWeight(FontWeight.Bold)
-              .fontColor(AppColors.TextPrimary)
-              .maxLines(1)
+              Text('已获取二维码')
+                .fontSize(18)
+                .fontWeight(FontWeight.Bold)
+                .fontColor(AppColors.TextPrimary)
+                .maxLines(1)
 
-            Text(this.getQrDeviceCodeDisplay())
-              .fontSize(15)
-              .fontWeight(FontWeight.Medium)
-              .fontColor(AppColors.TextSecondary)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              Text(this.getQrDeviceCodeDisplay())
+                .fontSize(15)
+                .fontWeight(FontWeight.Medium)
+                .fontColor(AppColors.TextSecondary)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+            }
+            .justifyContent(FlexAlign.Center)
+            .alignItems(HorizontalAlign.Center)
+            .width('100%')
+            .height('100%')
+          } else {
+            Column({ space: 12 }) {
+              SymbolGlyph($r('sys.symbol.qrcode'))
+                .fontSize(56)
+                .fontColor([AppColors.Disabled])
+
+              Text('请扫描或上传二维码')
+                .fontSize(18)
+                .fontWeight(FontWeight.Bold)
+                .fontColor(AppColors.TextPrimary)
+                .maxLines(1)
+            }
+            .justifyContent(FlexAlign.Center)
+            .alignItems(HorizontalAlign.Center)
+            .width('100%')
+            .height('100%')
           }
-          .justifyContent(FlexAlign.Center)
-          .alignItems(HorizontalAlign.Center)
-          .width('100%')
-          .height('100%')
-        } else {
-          Column({ space: 12 }) {
-            SymbolGlyph($r('sys.symbol.qrcode'))
-              .fontSize(56)
-              .fontColor([AppColors.Disabled])
-
-            Text('请扫描或上传二维码')
-              .fontSize(18)
-              .fontWeight(FontWeight.Bold)
-              .fontColor(AppColors.TextPrimary)
-              .maxLines(1)
-          }
-          .justifyContent(FlexAlign.Center)
-          .alignItems(HorizontalAlign.Center)
-          .width('100%')
-          .height('100%')
         }
+        .width('100%')
+        .aspectRatio(1)
+        .backgroundColor(AppColors.FieldBackground)
+        .borderRadius(24)
+        .border({
+          width: 1,
+          color: AppColors.Border
+        })
+
+        this.QrActionMessageText()
+
+        Row({ space: 10 }) {
+          Column() {
+            this.QrSourceButton('扫描', $r('sys.symbol.circle_viewfinder'), () => {
+              this.scanQrCode();
+            })
+          }
+          .layoutWeight(1)
+
+          Column() {
+            this.QrSourceButton('上传', $r('sys.symbol.picture'), () => {
+              this.uploadQrImage();
+            })
+          }
+          .layoutWeight(1)
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
       }
+      .padding({
+        left: 18,
+        right: 18,
+        top: 18,
+        bottom: 18
+      })
       .width('100%')
-      .aspectRatio(1)
-      .backgroundColor(AppColors.FieldBackground)
+      .backgroundColor(AppColors.SurfaceRaised)
       .borderRadius(24)
       .border({
         width: 1,
-        color: AppColors.Border
+        color: AppColors.Divider
       })
-
-      this.QrActionMessageText()
-
-      Row({ space: 10 }) {
-        Column() {
-          this.QrSourceButton('扫描', $r('sys.symbol.circle_viewfinder'), () => {
-            this.scanQrCode();
-          })
-        }
-        .layoutWeight(1)
-
-        Column() {
-          this.QrSourceButton('上传', $r('sys.symbol.picture'), () => {
-            this.uploadQrImage();
-          })
-        }
-        .layoutWeight(1)
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
+      .alignItems(HorizontalAlign.Start)
 
       this.QrQueryMessageText()
       this.QuerySubmitButton(() => {
         this.submitQrQuery();
       })
     }
-    .padding({
-      left: 18,
-      right: 18,
-      top: 18,
-      bottom: 18
-    })
     .width('100%')
-    .backgroundColor(AppColors.SurfaceRaised)
-    .borderRadius(24)
-    .border({
-      width: 1,
-      color: AppColors.Divider
-    })
     .alignItems(HorizontalAlign.Start)
   }
 
