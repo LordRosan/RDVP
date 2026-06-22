@@ -1,5 +1,5 @@
 import { AppColors } from '../../styles/AppTheme';
-import { ApiResponse } from '../../models/common/ApiModels';
+import { ApiError, ApiResponse } from '../../models/common/ApiModels';
 import { FaultSeverity, FaultType } from '../../models/operations/FaultModels';
 import {
   TaskAcceptanceListResult,
@@ -182,7 +182,7 @@ export class RepairTaskService {
     if (!response.success) {
       return {
         success: false,
-        error: response.error,
+        error: RepairTaskService.createTaskAcceptanceError(response.error === undefined ? '' : `${response.error.code}`),
         requestId: response.requestId,
         timestamp: response.timestamp
       };
@@ -606,6 +606,34 @@ export class RepairTaskService {
       recommendedRadiusKm: 0,
       message: '任务接取功能暂不可用，请稍后重试',
       canAccept: false
+    };
+  }
+
+  private static createTaskAcceptanceError(errorCode: string): ApiError {
+    if (errorCode === 'REPAIRER_BUSY') {
+      return {
+        code: errorCode,
+        message: '当前状态暂不可接取任务，请先处理已接取任务'
+      };
+    }
+
+    if (errorCode === 'REPAIR_TASK_RADIUS_INVALID') {
+      return {
+        code: errorCode,
+        message: '可接取半径无效，请重新选择'
+      };
+    }
+
+    if (errorCode === 'REPAIR_TASK_RADIUS_EXCEEDS_WORKLOAD') {
+      return {
+        code: errorCode,
+        message: '当前半径超过可接取范围，请重新选择'
+      };
+    }
+
+    return {
+      code: errorCode.length > 0 ? errorCode : 'TASK_ACCEPTANCE_UNAVAILABLE',
+      message: '任务接取功能暂不可用，请稍后重试'
     };
   }
 

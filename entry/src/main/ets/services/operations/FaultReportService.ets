@@ -70,14 +70,14 @@ export class FaultReportService {
     if (description.length === 0) {
       return {
         valid: false,
-        message: '请输入故障描述'
+        message: '请输入故障说明'
       };
     }
 
     if (description.length > MAX_DESCRIPTION_LENGTH) {
       return {
         valid: false,
-        message: '故障描述不能超过800字'
+        message: '故障说明不能超过800字'
       };
     }
 

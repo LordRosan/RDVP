@@ -9,6 +9,7 @@ export interface DeviceVerificationForm {
   deviceCode: string;
   result: VerificationResult;
   description: string;
+  verifiedAt: string;
   remark?: string;
 }
 

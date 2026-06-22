@@ -4,7 +4,8 @@ import { AppColors } from '../styles/AppTheme';
 export struct HeaderCircleButton {
   icon: Resource = $r('sys.symbol.gearshape');
   iconSize: number = 31;
-  action: () => void = () => {};
+  action: () => void = () => {
+  };
 
   build() {
     Button({ type: ButtonType.Circle, stateEffect: true }) {

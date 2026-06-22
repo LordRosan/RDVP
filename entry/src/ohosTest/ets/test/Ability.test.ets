@@ -50,6 +50,7 @@ export default function abilityTest() {
         deviceCode: 'RDVP-DEVICE-0001',
         result: VerificationResult.Normal,
         description: '设备外观完整，运行状态正常。',
+        verifiedAt: '2026-05-28 16:30',
         remark: ''
       });
 
@@ -61,11 +62,25 @@ export default function abilityTest() {
         deviceCode: 'RDVP-DEVICE-0001',
         result: VerificationResult.Normal,
         description: '',
+        verifiedAt: '2026-05-28 16:30',
         remark: ''
       });
 
       expect(result.valid).assertEqual(false);
-      expect(result.message).assertEqual('请输入核验描述');
+      expect(result.message).assertEqual('请输入核验说明');
+    });
+
+    it('validatesNormalVerificationRequiresTime', 0, () => {
+      const result = DeviceVerificationService.validateVerificationForm({
+        deviceCode: 'RDVP-DEVICE-0001',
+        result: VerificationResult.Normal,
+        description: '设备外观完整，运行状态正常。',
+        verifiedAt: '',
+        remark: ''
+      });
+
+      expect(result.valid).assertEqual(false);
+      expect(result.message).assertEqual('请选择核验时间');
     });
 
     it('validatesAbnormalVerificationUsesFaultDescription', 0, () => {
@@ -74,6 +89,7 @@ export default function abilityTest() {
           deviceCode: 'RDVP-DEVICE-0001',
           result: VerificationResult.Abnormal,
           description: '',
+          verifiedAt: '',
           remark: ''
         },
         faultReport: {

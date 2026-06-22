@@ -38,7 +38,8 @@ struct DeviceArchiveDelete {
   @State password: string = '';
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveCenterDeviceArchiveDeleteRequestSubmit)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(),
+      PermissionCode.ArchiveCenterDeviceArchiveDeleteRequestSubmit)) {
       return;
     }
 
@@ -207,19 +208,19 @@ struct DeviceArchiveDelete {
           .fontSize(18)
           .fontColor([AppColors.TextSecondary])
       }
-        .height(56)
-        .width('100%')
-        .backgroundColor(AppColors.FieldBackground)
-        .borderRadius(18)
-        .padding({ left: 16, right: 16 })
-        .border({ width: 1, color: AppColors.Border })
-        .onClick(() => {
-          if (this.isSubmitted() || this.submitting || this.isDeleteLocked()) {
-            return;
-          }
+      .height(56)
+      .width('100%')
+      .backgroundColor(AppColors.FieldBackground)
+      .borderRadius(18)
+      .padding({ left: 16, right: 16 })
+      .border({ width: 1, color: AppColors.Border })
+      .onClick(() => {
+        if (this.isSubmitted() || this.submitting || this.isDeleteLocked()) {
+          return;
+        }
 
-          this.showDeleteTimePicker();
-        })
+        this.showDeleteTimePicker();
+      })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -396,8 +397,10 @@ struct DeviceArchiveDelete {
         return;
       }
 
-      this.requestStatus = response.data === undefined ? DeviceArchiveRequestStatus.PendingReview : response.data.status;
-      DeviceArchiveFlowStore.markArchiveRequestPending(response.data ? response.data.id : '', undefined, this.requestStatus);
+      this.requestStatus =
+        response.data === undefined ? DeviceArchiveRequestStatus.PendingReview : response.data.status;
+      DeviceArchiveFlowStore.markArchiveRequestPending(response.data ? response.data.id : '', undefined,
+        this.requestStatus);
       const pendingDevice = DeviceArchiveFlowStore.getCurrentDevice();
       if (pendingDevice !== undefined) {
         this.device = pendingDevice;

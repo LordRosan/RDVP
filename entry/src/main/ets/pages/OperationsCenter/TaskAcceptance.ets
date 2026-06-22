@@ -20,14 +20,14 @@ import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
 
 const REFRESH_TIMEOUT_MS = 5000;
-const TASK_ACCEPTANCE_TYPE_FILTER_OPTIONS: string[] = ['全部类型', '运行异常', '部件损坏', '通信故障', '逻辑故障', '能源故障', '外部因素', '其他'];
+const TASK_ACCEPTANCE_TYPE_FILTER_OPTIONS: string[] = ['全部', '运行异常', '部件损坏', '通信故障', '逻辑故障', '能源故障', '外部因素', '其他'];
 const TASK_ACCEPTANCE_TYPE_FILTER_VALUES: string[] = ['', `${FaultType.OperationAbnormal}`, `${FaultType.HardwareDamage}`,
   `${FaultType.CommunicationFault}`, `${FaultType.LogicFault}`, `${FaultType.EnergyFault}`, `${FaultType.ExternalFactor}`,
   `${FaultType.Other}`];
-const TASK_ACCEPTANCE_SEVERITY_FILTER_OPTIONS: string[] = ['全部等级', '紧急', '严重', '一般', '轻微'];
+const TASK_ACCEPTANCE_SEVERITY_FILTER_OPTIONS: string[] = ['全部', '紧急', '严重', '一般', '轻微'];
 const TASK_ACCEPTANCE_SEVERITY_FILTER_VALUES: string[] = ['', `${FaultSeverity.Emergency}`, `${FaultSeverity.Severe}`,
   `${FaultSeverity.General}`, `${FaultSeverity.Minor}`];
-const TASK_TYPE_CHIP_OPTIONS: string[] = ['全部', '维修', '复检'];
+const TASK_TYPE_CHIP_OPTIONS: string[] = ['全部类型', '维修任务', '复检任务'];
 const TASK_TYPE_CHIP_VALUES: string[] = ['', 'REPAIR', 'REINSPECTION'];
 
 @Entry
@@ -135,14 +135,13 @@ struct TaskAcceptance {
   FilterPanel() {
     Column({ space: 12 }) {
       AppSectionTitle({
-        title: '查询任务',
+        title: '工作状态',
         subtitle: ''
       })
 
       Column({ space: 16 }) {
+        this.WorkStatusForm()
         this.RadiusPicker()
-        this.FieldTitle('工作状态')
-        this.WorkloadSnapshotPanel()
       }
       .padding({
         left: 18,
@@ -167,62 +166,89 @@ struct TaskAcceptance {
   }
 
   @Builder
-  RadiusPicker() {
-    Column({ space: 8 }) {
-      if (this.workloadSnapshot.canAccept) {
-        Row() {
-          Text('接取半径')
-            .fontSize(14)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(AppColors.TextPrimary)
-            .layoutWeight(1)
-            .maxLines(1)
+  WorkStatusForm() {
+    Column() {
+      this.StatusInfoLine('状态', RepairTaskService.formatWorkloadStatus(this.workloadSnapshot.status),
+        RepairTaskService.getWorkloadStatusTone(this.workloadSnapshot.status), this.getWorkloadSymbol())
+      this.CardDivider()
+      this.StatusInfoLine('已接取任务',
+        `${this.workloadSnapshot.activeTaskCount}/${this.workloadSnapshot.maxActiveTaskCount}`,
+        AppColors.Primary, $r('sys.symbol.wrench_and_screwdriver'))
+      this.CardDivider()
+      this.StatusInfoLine('可接取半径', this.getAvailableRadiusText(),
+        this.workloadSnapshot.canAccept ? AppColors.Primary : AppColors.Danger, $r('sys.symbol.location_up'))
+    }
+    .width('100%')
+    .backgroundColor(AppColors.FieldBackground)
+    .borderRadius(18)
+    .border({ width: 1, color: AppColors.Border })
+  }
 
-          Text(this.getCurrentRadiusText())
-            .fontSize(18)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(AppColors.Primary)
-            .maxLines(1)
-        }
-        .width('100%')
-        .alignItems(VerticalAlign.Center)
-
-        Slider({
-          value: this.radiusKm,
-          min: 1,
-          max: this.workloadSnapshot.maxRadiusKm,
-          step: 1,
-          style: SliderStyle.OutSet
-        })
-          .width('100%')
-          .onChange((value: number) => {
-            this.applyRadiusSliderValue(value);
-          })
-      } else {
-        Row({ space: 8 }) {
-          SymbolGlyph($r('sys.symbol.exclamationmark_circle'))
-            .fontSize(22)
-            .fontColor([AppColors.Danger])
-
-          Text('当前状态暂不可接取')
-            .fontSize(17)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(AppColors.Danger)
-            .maxLines(1)
-        }
-        .height(88)
-        .width('100%')
-        .justifyContent(FlexAlign.Center)
-        .alignItems(VerticalAlign.Center)
-        .backgroundColor(AppColors.FieldBackground)
-        .borderRadius(18)
+  @Builder
+  StatusInfoLine(label: string, value: string, tone: string, icon: Resource) {
+    Row({ space: 10 }) {
+      Stack() {
+        SymbolGlyph(icon)
+          .fontSize(18)
+          .fontColor([tone])
       }
+      .width(34)
+      .height(34)
+      .borderRadius(17)
+      .backgroundColor(this.getMetricSurface(tone))
 
-      Row({ space: 8 }) {
-        this.RangeChip(this.getAvailableRadiusText(), this.workloadSnapshot.canAccept ? AppColors.Primary : AppColors.Danger)
+      Text(label)
+        .fontSize(15)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextSecondary)
+        .layoutWeight(1)
+        .maxLines(1)
+
+      Text(value)
+        .fontSize(16)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(tone)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .height(58)
+    .width('100%')
+    .padding({ left: 14, right: 14 })
+    .alignItems(VerticalAlign.Center)
+  }
+
+  @Builder
+  RadiusPicker() {
+    Column({ space: 10 }) {
+      Slider({
+        value: this.radiusKm,
+        min: 1,
+        max: Math.max(1, this.workloadSnapshot.maxRadiusKm),
+        step: 1,
+        style: SliderStyle.OutSet
+      })
+        .width('100%')
+        .enabled(this.workloadSnapshot.canAccept && !this.refreshing && this.acceptingTaskId.length === 0)
+        .onChange((value: number) => {
+          this.applyRadiusSliderValue(value);
+        })
+
+      Row() {
+        Text('当前半径')
+          .fontSize(15)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppColors.TextSecondary)
+          .layoutWeight(1)
+          .maxLines(1)
+
+        Text(this.getCurrentRadiusText())
+          .fontSize(16)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(this.workloadSnapshot.canAccept ? AppColors.Primary : AppColors.Danger)
+          .maxLines(1)
       }
       .width('100%')
-      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
     }
     .width('100%')
     .padding({
@@ -237,78 +263,6 @@ struct TaskAcceptance {
       width: 1,
       color: AppColors.Border
     })
-  }
-
-  @Builder
-  WorkloadSnapshotPanel() {
-    Row({ space: 10 }) {
-      this.WorkloadMetric('状态', RepairTaskService.formatWorkloadStatus(this.workloadSnapshot.status),
-        this.getWorkloadSymbol(), RepairTaskService.getWorkloadStatusTone(this.workloadSnapshot.status))
-      this.WorkloadMetric('任务', `${this.workloadSnapshot.activeTaskCount}/${this.workloadSnapshot.maxActiveTaskCount}`,
-        $r('sys.symbol.wrench_and_screwdriver'), AppColors.Primary)
-    }
-    .width('100%')
-    .alignItems(VerticalAlign.Center)
-  }
-
-  @Builder
-  WorkloadMetric(label: string, value: string, icon: Resource, tone: string) {
-    Column({ space: 8 }) {
-      Row({ space: 8 }) {
-        Stack() {
-          SymbolGlyph(icon)
-            .fontSize(18)
-            .fontColor([tone])
-        }
-        .width(34)
-        .height(34)
-        .borderRadius(17)
-        .backgroundColor(this.getMetricSurface(tone))
-
-        Text(label)
-          .fontSize(14)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(AppColors.TextSecondary)
-          .maxLines(1)
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
-
-      Text(value)
-        .fontSize(18)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(tone)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
-    .height(92)
-    .layoutWeight(1)
-    .padding({
-      left: 14,
-      right: 14,
-      top: 12,
-      bottom: 12
-    })
-    .backgroundColor(AppColors.FieldBackground)
-    .borderRadius(18)
-    .border({
-      width: 1,
-      color: AppColors.Border
-    })
-  }
-
-  @Builder
-  RangeChip(value: string, tone: string) {
-    Text(value)
-      .fontSize(13)
-      .fontWeight(FontWeight.Medium)
-      .fontColor(tone)
-      .height(30)
-      .padding({ left: 12, right: 12 })
-      .backgroundColor(this.getMetricSurface(tone))
-      .borderRadius(15)
-      .maxLines(1)
-      .textOverflow({ overflow: TextOverflow.Ellipsis })
   }
 
   @Builder
@@ -720,9 +674,9 @@ struct TaskAcceptance {
 
   getTaskFilterParams(): FilterParams[] {
     return [
+      this.createFilterParams('任务类型', TASK_TYPE_CHIP_OPTIONS),
       this.createFilterParams('故障类型', TASK_ACCEPTANCE_TYPE_FILTER_OPTIONS),
-      this.createFilterParams('故障等级', TASK_ACCEPTANCE_SEVERITY_FILTER_OPTIONS),
-      this.createFilterParams('任务类型', TASK_TYPE_CHIP_OPTIONS)
+      this.createFilterParams('故障等级', TASK_ACCEPTANCE_SEVERITY_FILTER_OPTIONS)
     ];
   }
 
@@ -803,6 +757,17 @@ struct TaskAcceptance {
       this.workloadSnapshot.canAccept &&
       item.distanceKm !== undefined &&
       item.distanceKm <= this.workloadSnapshot.maxRadiusKm;
+  }
+
+  @Builder
+  CardDivider() {
+    Divider()
+      .height(1)
+      .backgroundColor(AppColors.Divider)
+      .margin({
+        left: 14,
+        right: 14
+      })
   }
 
   formatDistance(item: TaskAcceptanceItem): string {

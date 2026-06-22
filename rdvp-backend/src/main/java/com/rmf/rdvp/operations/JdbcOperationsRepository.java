@@ -140,18 +140,20 @@ public class JdbcOperationsRepository implements OperationsRepository {
             parameters.addValue("severity", severity.name());
         }
 
-        String distanceExpr = """
-                CASE
-                    WHEN :longitude IS NULL OR :latitude IS NULL OR d.longitude IS NULL OR d.latitude IS NULL
-                    THEN NULL
-                    ELSE ROUND((
-                        ST_DistanceSphere(
-                            ST_MakePoint(:longitude, :latitude),
-                            ST_MakePoint(d.longitude, d.latitude)
-                        ) / 1000.0
-                    )::numeric, 2)
-                END AS distance_km
-                """;
+        boolean hasLocation = longitude != null && latitude != null;
+        String repairDistanceExpr = hasLocation
+                ? """
+                ROUND((
+                    ST_DistanceSphere(
+                        ST_MakePoint(:longitude, :latitude),
+                        ST_MakePoint(d.longitude, d.latitude)
+                    ) / 1000.0
+                )::numeric, 2) AS distance_km
+                """
+                : "NULL::numeric AS distance_km";
+        String reinspectionDistanceExpr = hasLocation
+                ? repairDistanceExpr.replace("d.", "d2.")
+                : "NULL::numeric AS distance_km";
 
         String repairSelect = """
                 SELECT
@@ -169,10 +171,10 @@ public class JdbcOperationsRepository implements OperationsRepository {
                     'REPAIR' AS task_type
                 FROM fault_reports f
                 JOIN devices d ON d.id = f.device_id
-                """.formatted(distanceExpr);
+                """.formatted(repairDistanceExpr);
 
         List<String> geoConditions = new ArrayList<>();
-        if (longitude != null && latitude != null) {
+        if (hasLocation) {
             geoConditions.add("d.longitude IS NOT NULL");
             geoConditions.add("d.latitude IS NOT NULL");
             geoConditions.add("""
@@ -224,7 +226,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                     'REINSPECTION' AS task_type
                 FROM fault_reports f2
                 JOIN devices d2 ON d2.id = f2.device_id
-                """.formatted(distanceExpr.replace("d.", "d2."));
+                """.formatted(reinspectionDistanceExpr);
 
         String reinspectionWhere = " WHERE " + String.join(" AND ", reinspectionConditions);
 

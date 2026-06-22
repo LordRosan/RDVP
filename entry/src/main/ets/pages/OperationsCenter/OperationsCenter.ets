@@ -117,7 +117,7 @@ struct OperationsCenter {
           }
 
           GridItem() {
-            this.PermissionCell('提交报修', this.canSubmitFaultReport())
+            this.PermissionCell('设备报修', this.canSubmitFaultReport())
           }
 
           GridItem() {
@@ -125,11 +125,11 @@ struct OperationsCenter {
           }
 
           GridItem() {
-            this.PermissionCell('维修任务', this.canSubmitRepairReport())
+            this.PermissionCell('维修提交', this.canSubmitRepairReport())
           }
 
           GridItem() {
-            this.PermissionCell('复检任务', this.canSubmitReinspectionReport())
+            this.PermissionCell('复检提交', this.canSubmitReinspectionReport())
           }
         }
         .columnsTemplate('1fr 1fr')

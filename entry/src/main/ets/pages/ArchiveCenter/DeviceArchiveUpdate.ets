@@ -38,7 +38,8 @@ struct DeviceArchiveUpdate {
   private baseline?: DeviceArchiveUpdateBaseline = undefined;
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveCenterDeviceArchiveUpdateRequestSubmit)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(),
+      PermissionCode.ArchiveCenterDeviceArchiveUpdateRequestSubmit)) {
       return;
     }
 
@@ -354,25 +355,25 @@ struct DeviceArchiveUpdate {
           .fontSize(18)
           .fontColor([AppColors.TextSecondary])
       }
-        .height(56)
-        .width('100%')
-        .backgroundColor(AppColors.FieldBackground)
-        .borderRadius(18)
-        .padding({
-          left: 16,
-          right: 16
-        })
-        .border({
-          width: 1,
-          color: AppColors.Border
-        })
-        .onClick(() => {
-          if (this.submitting || this.isUpdateSubmitted()) {
-            return;
-          }
+      .height(56)
+      .width('100%')
+      .backgroundColor(AppColors.FieldBackground)
+      .borderRadius(18)
+      .padding({
+        left: 16,
+        right: 16
+      })
+      .border({
+        width: 1,
+        color: AppColors.Border
+      })
+      .onClick(() => {
+        if (this.submitting || this.isUpdateSubmitted()) {
+          return;
+        }
 
-          this.showInitiatedAtPicker();
-        })
+        this.showInitiatedAtPicker();
+      })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -537,8 +538,10 @@ struct DeviceArchiveUpdate {
       }
 
       const submittedDraft = this.buildDraft();
-      this.requestStatus = response.data === undefined ? DeviceArchiveRequestStatus.PendingReview : response.data.status;
-      DeviceArchiveFlowStore.markArchiveRequestPending(response.data ? response.data.id : '', submittedDraft, this.requestStatus);
+      this.requestStatus =
+        response.data === undefined ? DeviceArchiveRequestStatus.PendingReview : response.data.status;
+      DeviceArchiveFlowStore.markArchiveRequestPending(response.data ? response.data.id : '', submittedDraft,
+        this.requestStatus);
       this.applyDraft(submittedDraft);
       this.updatedFieldCount = DeviceArchiveUpdateService.countUpdatedFields(this.buildForm());
       this.password = '';

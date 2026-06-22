@@ -20,6 +20,7 @@ struct DeviceVerification {
   @State deviceCode: string = '';
   @State verificationResult: string = '';
   @State description: string = '';
+  @State verifiedAt: string = '';
   @State faultType: string = '';
   @State severity: string = '';
   @State occurredAt: string = '';
@@ -90,7 +91,7 @@ struct DeviceVerification {
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      Text('Verification and Repair')
+      Text('Verification and fault reporting')
         .fontSize(13)
         .fontWeight(FontWeight.Medium)
         .fontColor(AppColors.TextTertiary)
@@ -114,6 +115,7 @@ struct DeviceVerification {
         this.DeviceCodeField()
         this.ResultSelector()
         if (this.isNormalVerification()) {
+          this.VerifiedAtField()
           this.DescriptionField()
         }
       }
@@ -228,12 +230,57 @@ struct DeviceVerification {
   }
 
   @Builder
+  VerifiedAtField() {
+    Column({ space: 10 }) {
+      this.FieldTitle('核验时间')
+
+      Row({ space: 10 }) {
+        SymbolGlyph($r('sys.symbol.calendar'))
+          .fontSize(20)
+          .fontColor([AppColors.TextPrimary])
+
+        Text(this.verifiedAt.length > 0 ? this.verifiedAt : '请选择核验时间')
+          .fontSize(16)
+          .fontColor(this.verifiedAt.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
+          .layoutWeight(1)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+        SymbolGlyph($r('sys.symbol.chevron_forward'))
+          .fontSize(18)
+          .fontColor([AppColors.TextSecondary])
+      }
+      .height(56)
+      .width('100%')
+      .backgroundColor(AppColors.FieldBackground)
+      .borderRadius(18)
+      .padding({
+        left: 16,
+        right: 16
+      })
+      .border({
+        width: 1,
+        color: AppColors.Border
+      })
+      .onClick(() => {
+        if (this.submitting || this.submitted) {
+          return;
+        }
+
+        this.showVerifiedAtPicker();
+      })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
   DescriptionField() {
     Column({ space: 10 }) {
-      this.FieldTitle('核验描述')
+      this.FieldTitle('核验说明')
 
       TextArea({
-        placeholder: '请输入核验描述',
+        placeholder: '请输入核验说明',
         text: this.description
       })
         .height(118)
@@ -500,10 +547,10 @@ struct DeviceVerification {
   @Builder
   FaultDescriptionField() {
     Column({ space: 10 }) {
-      this.FieldTitle('故障描述')
+      this.FieldTitle('故障说明')
 
       TextArea({
-        placeholder: '请输入故障描述',
+        placeholder: '请输入故障说明',
         text: this.faultDescription
       })
         .height(128)
@@ -657,7 +704,8 @@ struct DeviceVerification {
     const response = await DeviceVerificationService.submitVerificationRemoteFirst({
       deviceCode: this.deviceCode,
       result: this.verificationResult as VerificationResult,
-      description: this.description
+      description: this.description,
+      verifiedAt: this.verifiedAt
     });
     if (!response.success) {
       const error = response.error;
@@ -684,7 +732,8 @@ struct DeviceVerification {
       verification: {
         deviceCode: this.deviceCode,
         result: this.verificationResult as VerificationResult,
-        description: ''
+        description: '',
+        verifiedAt: ''
       },
       faultReport: {
         deviceCode: this.deviceCode,
@@ -780,6 +829,7 @@ struct DeviceVerification {
           deviceCode: this.deviceCode,
           result: this.verificationResult as VerificationResult,
           description: '',
+          verifiedAt: '',
           remark: ''
         },
         faultReport: {
@@ -797,6 +847,7 @@ struct DeviceVerification {
       deviceCode: this.deviceCode,
       result: this.verificationResult as VerificationResult,
       description: this.description,
+      verifiedAt: this.verifiedAt,
       remark: ''
     });
   }
@@ -838,6 +889,24 @@ struct DeviceVerification {
       useMilitaryTime: true,
       onDateAccept: (value: Date) => {
         this.occurredAt = this.formatDateTime(value);
+        this.markFormChanged();
+      }
+    });
+  }
+
+  showVerifiedAtPicker(): void {
+    if (this.submitting || this.submitted) {
+      return;
+    }
+
+    this.getUIContext().showDatePickerDialog({
+      start: new Date(2000, 0, 1, 0, 0),
+      end: new Date(2100, 11, 31, 23, 59),
+      selected: this.resolveSelectedDate(this.verifiedAt),
+      showTime: true,
+      useMilitaryTime: true,
+      onDateAccept: (value: Date) => {
+        this.verifiedAt = this.formatDateTime(value);
         this.markFormChanged();
       }
     });

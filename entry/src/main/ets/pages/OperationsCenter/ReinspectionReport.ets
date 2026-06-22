@@ -2,7 +2,6 @@ import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
 import { AppSectionTitle } from '../../components/AppSectionTitle';
 import { CenterTitleBar } from '../../components/CenterTitleBar';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
-import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { FaultSeverity } from '../../models/operations/FaultModels';
 import {
   ReinspectionResult, ReinspectionTaskStatus, ReinspectionTaskSummary
@@ -10,7 +9,6 @@ import {
 import { PermissionCode } from '../../models/identity/PermissionModels';
 import { ApiClient } from '../../services/common/ApiClient';
 import { ReinspectionService } from '../../services/operations/ReinspectionService';
-import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
 
@@ -52,7 +50,6 @@ struct ReinspectionReport {
           this.ModeHeader()
           this.TaskListPanel()
           this.RecordForm()
-          this.StatusPanel()
         }
         .alignItems(HorizontalAlign.Start)
         .justifyContent(FlexAlign.Start)
@@ -168,7 +165,7 @@ struct ReinspectionReport {
       .borderRadius(32)
       .backgroundColor(AppColors.PrimarySurface)
 
-      Text('暂无待复检任务')
+      Text('暂无复检任务')
         .fontSize(18)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
@@ -239,11 +236,11 @@ struct ReinspectionReport {
 
       Button({ type: ButtonType.Capsule, stateEffect: true }) {
         Row({ space: 8 }) {
-          SymbolGlyph($r('sys.symbol.text_clipboard'))
+          SymbolGlyph(this.isTaskSelected(item) ? $r('sys.symbol.checkmark_circle') : $r('sys.symbol.text_clipboard'))
             .fontSize(18)
             .fontColor([AppColors.OnPrimary])
 
-          Text('填写复检任务')
+          Text(this.isTaskSelected(item) ? '已选择' : '填写复检报告')
             .fontSize(15)
             .fontWeight(FontWeight.Medium)
             .fontColor(AppColors.OnPrimary)
@@ -255,22 +252,19 @@ struct ReinspectionReport {
       }
       .height(46)
       .width('100%')
-      .backgroundColor(AppColors.Primary)
+      .backgroundColor(this.isTaskSelected(item) ? AppColors.Success : AppColors.Primary)
       .onClick(() => {
-        this.taskId = item.taskNo;
-        this.normalizedTaskId = item.taskNo;
-        if (this.normalizedTaskId !== this.submittedReinspectionTaskId) {
-          this.submittedReinspectionTaskId = '';
-        }
-        this.recordMessage = '';
-        this.recordMessageTone = AppColors.Danger;
+        this.selectTask(item);
       })
     }
     .padding(16)
     .width('100%')
     .backgroundColor(AppColors.SurfaceRaised)
     .borderRadius(AppRadii.Large)
-    .border({ width: 1, color: AppColors.Divider })
+    .border({
+      width: this.isTaskSelected(item) ? 2 : 1,
+      color: this.isTaskSelected(item) ? AppColors.Primary : AppColors.Divider
+    })
   }
 
   @Builder
@@ -314,12 +308,20 @@ struct ReinspectionReport {
     Column({ space: 10 }) {
       this.FieldTitle('复检任务编号')
 
-      TextInput({
-        placeholder: '请输入复检任务编号',
-        text: this.taskId
-      })
+      Row({ space: 10 }) {
+        SymbolGlyph($r('sys.symbol.text_clipboard'))
+          .fontSize(20)
+          .fontColor([this.taskId.length > 0 ? AppColors.TextPrimary : AppColors.TextSecondary])
+
+        Text(this.taskId.length > 0 ? this.taskId : '请选择复检任务')
+          .fontSize(16)
+          .fontColor(this.taskId.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
+          .layoutWeight(1)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
         .height(56)
-        .fontSize(16)
+        .width('100%')
         .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
         .padding({
@@ -329,19 +331,6 @@ struct ReinspectionReport {
         .border({
           width: 1,
           color: AppColors.Border
-        })
-        .enabled(this.canSubmitRecord())
-        .onChange((value: string) => {
-          this.taskId = value;
-          this.normalizedTaskId = value.trim().toUpperCase();
-          if (this.normalizedTaskId.length === 0) {
-            this.normalizedTaskId = '-';
-          }
-          if (this.normalizedTaskId !== this.submittedReinspectionTaskId) {
-            this.submittedReinspectionTaskId = '';
-          }
-          this.recordMessage = '';
-          this.recordMessageTone = AppColors.Danger;
         })
     }
     .width('100%')
@@ -482,34 +471,6 @@ struct ReinspectionReport {
   }
 
   @Builder
-  StatusPanel() {
-    Column({ space: 12 }) {
-      AppSectionTitle({
-        title: '提交摘要',
-        subtitle: ''
-      })
-
-      Column() {
-        StatusInfoRow({ label: '标准任务编号', value: this.normalizedTaskId, tone: AppColors.TextSecondary })
-        this.CardDivider()
-        StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: AppColors.TextSecondary })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '复检结果',
-          value: this.getResultStatusText(),
-          tone: this.getSelectedResultTone()
-        })
-      }
-      .width('100%')
-      .backgroundColor(AppColors.SurfaceRaised)
-      .borderRadius(AppRadii.Large)
-      .border({ width: 1, color: AppColors.Divider })
-    }
-    .alignItems(HorizontalAlign.Start)
-    .width('100%')
-  }
-
-  @Builder
   FieldTitle(title: string) {
     Text(title)
       .fontSize(17)
@@ -565,17 +526,6 @@ struct ReinspectionReport {
     })
   }
 
-  @Builder
-  CardDivider() {
-    Divider()
-      .height(1)
-      .backgroundColor(AppColors.Divider)
-      .margin({
-        left: 18,
-        right: 18
-      })
-  }
-
   async refreshTasks(): Promise<void> {
     if (this.refreshing || this.submitting) {
       return;
@@ -594,6 +544,7 @@ struct ReinspectionReport {
     const data = response.data;
     this.allTaskItems = data ? data.items : [];
     this.taskItems = [...this.allTaskItems];
+    this.ensureSelectedTaskStillAvailable();
     this.taskMessage = '';
   }
 
@@ -611,11 +562,6 @@ struct ReinspectionReport {
     });
     this.submitting = false;
 
-    this.normalizedTaskId = this.taskId.trim().toUpperCase();
-    if (this.normalizedTaskId.length === 0) {
-      this.normalizedTaskId = '-';
-    }
-
     if (!response.success) {
       const error = response.error;
       this.recordMessage = error ? error.message : '复检记录提交失败';
@@ -631,6 +577,8 @@ struct ReinspectionReport {
       return item.taskNo !== this.normalizedTaskId && item.id !== this.normalizedTaskId;
     });
     this.taskItems = [...this.allTaskItems];
+    this.clearSelectedTask();
+    this.refreshTasks();
   }
 
   getSubmitButtonLabel(): string {
@@ -650,19 +598,51 @@ struct ReinspectionReport {
   }
 
   canSubmitRecord(): boolean {
-    return !this.submitting && !this.isSelectedReinspectionTaskSubmitted();
+    return !this.submitting && this.taskId.length > 0 && !this.isSelectedReinspectionTaskSubmitted();
   }
 
   isSelectedReinspectionTaskSubmitted(): boolean {
     return this.submittedReinspectionTaskId.length > 0 && this.normalizedTaskId === this.submittedReinspectionTaskId;
   }
 
-  getResultStatusText(): string {
-    return this.result.length === 0 ? '-' : ReinspectionService.formatResult(this.result as ReinspectionResult);
+  isTaskSelected(item: ReinspectionTaskSummary): boolean {
+    const selectedTaskId = this.normalizedTaskId.trim();
+    if (selectedTaskId.length === 0 || selectedTaskId === '-') {
+      return false;
+    }
+
+    return item.taskNo === selectedTaskId || item.id === selectedTaskId;
   }
 
-  getSelectedResultTone(): string {
-    return this.result.length === 0 ? AppColors.TextSecondary : ReinspectionService.getResultTone(this.result as ReinspectionResult);
+  selectTask(item: ReinspectionTaskSummary): void {
+    this.taskId = item.id;
+    this.normalizedTaskId = item.id;
+    if (this.normalizedTaskId !== this.submittedReinspectionTaskId) {
+      this.submittedReinspectionTaskId = '';
+    }
+    this.recordMessage = '';
+    this.recordMessageTone = AppColors.Danger;
+  }
+
+  clearSelectedTask(): void {
+    this.taskId = '';
+    this.normalizedTaskId = '-';
+    this.result = '';
+    this.reinspectedAt = '';
+    this.description = '';
+  }
+
+  ensureSelectedTaskStillAvailable(): void {
+    if (this.taskId.length === 0) {
+      return;
+    }
+
+    const exists = this.taskItems.some((item: ReinspectionTaskSummary) => {
+      return item.id === this.taskId || item.taskNo === this.taskId;
+    });
+    if (!exists) {
+      this.clearSelectedTask();
+    }
   }
 
   showReinspectedAtPicker(): void {

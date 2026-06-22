@@ -3,7 +3,8 @@ import { AppColors } from '../styles/AppTheme';
 @Component
 export struct CenterTitleBar {
   title: string = '';
-  action: () => void = () => {};
+  action: () => void = () => {
+  };
 
   build() {
     Row({ space: 12 }) {

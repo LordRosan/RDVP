@@ -43,7 +43,8 @@ struct DeviceArchiveCreate {
   @State submitting: boolean = false;
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveCenterDeviceArchiveCreateRequestSubmit)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(),
+      PermissionCode.ArchiveCenterDeviceArchiveCreateRequestSubmit)) {
       return;
     }
   }
@@ -379,7 +380,8 @@ struct DeviceArchiveCreate {
   @Builder
   VerifyResultRow() {
     Row({ space: 10 }) {
-      SymbolGlyph(this.isDeviceCodeAvailable() ? $r('sys.symbol.checkmark_circle') : $r('sys.symbol.exclamationmark_circle'))
+      SymbolGlyph(
+        this.isDeviceCodeAvailable() ? $r('sys.symbol.checkmark_circle') : $r('sys.symbol.exclamationmark_circle'))
         .fontSize(20)
         .fontColor([this.isDeviceCodeAvailable() ? AppColors.Success : AppColors.Danger])
 
@@ -551,7 +553,8 @@ struct DeviceArchiveCreate {
         return;
       }
 
-      this.requestStatus = response.data === undefined ? DeviceArchiveRequestStatus.PendingReview : response.data.status;
+      this.requestStatus =
+        response.data === undefined ? DeviceArchiveRequestStatus.PendingReview : response.data.status;
       this.password = '';
       this.message = '提交成功，等待审核';
       this.messageTone = AppColors.Success;

@@ -2,15 +2,12 @@ import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
 import { AppSectionTitle } from '../../components/AppSectionTitle';
 import { CenterTitleBar } from '../../components/CenterTitleBar';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
-import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { FaultSeverity } from '../../models/operations/FaultModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
 import { RepairTaskItem, RepairReportResult, RepairTaskStatus } from '../../models/operations/RepairTaskModels';
 import { ApiClient } from '../../services/common/ApiClient';
-import { DeviceService } from '../../services/archive/DeviceService';
 import { FaultReportService } from '../../services/operations/FaultReportService';
 import { RepairTaskService } from '../../services/operations/RepairTaskService';
-import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
 
@@ -49,7 +46,6 @@ struct RepairReport {
           this.ModeHeader()
           this.TaskListPanel()
           this.ReportForm()
-          this.StatusPanel()
         }
         .alignItems(HorizontalAlign.Start)
         .justifyContent(FlexAlign.Start)
@@ -165,7 +161,7 @@ struct RepairReport {
       .borderRadius(32)
       .backgroundColor(AppColors.PrimarySurface)
 
-      Text('暂无已接取任务')
+      Text('暂无维修任务')
         .fontSize(18)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
@@ -253,13 +249,7 @@ struct RepairReport {
       .width('100%')
       .backgroundColor(this.isTaskSelected(item) ? AppColors.Success : AppColors.Primary)
       .onClick(() => {
-        this.taskId = item.taskNo;
-        this.normalizedTaskId = item.taskNo;
-        if (this.normalizedTaskId !== this.submittedRepairTaskId) {
-          this.submittedRepairTaskId = '';
-        }
-        this.reportMessage = '';
-        this.reportMessageTone = AppColors.Danger;
+        this.selectTask(item);
       })
     }
     .padding(16)
@@ -313,12 +303,20 @@ struct RepairReport {
     Column({ space: 10 }) {
       this.FieldTitle('维修任务编号')
 
-      TextInput({
-        placeholder: '请输入维修任务编号',
-        text: this.taskId
-      })
+      Row({ space: 10 }) {
+        SymbolGlyph($r('sys.symbol.text_clipboard'))
+          .fontSize(20)
+          .fontColor([this.taskId.length > 0 ? AppColors.TextPrimary : AppColors.TextSecondary])
+
+        Text(this.taskId.length > 0 ? this.taskId : '请选择维修任务')
+          .fontSize(16)
+          .fontColor(this.taskId.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
+          .layoutWeight(1)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
         .height(56)
-        .fontSize(16)
+        .width('100%')
         .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
         .padding({
@@ -328,19 +326,6 @@ struct RepairReport {
         .border({
           width: 1,
           color: AppColors.Border
-        })
-        .enabled(this.canSubmitRepairReport())
-        .onChange((value: string) => {
-          this.taskId = value;
-          this.normalizedTaskId = DeviceService.normalizeDeviceCode(value);
-          if (this.normalizedTaskId.length === 0) {
-            this.normalizedTaskId = '-';
-          }
-          if (this.normalizedTaskId !== this.submittedRepairTaskId) {
-            this.submittedRepairTaskId = '';
-          }
-          this.reportMessage = '';
-          this.reportMessageTone = AppColors.Danger;
         })
     }
     .width('100%')
@@ -482,34 +467,6 @@ struct RepairReport {
   }
 
   @Builder
-  StatusPanel() {
-    Column({ space: 12 }) {
-      AppSectionTitle({
-        title: '提交摘要',
-        subtitle: ''
-      })
-
-      Column() {
-        StatusInfoRow({ label: '标准任务编号', value: this.normalizedTaskId, tone: AppColors.TextSecondary })
-        this.CardDivider()
-        StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: AppColors.TextSecondary })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '维修结果',
-          value: this.getRepairResultStatusText(),
-          tone: this.getSelectedRepairResultTone()
-        })
-      }
-      .width('100%')
-      .backgroundColor(AppColors.SurfaceRaised)
-      .borderRadius(AppRadii.Large)
-      .border({ width: 1, color: AppColors.Divider })
-    }
-    .alignItems(HorizontalAlign.Start)
-    .width('100%')
-  }
-
-  @Builder
   FieldTitle(title: string) {
     Text(title)
       .fontSize(17)
@@ -565,17 +522,6 @@ struct RepairReport {
     })
   }
 
-  @Builder
-  CardDivider() {
-    Divider()
-      .height(1)
-      .backgroundColor(AppColors.Divider)
-      .margin({
-        left: 18,
-        right: 18
-      })
-  }
-
   async refreshTasks(): Promise<void> {
     if (this.refreshing || this.submitting) {
       return;
@@ -594,6 +540,7 @@ struct RepairReport {
     const data = response.data;
     this.allTaskItems = data ? data.items : [];
     this.taskItems = [...this.allTaskItems];
+    this.ensureSelectedTaskStillAvailable();
     this.taskMessage = '';
   }
 
@@ -612,11 +559,6 @@ struct RepairReport {
     });
     this.submitting = false;
 
-    this.normalizedTaskId = DeviceService.normalizeDeviceCode(this.taskId);
-    if (this.normalizedTaskId.length === 0) {
-      this.normalizedTaskId = '-';
-    }
-
     if (!response.success) {
       const error = response.error;
       this.reportMessage = error ? error.message : '维修报告提交失败';
@@ -632,6 +574,8 @@ struct RepairReport {
       return item.taskNo !== this.normalizedTaskId && item.id !== this.normalizedTaskId;
     });
     this.taskItems = [...this.allTaskItems];
+    this.clearSelectedTask();
+    this.refreshTasks();
   }
 
   getSubmitButtonLabel(): string {
@@ -651,7 +595,7 @@ struct RepairReport {
   }
 
   canSubmitRepairReport(): boolean {
-    return !this.submitting && !this.isSelectedRepairTaskSubmitted();
+    return !this.submitting && this.taskId.length > 0 && !this.isSelectedRepairTaskSubmitted();
   }
 
   isSelectedRepairTaskSubmitted(): boolean {
@@ -667,13 +611,35 @@ struct RepairReport {
     return item.taskNo === selectedTaskId || item.id === selectedTaskId;
   }
 
-  getRepairResultStatusText(): string {
-    return this.reportResult.length === 0 ? '-' :
-      RepairTaskService.formatRepairReportResult(this.reportResult as RepairReportResult);
+  selectTask(item: RepairTaskItem): void {
+    this.taskId = item.id;
+    this.normalizedTaskId = item.id;
+    if (this.normalizedTaskId !== this.submittedRepairTaskId) {
+      this.submittedRepairTaskId = '';
+    }
+    this.reportMessage = '';
+    this.reportMessageTone = AppColors.Danger;
   }
 
-  getSelectedRepairResultTone(): string {
-    return this.reportResult.length === 0 ? AppColors.TextSecondary : this.getRepairResultTone(this.reportResult as RepairReportResult);
+  clearSelectedTask(): void {
+    this.taskId = '';
+    this.normalizedTaskId = '-';
+    this.reportResult = '';
+    this.repairedAt = '';
+    this.processDescription = '';
+  }
+
+  ensureSelectedTaskStillAvailable(): void {
+    if (this.taskId.length === 0) {
+      return;
+    }
+
+    const exists = this.taskItems.some((item: RepairTaskItem) => {
+      return item.id === this.taskId || item.taskNo === this.taskId;
+    });
+    if (!exists) {
+      this.clearSelectedTask();
+    }
   }
 
   getRepairResultTone(result: RepairReportResult): string {

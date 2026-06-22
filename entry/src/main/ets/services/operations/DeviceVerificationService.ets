@@ -60,18 +60,33 @@ export class DeviceVerificationService {
       };
     }
 
+    const verifiedAt = DeviceVerificationService.normalizeText(form.verifiedAt);
+    if (verifiedAt.length === 0) {
+      return {
+        valid: false,
+        message: '请选择核验时间'
+      };
+    }
+
+    if (verifiedAt.length > 64) {
+      return {
+        valid: false,
+        message: '核验时间不能超过64字'
+      };
+    }
+
     const description = DeviceVerificationService.normalizeText(form.description);
     if (description.length === 0) {
       return {
         valid: false,
-        message: '请输入核验描述'
+        message: '请输入核验说明'
       };
     }
 
     if (description.length > MAX_DESCRIPTION_LENGTH) {
       return {
         valid: false,
-        message: '核验描述不能超过500字'
+        message: '核验说明不能超过500字'
       };
     }
 
@@ -127,7 +142,7 @@ export class DeviceVerificationService {
     if (verificationDescription.length > MAX_DESCRIPTION_LENGTH) {
       return {
         valid: false,
-        message: '故障描述不能超过500字'
+        message: '故障说明不能超过500字'
       };
     }
 
@@ -153,7 +168,7 @@ export class DeviceVerificationService {
       return ApiClient.createServiceUnavailableResponse<DeviceVerificationRecord>();
     }
 
-    const verifiedAt = new Date().toISOString();
+    const verifiedAt = DeviceVerificationService.normalizeText(form.verifiedAt);
     return DeviceVerificationService.submitVerificationToBackend(form, verifiedAt);
   }
 
@@ -175,7 +190,7 @@ export class DeviceVerificationService {
       return ApiClient.createServiceUnavailableResponse<DeviceVerificationFaultReportRecord>();
     }
 
-    const verifiedAt = new Date().toISOString();
+    const verifiedAt = FaultReportService.normalizeText(form.faultReport.occurredAt);
     return DeviceVerificationService.submitVerificationFaultReportToBackend(form, verifiedAt);
   }
 
