@@ -278,6 +278,7 @@ class OperationsControllerTests {
         String operatorToken = login("operator", "password");
         String operatorWorkerToken = login("operator", "password");
 
+        verifyPassword(operatorToken, "password");
         String response = mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records/fault-report", "device-local-0001")
                         .header("Authorization", "Bearer " + operatorToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -322,6 +323,7 @@ class OperationsControllerTests {
     void rejectsVerificationFaultReportWhenOnlyOneCoordinateIsProvided() throws Exception {
         String operatorToken = login("operator", "password");
 
+        verifyPassword(operatorToken, "password");
         mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records/fault-report", "device-local-0001")
                         .header("Authorization", "Bearer " + operatorToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -347,6 +349,7 @@ class OperationsControllerTests {
     void rejectsVerificationFaultReportWhenCoordinateIsOutOfRange() throws Exception {
         String operatorToken = login("operator", "password");
 
+        verifyPassword(operatorToken, "password");
         mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records/fault-report", "device-local-0001")
                         .header("Authorization", "Bearer " + operatorToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -380,6 +383,7 @@ class OperationsControllerTests {
                 "GENERAL",
                 "Power supply fluctuates under load.");
 
+        verifyPassword(operatorToken, "password");
         mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records/fault-report", "device-local-0001")
                         .header("Authorization", "Bearer " + operatorToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -756,6 +760,18 @@ class OperationsControllerTests {
                 .getResponse()
                 .getContentAsString(StandardCharsets.UTF_8);
         return objectMapper.readTree(response).path("data").path("repairTaskId").asText();
+    }
+
+    private void verifyPassword(String token, String password) throws Exception {
+        mockMvc.perform(post("/api/v1/auth/password-verification")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "password": "%s"
+                                }
+                                """.formatted(password)))
+                .andExpect(status().isOk());
     }
 
     private String login(String username, String password) throws Exception {

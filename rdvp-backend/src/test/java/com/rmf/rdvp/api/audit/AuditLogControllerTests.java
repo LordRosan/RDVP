@@ -153,6 +153,7 @@ class AuditLogControllerTests {
     void recordsFailedStandaloneDeviceVerificationForAuditReview() throws Exception {
         String operatorToken = login("operator", "password");
 
+        verifyPassword(operatorToken, "password");
         mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records", "device-local-0001")
                         .header("Authorization", "Bearer " + operatorToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -281,6 +282,7 @@ class AuditLogControllerTests {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("DEVICE_ACTIVE_FAULT_EXISTS"));
 
+        verifyPassword(operatorToken, "password");
         mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records/fault-report", "device-local-0001")
                         .header("Authorization", "Bearer " + operatorToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -479,6 +481,18 @@ class AuditLogControllerTests {
                                   "description": "Reinspection confirms stable operation."
                                 }
                                 """))
+                .andExpect(status().isOk());
+    }
+
+    private void verifyPassword(String token, String password) throws Exception {
+        mockMvc.perform(post("/api/v1/auth/password-verification")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "password": "%s"
+                                }
+                                """.formatted(password)))
                 .andExpect(status().isOk());
     }
 

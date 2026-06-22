@@ -372,6 +372,7 @@ class DeviceArchiveControllerTests {
     void createsDeviceVerificationRecordAndUpdatesArchiveTimestamp() throws Exception {
         String token = login("operator", "password");
 
+        verifyPassword(token, "password");
         mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records", "device-local-0001")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)

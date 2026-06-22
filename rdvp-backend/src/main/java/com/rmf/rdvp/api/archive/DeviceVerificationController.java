@@ -16,6 +16,7 @@ import com.rmf.rdvp.archive.DeviceVerificationResult;
 import com.rmf.rdvp.domain.common.BusinessException;
 import com.rmf.rdvp.domain.common.ErrorCode;
 import com.rmf.rdvp.identity.AuthenticatedUser;
+import com.rmf.rdvp.identity.AuthenticationService;
 import com.rmf.rdvp.operations.FaultSeverity;
 import com.rmf.rdvp.operations.FaultType;
 import com.rmf.rdvp.operations.OperationsService;
@@ -29,10 +30,15 @@ public class DeviceVerificationController {
 
     private final DeviceArchiveService archiveService;
     private final OperationsService operationsService;
+    private final AuthenticationService authenticationService;
 
-    public DeviceVerificationController(DeviceArchiveService archiveService, OperationsService operationsService) {
+    public DeviceVerificationController(
+            DeviceArchiveService archiveService,
+            OperationsService operationsService,
+            AuthenticationService authenticationService) {
         this.archiveService = archiveService;
         this.operationsService = operationsService;
+        this.authenticationService = authenticationService;
     }
 
     @PostMapping("/devices/{deviceId}/verification-records")
@@ -42,6 +48,7 @@ public class DeviceVerificationController {
             @Valid @RequestBody CreateDeviceVerificationRecordRequest requestBody,
             @AuthenticationPrincipal AuthenticatedUser user,
             HttpServletRequest request) {
+        authenticationService.consumeRecentPasswordVerification(user);
         var record = archiveService.createVerificationRecord(
                 deviceId,
                 parseResult(requestBody.result()),
@@ -59,6 +66,7 @@ public class DeviceVerificationController {
             @Valid @RequestBody CreateDeviceVerificationFaultReportRequest requestBody,
             @AuthenticationPrincipal AuthenticatedUser user,
             HttpServletRequest request) {
+        authenticationService.consumeRecentPasswordVerification(user);
         var result = operationsService.createVerificationWithFaultReport(
                 deviceId,
                 parseEnum(DeviceVerificationResult.class, requestBody.result(), "result"),

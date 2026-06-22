@@ -2,14 +2,13 @@ import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
 import { AppSectionTitle } from '../../components/AppSectionTitle';
 import { CenterTitleBar } from '../../components/CenterTitleBar';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
-import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { FaultSeverity, FaultType } from '../../models/operations/FaultModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
 import { VerificationResult } from '../../models/operations/VerificationModels';
-import { ApiClient } from '../../services/common/ApiClient';
 import { DeviceService } from '../../services/archive/DeviceService';
 import { DeviceVerificationService } from '../../services/operations/DeviceVerificationService';
 import { FaultReportService } from '../../services/operations/FaultReportService';
+import { AuthService } from '../../services/identity/AuthService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
@@ -25,11 +24,10 @@ struct DeviceVerification {
   @State severity: string = '';
   @State occurredAt: string = '';
   @State faultDescription: string = '';
-  @State sceneCondition: string = '';
+  @State password: string = '';
   @State message: string = '';
   @State messageTone: string = AppColors.Danger;
   @State normalizedDeviceCode: string = '-';
-  @State latestReportNo: string = '-';
   @State submitting: boolean = false;
   @State submitted: boolean = false;
 
@@ -47,7 +45,6 @@ struct DeviceVerification {
         Column({ space: 18 }) {
           this.ModeHeader()
           this.VerificationForm()
-          this.StatusPanel()
         }
         .alignItems(HorizontalAlign.Start)
         .justifyContent(FlexAlign.Start)
@@ -116,9 +113,8 @@ struct DeviceVerification {
       Column({ space: 16 }) {
         this.DeviceCodeField()
         this.ResultSelector()
-        this.DescriptionField()
-        if (this.requiresFaultReport()) {
-          this.FaultReportSection()
+        if (this.isNormalVerification()) {
+          this.DescriptionField()
         }
       }
       .padding({
@@ -133,6 +129,11 @@ struct DeviceVerification {
       .border({ width: 1, color: AppColors.Divider })
       .alignItems(HorizontalAlign.Start)
 
+      if (this.requiresFaultReport()) {
+        this.FaultReportSection()
+      }
+
+      this.PasswordSection()
       this.MessageText()
       this.ActionButton(this.getSubmitButtonLabel(), this.getSubmitIcon(), !this.submitting && !this.submitted,
         () => {
@@ -229,10 +230,10 @@ struct DeviceVerification {
   @Builder
   DescriptionField() {
     Column({ space: 10 }) {
-      this.FieldTitle('现场描述')
+      this.FieldTitle('核验描述')
 
       TextArea({
-        placeholder: '请输入现场描述',
+        placeholder: '请输入核验描述',
         text: this.description
       })
         .height(118)
@@ -264,17 +265,29 @@ struct DeviceVerification {
 
   @Builder
   FaultReportSection() {
-    Column({ space: 16 }) {
+    Column({ space: 12 }) {
       AppSectionTitle({
         title: '报修信息',
         subtitle: ''
       })
 
-      this.FaultTypeSelector()
-      this.SeveritySelector()
-      this.OccurredAtField()
-      this.FaultDescriptionField()
-      this.SceneConditionField()
+      Column({ space: 16 }) {
+        this.FaultTypeSelector()
+        this.SeveritySelector()
+        this.OccurredAtField()
+        this.FaultDescriptionField()
+      }
+      .padding({
+        left: 18,
+        right: 18,
+        top: 18,
+        bottom: 18
+      })
+      .width('100%')
+      .backgroundColor(AppColors.SurfaceRaised)
+      .borderRadius(AppRadii.Large)
+      .border({ width: 1, color: AppColors.Divider })
+      .alignItems(HorizontalAlign.Start)
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -521,48 +534,46 @@ struct DeviceVerification {
   }
 
   @Builder
-  SceneConditionField() {
-    Column({ space: 10 }) {
-      this.FieldTitle('备注')
-
-      TextArea({
-        placeholder: '请输入备注',
-        text: this.sceneCondition
-      })
-        .height(96)
-        .width('100%')
-        .fontSize(15)
-        .lineHeight(22)
-        .maxLength(500)
-        .backgroundColor(AppColors.FieldBackground)
-        .borderRadius(18)
-        .padding({
-          left: 14,
-          right: 14,
-          top: 12,
-          bottom: 12
-        })
-        .border({
-          width: 1,
-          color: AppColors.Border
-        })
-        .enabled(!this.submitting && !this.submitted)
-        .onChange((value: string) => {
-          this.sceneCondition = value;
-          this.markFormChanged();
-        })
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-  }
-
-  @Builder
   FieldTitle(title: string) {
     Text(title)
       .fontSize(17)
       .fontWeight(FontWeight.Bold)
       .fontColor(AppColors.TextPrimary)
       .maxLines(1)
+  }
+
+  @Builder
+  PasswordSection() {
+    Column({ space: 12 }) {
+      AppSectionTitle({
+        title: '密码',
+        subtitle: ''
+      })
+
+      TextInput({
+        placeholder: '请输入密码',
+        text: this.password
+      })
+        .type(InputType.Password)
+        .height(56)
+        .fontSize(16)
+        .backgroundColor(AppColors.FieldBackground)
+        .borderRadius(18)
+        .padding({ left: 16, right: 16 })
+        .border({ width: 1, color: AppColors.Border })
+        .enabled(!this.submitting && !this.submitted)
+        .onChange((value: string) => {
+          if (this.submitting || this.submitted) {
+            return;
+          }
+
+          this.password = value;
+          this.message = '';
+          this.messageTone = AppColors.Danger;
+        })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
@@ -602,63 +613,6 @@ struct DeviceVerification {
     })
   }
 
-  @Builder
-  StatusPanel() {
-    Column({ space: 12 }) {
-      AppSectionTitle({
-        title: '提交摘要',
-        subtitle: ''
-      })
-
-      Column() {
-        StatusInfoRow({ label: '标准设备编号', value: this.normalizedDeviceCode, tone: AppColors.TextSecondary })
-        this.CardDivider()
-        StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: AppColors.TextSecondary })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '核验结果',
-          value: this.getVerificationResultStatusText(),
-          tone: this.getSelectedResultTone()
-        })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '是否报修',
-          value: this.getFaultReportStatusText(),
-          tone: this.getFaultReportStatusTone()
-        })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '维修任务编号',
-          value: this.latestReportNo,
-          tone: AppColors.TextSecondary
-        })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '提交状态',
-          value: this.getSubmitStatusText(),
-          tone: this.getSubmitStatusTone()
-        })
-      }
-      .width('100%')
-      .backgroundColor(AppColors.SurfaceRaised)
-      .borderRadius(AppRadii.Large)
-      .border({ width: 1, color: AppColors.Divider })
-    }
-    .alignItems(HorizontalAlign.Start)
-    .width('100%')
-  }
-
-  @Builder
-  CardDivider() {
-    Divider()
-      .height(1)
-      .backgroundColor(AppColors.Divider)
-      .margin({
-        left: 18,
-        right: 18
-      })
-  }
-
   async submitVerification(): Promise<void> {
     if (this.submitting || this.submitted) {
       return;
@@ -669,8 +623,26 @@ struct DeviceVerification {
       this.normalizedDeviceCode = '-';
     }
 
+    const validation = this.validateCurrentForm();
+    if (!validation.valid) {
+      this.message = validation.message;
+      this.messageTone = AppColors.Danger;
+      return;
+    }
+
+    if (this.password.length === 0) {
+      this.message = '请输入密码';
+      this.messageTone = AppColors.Danger;
+      return;
+    }
+
     this.submitting = true;
     try {
+      const verified = await this.verifyPasswordForSubmit(this.password);
+      if (!verified) {
+        return;
+      }
+
       if (this.requiresFaultReport()) {
         await this.submitVerificationWithFaultReport();
       } else {
@@ -689,7 +661,7 @@ struct DeviceVerification {
     });
     if (!response.success) {
       const error = response.error;
-      this.message = error ? error.message : '核验提交失败';
+      this.message = error ? error.message : '核验功能暂不可用，请稍后重试';
       this.messageTone = AppColors.Danger;
       return;
     }
@@ -697,6 +669,7 @@ struct DeviceVerification {
     const recordId = response.data ? response.data.id : '';
     this.message = recordId.length > 0 ? `核验记录已提交：${recordId}` : '核验记录已提交';
     this.messageTone = AppColors.Success;
+    this.password = '';
     this.submitted = true;
   }
 
@@ -711,7 +684,7 @@ struct DeviceVerification {
       verification: {
         deviceCode: this.deviceCode,
         result: this.verificationResult as VerificationResult,
-        description: this.description
+        description: ''
       },
       faultReport: {
         deviceCode: this.deviceCode,
@@ -719,20 +692,19 @@ struct DeviceVerification {
         severity: this.severity as FaultSeverity,
         occurredAt: this.occurredAt,
         description: this.faultDescription,
-        sceneCondition: this.sceneCondition
+        sceneCondition: ''
       }
     });
     if (!response.success) {
       const error = response.error;
-      this.message = error ? error.message : '核验与报修提交失败';
+      this.message = error ? error.message : '核验功能暂不可用，请稍后重试';
       this.messageTone = AppColors.Danger;
       return;
     }
 
-    const reportNo = response.data ? response.data.faultReport.reportNo : '';
-    this.latestReportNo = reportNo.length > 0 ? reportNo : '-';
     this.message = '核验与报修已提交';
     this.messageTone = AppColors.Success;
+    this.password = '';
     this.submitted = true;
   }
 
@@ -760,6 +732,10 @@ struct DeviceVerification {
     return this.verificationResult === `${VerificationResult.Abnormal}`;
   }
 
+  isNormalVerification(): boolean {
+    return this.verificationResult === `${VerificationResult.Normal}`;
+  }
+
   getSubmitButtonLabel(): string {
     if (this.submitting) {
       return '提交中';
@@ -769,51 +745,11 @@ struct DeviceVerification {
       return '已提交';
     }
 
-    return this.requiresFaultReport() ? '提交核验与报修' : '提交核验';
+    return '提交报告';
   }
 
   getSubmitIcon(): Resource {
     return $r('sys.symbol.checkmark_circle');
-  }
-
-  getFaultReportStatusText(): string {
-    if (!this.requiresFaultReport()) {
-      return '否';
-    }
-
-    if (this.submitted) {
-      return '是';
-    }
-
-    return '是';
-  }
-
-  getFaultReportStatusTone(): string {
-    if (!this.requiresFaultReport()) {
-      return AppColors.TextSecondary;
-    }
-
-    return this.submitted ? AppColors.Success : AppColors.Warning;
-  }
-
-  getSubmitStatusText(): string {
-    if (this.submitting) {
-      return '提交中';
-    }
-    if (this.submitted) {
-      return '已提交';
-    }
-    return '未提交';
-  }
-
-  getSubmitStatusTone(): string {
-    if (this.submitting) {
-      return AppColors.Warning;
-    }
-    if (this.submitted) {
-      return AppColors.Success;
-    }
-    return AppColors.TextSecondary;
   }
 
   getSeverityTone(severity: FaultSeverity): string {
@@ -834,8 +770,59 @@ struct DeviceVerification {
   markFormChanged(): void {
     this.message = '';
     this.messageTone = AppColors.Danger;
-    this.latestReportNo = '-';
     this.submitted = false;
+  }
+
+  validateCurrentForm() {
+    if (this.requiresFaultReport()) {
+      return DeviceVerificationService.validateVerificationFaultReportForm({
+        verification: {
+          deviceCode: this.deviceCode,
+          result: this.verificationResult as VerificationResult,
+          description: '',
+          remark: ''
+        },
+        faultReport: {
+          deviceCode: this.deviceCode,
+          faultType: this.faultType as FaultType,
+          severity: this.severity as FaultSeverity,
+          occurredAt: this.occurredAt,
+          description: this.faultDescription,
+          sceneCondition: ''
+        }
+      });
+    }
+
+    return DeviceVerificationService.validateVerificationForm({
+      deviceCode: this.deviceCode,
+      result: this.verificationResult as VerificationResult,
+      description: this.description,
+      remark: ''
+    });
+  }
+
+  async verifyPasswordForSubmit(password: string): Promise<boolean> {
+    const response = await AuthService.verifyCurrentUserPasswordRemoteFirst(password);
+    if (response.success && response.data === true) {
+      return true;
+    }
+
+    const errorCode = response.error === undefined ? '' : `${response.error.code}`;
+    this.message = this.mapPasswordVerifyErrorMessage(errorCode);
+    this.messageTone = AppColors.Danger;
+    return false;
+  }
+
+  mapPasswordVerifyErrorMessage(errorCode: string): string {
+    if (errorCode === 'PASSWORD_REQUIRED') {
+      return '请输入密码';
+    }
+
+    if (errorCode === 'INVALID_CREDENTIALS' || errorCode === 'LOGIN_FAILED' || errorCode === 'UNAUTHORIZED') {
+      return '密码不正确，请重新输入';
+    }
+
+    return '核验功能暂不可用，请稍后重试';
   }
 
   showOccurredAtPicker(): void {

@@ -64,14 +64,14 @@ export class DeviceVerificationService {
     if (description.length === 0) {
       return {
         valid: false,
-        message: '请输入现场描述'
+        message: '请输入核验描述'
       };
     }
 
     if (description.length > MAX_DESCRIPTION_LENGTH) {
       return {
         valid: false,
-        message: '现场描述不能超过500字'
+        message: '核验描述不能超过500字'
       };
     }
 
@@ -90,9 +90,22 @@ export class DeviceVerificationService {
   }
 
   static validateVerificationFaultReportForm(form: DeviceVerificationFaultReportForm): DeviceVerificationValidationResult {
-    const verificationValidation = DeviceVerificationService.validateVerificationForm(form.verification);
-    if (!verificationValidation.valid) {
-      return verificationValidation;
+    const deviceCodeValidation = DeviceService.validateDeviceCodeQuery({
+      deviceCode: form.verification.deviceCode
+    });
+
+    if (!deviceCodeValidation.valid) {
+      return {
+        valid: false,
+        message: deviceCodeValidation.message
+      };
+    }
+
+    if (!DeviceVerificationService.isKnownResult(form.verification.result)) {
+      return {
+        valid: false,
+        message: '请选择核验结果'
+      };
     }
 
     if (form.verification.result === VerificationResult.Normal) {
@@ -107,6 +120,14 @@ export class DeviceVerificationService {
       return {
         valid: false,
         message: faultReportValidation.message
+      };
+    }
+
+    const verificationDescription = DeviceVerificationService.resolveVerificationDescription(form);
+    if (verificationDescription.length > MAX_DESCRIPTION_LENGTH) {
+      return {
+        valid: false,
+        message: '故障描述不能超过500字'
       };
     }
 
@@ -244,7 +265,7 @@ export class DeviceVerificationService {
       true,
       JSON.stringify({
         result: form.verification.result,
-        description: DeviceVerificationService.normalizeText(form.verification.description),
+        description: DeviceVerificationService.resolveVerificationDescription(form),
         remark: DeviceVerificationService.normalizeText(form.verification.remark ?? ''),
         verifiedAt,
         faultType: form.faultReport.faultType,
@@ -316,5 +337,14 @@ export class DeviceVerificationService {
   private static isKnownResult(result: VerificationResult): boolean {
     return result === VerificationResult.Normal ||
       result === VerificationResult.Abnormal;
+  }
+
+  private static resolveVerificationDescription(form: DeviceVerificationFaultReportForm): string {
+    const verificationDescription = DeviceVerificationService.normalizeText(form.verification.description);
+    if (verificationDescription.length > 0) {
+      return verificationDescription;
+    }
+
+    return FaultReportService.normalizeText(form.faultReport.description);
   }
 }

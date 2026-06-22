@@ -56,6 +56,39 @@ export default function abilityTest() {
       expect(result.valid).assertEqual(true);
     });
 
+    it('validatesNormalVerificationRequiresDescription', 0, () => {
+      const result = DeviceVerificationService.validateVerificationForm({
+        deviceCode: 'RDVP-DEVICE-0001',
+        result: VerificationResult.Normal,
+        description: '',
+        remark: ''
+      });
+
+      expect(result.valid).assertEqual(false);
+      expect(result.message).assertEqual('请输入核验描述');
+    });
+
+    it('validatesAbnormalVerificationUsesFaultDescription', 0, () => {
+      const result = DeviceVerificationService.validateVerificationFaultReportForm({
+        verification: {
+          deviceCode: 'RDVP-DEVICE-0001',
+          result: VerificationResult.Abnormal,
+          description: '',
+          remark: ''
+        },
+        faultReport: {
+          deviceCode: 'RDVP-DEVICE-0001',
+          faultType: FaultType.CommunicationFault,
+          severity: FaultSeverity.Severe,
+          occurredAt: '2026-05-28 16:30',
+          description: '设备通信链路异常。',
+          sceneCondition: ''
+        }
+      });
+
+      expect(result.valid).assertEqual(true);
+    });
+
     it('validatesFaultReportForm', 0, () => {
       const result = FaultReportService.validateFaultReportForm({
         deviceCode: 'RDVP-DEVICE-0001',

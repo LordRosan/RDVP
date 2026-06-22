@@ -198,6 +198,7 @@ class DashboardControllerTests {
                                 """))
                 .andExpect(status().isOk());
 
+        verifyPassword(operatorToken, "password");
         mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records", "device-local-0002")
                         .header("Authorization", "Bearer " + operatorToken)
                         .contentType(MediaType.APPLICATION_JSON)
