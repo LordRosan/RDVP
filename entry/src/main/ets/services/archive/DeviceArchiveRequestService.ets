@@ -53,10 +53,26 @@ export class DeviceArchiveRequestService {
       };
     }
 
+    if (model.length === 0) {
+      return {
+        valid: false,
+        message: '请输入设备型号',
+        normalizedDeviceCode
+      };
+    }
+
     if (model.length > 80) {
       return {
         valid: false,
         message: '设备型号不能超过80个字符',
+        normalizedDeviceCode
+      };
+    }
+
+    if (manufacturer.length === 0) {
+      return {
+        valid: false,
+        message: '请输入生产厂商',
         normalizedDeviceCode
       };
     }
@@ -69,10 +85,26 @@ export class DeviceArchiveRequestService {
       };
     }
 
+    if (locationAddress.length === 0) {
+      return {
+        valid: false,
+        message: '请输入设备位置',
+        normalizedDeviceCode
+      };
+    }
+
     if (locationAddress.length > 200) {
       return {
         valid: false,
         message: '设备位置不能超过200个字符',
+        normalizedDeviceCode
+      };
+    }
+
+    if (form.initiatedAt === undefined || form.initiatedAt.trim().length === 0) {
+      return {
+        valid: false,
+        message: '请选择添加时间',
         normalizedDeviceCode
       };
     }

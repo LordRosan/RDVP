@@ -1,17 +1,24 @@
-import { AppColors } from '../../styles/AppTheme';
-import { StatusInfoRow } from '../../components/StatusInfoRow';
+import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
+import { AppSectionTitle } from '../../components/AppSectionTitle';
+import { CenterTitleBar } from '../../components/CenterTitleBar';
+import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import {
   DeviceArchiveCreateRequestForm,
   DeviceArchiveRequestStatus
 } from '../../models/archive/DeviceArchiveRequestModels';
+import { ApiErrorCode } from '../../models/common/ApiModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
-import { ApiClient } from '../../services/common/ApiClient';
 import { DeviceArchiveRequestService } from '../../services/archive/DeviceArchiveRequestService';
-import { DeviceArchiveUpdateService } from '../../services/archive/DeviceArchiveUpdateService';
 import { DeviceService } from '../../services/archive/DeviceService';
-import { SessionStore } from '../../stores/SessionStore';
+import { ApiClient } from '../../services/common/ApiClient';
+import { AuthService } from '../../services/identity/AuthService';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
+
+interface CodeAvailabilityResult {
+  available: boolean;
+  reason?: string;
+}
 
 @Entry
 @Component
@@ -22,22 +29,23 @@ struct DeviceArchiveCreate {
   @State model: string = '';
   @State manufacturer: string = '';
   @State locationAddress: string = '';
+  @State createTime: string = '';
   @State reason: string = '';
+  @State password: string = '';
   @State message: string = '';
   @State messageTone: string = AppColors.Danger;
+  @State verifyMessage: string = '';
+  @State verifyMessageTone: string = AppColors.Danger;
+  @State verifyResult: CodeAvailabilityResult | undefined = undefined;
   @State normalizedDeviceCode: string = '-';
-  @State fieldCount: number = 0;
-  @State createTime: string = '';
   @State requestStatus: DeviceArchiveRequestStatus = DeviceArchiveRequestStatus.Draft;
+  @State verifying: boolean = false;
   @State submitting: boolean = false;
-  private prefilledDeviceCode: string = '';
 
   aboutToAppear(): void {
     if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveCenterDeviceArchiveCreateRequestSubmit)) {
       return;
     }
-
-    this.loadRouteParams();
   }
 
   build() {
@@ -47,16 +55,18 @@ struct DeviceArchiveCreate {
 
         Column({ space: 18 }) {
           this.ModeHeader()
-          this.CreateForm()
-          this.StatusPanel()
+          this.VerifySection()
+          if (this.isDeviceCodeAvailable()) {
+            this.CreateSection()
+          }
         }
         .alignItems(HorizontalAlign.Start)
         .justifyContent(FlexAlign.Start)
         .padding({
-          left: 24,
-          right: 24,
+          left: AppSpacing.PageX,
+          right: AppSpacing.PageX,
           top: 0,
-          bottom: 28
+          bottom: AppSpacing.PageBottom
         })
         .width('100%')
       }
@@ -77,87 +87,128 @@ struct DeviceArchiveCreate {
 
   @Builder
   PageTitleBar() {
-    Row({ space: 12 }) {
-      Button({ type: ButtonType.Circle, stateEffect: true }) {
-        SymbolGlyph($r('sys.symbol.chevron_backward'))
-          .fontSize(22)
-          .fontColor([AppColors.TextPrimary])
-      }
-      .width(44)
-      .height(44)
-      .backgroundColor(AppColors.Surface)
-      .border({ width: 1, color: AppColors.Divider })
-      .onClick(() => {
+    CenterTitleBar({
+      action: () => {
         this.backToArchiveCenter();
-      })
-    }
-    .width('100%')
-    .height(60)
-    .alignItems(VerticalAlign.Center)
-    .padding({ left: 24, right: 24 })
-    .backgroundColor(AppColors.PageBackground)
+      }
+    })
   }
 
   @Builder
   ModeHeader() {
-    Text('添加设备档案')
-      .fontSize(34)
-      .fontWeight(FontWeight.Bold)
-      .fontColor(AppColors.TextPrimary)
-      .maxLines(1)
-      .textOverflow({ overflow: TextOverflow.Ellipsis })
+    Column({ space: 5 }) {
+      Text('添加设备档案')
+        .fontSize(34)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+      Text('Device Archive Create')
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextTertiary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
     .width('100%')
-    .alignSelf(ItemAlign.Start)
-    .padding({ top: 0, bottom: 2 })
+    .alignItems(HorizontalAlign.Start)
+    .padding({ top: 12, bottom: 6 })
   }
 
   @Builder
-  CreateForm() {
-    Column({ space: 16 }) {
-      this.DeviceCodeField()
-      this.TextInputField('设备名称', '填写设备名称', this.deviceName, (value: string) => {
-        this.deviceName = value;
-        this.onFormChanged();
+  VerifySection() {
+    Column({ space: 12 }) {
+      AppSectionTitle({
+        title: '编号核验',
+        subtitle: ''
       })
-      this.TextInputField('设备型号', '填写设备型号', this.model, (value: string) => {
-        this.model = value;
-        this.onFormChanged();
+
+      Column({ space: 16 }) {
+        this.DeviceCodeVerifyField()
+        this.VerifyMessageText()
+        if (this.verifyResult !== undefined) {
+          this.VerifyResultRow()
+        }
+        this.ActionButton(this.getVerifyButtonLabel(), $r('sys.symbol.checkmark_circle'), this.canVerifyDeviceCode(),
+          AppColors.Primary, () => {
+            this.verifyDeviceCode();
+          })
+      }
+      .padding({
+        left: 18,
+        right: 18,
+        top: 18,
+        bottom: 18
       })
-      this.TextInputField('生产厂商', '填写生产厂商', this.manufacturer, (value: string) => {
-        this.manufacturer = value;
-        this.onFormChanged();
-      })
-      this.TextInputField('设备位置', '填写设备部署位置', this.locationAddress, (value: string) => {
-        this.locationAddress = value;
-        this.onFormChanged();
-      })
-      this.CreateTimeField()
-      this.ReasonField()
-      this.MessageText()
-      this.ActionButton(this.getSubmitButtonLabel(), $r('sys.symbol.plus_circle'),
-        !this.submitting && !this.isSubmitted(), () => {
-          this.submitCreateRequest();
-        })
+      .width('100%')
+      .backgroundColor(AppColors.SurfaceRaised)
+      .borderRadius(AppRadii.Large)
+      .border({ width: 1, color: AppColors.Divider })
+      .alignItems(HorizontalAlign.Start)
     }
-    .padding({
-      left: 18,
-      right: 18,
-      top: 18,
-      bottom: 18
-    })
     .width('100%')
-    .backgroundColor(AppColors.Surface)
-    .borderRadius(24)
     .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
-  DeviceCodeField() {
+  CreateSection() {
+    Column({ space: 12 }) {
+      AppSectionTitle({
+        title: '添加信息',
+        subtitle: ''
+      })
+
+      Column({ space: 16 }) {
+        this.TextInputField('设备名称', '请输入设备名称', this.deviceName, (value: string) => {
+          this.deviceName = value;
+          this.onFormChanged();
+        })
+        this.TextInputField('设备型号', '请输入设备型号', this.model, (value: string) => {
+          this.model = value;
+          this.onFormChanged();
+        })
+        this.TextInputField('生产厂商', '请输入生产厂商', this.manufacturer, (value: string) => {
+          this.manufacturer = value;
+          this.onFormChanged();
+        })
+        this.TextInputField('设备位置', '请输入设备位置', this.locationAddress, (value: string) => {
+          this.locationAddress = value;
+          this.onFormChanged();
+        })
+        this.CreateTimeField()
+        this.ReasonField()
+      }
+      .padding({
+        left: 18,
+        right: 18,
+        top: 18,
+        bottom: 18
+      })
+      .width('100%')
+      .backgroundColor(AppColors.SurfaceRaised)
+      .borderRadius(AppRadii.Large)
+      .border({ width: 1, color: AppColors.Divider })
+      .alignItems(HorizontalAlign.Start)
+
+      this.PasswordField()
+      this.MessageText()
+      this.ActionButton(this.getSubmitButtonLabel(), $r('sys.symbol.plus_circle'), this.canSubmitCreate(),
+        AppColors.Primary, () => {
+          this.submitCreateRequest();
+        })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  DeviceCodeVerifyField() {
     Column({ space: 10 }) {
       this.FieldTitle('设备编号')
 
       TextInput({
-        placeholder: '例如 RDVP-DEVICE-0100',
+        placeholder: 'RDVP-DEVICE-XXXX',
         text: this.deviceCode
       })
         .height(56)
@@ -166,14 +217,21 @@ struct DeviceArchiveCreate {
         .borderRadius(18)
         .padding({ left: 16, right: 16 })
         .border({ width: 1, color: AppColors.Border })
-        .enabled(!this.submitting && !this.isSubmitted() && this.prefilledDeviceCode.length === 0)
+        .enabled(!this.verifying && !this.submitting && !this.isSubmitted())
         .onChange((value: string) => {
+          if (this.verifying || this.submitting || this.isSubmitted()) {
+            return;
+          }
+
           this.deviceCode = value;
           this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(value);
           if (this.normalizedDeviceCode.length === 0) {
             this.normalizedDeviceCode = '-';
           }
-          this.onFormChanged();
+          this.verifyMessage = '';
+          this.verifyMessageTone = AppColors.Danger;
+          this.verifyResult = undefined;
+          this.clearCreateState();
         })
     }
     .width('100%')
@@ -197,6 +255,10 @@ struct DeviceArchiveCreate {
         .border({ width: 1, color: AppColors.Border })
         .enabled(!this.submitting && !this.isSubmitted())
         .onChange((input: string) => {
+          if (this.submitting || this.isSubmitted()) {
+            return;
+          }
+
           change(input);
         })
     }
@@ -214,7 +276,7 @@ struct DeviceArchiveCreate {
           .fontSize(20)
           .fontColor([AppColors.TextPrimary])
 
-        Text(this.createTime.length > 0 ? this.createTime : '选择添加时间')
+        Text(this.createTime.length > 0 ? this.createTime : '请选择添加时间')
           .fontSize(16)
           .fontColor(this.createTime.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
           .layoutWeight(1)
@@ -225,19 +287,19 @@ struct DeviceArchiveCreate {
           .fontSize(18)
           .fontColor([AppColors.TextSecondary])
       }
-        .height(56)
-        .width('100%')
-        .backgroundColor(AppColors.FieldBackground)
-        .borderRadius(18)
-        .padding({ left: 16, right: 16 })
-        .border({ width: 1, color: AppColors.Border })
-        .onClick(() => {
-          if (this.submitting || this.isSubmitted()) {
-            return;
-          }
+      .height(56)
+      .width('100%')
+      .backgroundColor(AppColors.FieldBackground)
+      .borderRadius(18)
+      .padding({ left: 16, right: 16 })
+      .border({ width: 1, color: AppColors.Border })
+      .onClick(() => {
+        if (this.submitting || this.isSubmitted()) {
+          return;
+        }
 
-          this.showCreateTimePicker();
-        })
+        this.showCreateTimePicker();
+      })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -249,10 +311,10 @@ struct DeviceArchiveCreate {
       this.FieldTitle('添加原因')
 
       TextArea({
-        placeholder: '填写设备来源、安装位置、投用依据或其他添加说明',
+        placeholder: '请输入添加原因',
         text: this.reason
       })
-        .height(118)
+        .height(126)
         .width('100%')
         .fontSize(15)
         .lineHeight(22)
@@ -268,6 +330,10 @@ struct DeviceArchiveCreate {
         .border({ width: 1, color: AppColors.Border })
         .enabled(!this.submitting && !this.isSubmitted())
         .onChange((value: string) => {
+          if (this.submitting || this.isSubmitted()) {
+            return;
+          }
+
           this.reason = value;
           this.onFormChanged();
         })
@@ -277,31 +343,57 @@ struct DeviceArchiveCreate {
   }
 
   @Builder
-  StatusPanel() {
+  PasswordField() {
     Column({ space: 10 }) {
-      Text('提交摘要')
-        .fontSize(22)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
+      this.FieldTitle('密码')
 
-      Column() {
-        StatusInfoRow({ label: '标准设备编号', value: this.normalizedDeviceCode, tone: AppColors.TextSecondary })
-        this.CardDivider()
-        StatusInfoRow({ label: '操作人', value: SessionStore.getCurrentOperatorName(), tone: AppColors.TextSecondary })
-        this.CardDivider()
-        StatusInfoRow({
-          label: '申请状态',
-          value: DeviceArchiveUpdateService.formatRequestStatus(this.requestStatus),
-          tone: this.getStatusTone(this.requestStatus)
+      TextInput({
+        placeholder: '请输入密码',
+        text: this.password
+      })
+        .type(InputType.Password)
+        .height(56)
+        .fontSize(16)
+        .backgroundColor(AppColors.FieldBackground)
+        .borderRadius(18)
+        .padding({ left: 16, right: 16 })
+        .border({ width: 1, color: AppColors.Border })
+        .enabled(!this.submitting && !this.isSubmitted())
+        .onChange((value: string) => {
+          if (this.submitting || this.isSubmitted()) {
+            return;
+          }
+
+          this.password = value;
+          this.message = '';
+          this.messageTone = AppColors.Danger;
         })
-      }
-      .width('100%')
-      .backgroundColor(AppColors.Surface)
-      .borderRadius(24)
     }
-    .alignItems(HorizontalAlign.Start)
     .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  VerifyResultRow() {
+    Row({ space: 10 }) {
+      SymbolGlyph(this.isDeviceCodeAvailable() ? $r('sys.symbol.checkmark_circle') : $r('sys.symbol.exclamationmark_circle'))
+        .fontSize(20)
+        .fontColor([this.isDeviceCodeAvailable() ? AppColors.Success : AppColors.Danger])
+
+      Text(this.isDeviceCodeAvailable() ? '设备编号可用' : '设备编号不可用')
+        .fontSize(15)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(this.isDeviceCodeAvailable() ? AppColors.Success : AppColors.Danger)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .layoutWeight(1)
+    }
+    .width('100%')
+    .height(44)
+    .padding({ left: 12, right: 12 })
+    .backgroundColor(this.isDeviceCodeAvailable() ? AppColors.SuccessSurface : AppColors.DangerSurface)
+    .borderRadius(AppRadii.Small)
+    .alignItems(VerticalAlign.Center)
   }
 
   @Builder
@@ -314,19 +406,27 @@ struct DeviceArchiveCreate {
   }
 
   @Builder
-  MessageText() {
-    if (this.message.length > 0) {
-      Text(this.message)
-        .fontSize(13)
-        .fontColor(this.messageTone)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
+  VerifyMessageText() {
+    if (this.verifyMessage.length > 0) {
+      InlineMessageSurface({
+        message: this.verifyMessage,
+        tone: this.verifyMessageTone
+      })
     }
   }
 
   @Builder
-  ActionButton(label: string, icon: Resource, enabled: boolean, action: () => void) {
+  MessageText() {
+    if (this.message.length > 0) {
+      InlineMessageSurface({
+        message: this.message,
+        tone: this.messageTone
+      })
+    }
+  }
+
+  @Builder
+  ActionButton(label: string, icon: Resource, enabled: boolean, color: string, action: () => void) {
     Button({ type: ButtonType.Capsule, stateEffect: enabled }) {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
@@ -345,23 +445,72 @@ struct DeviceArchiveCreate {
     }
     .height(54)
     .width('100%')
-    .backgroundColor(enabled ? AppColors.Primary : AppColors.Disabled)
+    .backgroundColor(enabled ? color : AppColors.Disabled)
     .enabled(enabled)
     .onClick(() => {
       action();
     })
   }
 
-  @Builder
-  CardDivider() {
-    Divider()
-      .height(1)
-      .backgroundColor(AppColors.Divider)
-      .margin({ left: 18, right: 18 })
+  async verifyDeviceCode(): Promise<void> {
+    if (this.verifying || this.submitting || this.isSubmitted()) {
+      return;
+    }
+
+    this.verifyMessage = '';
+    this.verifyMessageTone = AppColors.Danger;
+    this.verifyResult = undefined;
+    this.clearCreateState();
+    const validation = DeviceService.validateDeviceCodeQuery({
+      deviceCode: this.deviceCode
+    });
+    if (!validation.valid) {
+      this.verifyMessage = validation.message;
+      return;
+    }
+
+    const deviceCode = DeviceService.normalizeDeviceCode(this.deviceCode);
+    this.deviceCode = deviceCode;
+    this.normalizedDeviceCode = deviceCode;
+    if (!ApiClient.isConfigured()) {
+      this.verifyMessage = '核验功能暂不可用，请稍后重试';
+      return;
+    }
+
+    this.verifying = true;
+    try {
+      const code = encodeURIComponent(deviceCode);
+      const response = await ApiClient.request<CodeAvailabilityResult>(
+        `/api/v1/device-codes/${code}/availability`, 'GET', true);
+
+      if (!response.success) {
+        const error = response.error;
+        this.verifyMessage = this.normalizeVerifyErrorMessage(error === undefined ? '' : `${error.code}`);
+        return;
+      }
+
+      if (response.data === undefined) {
+        this.verifyMessage = '核验功能暂不可用，请稍后重试';
+        return;
+      }
+
+      this.verifyResult = response.data;
+      if (!response.data.available) {
+        this.verifyMessage = '设备编号不可用，请重新输入';
+      }
+    } finally {
+      this.verifying = false;
+    }
   }
 
   async submitCreateRequest(): Promise<void> {
     if (this.submitting || this.isSubmitted()) {
+      return;
+    }
+
+    if (!this.isDeviceCodeAvailable()) {
+      this.message = '请先完成编号核验';
+      this.messageTone = AppColors.Danger;
       return;
     }
 
@@ -372,7 +521,6 @@ struct DeviceArchiveCreate {
     if (this.normalizedDeviceCode.length === 0) {
       this.normalizedDeviceCode = '-';
     }
-    this.fieldCount = DeviceArchiveRequestService.countCreateFields(form);
 
     if (!validation.valid) {
       this.message = validation.message;
@@ -380,20 +528,45 @@ struct DeviceArchiveCreate {
       return;
     }
 
-    this.submitting = true;
-    const response = await DeviceArchiveRequestService.submitCreateRequestRemoteFirst(form);
-    this.submitting = false;
-
-    if (!response.success) {
-      const error = response.error;
-      this.message = error ? error.message : '添加申请提交失败';
+    if (this.password.length === 0) {
+      this.message = '请输入密码';
       this.messageTone = AppColors.Danger;
       return;
     }
 
-    this.requestStatus = response.data === undefined ? DeviceArchiveRequestStatus.PendingReview : response.data.status;
-    this.message = '添加申请已提交，等待管理员审核';
-    this.messageTone = AppColors.Success;
+    this.submitting = true;
+    try {
+      const verified = await this.verifyPasswordForSubmit(this.password);
+      if (!verified) {
+        return;
+      }
+
+      const response = await DeviceArchiveRequestService.submitCreateRequestRemoteFirst(form);
+      if (!response.success) {
+        this.message = '添加功能暂不可用，请稍后重试';
+        this.messageTone = AppColors.Danger;
+        return;
+      }
+
+      this.requestStatus = response.data === undefined ? DeviceArchiveRequestStatus.PendingReview : response.data.status;
+      this.password = '';
+      this.message = '提交成功，等待审核';
+      this.messageTone = AppColors.Success;
+    } finally {
+      this.submitting = false;
+    }
+  }
+
+  async verifyPasswordForSubmit(password: string): Promise<boolean> {
+    const response = await AuthService.verifyCurrentUserPasswordRemoteFirst(password);
+    if (response.success && response.data === true) {
+      return true;
+    }
+
+    const errorCode = response.error === undefined ? '' : `${response.error.code}`;
+    this.message = this.mapPasswordVerifyErrorMessage(errorCode);
+    this.messageTone = AppColors.Danger;
+    return false;
   }
 
   buildForm(): DeviceArchiveCreateRequestForm {
@@ -411,14 +584,42 @@ struct DeviceArchiveCreate {
   onFormChanged(): void {
     this.message = '';
     this.messageTone = AppColors.Danger;
-    this.fieldCount = DeviceArchiveRequestService.countCreateFields(this.buildForm());
     if (!this.isSubmitted()) {
       this.requestStatus = DeviceArchiveRequestStatus.Draft;
     }
   }
 
+  clearCreateState(): void {
+    this.deviceName = '';
+    this.model = '';
+    this.manufacturer = '';
+    this.locationAddress = '';
+    this.createTime = '';
+    this.reason = '';
+    this.password = '';
+    this.message = '';
+    this.messageTone = AppColors.Danger;
+    this.requestStatus = DeviceArchiveRequestStatus.Draft;
+  }
+
+  canVerifyDeviceCode(): boolean {
+    return !this.verifying && !this.submitting && !this.isSubmitted();
+  }
+
+  canSubmitCreate(): boolean {
+    return this.isDeviceCodeAvailable() && !this.submitting && !this.isSubmitted();
+  }
+
+  isDeviceCodeAvailable(): boolean {
+    return this.verifyResult !== undefined && this.verifyResult.available;
+  }
+
   isSubmitted(): boolean {
     return this.requestStatus === DeviceArchiveRequestStatus.PendingReview;
+  }
+
+  getVerifyButtonLabel(): string {
+    return this.verifying ? '核验中' : '核验';
   }
 
   getSubmitButtonLabel(): string {
@@ -433,36 +634,25 @@ struct DeviceArchiveCreate {
     return '提交申请';
   }
 
-  getStatusTone(status: DeviceArchiveRequestStatus): string {
-    switch (status) {
-      case DeviceArchiveRequestStatus.PendingReview:
-        return AppColors.Warning;
-      case DeviceArchiveRequestStatus.Approved:
-        return AppColors.Success;
-      case DeviceArchiveRequestStatus.Rejected:
-        return AppColors.Danger;
-      case DeviceArchiveRequestStatus.Withdrawn:
-        return AppColors.TextSecondary;
-      case DeviceArchiveRequestStatus.Draft:
-      default:
-        return AppColors.TextSecondary;
+  normalizeVerifyErrorMessage(errorCode: string): string {
+    if (errorCode === 'DEVICE_CODE_INVALID' || errorCode === ApiErrorCode.BadRequest ||
+      errorCode === ApiErrorCode.ValidationFailed) {
+      return '设备编号无效，请重新输入';
     }
+
+    return '核验功能暂不可用，请稍后重试';
   }
 
-  loadRouteParams(): void {
-    const router = this.getUIContext().getRouter();
-    const params = router.getParams() as Record<string, Object> | undefined;
-    if (params !== undefined) {
-      const code = params['deviceCode'] as string | undefined;
-      if (code !== undefined && code.trim().length > 0) {
-        this.prefilledDeviceCode = code.trim();
-        this.deviceCode = this.prefilledDeviceCode;
-        this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(this.deviceCode);
-        if (this.normalizedDeviceCode.length === 0) {
-          this.normalizedDeviceCode = '-';
-        }
-      }
+  mapPasswordVerifyErrorMessage(errorCode: string): string {
+    if (errorCode === 'PASSWORD_REQUIRED') {
+      return '请输入密码';
     }
+
+    if (errorCode === 'INVALID_CREDENTIALS' || errorCode === 'LOGIN_FAILED' || errorCode === 'UNAUTHORIZED') {
+      return '密码不正确，请重新输入';
+    }
+
+    return '添加功能暂不可用，请稍后重试';
   }
 
   showCreateTimePicker(): void {
@@ -530,5 +720,3 @@ struct DeviceArchiveCreate {
     }
   }
 }
-
-

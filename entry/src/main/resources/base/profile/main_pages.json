@@ -8,7 +8,6 @@
     "pages/OperationsCenter/OperationsCenter",
     "pages/ManagementCenter/ManagementCenter",
     "pages/ArchiveCenter/DeviceArchiveQuery",
-    "pages/ArchiveCenter/DeviceArchiveCodeVerify",
     "pages/ArchiveCenter/DeviceArchiveCreate",
     "pages/ArchiveCenter/DeviceArchiveDetail",
     "pages/ArchiveCenter/DeviceArchiveExport",

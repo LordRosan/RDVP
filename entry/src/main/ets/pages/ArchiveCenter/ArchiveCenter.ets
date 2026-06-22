@@ -249,7 +249,7 @@ struct ArchiveCenter {
 
     if (action.id === MainPageActionId.DeviceArchiveCreateRequest) {
       try {
-        this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveCodeVerify' });
+        this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveCreate' });
       } catch (err) {
         this.message = '添加设备档案不可用';
         this.messageTargetId = `${action.id}`;

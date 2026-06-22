@@ -69,5 +69,65 @@ export default function localUnitTest() {
       expect(result.valid).assertEqual(false);
       expect(result.message).assertEqual('请选择删除时间');
     });
+
+    it('validatesArchiveCreateRequiresTime', 0, () => {
+      const result = DeviceArchiveRequestService.validateCreateRequestForm({
+        deviceCode: 'RDVP-DEVICE-0002',
+        deviceName: 'B',
+        model: 'M',
+        manufacturer: 'Factory',
+        locationAddress: 'Lab',
+        reason: '新增设备',
+        initiatedAt: ''
+      });
+
+      expect(result.valid).assertEqual(false);
+      expect(result.message).assertEqual('请选择添加时间');
+    });
+
+    it('validatesArchiveCreateRequiresModel', 0, () => {
+      const result = DeviceArchiveRequestService.validateCreateRequestForm({
+        deviceCode: 'RDVP-DEVICE-0002',
+        deviceName: 'B',
+        model: '',
+        manufacturer: 'Factory',
+        locationAddress: 'Lab',
+        reason: '新增设备',
+        initiatedAt: '2026-06-22 10:00'
+      });
+
+      expect(result.valid).assertEqual(false);
+      expect(result.message).assertEqual('请输入设备型号');
+    });
+
+    it('validatesArchiveCreateRequiresManufacturer', 0, () => {
+      const result = DeviceArchiveRequestService.validateCreateRequestForm({
+        deviceCode: 'RDVP-DEVICE-0002',
+        deviceName: 'B',
+        model: 'M',
+        manufacturer: '',
+        locationAddress: 'Lab',
+        reason: '新增设备',
+        initiatedAt: '2026-06-22 10:00'
+      });
+
+      expect(result.valid).assertEqual(false);
+      expect(result.message).assertEqual('请输入生产厂商');
+    });
+
+    it('validatesArchiveCreateRequiresLocation', 0, () => {
+      const result = DeviceArchiveRequestService.validateCreateRequestForm({
+        deviceCode: 'RDVP-DEVICE-0002',
+        deviceName: 'B',
+        model: 'M',
+        manufacturer: 'Factory',
+        locationAddress: '',
+        reason: '新增设备',
+        initiatedAt: '2026-06-22 10:00'
+      });
+
+      expect(result.valid).assertEqual(false);
+      expect(result.message).assertEqual('请输入设备位置');
+    });
   });
 }
