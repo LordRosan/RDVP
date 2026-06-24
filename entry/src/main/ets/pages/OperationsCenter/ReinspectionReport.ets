@@ -278,7 +278,7 @@ struct ReinspectionReport {
   RecordForm() {
     Column({ space: 12 }) {
       AppSectionTitle({
-        title: '复检记录',
+        title: '复检报告',
         subtitle: ''
       })
 
@@ -572,13 +572,13 @@ struct ReinspectionReport {
 
     if (!response.success) {
       const error = response.error;
-      this.recordMessage = error ? error.message : '复检记录提交失败';
+      this.recordMessage = error ? error.message : '复检报告提交失败';
       this.recordMessageTone = AppColors.Danger;
       return;
     }
 
     const recordNo = response.data ? response.data.recordNo : '';
-    this.recordMessage = recordNo.length > 0 ? `复检记录已提交：${recordNo}` : '复检记录已提交';
+    this.recordMessage = recordNo.length > 0 ? `复检报告已提交：${recordNo}` : '复检报告已提交';
     this.recordMessageTone = AppColors.Success;
     this.submittedReinspectionTaskId = this.normalizedTaskId;
     this.allTaskItems = this.allTaskItems.filter((item: ReinspectionTaskSummary) => {

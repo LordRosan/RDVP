@@ -5,30 +5,37 @@ import { CenterTitleBar } from '../../components/CenterTitleBar';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { PermissionCode } from '../../models/identity/PermissionModels';
 import {
-  OperationReviewDecision,
-  OperationReviewItem,
-  OperationReviewRequestType
-} from '../../models/management/OperationReviewModels';
-import { OperationReviewService } from '../../services/management/OperationReviewService';
+  OperationsReviewDecision,
+  OperationsReviewItem,
+  OperationsReviewRequestType
+} from '../../models/management/OperationsReviewModels';
+import { OperationsReviewService } from '../../services/management/OperationsReviewService';
+import { AuthService } from '../../services/identity/AuthService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
 
-const OPERATION_REVIEW_TYPE_OPTIONS: string[] = ['全部类型', '维修报告', '复检记录'];
-const OPERATION_REVIEW_TYPE_VALUES: string[] = ['', 'REPAIR_REPORT', 'REINSPECTION_RECORD'];
+const OPERATIONS_REVIEW_TYPE_OPTIONS: string[] = ['全部类型', '核验报告', '报修报告', '维修报告', '复检报告'];
+const OPERATIONS_REVIEW_TYPE_VALUES: string[] = [
+  '',
+  'DEVICE_VERIFICATION_REPORT',
+  'FAULT_REPORT',
+  'REPAIR_REPORT',
+  'REINSPECTION_REPORT'
+];
 const REVIEW_FILTER_CONTROL_HEIGHT = 56;
 
 @Entry
 @Component
 struct OperationsReview {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
-  @State requests: OperationReviewItem[] = [];
+  @State requests: OperationsReviewItem[] = [];
   @State requestTypeFilterIndex: number = 0;
-  @State keyword: string = '';
   @State selectedRequestId: string = '';
   @State reviewDecision: string = '';
   @State reviewedAt: string = '';
   @State reviewComment: string = '';
+  @State password: string = '';
   @State message: string = '';
   @State messageTone: string = AppColors.Danger;
   @State refreshMessage: string = '';
@@ -121,13 +128,11 @@ struct OperationsReview {
   RequestListPanel() {
     Column({ space: 12 }) {
       AppSectionTitle({
-        title: '待审核运维列表',
+        title: '待审核操作列表',
         subtitle: ''
       })
 
       Column({ space: 14 }) {
-        this.SearchPanel()
-
         Column() {
           Filter({
             multiFilters: this.getRequestFilterParams(),
@@ -169,22 +174,6 @@ struct OperationsReview {
   }
 
   @Builder
-  SearchPanel() {
-    TextInput({ placeholder: '输入设备编号、设备名称或报告编号搜索', text: this.keyword })
-      .height(52)
-      .fontSize(15)
-      .backgroundColor(AppColors.FieldBackground)
-      .borderRadius(18)
-      .padding({ left: 16, right: 16 })
-      .border({ width: 1, color: AppColors.Border })
-      .enabled(!this.refreshing && !this.submitting)
-      .onChange((value: string) => {
-        this.keyword = value;
-      })
-      .width('100%')
-  }
-
-  @Builder
   RefreshButton() {
     Button({ type: ButtonType.Capsule, stateEffect: !this.refreshing && !this.submitting }) {
       Row({ space: 8 }) {
@@ -192,7 +181,7 @@ struct OperationsReview {
           .fontSize(20)
           .fontColor([AppColors.OnPrimary])
 
-        Text(this.refreshing ? '刷新中' : '刷新申请')
+        Text(this.refreshing ? '刷新中' : '刷新')
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
           .fontColor(AppColors.OnPrimary)
@@ -217,16 +206,16 @@ struct OperationsReview {
       if (this.requests.length === 0) {
         this.EmptyState()
       } else {
-        ForEach(this.requests, (item: OperationReviewItem) => {
+        ForEach(this.requests, (item: OperationsReviewItem) => {
           this.RequestItem(item)
-        }, (item: OperationReviewItem) => item.id)
+        }, (item: OperationsReviewItem) => item.id)
       }
     }
     .width('100%')
   }
 
   @Builder
-  RequestItem(item: OperationReviewItem) {
+  RequestItem(item: OperationsReviewItem) {
     Column({ space: 10 }) {
       Row({ space: 12 }) {
         Stack() {
@@ -237,48 +226,28 @@ struct OperationsReview {
         .width(44)
         .height(44)
         .borderRadius(22)
-        .backgroundColor(OperationReviewService.getRequestTypeTone(item.type))
+        .backgroundColor(OperationsReviewService.getRequestTypeTone(item.type))
 
         Column({ space: 4 }) {
-          Text(OperationReviewService.formatRequestType(item.type))
+          Text(OperationsReviewService.formatRequestType(item.type))
             .fontSize(17)
             .fontWeight(FontWeight.Bold)
             .fontColor(AppColors.TextPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-          Text(item.targetNo)
-            .fontSize(13)
-            .fontColor(AppColors.TextSecondary)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
-
-        Text(OperationReviewService.formatStatus(item.status))
-          .fontSize(13)
-          .fontColor(OperationReviewService.getStatusTone(item.status))
-          .fontWeight(FontWeight.Medium)
-          .maxLines(1)
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
 
-      this.RequestFieldRow('设备标准编号', item.deviceCode)
+      this.RequestFieldRow('设备编号', item.deviceCode)
       this.RequestFieldRow('设备名称', item.deviceName)
-      this.RequestFieldRow('申请人', this.getApplicantName(item))
+      this.RequestFieldRow('审核编号', item.id)
+      this.RequestFieldRow('操作人', this.getOperatorName(item))
       this.RequestFieldRow('提交时间', this.formatReviewTime(item.submittedAt))
-
-      if (item.summary.length > 0) {
-        Text(item.summary)
-          .fontSize(14)
-          .fontColor(AppColors.TextSecondary)
-          .lineHeight(20)
-          .maxLines(3)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .width('100%')
-      }
+      this.RequestFieldRow('原因', item.summary.length > 0 ? item.summary : '-')
 
       this.SelectRequestButton(item)
     }
@@ -307,14 +276,14 @@ struct OperationsReview {
         .fontColor(AppColors.TextSecondary)
         .textAlign(TextAlign.End)
         .width('58%')
-        .maxLines(1)
+        .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .width('100%')
   }
 
   @Builder
-  SelectRequestButton(item: OperationReviewItem) {
+  SelectRequestButton(item: OperationsReviewItem) {
     Button({ type: ButtonType.Capsule, stateEffect: true }) {
       Row({ space: 8 }) {
         SymbolGlyph(
@@ -322,7 +291,7 @@ struct OperationsReview {
           .fontSize(18)
           .fontColor([AppColors.OnPrimary])
 
-        Text(this.selectedRequestId === item.id ? '已选择' : '选择审核')
+        Text(this.selectedRequestId === item.id ? '已选择' : '选择')
           .fontSize(15)
           .fontWeight(FontWeight.Medium)
           .fontColor(AppColors.OnPrimary)
@@ -335,7 +304,7 @@ struct OperationsReview {
     .height(46)
     .width('100%')
     .backgroundColor(this.selectedRequestId === item.id ? AppColors.Success : AppColors.Primary)
-    .enabled(!this.submitting)
+    .enabled(this.hasSelectedRequest() && !this.submitting)
     .onClick(() => {
       this.selectRequest(item);
     })
@@ -345,7 +314,7 @@ struct OperationsReview {
   ReviewForm() {
     Column({ space: 12 }) {
       AppSectionTitle({
-        title: '审核结果',
+        title: '审核报告',
         subtitle: ''
       })
 
@@ -353,9 +322,10 @@ struct OperationsReview {
         this.RequestIdField()
         this.DecisionSelector()
         this.ReviewedAtField()
-        if (this.reviewDecision === `${OperationReviewDecision.Rejected}`) {
+        if (this.reviewDecision === `${OperationsReviewDecision.Rejected}`) {
           this.ReviewCommentField()
         }
+        this.PasswordField()
       }
       .padding({
         left: 18,
@@ -379,10 +349,10 @@ struct OperationsReview {
   @Builder
   RequestIdField() {
     Column({ space: 10 }) {
-      this.FieldTitle('运维审核编号')
+      this.FieldTitle('审核编号')
 
       TextInput({
-        placeholder: '请先选择待审核申请',
+        placeholder: '请选择待审核操作',
         text: this.selectedRequestId
       })
         .height(56)
@@ -401,11 +371,11 @@ struct OperationsReview {
   @Builder
   DecisionSelector() {
     Column({ space: 10 }) {
-      this.FieldTitle('审核结论')
+      this.FieldTitle('审核结果')
 
       Row({ space: 10 }) {
-        this.DecisionOption(OperationReviewDecision.Approved, $r('sys.symbol.checkmark_circle'))
-        this.DecisionOption(OperationReviewDecision.Rejected, $r('sys.symbol.xmark_circle'))
+        this.DecisionOption(OperationsReviewDecision.Approved, $r('sys.symbol.checkmark_circle'))
+        this.DecisionOption(OperationsReviewDecision.Rejected, $r('sys.symbol.xmark_circle'))
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
@@ -415,14 +385,14 @@ struct OperationsReview {
   }
 
   @Builder
-  DecisionOption(decision: OperationReviewDecision, icon: Resource) {
+  DecisionOption(decision: OperationsReviewDecision, icon: Resource) {
     Button({ type: ButtonType.Capsule, stateEffect: true }) {
       Row({ space: 6 }) {
         SymbolGlyph(icon)
           .fontSize(18)
           .fontColor([this.reviewDecision === `${decision}` ? AppColors.OnPrimary : AppColors.TextPrimary])
 
-        Text(OperationReviewService.formatDecision(decision))
+        Text(OperationsReviewService.formatDecision(decision))
           .fontSize(15)
           .fontWeight(FontWeight.Medium)
           .fontColor(this.reviewDecision === `${decision}` ? AppColors.OnPrimary : AppColors.TextPrimary)
@@ -458,7 +428,7 @@ struct OperationsReview {
           .fontSize(20)
           .fontColor([AppColors.TextPrimary])
 
-        Text(this.reviewedAt.length > 0 ? this.reviewedAt : '选择审核时间')
+        Text(this.reviewedAt.length > 0 ? this.reviewedAt : '请选择审核时间')
           .fontSize(16)
           .fontColor(this.reviewedAt.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
           .layoutWeight(1)
@@ -476,7 +446,7 @@ struct OperationsReview {
       .padding({ left: 16, right: 16 })
       .border({ width: 1, color: AppColors.Border })
       .onClick(() => {
-        if (this.submitting) {
+        if (!this.hasSelectedRequest() || this.submitting) {
           return;
         }
 
@@ -512,9 +482,41 @@ struct OperationsReview {
           bottom: 12
         })
         .border({ width: 1, color: AppColors.Border })
-        .enabled(!this.submitting)
+        .enabled(this.hasSelectedRequest() && !this.submitting)
         .onChange((value: string) => {
           this.reviewComment = value;
+          this.message = '';
+          this.messageTone = AppColors.Danger;
+          this.updateReviewReady();
+        })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  PasswordField() {
+    Column({ space: 10 }) {
+      this.FieldTitle('密码')
+
+      TextInput({
+        placeholder: '请输入密码',
+        text: this.password
+      })
+        .type(InputType.Password)
+        .height(56)
+        .fontSize(16)
+        .backgroundColor(AppColors.FieldBackground)
+        .borderRadius(18)
+        .padding({ left: 16, right: 16 })
+        .border({ width: 1, color: AppColors.Border })
+        .enabled(this.hasSelectedRequest() && !this.submitting)
+        .onChange((value: string) => {
+          if (!this.hasSelectedRequest() || this.submitting) {
+            return;
+          }
+
+          this.password = value;
           this.message = '';
           this.messageTone = AppColors.Danger;
           this.updateReviewReady();
@@ -537,7 +539,7 @@ struct OperationsReview {
       .borderRadius(32)
       .backgroundColor(AppColors.PrimarySurface)
 
-      Text('暂无待审核运维申请')
+      Text('暂无待审核操作')
         .fontSize(18)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
@@ -624,14 +626,13 @@ struct OperationsReview {
     }
 
     this.refreshing = true;
-    const response = await OperationReviewService.listPendingReviewsRemoteFirst(
-      OPERATION_REVIEW_TYPE_VALUES[this.requestTypeFilterIndex],
-      this.keyword);
+    const response = await OperationsReviewService.listPendingReviewsRemoteFirst(
+      OPERATIONS_REVIEW_TYPE_VALUES[this.requestTypeFilterIndex]);
     this.refreshing = false;
 
     if (!response.success) {
       const error = response.error;
-      this.refreshMessage = error ? error.message : '运维申请刷新失败';
+      this.refreshMessage = error ? error.message : '待审核操作刷新失败';
       this.refreshMessageTone = AppColors.Danger;
       return;
     }
@@ -650,11 +651,12 @@ struct OperationsReview {
     }
   }
 
-  selectRequest(item: OperationReviewItem): void {
+  selectRequest(item: OperationsReviewItem): void {
     this.selectedRequestId = item.id;
     this.reviewDecision = '';
     this.reviewComment = '';
     this.reviewedAt = '';
+    this.password = '';
     this.message = '';
     this.messageTone = AppColors.Danger;
     this.updateReviewReady();
@@ -662,16 +664,16 @@ struct OperationsReview {
 
   applyRequestFilterResults(filterResults: FilterResult[]): void {
     const result = filterResults.find((item: FilterResult) => {
-      return item.name === '申请类型';
+      return item.name === '操作类型';
     });
     this.requestTypeFilterIndex = result === undefined ? 0 :
-      this.normalizeFilterIndex(result.index, OPERATION_REVIEW_TYPE_VALUES.length);
+      this.normalizeFilterIndex(result.index, OPERATIONS_REVIEW_TYPE_VALUES.length);
     this.refreshRequests();
   }
 
   getRequestFilterParams(): FilterParams[] {
     return [
-      this.createFilterParams('申请类型', OPERATION_REVIEW_TYPE_OPTIONS)
+      this.createFilterParams('操作类型', OPERATIONS_REVIEW_TYPE_OPTIONS)
     ];
   }
 
@@ -702,26 +704,34 @@ struct OperationsReview {
     }
 
     this.submitting = true;
-    const decision = this.reviewDecision as OperationReviewDecision;
-    const response = await OperationReviewService.reviewOperationRequestRemoteFirst({
-      requestId: this.selectedRequestId,
-      decision,
-      reviewedAt: this.reviewedAt,
-      reviewComment: this.reviewComment
-    });
-    this.submitting = false;
+    try {
+      const verified = await this.verifyPasswordForSubmit(this.password);
+      if (!verified) {
+        return;
+      }
 
-    if (!response.success) {
-      const error = response.error;
-      this.message = error ? error.message : '运维审核失败';
-      this.messageTone = AppColors.Danger;
-      return;
+      const decision = this.reviewDecision as OperationsReviewDecision;
+      const response = await OperationsReviewService.reviewOperationsRequestRemoteFirst({
+        requestId: this.selectedRequestId,
+        decision,
+        reviewedAt: this.reviewedAt,
+        reviewComment: this.reviewComment
+      });
+
+      if (!response.success) {
+        const error = response.error;
+        this.message = error ? error.message : '运维审核失败';
+        this.messageTone = AppColors.Danger;
+        return;
+      }
+
+      this.message = `${OperationsReviewService.formatDecision(decision)}完成`;
+      this.messageTone = AppColors.Success;
+      this.clearReviewForm();
+      await this.refreshRequests(false);
+    } finally {
+      this.submitting = false;
     }
-
-    this.message = `${OperationReviewService.formatDecision(decision)}完成`;
-    this.messageTone = AppColors.Success;
-    this.clearReviewForm();
-    await this.refreshRequests(false);
   }
 
   canSubmitReview(): boolean {
@@ -736,25 +746,28 @@ struct OperationsReview {
     return this.selectedRequestId.length > 0 &&
       this.hasReviewDecision() &&
       this.reviewedAt.length > 0 &&
-      (this.reviewDecision !== `${OperationReviewDecision.Rejected}` || this.reviewComment.trim().length > 0);
+      this.password.length > 0 &&
+      (this.reviewDecision !== `${OperationsReviewDecision.Rejected}` || this.reviewComment.trim().length > 0);
   }
 
   fillSubmitValidationMessage(): void {
     if (this.refreshing) {
-      this.message = '申请列表正在刷新，请稍后提交审核结果';
+      this.message = '操作列表正在刷新，请稍后提交报告';
     } else if (!this.canReview()) {
       this.message = '当前账号无权审核运维申请';
     } else if (this.selectedRequestId.length === 0) {
-      this.message = '请先选择待审核申请';
+      this.message = '请选择待审核操作';
     } else if (!this.hasReviewDecision()) {
-      this.message = '请选择审核结论';
+      this.message = '请选择审核结果';
     } else if (this.reviewedAt.length === 0) {
       this.message = '请选择审核时间';
-    } else if (this.reviewDecision === `${OperationReviewDecision.Rejected}` &&
+    } else if (this.reviewDecision === `${OperationsReviewDecision.Rejected}` &&
       this.reviewComment.trim().length === 0) {
       this.message = '驳回申请时必须填写审核意见';
+    } else if (this.password.length === 0) {
+      this.message = '请输入密码';
     } else {
-      this.message = '当前不可提交审核结果';
+      this.message = '当前不可提交报告';
     }
     this.messageTone = AppColors.Danger;
   }
@@ -764,6 +777,7 @@ struct OperationsReview {
     this.reviewDecision = '';
     this.reviewComment = '';
     this.reviewedAt = '';
+    this.password = '';
     this.updateReviewReady();
   }
 
@@ -772,33 +786,65 @@ struct OperationsReview {
   }
 
   hasRequest(requestId: string): boolean {
-    return this.requests.some((item: OperationReviewItem) => {
+    return this.requests.some((item: OperationsReviewItem) => {
       return item.id === requestId;
     });
   }
 
-  hasReviewDecision(): boolean {
-    return this.reviewDecision === `${OperationReviewDecision.Approved}` ||
-      this.reviewDecision === `${OperationReviewDecision.Rejected}`;
+  hasSelectedRequest(): boolean {
+    return this.selectedRequestId.length > 0;
   }
 
-  getApplicantName(item: OperationReviewItem): string {
-    return item.applicantName === undefined || item.applicantName.length === 0 ? '-' : item.applicantName;
+  hasReviewDecision(): boolean {
+    return this.reviewDecision === `${OperationsReviewDecision.Approved}` ||
+      this.reviewDecision === `${OperationsReviewDecision.Rejected}`;
+  }
+
+  getOperatorName(item: OperationsReviewItem): string {
+    return item.operatorName.length === 0 ? '-' : item.operatorName;
   }
 
   getSubmitButtonLabel(): string {
-    return this.submitting ? '提交中' : '提交审核结果';
+    return this.submitting ? '提交中' : '提交报告';
   }
 
-  getDecisionTone(decision: OperationReviewDecision): string {
-    return decision === OperationReviewDecision.Approved ? AppColors.Success : AppColors.Danger;
+  async verifyPasswordForSubmit(password: string): Promise<boolean> {
+    const response = await AuthService.verifyCurrentUserPasswordRemoteFirst(password);
+    if (response.success && response.data === true) {
+      return true;
+    }
+
+    const errorCode = response.error === undefined ? '' : `${response.error.code}`;
+    this.message = this.mapPasswordVerifyErrorMessage(errorCode);
+    this.messageTone = AppColors.Danger;
+    return false;
   }
 
-  getRequestTypeIcon(type: OperationReviewRequestType): Resource {
+  mapPasswordVerifyErrorMessage(errorCode: string): string {
+    if (errorCode === 'PASSWORD_REQUIRED') {
+      return '请输入密码';
+    }
+
+    if (errorCode === 'INVALID_CREDENTIALS' || errorCode === 'LOGIN_FAILED' || errorCode === 'UNAUTHORIZED') {
+      return '密码不正确，请重新输入';
+    }
+
+    return '审核功能暂不可用，请稍后重试';
+  }
+
+  getDecisionTone(decision: OperationsReviewDecision): string {
+    return decision === OperationsReviewDecision.Approved ? AppColors.Success : AppColors.Danger;
+  }
+
+  getRequestTypeIcon(type: OperationsReviewRequestType): Resource {
     switch (type) {
-      case OperationReviewRequestType.ReinspectionRecord:
+      case OperationsReviewRequestType.ReinspectionReport:
         return $r('sys.symbol.doc_text_badge_checkmark');
-      case OperationReviewRequestType.RepairReport:
+      case OperationsReviewRequestType.DeviceVerificationReport:
+        return $r('sys.symbol.checkmark_shield');
+      case OperationsReviewRequestType.FaultReport:
+        return $r('sys.symbol.exclamationmark_triangle');
+      case OperationsReviewRequestType.RepairReport:
       default:
         return $r('sys.symbol.wrench_and_screwdriver');
     }
@@ -814,7 +860,7 @@ struct OperationsReview {
   }
 
   showReviewedAtPicker(): void {
-    if (this.submitting) {
+    if (!this.hasSelectedRequest() || this.submitting) {
       return;
     }
 

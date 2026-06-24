@@ -701,17 +701,17 @@ public class JdbcOperationsRepository implements OperationsRepository {
     }
 
     @Override
-    public void createOperationReviewRequest(OperationReviewRequestCreate create) {
+    public void createOperationsReviewRequest(OperationsReviewRequestCreate create) {
         jdbcTemplate.update(
                 """
-                        INSERT INTO operation_review_requests (
+                        INSERT INTO operations_review_requests (
                             id,
                             request_type,
                             target_id,
                             target_no,
                             fault_report_id,
                             device_id,
-                            applicant_id,
+                            operator_id,
                             summary,
                             status,
                             submitted_at,
@@ -724,7 +724,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                             :targetNo,
                             :faultReportId,
                             :deviceId,
-                            :applicantId,
+                            :operatorId,
                             :summary,
                             'PENDING_REVIEW',
                             :submittedAt,
@@ -739,25 +739,25 @@ public class JdbcOperationsRepository implements OperationsRepository {
                         .addValue("targetNo", create.targetNo())
                         .addValue("faultReportId", create.faultReportId())
                         .addValue("deviceId", create.deviceId())
-                        .addValue("applicantId", create.applicantId())
+                        .addValue("operatorId", create.operatorId())
                         .addValue("summary", create.summary())
                         .addValue("submittedAt", create.submittedAt())
                         .addValue("createdAt", create.createdAt()));
     }
 
     @Override
-    public Optional<OperationReviewRequest> findOperationReviewRequestById(String id) {
-        List<OperationReviewRequest> results = jdbcTemplate.query(
-                operationReviewSelectSql() + " WHERE rr.id = :id",
+    public Optional<OperationsReviewRequest> findOperationsReviewRequestById(String id) {
+        List<OperationsReviewRequest> results = jdbcTemplate.query(
+                operationsReviewSelectSql() + " WHERE rr.id = :id",
                 Map.of("id", id),
-                this::mapOperationReviewRequest);
+                this::mapOperationsReviewRequest);
         return results.stream().findFirst();
     }
 
     @Override
-    public OperationReviewRequestPage listOperationReviewRequests(
-            OperationReviewRequestStatus status,
-            OperationReviewRequestType type,
+    public OperationsReviewRequestPage listOperationsReviewRequests(
+            OperationsReviewRequestStatus status,
+            OperationsReviewRequestType type,
             String keyword,
             int limit,
             int offset) {
@@ -779,38 +779,38 @@ public class JdbcOperationsRepository implements OperationsRepository {
         }
 
         String where = conditions.isEmpty() ? "" : " WHERE " + String.join(" AND ", conditions);
-        List<OperationReviewRequest> items = jdbcTemplate.query(
-                operationReviewSelectSql()
+        List<OperationsReviewRequest> items = jdbcTemplate.query(
+                operationsReviewSelectSql()
                         + where
                         + " ORDER BY rr.submitted_at DESC"
                         + " LIMIT :limit OFFSET :offset",
                 parameters,
-                this::mapOperationReviewRequest);
+                this::mapOperationsReviewRequest);
         Long total = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM operation_review_requests rr
+                        FROM operations_review_requests rr
                         JOIN devices d ON d.id = rr.device_id
-                        LEFT JOIN users applicant ON applicant.id = rr.applicant_id
+                        LEFT JOIN users op ON op.id = rr.operator_id
                         """
                         + where,
                 parameters,
                 Long.class);
-        return new OperationReviewRequestPage(items, total == null ? 0 : total);
+        return new OperationsReviewRequestPage(items, total == null ? 0 : total);
     }
 
     @Override
-    public boolean markOperationReviewRequestReviewed(
+    public boolean markOperationsReviewRequestReviewed(
             String id,
-            OperationReviewRequestStatus status,
-            String reviewerId,
+            OperationsReviewRequestStatus status,
+            String reviewOperatorId,
             String reviewComment,
             OffsetDateTime reviewedAt) {
         int updated = jdbcTemplate.update(
                 """
-                        UPDATE operation_review_requests
+                        UPDATE operations_review_requests
                         SET status = :status,
-                            reviewer_id = :reviewerId,
+                            review_operator_id = :reviewOperatorId,
                             review_comment = :reviewComment,
                             reviewed_at = :reviewedAt,
                             updated_at = :reviewedAt
@@ -820,18 +820,18 @@ public class JdbcOperationsRepository implements OperationsRepository {
                 new MapSqlParameterSource()
                         .addValue("id", id)
                         .addValue("status", status.name())
-                        .addValue("reviewerId", reviewerId)
+                        .addValue("reviewOperatorId", reviewOperatorId)
                         .addValue("reviewComment", reviewComment)
                         .addValue("reviewedAt", reviewedAt));
         return updated > 0;
     }
 
     @Override
-    public long countPendingOperationReviews() {
+    public long countPendingOperationsReviews() {
         Long count = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM operation_review_requests
+                        FROM operations_review_requests
                         WHERE status = 'PENDING_REVIEW'
                         """,
                 Map.of(),
@@ -840,11 +840,11 @@ public class JdbcOperationsRepository implements OperationsRepository {
     }
 
     @Override
-    public long countReviewedOperationReviews() {
+    public long countReviewedOperationsReviews() {
         Long count = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM operation_review_requests
+                        FROM operations_review_requests
                         WHERE status IN ('APPROVED', 'REJECTED')
                         """,
                 Map.of(),
@@ -852,7 +852,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
         return count == null ? 0 : count;
     }
 
-    private String operationReviewSelectSql() {
+    private String operationsReviewSelectSql() {
         return """
                 SELECT
                     rr.id,
@@ -863,36 +863,36 @@ public class JdbcOperationsRepository implements OperationsRepository {
                     rr.device_id,
                     d.device_code,
                     d.name AS device_name,
-                    rr.applicant_id,
-                    COALESCE(applicant.display_name, applicant.username, rr.applicant_id) AS applicant_name,
+                    rr.operator_id,
+                    COALESCE(op.display_name, op.username, rr.operator_id) AS operator_name,
                     rr.summary,
                     rr.status,
                     rr.submitted_at,
-                    rr.reviewer_id,
+                    rr.review_operator_id,
                     rr.review_comment,
                     rr.reviewed_at
-                FROM operation_review_requests rr
+                FROM operations_review_requests rr
                 JOIN devices d ON d.id = rr.device_id
-                LEFT JOIN users applicant ON applicant.id = rr.applicant_id
+                LEFT JOIN users op ON op.id = rr.operator_id
                 """;
     }
 
-    private OperationReviewRequest mapOperationReviewRequest(ResultSet resultSet, int rowNumber) throws SQLException {
-        return new OperationReviewRequest(
+    private OperationsReviewRequest mapOperationsReviewRequest(ResultSet resultSet, int rowNumber) throws SQLException {
+        return new OperationsReviewRequest(
                 resultSet.getString("id"),
-                OperationReviewRequestType.valueOf(resultSet.getString("request_type")),
+                OperationsReviewRequestType.valueOf(resultSet.getString("request_type")),
                 resultSet.getString("target_id"),
                 resultSet.getString("target_no"),
                 resultSet.getString("fault_report_id"),
                 resultSet.getString("device_id"),
                 resultSet.getString("device_code"),
                 resultSet.getString("device_name"),
-                resultSet.getString("applicant_id"),
-                resultSet.getString("applicant_name"),
+                resultSet.getString("operator_id"),
+                resultSet.getString("operator_name"),
                 resultSet.getString("summary"),
-                OperationReviewRequestStatus.valueOf(resultSet.getString("status")),
+                OperationsReviewRequestStatus.valueOf(resultSet.getString("status")),
                 resultSet.getObject("submitted_at", OffsetDateTime.class),
-                resultSet.getString("reviewer_id"),
+                resultSet.getString("review_operator_id"),
                 resultSet.getString("review_comment"),
                 resultSet.getObject("reviewed_at", OffsetDateTime.class));
     }

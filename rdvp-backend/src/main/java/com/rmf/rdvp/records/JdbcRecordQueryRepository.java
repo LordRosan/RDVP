@@ -115,15 +115,15 @@ public class JdbcRecordQueryRepository implements RecordQueryRepository {
                     orr.request_type AS record_type,
                     d.device_code AS device_code,
                     orr.target_no AS task_no,
-                    COALESCE(reviewer.username, applicant.username, orr.reviewer_id, orr.applicant_id) AS operator_name,
+                    COALESCE(review_op.username, op.username, orr.review_operator_id, orr.operator_id) AS operator_name,
                     orr.reviewed_at AS occurred_at,
                     orr.status AS business_status,
                     orr.review_comment AS description,
                     'REVIEW' AS record_category
-                FROM operation_review_requests orr
+                FROM operations_review_requests orr
                 LEFT JOIN devices d ON d.id = orr.device_id
-                LEFT JOIN users applicant ON applicant.id = orr.applicant_id
-                LEFT JOIN users reviewer ON reviewer.id = orr.reviewer_id
+                LEFT JOIN users op ON op.id = orr.operator_id
+                LEFT JOIN users review_op ON review_op.id = orr.review_operator_id
                 """
                 + operationWhere;
 
@@ -288,7 +288,9 @@ public class JdbcRecordQueryRepository implements RecordQueryRepository {
         {
             List<String> conditions = new ArrayList<>(keywordConditions.stream()
                     .map(c -> c.replace("d.", "rid.")).toList());
-            String filter = (type == null || type.isBlank() || "REINSPECTION_RECORD".equalsIgnoreCase(type))
+            String filter = (type == null || type.isBlank()
+                    || "REINSPECTION_REPORT".equalsIgnoreCase(type)
+                    || "REINSPECTION_RECORD".equalsIgnoreCase(type))
                     ? ""
                     : "1=0";
             if (!filter.isBlank()) {
@@ -297,7 +299,7 @@ public class JdbcRecordQueryRepository implements RecordQueryRepository {
             String where = conditions.isEmpty() ? "" : " WHERE " + String.join(" AND ", conditions);
             sql.append("""
                     SELECT
-                        'REINSPECTION_RECORD' AS record_type,
+                        'REINSPECTION_REPORT' AS record_type,
                         rid.device_code,
                         ri.reinspection_record_no AS task_no,
                         COALESCE(reinspector.username, ri.reinspector_id) AS operator_name,

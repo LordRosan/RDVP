@@ -177,7 +177,7 @@ export class ReinspectionService {
         success: false,
         error: {
           code: 'REINSPECTION_RECORD_RESPONSE_INVALID',
-          message: '复检记录响应无效'
+          message: '复检报告响应无效'
         },
         requestId: response.requestId,
         timestamp: response.timestamp

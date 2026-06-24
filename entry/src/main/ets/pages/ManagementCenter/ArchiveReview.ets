@@ -11,6 +11,7 @@ import {
 } from '../../models/archive/DeviceArchiveReviewModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
 import { DeviceArchiveReviewService } from '../../services/management/DeviceArchiveReviewService';
+import { AuthService } from '../../services/identity/AuthService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
@@ -30,6 +31,7 @@ struct DeviceArchiveReview {
   @State reviewDecision: string = '';
   @State reviewedAt: string = '';
   @State reviewComment: string = '';
+  @State password: string = '';
   @State message: string = '';
   @State messageTone: string = AppColors.Danger;
   @State refreshMessage: string = '';
@@ -122,7 +124,7 @@ struct DeviceArchiveReview {
   RequestListPanel() {
     Column({ space: 12 }) {
       AppSectionTitle({
-        title: '审核申请列表',
+        title: '待审核操作列表',
         subtitle: ''
       })
 
@@ -175,7 +177,7 @@ struct DeviceArchiveReview {
           .fontSize(20)
           .fontColor([AppColors.OnPrimary])
 
-        Text(this.refreshing ? '刷新中' : '刷新申请')
+        Text(this.refreshing ? '刷新中' : '刷新')
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
           .fontColor(AppColors.OnPrimary)
@@ -229,39 +231,18 @@ struct DeviceArchiveReview {
             .fontColor(AppColors.TextPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-          Text(item.deviceCode)
-            .fontSize(13)
-            .fontColor(AppColors.TextSecondary)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
-
-        Text(DeviceArchiveReviewService.formatStatus(item.status))
-          .fontSize(13)
-          .fontColor(DeviceArchiveReviewService.getStatusTone(item.status))
-          .fontWeight(FontWeight.Medium)
-          .maxLines(1)
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
 
-      this.RequestTimeRow('设备标准编号', item.deviceCode)
-      this.RequestTimeRow('标准审核编号', item.id)
-      this.RequestTimeRow('申请人', this.getApplicantName(item))
+      this.RequestTimeRow('设备编号', item.deviceCode)
+      this.RequestTimeRow('审核编号', item.id)
+      this.RequestTimeRow('操作人', this.getOperatorName(item))
       this.RequestTimeRow('提交时间', this.formatReviewTime(item.submittedAt))
-
-      Row() {
-        Text(item.reason)
-          .fontSize(14)
-          .fontColor(AppColors.TextSecondary)
-          .lineHeight(20)
-          .maxLines(2)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      }
-      .width('100%')
+      this.RequestTimeRow('原因', item.reason)
 
       Column({ space: 8 }) {
         ForEach(item.changes, (change: DeviceArchiveRequestFieldDiff) => {
@@ -297,7 +278,7 @@ struct DeviceArchiveReview {
         .fontColor(AppColors.TextSecondary)
         .textAlign(TextAlign.End)
         .width('58%')
-        .maxLines(1)
+        .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .width('100%')
@@ -339,7 +320,7 @@ struct DeviceArchiveReview {
           .fontSize(18)
           .fontColor([AppColors.OnPrimary])
 
-        Text(this.selectedRequestId === item.id ? '已选择' : '选择审核')
+        Text(this.selectedRequestId === item.id ? '已选择' : '选择')
           .fontSize(15)
           .fontWeight(FontWeight.Medium)
           .fontColor(AppColors.OnPrimary)
@@ -362,7 +343,7 @@ struct DeviceArchiveReview {
   ReviewForm() {
     Column({ space: 12 }) {
       AppSectionTitle({
-        title: '审核结果',
+        title: '审核报告',
         subtitle: ''
       })
 
@@ -373,6 +354,7 @@ struct DeviceArchiveReview {
         if (this.reviewDecision === `${DeviceArchiveReviewDecision.Rejected}`) {
           this.ReviewCommentField()
         }
+        this.PasswordField()
       }
       .padding({
         left: 18,
@@ -396,10 +378,10 @@ struct DeviceArchiveReview {
   @Builder
   RequestIdField() {
     Column({ space: 10 }) {
-      this.FieldTitle('标准审核编号')
+      this.FieldTitle('审核编号')
 
       TextInput({
-        placeholder: '请先选择待审核申请',
+        placeholder: '请选择待审核操作',
         text: this.selectedRequestId
       })
         .height(56)
@@ -418,7 +400,7 @@ struct DeviceArchiveReview {
   @Builder
   DecisionSelector() {
     Column({ space: 10 }) {
-      this.FieldTitle('审核结论')
+      this.FieldTitle('审核结果')
 
       Row({ space: 10 }) {
         this.DecisionOption(DeviceArchiveReviewDecision.Approved, $r('sys.symbol.checkmark_circle'))
@@ -456,7 +438,7 @@ struct DeviceArchiveReview {
       width: 1,
       color: this.reviewDecision === `${decision}` ? this.getDecisionTone(decision) : AppColors.Border
     })
-    .enabled(!this.submitting)
+    .enabled(this.hasSelectedRequest() && !this.submitting)
     .onClick(() => {
       this.reviewDecision = `${decision}`;
       this.message = '';
@@ -475,7 +457,7 @@ struct DeviceArchiveReview {
           .fontSize(20)
           .fontColor([AppColors.TextPrimary])
 
-        Text(this.reviewedAt.length > 0 ? this.reviewedAt : '选择审核时间')
+        Text(this.reviewedAt.length > 0 ? this.reviewedAt : '请选择审核时间')
           .fontSize(16)
           .fontColor(this.reviewedAt.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
           .layoutWeight(1)
@@ -493,7 +475,7 @@ struct DeviceArchiveReview {
       .padding({ left: 16, right: 16 })
       .border({ width: 1, color: AppColors.Border })
       .onClick(() => {
-        if (this.submitting) {
+        if (!this.hasSelectedRequest() || this.submitting) {
           return;
         }
 
@@ -529,9 +511,41 @@ struct DeviceArchiveReview {
           bottom: 12
         })
         .border({ width: 1, color: AppColors.Border })
-        .enabled(!this.submitting)
+        .enabled(this.hasSelectedRequest() && !this.submitting)
         .onChange((value: string) => {
           this.reviewComment = value;
+          this.message = '';
+          this.messageTone = AppColors.Danger;
+          this.updateReviewReady();
+        })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  PasswordField() {
+    Column({ space: 10 }) {
+      this.FieldTitle('密码')
+
+      TextInput({
+        placeholder: '请输入密码',
+        text: this.password
+      })
+        .type(InputType.Password)
+        .height(56)
+        .fontSize(16)
+        .backgroundColor(AppColors.FieldBackground)
+        .borderRadius(18)
+        .padding({ left: 16, right: 16 })
+        .border({ width: 1, color: AppColors.Border })
+        .enabled(this.hasSelectedRequest() && !this.submitting)
+        .onChange((value: string) => {
+          if (!this.hasSelectedRequest() || this.submitting) {
+            return;
+          }
+
+          this.password = value;
           this.message = '';
           this.messageTone = AppColors.Danger;
           this.updateReviewReady();
@@ -554,7 +568,7 @@ struct DeviceArchiveReview {
       .borderRadius(32)
       .backgroundColor(AppColors.PrimarySurface)
 
-      Text('暂无待审核申请')
+      Text('暂无待审核操作')
         .fontSize(18)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
@@ -646,7 +660,7 @@ struct DeviceArchiveReview {
 
     if (!response.success) {
       const error = response.error;
-      this.refreshMessage = error ? error.message : '档案申请刷新失败';
+      this.refreshMessage = error ? error.message : '待审核操作刷新失败';
       this.refreshMessageTone = AppColors.Danger;
       return;
     }
@@ -671,6 +685,7 @@ struct DeviceArchiveReview {
     this.reviewDecision = '';
     this.reviewComment = '';
     this.reviewedAt = '';
+    this.password = '';
     this.message = '';
     this.messageTone = AppColors.Danger;
     this.updateReviewReady();
@@ -685,7 +700,7 @@ struct DeviceArchiveReview {
 
   applyRequestFilterResults(filterResults: FilterResult[]): void {
     const result = filterResults.find((item: FilterResult) => {
-      return item.name === '申请类型';
+      return item.name === '操作类型';
     });
     this.requestTypeFilterIndex = result === undefined ? 0 :
       this.normalizeFilterIndex(result.index, REVIEW_TYPE_FILTER_VALUES.length);
@@ -694,7 +709,7 @@ struct DeviceArchiveReview {
 
   getRequestFilterParams(): FilterParams[] {
     return [
-      this.createFilterParams('申请类型', REVIEW_TYPE_FILTER_OPTIONS)
+      this.createFilterParams('操作类型', REVIEW_TYPE_FILTER_OPTIONS)
     ];
   }
 
@@ -725,26 +740,34 @@ struct DeviceArchiveReview {
     }
 
     this.submitting = true;
-    const decision = this.reviewDecision as DeviceArchiveReviewDecision;
-    const response = await DeviceArchiveReviewService.reviewArchiveRequestRemoteFirst({
-      requestId: this.selectedRequestId,
-      decision,
-      reviewedAt: this.reviewedAt,
-      reviewComment: this.reviewComment
-    });
-    this.submitting = false;
+    try {
+      const verified = await this.verifyPasswordForSubmit(this.password);
+      if (!verified) {
+        return;
+      }
 
-    if (!response.success) {
-      const error = response.error;
-      this.message = error ? error.message : '档案审核失败';
-      this.messageTone = AppColors.Danger;
-      return;
+      const decision = this.reviewDecision as DeviceArchiveReviewDecision;
+      const response = await DeviceArchiveReviewService.reviewArchiveRequestRemoteFirst({
+        requestId: this.selectedRequestId,
+        decision,
+        reviewedAt: this.reviewedAt,
+        reviewComment: this.reviewComment
+      });
+
+      if (!response.success) {
+        const error = response.error;
+        this.message = error ? error.message : '档案审核失败';
+        this.messageTone = AppColors.Danger;
+        return;
+      }
+
+      this.message = `${DeviceArchiveReviewService.formatDecision(decision)}完成`;
+      this.messageTone = AppColors.Success;
+      this.clearReviewForm();
+      await this.refreshRequests(false);
+    } finally {
+      this.submitting = false;
     }
-
-    this.message = `${DeviceArchiveReviewService.formatDecision(decision)}完成`;
-    this.messageTone = AppColors.Success;
-    this.clearReviewForm();
-    await this.refreshRequests(false);
   }
 
   canSubmitReview(): boolean {
@@ -759,25 +782,28 @@ struct DeviceArchiveReview {
     return this.selectedRequestId.length > 0 &&
       this.hasReviewDecision() &&
       this.reviewedAt.length > 0 &&
+      this.password.length > 0 &&
       (this.reviewDecision !== `${DeviceArchiveReviewDecision.Rejected}` || this.reviewComment.trim().length > 0);
   }
 
   fillSubmitValidationMessage(): void {
     if (this.refreshing) {
-      this.message = '申请列表正在刷新，请稍后提交审核结果';
+      this.message = '操作列表正在刷新，请稍后提交报告';
     } else if (!this.canReview()) {
       this.message = '当前账号无权审核设备档案申请';
     } else if (this.selectedRequestId.length === 0) {
-      this.message = '请先选择待审核申请';
+      this.message = '请选择待审核操作';
     } else if (!this.hasReviewDecision()) {
-      this.message = '请选择审核结论';
+      this.message = '请选择审核结果';
     } else if (this.reviewedAt.length === 0) {
       this.message = '请选择审核时间';
     } else if (this.reviewDecision === `${DeviceArchiveReviewDecision.Rejected}` &&
       this.reviewComment.trim().length === 0) {
       this.message = '驳回申请时必须填写审核意见';
+    } else if (this.password.length === 0) {
+      this.message = '请输入密码';
     } else {
-      this.message = '当前不可提交审核结果';
+      this.message = '当前不可提交报告';
     }
     this.messageTone = AppColors.Danger;
   }
@@ -787,6 +813,7 @@ struct DeviceArchiveReview {
     this.reviewDecision = '';
     this.reviewComment = '';
     this.reviewedAt = '';
+    this.password = '';
     this.updateReviewReady();
   }
 
@@ -800,17 +827,45 @@ struct DeviceArchiveReview {
     });
   }
 
+  hasSelectedRequest(): boolean {
+    return this.selectedRequestId.length > 0;
+  }
+
   hasReviewDecision(): boolean {
     return this.reviewDecision === `${DeviceArchiveReviewDecision.Approved}` ||
       this.reviewDecision === `${DeviceArchiveReviewDecision.Rejected}`;
   }
 
-  getApplicantName(item: DeviceArchiveReviewItem): string {
-    return item.applicantName === undefined || item.applicantName.length === 0 ? '-' : item.applicantName;
+  getOperatorName(item: DeviceArchiveReviewItem): string {
+    return item.operatorName === undefined || item.operatorName.length === 0 ? '-' : item.operatorName;
   }
 
   getSubmitButtonLabel(): string {
-    return this.submitting ? '提交中' : '提交审核结果';
+    return this.submitting ? '提交中' : '提交报告';
+  }
+
+  async verifyPasswordForSubmit(password: string): Promise<boolean> {
+    const response = await AuthService.verifyCurrentUserPasswordRemoteFirst(password);
+    if (response.success && response.data === true) {
+      return true;
+    }
+
+    const errorCode = response.error === undefined ? '' : `${response.error.code}`;
+    this.message = this.mapPasswordVerifyErrorMessage(errorCode);
+    this.messageTone = AppColors.Danger;
+    return false;
+  }
+
+  mapPasswordVerifyErrorMessage(errorCode: string): string {
+    if (errorCode === 'PASSWORD_REQUIRED') {
+      return '请输入密码';
+    }
+
+    if (errorCode === 'INVALID_CREDENTIALS' || errorCode === 'LOGIN_FAILED' || errorCode === 'UNAUTHORIZED') {
+      return '密码不正确，请重新输入';
+    }
+
+    return '审核功能暂不可用，请稍后重试';
   }
 
   getDecisionTone(decision: DeviceArchiveReviewDecision): string {
@@ -839,7 +894,7 @@ struct DeviceArchiveReview {
   }
 
   showReviewedAtPicker(): void {
-    if (this.submitting) {
+    if (!this.hasSelectedRequest() || this.submitting) {
       return;
     }
 

@@ -1,6 +1,6 @@
 package com.rmf.rdvp.operations;
 
-public enum OperationReviewDecision {
+public enum OperationsReviewDecision {
     APPROVED,
     REJECTED
 }

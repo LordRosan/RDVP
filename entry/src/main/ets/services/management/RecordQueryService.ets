@@ -146,8 +146,10 @@ export class RecordQueryService {
         return '维修接取';
       case 'REPAIR_REPORT':
         return '维修报告';
+      case 'REINSPECTION_REPORT':
+        return '复检报告';
       case 'REINSPECTION_RECORD':
-        return '复检记录';
+        return '复检报告';
       default:
         return action;
     }

@@ -23,7 +23,7 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     private final Map<String, RepairTaskRecord> repairTasksById = new ConcurrentHashMap<>();
     private final Map<String, RepairReportRecord> repairReportsById = new ConcurrentHashMap<>();
     private final Map<String, ReinspectionRecordCreate> reinspectionRecordsById = new ConcurrentHashMap<>();
-    private final Map<String, OperationReviewRequest> operationReviewsById = new ConcurrentHashMap<>();
+    private final Map<String, OperationsReviewRequest> operationsReviewsById = new ConcurrentHashMap<>();
     private final DeviceArchiveRepository archiveRepository;
 
     public InMemoryOperationsRepository(DeviceArchiveRepository archiveRepository) {
@@ -337,9 +337,9 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     }
 
     @Override
-    public void createOperationReviewRequest(OperationReviewRequestCreate create) {
+    public void createOperationsReviewRequest(OperationsReviewRequestCreate create) {
         DeviceArchive device = archiveRepository.findById(create.deviceId()).orElseThrow();
-        operationReviewsById.put(create.id(), new OperationReviewRequest(
+        operationsReviewsById.put(create.id(), new OperationsReviewRequest(
                 create.id(),
                 create.type(),
                 create.targetId(),
@@ -348,10 +348,10 @@ public class InMemoryOperationsRepository implements OperationsRepository {
                 create.deviceId(),
                 device.deviceCode(),
                 device.name(),
-                create.applicantId(),
-                create.applicantId(),
+                create.operatorId(),
+                create.operatorId(),
                 create.summary(),
-                OperationReviewRequestStatus.PENDING_REVIEW,
+                OperationsReviewRequestStatus.PENDING_REVIEW,
                 create.submittedAt(),
                 null,
                 null,
@@ -359,19 +359,19 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     }
 
     @Override
-    public Optional<OperationReviewRequest> findOperationReviewRequestById(String id) {
-        return Optional.ofNullable(operationReviewsById.get(id));
+    public Optional<OperationsReviewRequest> findOperationsReviewRequestById(String id) {
+        return Optional.ofNullable(operationsReviewsById.get(id));
     }
 
     @Override
-    public OperationReviewRequestPage listOperationReviewRequests(
-            OperationReviewRequestStatus status,
-            OperationReviewRequestType type,
+    public OperationsReviewRequestPage listOperationsReviewRequests(
+            OperationsReviewRequestStatus status,
+            OperationsReviewRequestType type,
             String keyword,
             int limit,
             int offset) {
         String normalizedKeyword = keyword == null ? "" : keyword.trim().toLowerCase();
-        List<OperationReviewRequest> items = operationReviewsById.values()
+        List<OperationsReviewRequest> items = operationsReviewsById.values()
                 .stream()
                 .filter(item -> status == null || item.status() == status)
                 .filter(item -> type == null || item.type() == type)
@@ -379,28 +379,28 @@ public class InMemoryOperationsRepository implements OperationsRepository {
                         || item.deviceCode().toLowerCase().contains(normalizedKeyword)
                         || item.deviceName().toLowerCase().contains(normalizedKeyword)
                         || item.targetNo().toLowerCase().contains(normalizedKeyword))
-                .sorted(Comparator.comparing(OperationReviewRequest::submittedAt).reversed())
+                .sorted(Comparator.comparing(OperationsReviewRequest::submittedAt).reversed())
                 .toList();
-        List<OperationReviewRequest> page = items.stream()
+        List<OperationsReviewRequest> page = items.stream()
                 .skip(offset)
                 .limit(limit)
                 .toList();
-        return new OperationReviewRequestPage(page, items.size());
+        return new OperationsReviewRequestPage(page, items.size());
     }
 
     @Override
-    public boolean markOperationReviewRequestReviewed(
+    public boolean markOperationsReviewRequestReviewed(
             String id,
-            OperationReviewRequestStatus status,
-            String reviewerId,
+            OperationsReviewRequestStatus status,
+            String reviewOperatorId,
             String reviewComment,
             OffsetDateTime reviewedAt) {
-        OperationReviewRequest request = operationReviewsById.get(id);
-        if (request == null || request.status() != OperationReviewRequestStatus.PENDING_REVIEW) {
+        OperationsReviewRequest request = operationsReviewsById.get(id);
+        if (request == null || request.status() != OperationsReviewRequestStatus.PENDING_REVIEW) {
             return false;
         }
 
-        operationReviewsById.put(id, new OperationReviewRequest(
+        operationsReviewsById.put(id, new OperationsReviewRequest(
                 request.id(),
                 request.type(),
                 request.targetId(),
@@ -409,31 +409,31 @@ public class InMemoryOperationsRepository implements OperationsRepository {
                 request.deviceId(),
                 request.deviceCode(),
                 request.deviceName(),
-                request.applicantId(),
-                request.applicantName(),
+                request.operatorId(),
+                request.operatorName(),
                 request.summary(),
                 status,
                 request.submittedAt(),
-                reviewerId,
+                reviewOperatorId,
                 reviewComment,
                 reviewedAt));
         return true;
     }
 
     @Override
-    public long countPendingOperationReviews() {
-        return operationReviewsById.values()
+    public long countPendingOperationsReviews() {
+        return operationsReviewsById.values()
                 .stream()
-                .filter(item -> item.status() == OperationReviewRequestStatus.PENDING_REVIEW)
+                .filter(item -> item.status() == OperationsReviewRequestStatus.PENDING_REVIEW)
                 .count();
     }
 
     @Override
-    public long countReviewedOperationReviews() {
-        return operationReviewsById.values()
+    public long countReviewedOperationsReviews() {
+        return operationsReviewsById.values()
                 .stream()
-                .filter(item -> item.status() == OperationReviewRequestStatus.APPROVED
-                        || item.status() == OperationReviewRequestStatus.REJECTED)
+                .filter(item -> item.status() == OperationsReviewRequestStatus.APPROVED
+                        || item.status() == OperationsReviewRequestStatus.REJECTED)
                 .count();
     }
 

@@ -9,8 +9,8 @@ import org.springframework.stereotype.Repository;
 import com.rmf.rdvp.archive.DeviceArchiveRequest;
 import com.rmf.rdvp.archive.DeviceArchiveRequestQuery;
 import com.rmf.rdvp.archive.DeviceArchiveRequestRepository;
-import com.rmf.rdvp.operations.OperationReviewRequest;
-import com.rmf.rdvp.operations.OperationReviewRequestPage;
+import com.rmf.rdvp.operations.OperationsReviewRequest;
+import com.rmf.rdvp.operations.OperationsReviewRequestPage;
 import com.rmf.rdvp.operations.OperationsRepository;
 
 @Repository
@@ -51,7 +51,7 @@ public class InMemoryRecordQueryRepository implements RecordQueryRepository {
                 .map(this::toArchiveReviewRecord)
                 .toList();
 
-        OperationReviewRequestPage operationPage = operationsRepository.listOperationReviewRequests(
+        OperationsReviewRequestPage operationPage = operationsRepository.listOperationsReviewRequests(
                 null,
                 null,
                 keyword,
@@ -60,8 +60,8 @@ public class InMemoryRecordQueryRepository implements RecordQueryRepository {
         var operationRequests = operationPage.items()
                 .stream()
                 .filter(item -> item.reviewedAt() != null)
-                .filter(item -> type == null || type.isBlank() || item.type().name().equalsIgnoreCase(type))
-                .map(this::toOperationReviewRecord)
+                .filter(item -> matchesOperationsReviewType(item.type().name(), type))
+                .map(this::toOperationsReviewRecord)
                 .toList();
 
         List<RecordItemResponse> items = java.util.stream.Stream.concat(archiveRequests.stream(), operationRequests.stream())
@@ -95,13 +95,13 @@ public class InMemoryRecordQueryRepository implements RecordQueryRepository {
                 request.reviewComment());
     }
 
-    private RecordItemResponse toOperationReviewRecord(OperationReviewRequest request) {
+    private RecordItemResponse toOperationsReviewRecord(OperationsReviewRequest request) {
         return new RecordItemResponse(
                 "REVIEW",
                 request.type().name(),
                 request.deviceCode(),
                 request.targetNo(),
-                firstPresent(request.reviewerId(), request.applicantName(), request.applicantId()),
+                firstPresent(request.reviewOperatorId(), request.operatorName(), request.operatorId()),
                 request.reviewedAt(),
                 request.status().name(),
                 request.reviewComment());
@@ -109,6 +109,17 @@ public class InMemoryRecordQueryRepository implements RecordQueryRepository {
 
     private boolean contains(String value, String keyword) {
         return value != null && value.toLowerCase().contains(keyword);
+    }
+
+    private boolean matchesOperationsReviewType(String recordType, String filterType) {
+        if (filterType == null || filterType.isBlank()) {
+            return true;
+        }
+        if (recordType.equalsIgnoreCase(filterType)) {
+            return true;
+        }
+        return "REINSPECTION_REPORT".equalsIgnoreCase(recordType)
+                && "REINSPECTION_RECORD".equalsIgnoreCase(filterType);
     }
 
     private String firstPresent(String first, String second, String third) {

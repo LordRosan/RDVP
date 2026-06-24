@@ -9,8 +9,8 @@ import { RecordQueryService } from '../../services/management/RecordQueryService
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
 
-const REVIEW_TYPE_OPTIONS: string[] = ['全部', '添加档案', '修改档案', '删除档案', '维修报告', '复检记录'];
-const REVIEW_TYPE_VALUES: string[] = ['', 'CREATE', 'UPDATE', 'DELETE', 'REPAIR_REPORT', 'REINSPECTION_RECORD'];
+const REVIEW_TYPE_OPTIONS: string[] = ['全部', '添加档案', '修改档案', '删除档案', '维修报告', '复检报告'];
+const REVIEW_TYPE_VALUES: string[] = ['', 'CREATE', 'UPDATE', 'DELETE', 'REPAIR_REPORT', 'REINSPECTION_REPORT'];
 const RECORD_FILTER_CONTROL_HEIGHT = 56;
 
 @Entry
@@ -238,8 +238,8 @@ struct ReviewRecordQuery {
       }
       .width('100%')
 
-      this.RecordFieldRow('设备标准编号', item.deviceCode)
-      this.RecordFieldRow('标准审核编号', item.taskNo)
+      this.RecordFieldRow('设备编号', item.deviceCode)
+      this.RecordFieldRow('审核编号', item.taskNo)
       this.RecordFieldRow('操作人', item.operatorName)
       this.RecordFieldRow('时间', item.occurredAt)
     }

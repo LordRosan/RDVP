@@ -154,6 +154,18 @@ public class OperationsService {
                 record.faultReportNo(),
                 reporter,
                 "Submitted fault report.");
+        createOperationsReviewRequest(
+                OperationsReviewRequestType.FAULT_REPORT,
+                record.id(),
+                record.faultReportNo(),
+                record.id(),
+                record.deviceId(),
+                reporter.id(),
+                "报修类型：%s；故障等级：%s；报修说明：%s".formatted(
+                        record.faultType().name(),
+                        record.severity().name(),
+                        record.description()),
+                record.createdAt());
         return record;
     }
 
@@ -262,6 +274,29 @@ public class OperationsService {
                     faultReport.faultReportNo(),
                     operator,
                     "Submitted fault report from device verification.");
+            createOperationsReviewRequest(
+                    OperationsReviewRequestType.DEVICE_VERIFICATION_REPORT,
+                    verificationRecord.id(),
+                    verificationRecord.id(),
+                    faultReport.id(),
+                    device.id(),
+                    operator.id(),
+                    "核验结果：%s；核验说明：%s".formatted(
+                            verificationRecord.result().name(),
+                            verificationRecord.description()),
+                    verificationRecord.createdAt());
+            createOperationsReviewRequest(
+                    OperationsReviewRequestType.FAULT_REPORT,
+                    faultReport.id(),
+                    faultReport.faultReportNo(),
+                    faultReport.id(),
+                    device.id(),
+                    operator.id(),
+                    "报修类型：%s；故障等级：%s；报修说明：%s".formatted(
+                            faultReport.faultType().name(),
+                            faultReport.severity().name(),
+                            faultReport.description()),
+                    faultReport.createdAt());
             return new DeviceVerificationFaultReportResult(verificationRecord, faultReport);
         } catch (BusinessException exception) {
             recordDeviceVerificationFailure(deviceId, device, operator, exception);
@@ -453,8 +488,8 @@ public class OperationsService {
 
         archiveRepository.updateStatus(task.deviceId(), nextDeviceStatus(nextFaultStatus), maintainer.id());
         RepairReportRecord record = toRecord(create);
-        createOperationReviewRequest(
-                OperationReviewRequestType.REPAIR_REPORT,
+        createOperationsReviewRequest(
+                OperationsReviewRequestType.REPAIR_REPORT,
                 record.id(),
                 record.repairReportNo(),
                 record.faultReportId(),
@@ -621,8 +656,8 @@ public class OperationsService {
                 nextFaultStatus,
                 nextDeviceStatus,
                 create.createdAt());
-        createOperationReviewRequest(
-                OperationReviewRequestType.REINSPECTION_RECORD,
+        createOperationsReviewRequest(
+                OperationsReviewRequestType.REINSPECTION_REPORT,
                 record.id(),
                 record.reinspectionRecordNo(),
                 record.faultReportId(),
@@ -641,7 +676,7 @@ public class OperationsService {
         return record;
     }
 
-    public OperationReviewRequestPage listOperationReviewRequests(
+    public OperationsReviewRequestPage listOperationsReviewRequests(
             String status,
             String type,
             String keyword,
@@ -649,9 +684,9 @@ public class OperationsService {
             int pageSize) {
         int normalizedPage = Math.max(1, page);
         int normalizedPageSize = Math.max(1, Math.min(pageSize, MAX_OPERATION_LIST_ITEMS));
-        OperationReviewRequestStatus normalizedStatus = parseOptionalOperationReviewStatus(status);
-        OperationReviewRequestType normalizedType = parseOptionalOperationReviewType(type);
-        return operationsRepository.listOperationReviewRequests(
+        OperationsReviewRequestStatus normalizedStatus = parseOptionalOperationsReviewStatus(status);
+        OperationsReviewRequestType normalizedType = parseOptionalOperationsReviewType(type);
+        return operationsRepository.listOperationsReviewRequests(
                 normalizedStatus,
                 normalizedType,
                 keyword,
@@ -660,52 +695,52 @@ public class OperationsService {
     }
 
     @Transactional
-    public OperationReviewRequest reviewOperationRequest(
+    public OperationsReviewRequest reviewOperationsRequest(
             String requestId,
-            OperationReviewDecision decision,
+            OperationsReviewDecision decision,
             String reviewedAtText,
             String reviewComment,
-            AuthenticatedUser reviewer) {
+            AuthenticatedUser reviewOperator) {
         String normalizedRequestId = normalizeId(requestId, "requestId");
-        OperationReviewRequest request = operationsRepository.findOperationReviewRequestById(normalizedRequestId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.OPERATION_REVIEW_REQUEST_NOT_FOUND));
-        if (request.status() != OperationReviewRequestStatus.PENDING_REVIEW) {
-            throw new BusinessException(ErrorCode.OPERATION_REVIEW_REQUEST_ALREADY_REVIEWED);
+        OperationsReviewRequest request = operationsRepository.findOperationsReviewRequestById(normalizedRequestId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.OPERATIONS_REVIEW_REQUEST_NOT_FOUND));
+        if (request.status() != OperationsReviewRequestStatus.PENDING_REVIEW) {
+            throw new BusinessException(ErrorCode.OPERATIONS_REVIEW_REQUEST_ALREADY_REVIEWED);
         }
 
-        OperationReviewDecision normalizedDecision = requireEnum(decision, "decision");
+        OperationsReviewDecision normalizedDecision = requireEnum(decision, "decision");
         String normalizedComment = normalizeOptionalText(reviewComment, MAX_REVIEW_COMMENT_LENGTH,
-                ErrorCode.OPERATION_REVIEW_REQUEST_INVALID);
-        if (normalizedDecision == OperationReviewDecision.REJECTED && normalizedComment.isBlank()) {
+                ErrorCode.OPERATIONS_REVIEW_REQUEST_INVALID);
+        if (normalizedDecision == OperationsReviewDecision.REJECTED && normalizedComment.isBlank()) {
             throw new BusinessException(
-                    ErrorCode.OPERATION_REVIEW_REQUEST_INVALID,
-                    "reviewComment is required when rejecting an operation review request.");
+                    ErrorCode.OPERATIONS_REVIEW_REQUEST_INVALID,
+                    "reviewComment is required when rejecting an operations review request.");
         }
 
         OffsetDateTime reviewedAt = parseDateTime(reviewedAtText, "reviewedAt");
-        OperationReviewRequestStatus nextStatus = normalizedDecision == OperationReviewDecision.APPROVED
-                ? OperationReviewRequestStatus.APPROVED
-                : OperationReviewRequestStatus.REJECTED;
-        boolean reviewed = operationsRepository.markOperationReviewRequestReviewed(
+        OperationsReviewRequestStatus nextStatus = normalizedDecision == OperationsReviewDecision.APPROVED
+                ? OperationsReviewRequestStatus.APPROVED
+                : OperationsReviewRequestStatus.REJECTED;
+        boolean reviewed = operationsRepository.markOperationsReviewRequestReviewed(
                 request.id(),
                 nextStatus,
-                reviewer.id(),
+                reviewOperator.id(),
                 normalizedComment,
                 reviewedAt);
         if (!reviewed) {
-            throw new BusinessException(ErrorCode.OPERATION_REVIEW_REQUEST_ALREADY_REVIEWED);
+            throw new BusinessException(ErrorCode.OPERATIONS_REVIEW_REQUEST_ALREADY_REVIEWED);
         }
 
-        OperationReviewRequest updated = operationsRepository.findOperationReviewRequestById(request.id())
-                .orElseThrow(() -> new BusinessException(ErrorCode.OPERATION_REVIEW_REQUEST_NOT_FOUND));
+        OperationsReviewRequest updated = operationsRepository.findOperationsReviewRequestById(request.id())
+                .orElseThrow(() -> new BusinessException(ErrorCode.OPERATIONS_REVIEW_REQUEST_NOT_FOUND));
         auditLogService.recordSuccess(
-                AuditAction.OPERATION_REVIEW,
+                AuditAction.OPERATIONS_REVIEW,
                 updated.id(),
                 updated.targetNo(),
-                reviewer,
-                normalizedDecision == OperationReviewDecision.APPROVED
-                        ? "Approved operation review request."
-                        : "Rejected operation review request.");
+                reviewOperator,
+                normalizedDecision == OperationsReviewDecision.APPROVED
+                        ? "Approved operations review request."
+                        : "Rejected operations review request.");
         return updated;
     }
 
@@ -724,24 +759,24 @@ public class OperationsService {
                 create.createdAt());
     }
 
-    private void createOperationReviewRequest(
-            OperationReviewRequestType type,
+    private void createOperationsReviewRequest(
+            OperationsReviewRequestType type,
             String targetId,
             String targetNo,
             String faultReportId,
             String deviceId,
-            String applicantId,
+            String operatorId,
             String summary,
             OffsetDateTime submittedAt) {
-        operationsRepository.createOperationReviewRequest(new OperationReviewRequestCreate(
-                "operation-review-" + UUID.randomUUID(),
+        operationsRepository.createOperationsReviewRequest(new OperationsReviewRequestCreate(
+                "operations-review-" + UUID.randomUUID(),
                 type,
                 targetId,
                 targetNo,
                 faultReportId,
                 deviceId,
-                applicantId,
-                normalizeOptionalText(summary, 500, ErrorCode.OPERATION_REVIEW_REQUEST_INVALID),
+                operatorId,
+                normalizeOptionalText(summary, 500, ErrorCode.OPERATIONS_REVIEW_REQUEST_INVALID),
                 submittedAt,
                 now()));
     }
@@ -809,7 +844,7 @@ public class OperationsService {
                 normalizedFaultReportId,
                 resolveFaultReportTargetNo(normalizedFaultReportId),
                 reinspector,
-                "复检记录提交失败：%s。".formatted(exception.getErrorCode().code()));
+                "复检报告提交失败：%s。".formatted(exception.getErrorCode().code()));
     }
 
     private void recordReinspectionAcceptFailure(
@@ -974,25 +1009,25 @@ public class OperationsService {
         return normalized;
     }
 
-    private OperationReviewRequestStatus parseOptionalOperationReviewStatus(String status) {
+    private OperationsReviewRequestStatus parseOptionalOperationsReviewStatus(String status) {
         if (status == null || status.isBlank()) {
             return null;
         }
 
         try {
-            return OperationReviewRequestStatus.valueOf(status.trim().toUpperCase(Locale.ROOT));
+            return OperationsReviewRequestStatus.valueOf(status.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException exception) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "status is invalid.");
         }
     }
 
-    private OperationReviewRequestType parseOptionalOperationReviewType(String type) {
+    private OperationsReviewRequestType parseOptionalOperationsReviewType(String type) {
         if (type == null || type.isBlank()) {
             return null;
         }
 
         try {
-            return OperationReviewRequestType.valueOf(type.trim().toUpperCase(Locale.ROOT));
+            return OperationsReviewRequestType.valueOf(type.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException exception) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "type is invalid.");
         }

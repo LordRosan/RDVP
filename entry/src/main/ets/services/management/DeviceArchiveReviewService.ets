@@ -29,7 +29,8 @@ interface DeviceArchiveReviewApiItem {
   deviceId?: string;
   deviceCode: string;
   deviceName: string;
-  applicantName?: string;
+  operatorId?: string;
+  operatorName?: string;
   reason: string;
   status: DeviceArchiveRequestStatus;
   initiatedAt?: string;
@@ -211,7 +212,7 @@ export class DeviceArchiveReviewService {
       deviceId: item.deviceId,
       deviceCode: item.deviceCode,
       deviceName: item.deviceName,
-      applicantName: item.applicantName,
+      operatorName: item.operatorName === undefined || item.operatorName.length === 0 ? item.operatorId : item.operatorName,
       reason: item.reason,
       status: item.status,
       initiatedAt: DeviceArchiveReviewService.resolveTimeText(item.initiatedAt, item.createdAt),

@@ -87,7 +87,7 @@ class DeviceArchiveRequestControllerTests {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items[0].id").value("DCR-LOCAL-0002"))
-                .andExpect(jsonPath("$.data.items[0].applicantName").value("档案员"))
+                .andExpect(jsonPath("$.data.items[0].operatorName").value("档案员"))
                 .andExpect(jsonPath("$.data.items[0].changes['location.address'].newValue")
                         .value("二号厂房包装区A段"));
     }
@@ -98,6 +98,20 @@ class DeviceArchiveRequestControllerTests {
         String reviewerToken = login("archiveadmin", "password");
         String requestId = createNameChange(applicantToken, "冷却泵A-02");
 
+        mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", requestId)
+                        .header("Authorization", "Bearer " + reviewerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "decision": "APPROVED",
+                                  "reviewedAt": "2026-06-01T08:00:00Z",
+                                  "reviewComment": "Approved."
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("SENSITIVE_OPERATION_VERIFICATION_REQUIRED"));
+
+        verifyPassword(reviewerToken, "password");
         mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", requestId)
                         .header("Authorization", "Bearer " + reviewerToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -140,6 +154,7 @@ class DeviceArchiveRequestControllerTests {
                         OffsetDateTime.parse("2026-06-01T07:30:00Z")),
                 null);
 
+        verifyPassword(reviewerToken, "password");
         mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", requestId)
                         .header("Authorization", "Bearer " + reviewerToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -176,6 +191,7 @@ class DeviceArchiveRequestControllerTests {
                         OffsetDateTime.parse("2026-06-01T07:45:00Z")),
                 null);
 
+        verifyPassword(token, "password");
         mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", requestId)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -201,6 +217,7 @@ class DeviceArchiveRequestControllerTests {
         String reviewerToken = login("archiveadmin", "password");
         String requestId = createNameChange(applicantToken, "冷却泵A-02");
 
+        verifyPassword(reviewerToken, "password");
         mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", requestId)
                         .header("Authorization", "Bearer " + reviewerToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -213,6 +230,7 @@ class DeviceArchiveRequestControllerTests {
                                 """))
                 .andExpect(status().isOk());
 
+        verifyPassword(reviewerToken, "password");
         mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", requestId)
                         .header("Authorization", "Bearer " + reviewerToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -276,6 +294,7 @@ class DeviceArchiveRequestControllerTests {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("DEVICE_NOT_FOUND"));
 
+        verifyPassword(token, "password");
         mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", requestId)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -310,6 +329,7 @@ class DeviceArchiveRequestControllerTests {
                 .andExpect(jsonPath("$.data.archiveRequestState.locked").value(true))
                 .andExpect(jsonPath("$.data.archiveRequestState.pendingRequestId").value(requestId));
 
+        verifyPassword(token, "password");
         mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", requestId)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)

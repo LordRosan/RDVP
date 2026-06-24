@@ -150,6 +150,7 @@ class DashboardControllerTests {
                 .findFirst()
                 .orElseThrow();
 
+        verifyPassword(adminToken, "password");
         mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", createRequestId)
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -228,7 +229,7 @@ class DashboardControllerTests {
     }
 
     @Test
-    void countsPendingAndReviewedOperationReviews() throws Exception {
+    void countsPendingAndReviewedOperationsReviews() throws Exception {
         String managerToken = login("manager", "password");
         String operatorToken = login("operator", "password");
 
@@ -251,9 +252,9 @@ class DashboardControllerTests {
                         .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.management.reviewedTotal").value(0))
-                .andExpect(jsonPath("$.data.management.pendingOperationsReviews").value(1));
+                .andExpect(jsonPath("$.data.management.pendingOperationsReviews").value(2));
 
-        String pendingResponse = mockMvc.perform(get("/api/v1/operation-review-requests?status=PENDING_REVIEW")
+        String pendingResponse = mockMvc.perform(get("/api/v1/operations-review-requests?status=PENDING_REVIEW")
                         .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
                 .andReturn()
@@ -261,7 +262,8 @@ class DashboardControllerTests {
                 .getContentAsString(StandardCharsets.UTF_8);
         String requestId = objectMapper.readTree(pendingResponse).path("data").path("items").get(0).path("id").asText();
 
-        mockMvc.perform(post("/api/v1/operation-review-requests/{requestId}/review", requestId)
+        verifyPassword(managerToken, "password");
+        mockMvc.perform(post("/api/v1/operations-review-requests/{requestId}/review", requestId)
                         .header("Authorization", "Bearer " + managerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -277,7 +279,7 @@ class DashboardControllerTests {
                         .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.management.reviewedTotal").value(1))
-                .andExpect(jsonPath("$.data.management.pendingOperationsReviews").value(0));
+                .andExpect(jsonPath("$.data.management.pendingOperationsReviews").value(1));
     }
 
     @Test
@@ -314,6 +316,7 @@ class DashboardControllerTests {
                 .andExpect(jsonPath("$.data.archive.archiveDeletes").value(0))
                 .andExpect(jsonPath("$.data.management.reviewedTotal").value(0));
 
+        verifyPassword(adminToken, "password");
         mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", createRequestId)
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -389,6 +392,7 @@ class DashboardControllerTests {
                 .andExpect(jsonPath("$.data.archive.archiveDeletes").value(0))
                 .andExpect(jsonPath("$.data.management.reviewedTotal").value(1));
 
+        verifyPassword(adminToken, "password");
         mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", updateRequestId)
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -410,6 +414,7 @@ class DashboardControllerTests {
                 .andExpect(jsonPath("$.data.archive.archiveDeletes").value(0))
                 .andExpect(jsonPath("$.data.management.reviewedTotal").value(2));
 
+        verifyPassword(adminToken, "password");
         mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", deleteRequestId)
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)

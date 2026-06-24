@@ -51,7 +51,7 @@ export class DashboardRefreshStore {
       return true;
     }
 
-    if (normalizedPath.startsWith('/api/v1/operation-review-requests')) {
+    if (normalizedPath.startsWith('/api/v1/operations-review-requests')) {
       return true;
     }
 

@@ -2,21 +2,21 @@ package com.rmf.rdvp.operations;
 
 import java.time.OffsetDateTime;
 
-public record OperationReviewRequest(
+public record OperationsReviewRequest(
         String id,
-        OperationReviewRequestType type,
+        OperationsReviewRequestType type,
         String targetId,
         String targetNo,
         String faultReportId,
         String deviceId,
         String deviceCode,
         String deviceName,
-        String applicantId,
-        String applicantName,
+        String operatorId,
+        String operatorName,
         String summary,
-        OperationReviewRequestStatus status,
+        OperationsReviewRequestStatus status,
         OffsetDateTime submittedAt,
-        String reviewerId,
+        String reviewOperatorId,
         String reviewComment,
         OffsetDateTime reviewedAt) {
 }

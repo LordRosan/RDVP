@@ -227,9 +227,9 @@ struct OperationRecordQuery {
       }
       .width('100%')
 
-      this.RecordFieldRow('设备标准编号', item.deviceCode)
+      this.RecordFieldRow('设备编号', item.deviceCode)
       if (item.taskNo.length > 0 && item.taskNo !== '-') {
-        this.RecordFieldRow('标准任务编号', item.taskNo)
+        this.RecordFieldRow('任务编号', item.taskNo)
       }
       this.RecordFieldRow('操作人', item.operatorName)
       this.RecordFieldRow('时间', item.occurredAt)

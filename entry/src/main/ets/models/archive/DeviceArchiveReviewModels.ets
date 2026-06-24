@@ -24,7 +24,7 @@ export interface DeviceArchiveReviewItem {
   deviceId?: string;
   deviceCode: string;
   deviceName: string;
-  applicantName?: string;
+  operatorName?: string;
   reason: string;
   status: DeviceArchiveRequestStatus;
   initiatedAt: string;

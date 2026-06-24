@@ -65,9 +65,10 @@ class RecordQueryControllerTests {
         String faultId = createFaultReport(operatorToken);
         String repairTaskId = acceptFaultReport(operatorToken, faultId);
         submitRepairReport(operatorToken, repairTaskId);
-        String requestId = findPendingOperationReviewRequest(managerToken);
+        String requestId = findPendingOperationsReviewRequest(managerToken);
 
-        mockMvc.perform(post("/api/v1/operation-review-requests/{requestId}/review", requestId)
+        verifyPassword(managerToken, "password");
+        mockMvc.perform(post("/api/v1/operations-review-requests/{requestId}/review", requestId)
                         .header("Authorization", "Bearer " + managerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -163,9 +164,10 @@ class RecordQueryControllerTests {
                 .andExpect(status().isOk());
     }
 
-    private String findPendingOperationReviewRequest(String token) throws Exception {
-        String response = mockMvc.perform(get("/api/v1/operation-review-requests")
+    private String findPendingOperationsReviewRequest(String token) throws Exception {
+        String response = mockMvc.perform(get("/api/v1/operations-review-requests")
                         .queryParam("status", "PENDING_REVIEW")
+                        .queryParam("type", "REPAIR_REPORT")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1))
@@ -173,6 +175,18 @@ class RecordQueryControllerTests {
                 .getResponse()
                 .getContentAsString(StandardCharsets.UTF_8);
         return objectMapper.readTree(response).path("data").path("items").get(0).path("id").asText();
+    }
+
+    private void verifyPassword(String token, String password) throws Exception {
+        mockMvc.perform(post("/api/v1/auth/password-verification")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "password": "%s"
+                                }
+                                """.formatted(password)))
+                .andExpect(status().isOk());
     }
 
     private String login(String username, String password) throws Exception {

@@ -2,9 +2,9 @@ package com.rmf.rdvp.api.operations;
 
 import java.time.OffsetDateTime;
 
-import com.rmf.rdvp.operations.OperationReviewRequest;
+import com.rmf.rdvp.operations.OperationsReviewRequest;
 
-public record OperationReviewRequestResponse(
+public record OperationsReviewRequestResponse(
         String id,
         String type,
         String targetId,
@@ -13,17 +13,17 @@ public record OperationReviewRequestResponse(
         String deviceId,
         String deviceCode,
         String deviceName,
-        String applicantId,
-        String applicantName,
+        String operatorId,
+        String operatorName,
         String summary,
         String status,
         String submittedAt,
-        String reviewerId,
+        String reviewOperatorId,
         String reviewComment,
         String reviewedAt) {
 
-    public static OperationReviewRequestResponse from(OperationReviewRequest request) {
-        return new OperationReviewRequestResponse(
+    public static OperationsReviewRequestResponse from(OperationsReviewRequest request) {
+        return new OperationsReviewRequestResponse(
                 request.id(),
                 request.type().name(),
                 request.targetId(),
@@ -32,12 +32,12 @@ public record OperationReviewRequestResponse(
                 request.deviceId(),
                 request.deviceCode(),
                 request.deviceName(),
-                request.applicantId(),
-                request.applicantName(),
+                request.operatorId(),
+                request.operatorName(),
                 request.summary(),
                 request.status().name(),
                 toIsoString(request.submittedAt()),
-                request.reviewerId(),
+                request.reviewOperatorId(),
                 request.reviewComment(),
                 toIsoString(request.reviewedAt()));
     }

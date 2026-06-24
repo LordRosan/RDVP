@@ -102,9 +102,11 @@ public class DeviceArchiveRequestController {
             @Valid @RequestBody ReviewDeviceArchiveRequest requestBody,
             @AuthenticationPrincipal AuthenticatedUser user,
             HttpServletRequest request) {
+        DeviceArchiveReviewDecision decision = parseDecision(requestBody.decision());
+        authenticationService.consumeRecentPasswordVerification(user);
         var reviewed = archiveRequestService.review(
                 requestId,
-                parseDecision(requestBody.decision()),
+                decision,
                 requestBody.reviewedAt(),
                 requestBody.reviewComment(),
                 user);

@@ -612,42 +612,89 @@ class OperationsControllerTests {
     }
 
     @Test
-    void createsAndReviewsPendingOperationsReviewForRepairReport() throws Exception {
+    void createsPendingOperationsReviewForAllReportTypesAndRequiresPasswordBeforeReview() throws Exception {
         String operatorToken = login("operator", "password");
         String operatorWorkerToken = login("operator", "password");
         String reviewerToken = login("operationsadmin", "password");
 
-        String faultId = createFaultReport(
-                operatorToken,
-                "RDVP-DEVICE-0001",
-                "ENERGY_FAULT",
-                "GENERAL",
-                "Power supply fluctuates under load.");
-        String repairTaskId = acceptFaultReport(operatorWorkerToken, faultId);
-        submitRepairReport(operatorWorkerToken, repairTaskId);
-
-        String listResponse = mockMvc.perform(get("/api/v1/operation-review-requests?status=PENDING_REVIEW")
-                        .header("Authorization", "Bearer " + reviewerToken))
+        verifyPassword(operatorToken, "password");
+        String verificationResponse = mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records/fault-report", "device-local-0001")
+                        .header("Authorization", "Bearer " + operatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "result": "ABNORMAL",
+                                  "description": "现场核验发现设备运行噪声异常。",
+                                  "remark": "已同步提交报修信息。",
+                                  "verifiedAt": "2026-06-03T08:30:00Z",
+                                  "faultType": "OPERATION_ABNORMAL",
+                                  "severity": "SEVERE",
+                                  "occurredAt": "2026-06-03T08:20:00Z",
+                                  "faultDescription": "设备运行噪声持续升高，存在进一步恶化风险。",
+                                  "sceneCondition": "现场负载已降低，等待维修人员接取。"
+                                }
+                                """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.total").value(1))
-                .andExpect(jsonPath("$.data.items[0].type").value("REPAIR_REPORT"))
-                .andExpect(jsonPath("$.data.items[0].status").value("PENDING_REVIEW"))
-                .andExpect(jsonPath("$.data.items[0].targetId").isString())
-                .andExpect(jsonPath("$.data.items[0].deviceCode").value("RDVP-DEVICE-0001"))
                 .andReturn()
                 .getResponse()
                 .getContentAsString(StandardCharsets.UTF_8);
-        String requestId = objectMapper.readTree(listResponse).path("data").path("items").get(0).path("id").asText();
+        String faultId = objectMapper.readTree(verificationResponse).path("data").path("faultReport").path("id").asText();
+        String repairTaskId = acceptFaultReport(operatorWorkerToken, faultId);
+        submitRepairReport(operatorWorkerToken, repairTaskId);
+        mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-records", faultId)
+                        .header("Authorization", "Bearer " + operatorWorkerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "result": "PASSED",
+                                  "reinspectedAt": "2026-05-29T07:00:00Z",
+                                  "description": "Reinspection confirms stable operation under controlled load."
+                                }
+                                """))
+                .andExpect(status().isOk());
 
-        mockMvc.perform(post("/api/v1/operation-review-requests/{requestId}/review", requestId)
+        String listResponse = mockMvc.perform(get("/api/v1/operations-review-requests?status=PENDING_REVIEW")
+                        .header("Authorization", "Bearer " + reviewerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.total").value(4))
+                .andExpect(jsonPath("$.data.items[0].status").value("PENDING_REVIEW"))
+                .andExpect(jsonPath("$.data.items[0].targetId").isString())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        JsonNode items = objectMapper.readTree(listResponse).path("data").path("items");
+        org.assertj.core.api.Assertions.assertThat(items)
+                .extracting(item -> item.path("type").asText())
+                .containsExactlyInAnyOrder(
+                        "DEVICE_VERIFICATION_REPORT",
+                        "FAULT_REPORT",
+                        "REPAIR_REPORT",
+                        "REINSPECTION_REPORT");
+        String requestId = items.get(0).path("id").asText();
+
+        mockMvc.perform(post("/api/v1/operations-review-requests/{requestId}/review", requestId)
                         .header("Authorization", "Bearer " + reviewerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "decision": "APPROVED",
                                   "reviewedAt": "2026-06-01T08:00:00Z",
-                                  "reviewComment": "Repair report accepted."
+                                  "reviewComment": "Report accepted."
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("SENSITIVE_OPERATION_VERIFICATION_REQUIRED"));
+
+        verifyPassword(reviewerToken, "password");
+        mockMvc.perform(post("/api/v1/operations-review-requests/{requestId}/review", requestId)
+                        .header("Authorization", "Bearer " + reviewerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "decision": "APPROVED",
+                                  "reviewedAt": "2026-06-01T08:00:00Z",
+                                  "reviewComment": "Report accepted."
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -655,17 +702,17 @@ class OperationsControllerTests {
                 .andExpect(jsonPath("$.data.status").value("APPROVED"))
                 .andExpect(jsonPath("$.data.reviewedAt").value("2026-06-01T08:00:00Z"));
 
-        mockMvc.perform(get("/api/v1/operation-review-requests?status=PENDING_REVIEW")
+        mockMvc.perform(get("/api/v1/operations-review-requests?status=PENDING_REVIEW")
                         .header("Authorization", "Bearer " + reviewerToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.total").value(0));
+                .andExpect(jsonPath("$.data.total").value(3));
     }
 
     @Test
     void requiresOperationsReviewPermissionForManagementReviewEndpoints() throws Exception {
         String operatorToken = login("operator", "password");
 
-        mockMvc.perform(get("/api/v1/operation-review-requests?status=PENDING_REVIEW")
+        mockMvc.perform(get("/api/v1/operations-review-requests?status=PENDING_REVIEW")
                         .header("Authorization", "Bearer " + operatorToken))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("FORBIDDEN"));

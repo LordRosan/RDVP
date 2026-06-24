@@ -17,7 +17,7 @@
     "pages/OperationsCenter/TaskAcceptance",
     "pages/OperationsCenter/RepairReport",
     "pages/OperationsCenter/ReinspectionReport",
-    "pages/ManagementCenter/DeviceArchiveReview",
+    "pages/ManagementCenter/ArchiveReview",
     "pages/ManagementCenter/OperationsReview",
     "pages/ManagementCenter/RecordQuery",
     "pages/ManagementCenter/ArchiveRecordQuery",

@@ -18,9 +18,10 @@ import com.rmf.rdvp.api.common.RequestIds;
 import com.rmf.rdvp.domain.common.BusinessException;
 import com.rmf.rdvp.domain.common.ErrorCode;
 import com.rmf.rdvp.identity.AuthenticatedUser;
+import com.rmf.rdvp.identity.AuthenticationService;
 import com.rmf.rdvp.operations.FaultSeverity;
 import com.rmf.rdvp.operations.FaultType;
-import com.rmf.rdvp.operations.OperationReviewDecision;
+import com.rmf.rdvp.operations.OperationsReviewDecision;
 import com.rmf.rdvp.operations.OperationsService;
 import com.rmf.rdvp.operations.ReinspectionResult;
 import com.rmf.rdvp.operations.RepairReportResult;
@@ -33,9 +34,13 @@ import jakarta.validation.Valid;
 public class OperationsController {
 
     private final OperationsService operationsService;
+    private final AuthenticationService authenticationService;
 
-    public OperationsController(OperationsService operationsService) {
+    public OperationsController(
+            OperationsService operationsService,
+            AuthenticationService authenticationService) {
         this.operationsService = operationsService;
+        this.authenticationService = authenticationService;
     }
 
     @PostMapping("/fault-reports")
@@ -155,33 +160,35 @@ public class OperationsController {
         return ResponseEntity.ok(ApiResponse.success(ReinspectionRecordResponse.from(result), RequestIds.resolve(request)));
     }
 
-    @GetMapping("/operation-review-requests")
+    @GetMapping("/operations-review-requests")
     @PreAuthorize("hasAuthority('MANAGEMENT_CENTER_OPERATIONS_REVIEW')")
-    public ResponseEntity<ApiResponse<OperationReviewRequestListResponse>> listOperationReviewRequests(
+    public ResponseEntity<ApiResponse<OperationsReviewRequestListResponse>> listOperationsReviewRequests(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int pageSize,
             HttpServletRequest request) {
-        var result = operationsService.listOperationReviewRequests(status, type, keyword, page, pageSize);
-        return ResponseEntity.ok(ApiResponse.success(OperationReviewRequestListResponse.from(result), RequestIds.resolve(request)));
+        var result = operationsService.listOperationsReviewRequests(status, type, keyword, page, pageSize);
+        return ResponseEntity.ok(ApiResponse.success(OperationsReviewRequestListResponse.from(result), RequestIds.resolve(request)));
     }
 
-    @PostMapping("/operation-review-requests/{requestId}/review")
+    @PostMapping("/operations-review-requests/{requestId}/review")
     @PreAuthorize("hasAuthority('MANAGEMENT_CENTER_OPERATIONS_REVIEW')")
-    public ResponseEntity<ApiResponse<OperationReviewResultResponse>> reviewOperationRequest(
+    public ResponseEntity<ApiResponse<OperationsReviewResultResponse>> reviewOperationsRequest(
             @PathVariable String requestId,
-            @Valid @RequestBody ReviewOperationRequest requestBody,
+            @Valid @RequestBody ReviewOperationsRequest requestBody,
             @AuthenticationPrincipal AuthenticatedUser user,
             HttpServletRequest request) {
-        var result = operationsService.reviewOperationRequest(
+        OperationsReviewDecision decision = parseEnum(OperationsReviewDecision.class, requestBody.decision(), "decision");
+        authenticationService.consumeRecentPasswordVerification(user);
+        var result = operationsService.reviewOperationsRequest(
                 requestId,
-                parseEnum(OperationReviewDecision.class, requestBody.decision(), "decision"),
+                decision,
                 requestBody.reviewedAt(),
                 requestBody.reviewComment(),
                 user);
-        return ResponseEntity.ok(ApiResponse.success(OperationReviewResultResponse.from(result), RequestIds.resolve(request)));
+        return ResponseEntity.ok(ApiResponse.success(OperationsReviewResultResponse.from(result), RequestIds.resolve(request)));
     }
 
     private <T extends Enum<T>> T parseEnum(Class<T> enumType, String value, String field) {

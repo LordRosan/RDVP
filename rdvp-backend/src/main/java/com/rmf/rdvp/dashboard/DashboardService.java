@@ -65,9 +65,9 @@ public class DashboardService {
         }
 
         return new ManagementDashboardStats(
-                canViewReviewedTotal ? archiveRequestRepository.countReviewed() + operationsRepository.countReviewedOperationReviews() : null,
+                canViewReviewedTotal ? archiveRequestRepository.countReviewed() + operationsRepository.countReviewedOperationsReviews() : null,
                 canViewPendingArchiveReviews ? archiveRequestRepository.countPendingReview() : null,
-                canViewPendingOperationsReviews ? operationsRepository.countPendingOperationReviews() : null);
+                canViewPendingOperationsReviews ? operationsRepository.countPendingOperationsReviews() : null);
     }
 
     private boolean canViewArchiveStats(AuthenticatedUser user) {

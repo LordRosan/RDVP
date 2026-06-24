@@ -215,6 +215,7 @@ class AuditLogControllerTests {
     void recordsFailedDeviceArchiveReviewForAuditReview() throws Exception {
         String reviewerToken = login("archiveadmin", "password");
 
+        verifyPassword(reviewerToken, "password");
         mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", "DCR-LOCAL-0002")
                         .header("Authorization", "Bearer " + reviewerToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -382,7 +383,7 @@ class AuditLogControllerTests {
                 .andExpect(jsonPath("$.data.total").value(2))
                 .andExpect(jsonPath("$.data.items[*].status").value(hasItem("FAILED")))
                 .andExpect(jsonPath("$.data.items[?(@.status == 'FAILED')].description")
-                        .value(hasItem("复检记录提交失败：REINSPECTION_REQUIRED。")));
+                        .value(hasItem("复检报告提交失败：REINSPECTION_REQUIRED。")));
     }
 
     @Test

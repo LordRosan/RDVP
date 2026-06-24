@@ -2,15 +2,15 @@ package com.rmf.rdvp.api.operations;
 
 import java.time.OffsetDateTime;
 
-import com.rmf.rdvp.operations.OperationReviewRequest;
+import com.rmf.rdvp.operations.OperationsReviewRequest;
 
-public record OperationReviewResultResponse(
+public record OperationsReviewResultResponse(
         String id,
         String status,
         String reviewedAt) {
 
-    public static OperationReviewResultResponse from(OperationReviewRequest request) {
-        return new OperationReviewResultResponse(
+    public static OperationsReviewResultResponse from(OperationsReviewRequest request) {
+        return new OperationsReviewResultResponse(
                 request.id(),
                 request.status().name(),
                 toIsoString(request.reviewedAt()));

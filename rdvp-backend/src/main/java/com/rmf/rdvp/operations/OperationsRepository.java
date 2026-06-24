@@ -66,25 +66,25 @@ public interface OperationsRepository {
 
     long countReinspectionRecords();
 
-    void createOperationReviewRequest(OperationReviewRequestCreate create);
+    void createOperationsReviewRequest(OperationsReviewRequestCreate create);
 
-    Optional<OperationReviewRequest> findOperationReviewRequestById(String id);
+    Optional<OperationsReviewRequest> findOperationsReviewRequestById(String id);
 
-    OperationReviewRequestPage listOperationReviewRequests(
-            OperationReviewRequestStatus status,
-            OperationReviewRequestType type,
+    OperationsReviewRequestPage listOperationsReviewRequests(
+            OperationsReviewRequestStatus status,
+            OperationsReviewRequestType type,
             String keyword,
             int limit,
             int offset);
 
-    boolean markOperationReviewRequestReviewed(
+    boolean markOperationsReviewRequestReviewed(
             String id,
-            OperationReviewRequestStatus status,
-            String reviewerId,
+            OperationsReviewRequestStatus status,
+            String reviewOperatorId,
             String reviewComment,
             OffsetDateTime reviewedAt);
 
-    long countPendingOperationReviews();
+    long countPendingOperationsReviews();
 
-    long countReviewedOperationReviews();
+    long countReviewedOperationsReviews();
 }
