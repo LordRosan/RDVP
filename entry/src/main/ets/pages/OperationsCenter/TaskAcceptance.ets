@@ -30,9 +30,7 @@ const TASK_ACCEPTANCE_SEVERITY_FILTER_VALUES: string[] = ['', `${FaultSeverity.E
   `${FaultSeverity.General}`, `${FaultSeverity.Minor}`];
 const TASK_TYPE_CHIP_OPTIONS: string[] = ['全部', '维修任务', '复检任务'];
 const TASK_TYPE_CHIP_VALUES: string[] = ['', 'REPAIR', 'REINSPECTION'];
-const TASK_FILTER_ROW_HEIGHT = 40;
-const TASK_FILTER_TOP_OFFSET = 8;
-const TASK_FILTER_AREA_HEIGHT = TASK_FILTER_ROW_HEIGHT * 3 + TASK_FILTER_TOP_OFFSET;
+const TASK_FILTER_CONTROL_HEIGHT = 158;
 
 @Entry
 @Component
@@ -144,13 +142,6 @@ struct TaskAcceptance {
       })
 
       this.WorkStatusForm()
-      this.RadiusPicker()
-
-      this.MessageText()
-      this.ActionButton(this.refreshing ? '刷新中' : '刷新任务', $r('sys.symbol.arrow_clockwise'), this.isRefreshEnabled(),
-        () => {
-          this.refreshTasks();
-        })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -189,21 +180,8 @@ struct TaskAcceptance {
   @Builder
   RadiusPicker() {
     Column({ space: 10 }) {
-      Slider({
-        value: this.radiusKm,
-        min: 1,
-        max: Math.max(1, this.workloadSnapshot.maxRadiusKm),
-        step: 1,
-        style: SliderStyle.OutSet
-      })
-        .width('100%')
-        .enabled(this.workloadSnapshot.canAccept && !this.refreshing && this.acceptingTaskId.length === 0)
-        .onChange((value: number) => {
-          this.applyRadiusSliderValue(value);
-        })
-
       Row() {
-        Text('当前半径')
+        Text('接取半径')
           .fontSize(15)
           .fontWeight(FontWeight.Medium)
           .fontColor(AppColors.TextSecondary)
@@ -218,20 +196,21 @@ struct TaskAcceptance {
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
+
+      Slider({
+        value: this.radiusKm,
+        min: 1,
+        max: Math.max(1, this.workloadSnapshot.maxRadiusKm),
+        step: 1,
+        style: SliderStyle.OutSet
+      })
+        .width('100%')
+        .enabled(this.workloadSnapshot.canAccept && !this.refreshing && this.acceptingTaskId.length === 0)
+        .onChange((value: number) => {
+          this.applyRadiusSliderValue(value);
+        })
     }
     .width('100%')
-    .padding({
-      left: 12,
-      right: 12,
-      top: 8,
-      bottom: 10
-    })
-    .backgroundColor(AppColors.FieldBackground)
-    .borderRadius(18)
-    .border({
-      width: 1,
-      color: AppColors.Border
-    })
   }
 
   @Builder
@@ -244,24 +223,20 @@ struct TaskAcceptance {
         subtitle: ''
       })
 
-      this.TaskFilterRows()
-      this.TaskFilterResultList()
+      this.TaskFilterPanel()
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
   }
 
   @Builder
-  TaskFilterRows() {
-    Row({ space: 12 }) {
-      Column({ space: 0 }) {
-        this.TaskFilterLabel('任务类型')
-        this.TaskFilterLabel('故障类型')
-        this.TaskFilterLabel('故障等级')
-      }
-      .width(68)
-      .height(TASK_FILTER_AREA_HEIGHT)
-      .padding({ top: TASK_FILTER_TOP_OFFSET })
+  TaskFilterPanel() {
+    Column({ space: 14 }) {
+      this.RadiusPicker()
+
+      Divider()
+        .height(1)
+        .backgroundColor(AppColors.Divider)
 
       Column() {
         Filter({
@@ -271,29 +246,49 @@ struct TaskAcceptance {
           },
           filterType: FilterType.LIST_FILTER
         }) {
-          Column() {
-          }
-          .height(0)
+          Column()
+            .width('100%')
+            .height(1)
         }
       }
-      .height(TASK_FILTER_AREA_HEIGHT)
-      .layoutWeight(1)
+      .height(TASK_FILTER_CONTROL_HEIGHT)
+      .width('100%')
+      .clip(true)
+
+      Divider()
+        .height(1)
+        .backgroundColor(AppColors.Divider)
+
+      this.TaskResultContent()
     }
     .width('100%')
-    .height(TASK_FILTER_AREA_HEIGHT)
-    .alignItems(VerticalAlign.Top)
+    .padding({
+      left: 18,
+      right: 18,
+      top: 16,
+      bottom: 14
+    })
+    .backgroundColor(AppColors.SurfaceRaised)
+    .borderRadius(AppRadii.Large)
+    .border({
+      width: 1,
+      color: AppColors.Divider
+    })
+    .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
-  TaskFilterLabel(label: string) {
-    Text(label)
-      .height(TASK_FILTER_ROW_HEIGHT)
-      .width(68)
-      .fontSize(14)
-      .fontWeight(FontWeight.Medium)
-      .fontColor(AppColors.TextSecondary)
-      .maxLines(1)
-      .textAlign(TextAlign.Start)
+  TaskResultContent() {
+    Column({ space: 12 }) {
+      this.MessageText()
+      this.ActionButton(this.refreshing ? '刷新中' : '刷新任务', $r('sys.symbol.arrow_clockwise'),
+        this.isRefreshEnabled(), () => {
+          this.refreshTasks();
+        })
+      this.TaskFilterResultList()
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
   }
 
   @Builder

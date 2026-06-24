@@ -112,13 +112,21 @@ struct ReinspectionReport {
   @Builder
   TaskListPanel() {
     Column({ space: 10 }) {
-      this.TaskMessageText()
-
       AppSectionTitle({
         title: '复检任务列表',
         subtitle: ''
       })
 
+      this.TaskResultPanel()
+    }
+    .alignItems(HorizontalAlign.Start)
+    .width('100%')
+  }
+
+  @Builder
+  TaskResultPanel() {
+    Column({ space: 12 }) {
+      this.TaskMessageText()
       this.ActionButton(this.refreshing ? '刷新中' : '刷新任务', $r('sys.symbol.arrow_clockwise'),
         !this.refreshing && !this.submitting, () => {
           this.refreshTasks();
@@ -135,8 +143,20 @@ struct ReinspectionReport {
         .width('100%')
       }
     }
-    .alignItems(HorizontalAlign.Start)
     .width('100%')
+    .padding({
+      left: 18,
+      right: 18,
+      top: 18,
+      bottom: 18
+    })
+    .backgroundColor(AppColors.SurfaceRaised)
+    .borderRadius(AppRadii.Large)
+    .border({
+      width: 1,
+      color: AppColors.Divider
+    })
+    .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
@@ -699,4 +719,3 @@ struct ReinspectionReport {
     }
   }
 }
-
