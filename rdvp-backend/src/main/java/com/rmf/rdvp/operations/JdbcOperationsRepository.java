@@ -700,6 +700,203 @@ public class JdbcOperationsRepository implements OperationsRepository {
         return count == null ? 0 : count;
     }
 
+    @Override
+    public void createOperationReviewRequest(OperationReviewRequestCreate create) {
+        jdbcTemplate.update(
+                """
+                        INSERT INTO operation_review_requests (
+                            id,
+                            request_type,
+                            target_id,
+                            target_no,
+                            fault_report_id,
+                            device_id,
+                            applicant_id,
+                            summary,
+                            status,
+                            submitted_at,
+                            created_at,
+                            updated_at
+                        ) VALUES (
+                            :id,
+                            :requestType,
+                            :targetId,
+                            :targetNo,
+                            :faultReportId,
+                            :deviceId,
+                            :applicantId,
+                            :summary,
+                            'PENDING_REVIEW',
+                            :submittedAt,
+                            :createdAt,
+                            :createdAt
+                        )
+                        """,
+                new MapSqlParameterSource()
+                        .addValue("id", create.id())
+                        .addValue("requestType", create.type().name())
+                        .addValue("targetId", create.targetId())
+                        .addValue("targetNo", create.targetNo())
+                        .addValue("faultReportId", create.faultReportId())
+                        .addValue("deviceId", create.deviceId())
+                        .addValue("applicantId", create.applicantId())
+                        .addValue("summary", create.summary())
+                        .addValue("submittedAt", create.submittedAt())
+                        .addValue("createdAt", create.createdAt()));
+    }
+
+    @Override
+    public Optional<OperationReviewRequest> findOperationReviewRequestById(String id) {
+        List<OperationReviewRequest> results = jdbcTemplate.query(
+                operationReviewSelectSql() + " WHERE rr.id = :id",
+                Map.of("id", id),
+                this::mapOperationReviewRequest);
+        return results.stream().findFirst();
+    }
+
+    @Override
+    public OperationReviewRequestPage listOperationReviewRequests(
+            OperationReviewRequestStatus status,
+            OperationReviewRequestType type,
+            String keyword,
+            int limit,
+            int offset) {
+        List<String> conditions = new ArrayList<>();
+        MapSqlParameterSource parameters = new MapSqlParameterSource()
+                .addValue("limit", limit)
+                .addValue("offset", offset);
+        if (status != null) {
+            conditions.add("rr.status = :status");
+            parameters.addValue("status", status.name());
+        }
+        if (type != null) {
+            conditions.add("rr.request_type = :type");
+            parameters.addValue("type", type.name());
+        }
+        if (keyword != null && !keyword.isBlank()) {
+            conditions.add("(d.device_code ILIKE :keyword OR d.name ILIKE :keyword OR rr.target_no ILIKE :keyword)");
+            parameters.addValue("keyword", "%" + keyword.trim() + "%");
+        }
+
+        String where = conditions.isEmpty() ? "" : " WHERE " + String.join(" AND ", conditions);
+        List<OperationReviewRequest> items = jdbcTemplate.query(
+                operationReviewSelectSql()
+                        + where
+                        + " ORDER BY rr.submitted_at DESC"
+                        + " LIMIT :limit OFFSET :offset",
+                parameters,
+                this::mapOperationReviewRequest);
+        Long total = jdbcTemplate.queryForObject(
+                """
+                        SELECT count(*)
+                        FROM operation_review_requests rr
+                        JOIN devices d ON d.id = rr.device_id
+                        LEFT JOIN users applicant ON applicant.id = rr.applicant_id
+                        """
+                        + where,
+                parameters,
+                Long.class);
+        return new OperationReviewRequestPage(items, total == null ? 0 : total);
+    }
+
+    @Override
+    public boolean markOperationReviewRequestReviewed(
+            String id,
+            OperationReviewRequestStatus status,
+            String reviewerId,
+            String reviewComment,
+            OffsetDateTime reviewedAt) {
+        int updated = jdbcTemplate.update(
+                """
+                        UPDATE operation_review_requests
+                        SET status = :status,
+                            reviewer_id = :reviewerId,
+                            review_comment = :reviewComment,
+                            reviewed_at = :reviewedAt,
+                            updated_at = :reviewedAt
+                        WHERE id = :id
+                          AND status = 'PENDING_REVIEW'
+                        """,
+                new MapSqlParameterSource()
+                        .addValue("id", id)
+                        .addValue("status", status.name())
+                        .addValue("reviewerId", reviewerId)
+                        .addValue("reviewComment", reviewComment)
+                        .addValue("reviewedAt", reviewedAt));
+        return updated > 0;
+    }
+
+    @Override
+    public long countPendingOperationReviews() {
+        Long count = jdbcTemplate.queryForObject(
+                """
+                        SELECT count(*)
+                        FROM operation_review_requests
+                        WHERE status = 'PENDING_REVIEW'
+                        """,
+                Map.of(),
+                Long.class);
+        return count == null ? 0 : count;
+    }
+
+    @Override
+    public long countReviewedOperationReviews() {
+        Long count = jdbcTemplate.queryForObject(
+                """
+                        SELECT count(*)
+                        FROM operation_review_requests
+                        WHERE status IN ('APPROVED', 'REJECTED')
+                        """,
+                Map.of(),
+                Long.class);
+        return count == null ? 0 : count;
+    }
+
+    private String operationReviewSelectSql() {
+        return """
+                SELECT
+                    rr.id,
+                    rr.request_type,
+                    rr.target_id,
+                    rr.target_no,
+                    rr.fault_report_id,
+                    rr.device_id,
+                    d.device_code,
+                    d.name AS device_name,
+                    rr.applicant_id,
+                    COALESCE(applicant.display_name, applicant.username, rr.applicant_id) AS applicant_name,
+                    rr.summary,
+                    rr.status,
+                    rr.submitted_at,
+                    rr.reviewer_id,
+                    rr.review_comment,
+                    rr.reviewed_at
+                FROM operation_review_requests rr
+                JOIN devices d ON d.id = rr.device_id
+                LEFT JOIN users applicant ON applicant.id = rr.applicant_id
+                """;
+    }
+
+    private OperationReviewRequest mapOperationReviewRequest(ResultSet resultSet, int rowNumber) throws SQLException {
+        return new OperationReviewRequest(
+                resultSet.getString("id"),
+                OperationReviewRequestType.valueOf(resultSet.getString("request_type")),
+                resultSet.getString("target_id"),
+                resultSet.getString("target_no"),
+                resultSet.getString("fault_report_id"),
+                resultSet.getString("device_id"),
+                resultSet.getString("device_code"),
+                resultSet.getString("device_name"),
+                resultSet.getString("applicant_id"),
+                resultSet.getString("applicant_name"),
+                resultSet.getString("summary"),
+                OperationReviewRequestStatus.valueOf(resultSet.getString("status")),
+                resultSet.getObject("submitted_at", OffsetDateTime.class),
+                resultSet.getString("reviewer_id"),
+                resultSet.getString("review_comment"),
+                resultSet.getObject("reviewed_at", OffsetDateTime.class));
+    }
+
     private FaultReportRecord mapFaultReport(ResultSet resultSet, int rowNumber) throws SQLException {
         return new FaultReportRecord(
                 resultSet.getString("id"),

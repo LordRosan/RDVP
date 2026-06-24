@@ -23,6 +23,7 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     private final Map<String, RepairTaskRecord> repairTasksById = new ConcurrentHashMap<>();
     private final Map<String, RepairReportRecord> repairReportsById = new ConcurrentHashMap<>();
     private final Map<String, ReinspectionRecordCreate> reinspectionRecordsById = new ConcurrentHashMap<>();
+    private final Map<String, OperationReviewRequest> operationReviewsById = new ConcurrentHashMap<>();
     private final DeviceArchiveRepository archiveRepository;
 
     public InMemoryOperationsRepository(DeviceArchiveRepository archiveRepository) {
@@ -333,6 +334,107 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     @Override
     public long countReinspectionRecords() {
         return reinspectionRecordsById.size();
+    }
+
+    @Override
+    public void createOperationReviewRequest(OperationReviewRequestCreate create) {
+        DeviceArchive device = archiveRepository.findById(create.deviceId()).orElseThrow();
+        operationReviewsById.put(create.id(), new OperationReviewRequest(
+                create.id(),
+                create.type(),
+                create.targetId(),
+                create.targetNo(),
+                create.faultReportId(),
+                create.deviceId(),
+                device.deviceCode(),
+                device.name(),
+                create.applicantId(),
+                create.applicantId(),
+                create.summary(),
+                OperationReviewRequestStatus.PENDING_REVIEW,
+                create.submittedAt(),
+                null,
+                null,
+                null));
+    }
+
+    @Override
+    public Optional<OperationReviewRequest> findOperationReviewRequestById(String id) {
+        return Optional.ofNullable(operationReviewsById.get(id));
+    }
+
+    @Override
+    public OperationReviewRequestPage listOperationReviewRequests(
+            OperationReviewRequestStatus status,
+            OperationReviewRequestType type,
+            String keyword,
+            int limit,
+            int offset) {
+        String normalizedKeyword = keyword == null ? "" : keyword.trim().toLowerCase();
+        List<OperationReviewRequest> items = operationReviewsById.values()
+                .stream()
+                .filter(item -> status == null || item.status() == status)
+                .filter(item -> type == null || item.type() == type)
+                .filter(item -> normalizedKeyword.isBlank()
+                        || item.deviceCode().toLowerCase().contains(normalizedKeyword)
+                        || item.deviceName().toLowerCase().contains(normalizedKeyword)
+                        || item.targetNo().toLowerCase().contains(normalizedKeyword))
+                .sorted(Comparator.comparing(OperationReviewRequest::submittedAt).reversed())
+                .toList();
+        List<OperationReviewRequest> page = items.stream()
+                .skip(offset)
+                .limit(limit)
+                .toList();
+        return new OperationReviewRequestPage(page, items.size());
+    }
+
+    @Override
+    public boolean markOperationReviewRequestReviewed(
+            String id,
+            OperationReviewRequestStatus status,
+            String reviewerId,
+            String reviewComment,
+            OffsetDateTime reviewedAt) {
+        OperationReviewRequest request = operationReviewsById.get(id);
+        if (request == null || request.status() != OperationReviewRequestStatus.PENDING_REVIEW) {
+            return false;
+        }
+
+        operationReviewsById.put(id, new OperationReviewRequest(
+                request.id(),
+                request.type(),
+                request.targetId(),
+                request.targetNo(),
+                request.faultReportId(),
+                request.deviceId(),
+                request.deviceCode(),
+                request.deviceName(),
+                request.applicantId(),
+                request.applicantName(),
+                request.summary(),
+                status,
+                request.submittedAt(),
+                reviewerId,
+                reviewComment,
+                reviewedAt));
+        return true;
+    }
+
+    @Override
+    public long countPendingOperationReviews() {
+        return operationReviewsById.values()
+                .stream()
+                .filter(item -> item.status() == OperationReviewRequestStatus.PENDING_REVIEW)
+                .count();
+    }
+
+    @Override
+    public long countReviewedOperationReviews() {
+        return operationReviewsById.values()
+                .stream()
+                .filter(item -> item.status() == OperationReviewRequestStatus.APPROVED
+                        || item.status() == OperationReviewRequestStatus.REJECTED)
+                .count();
     }
 
     private TaskAcceptanceItem toTaskAcceptanceItem(FaultReportRecord fault, BigDecimal longitude, BigDecimal latitude) {

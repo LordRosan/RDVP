@@ -41,6 +41,7 @@ public class OperationsService {
     private static final int MAX_TASK_ACCEPTANCE_CANDIDATES = 500;
     private static final int MAX_VERIFICATION_DESCRIPTION_LENGTH = 500;
     private static final int MAX_VERIFICATION_REMARK_LENGTH = 300;
+    private static final int MAX_REVIEW_COMMENT_LENGTH = 500;
     private static final Pattern DEVICE_CODE_PATTERN = Pattern.compile("^RDVP-DEVICE-\\d{4}$");
     private static final Pattern BUSINESS_ID_PATTERN = Pattern.compile("^[A-Za-z0-9_-]{1,64}$");
     private static final DateTimeFormatter LOCAL_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -452,6 +453,17 @@ public class OperationsService {
 
         archiveRepository.updateStatus(task.deviceId(), nextDeviceStatus(nextFaultStatus), maintainer.id());
         RepairReportRecord record = toRecord(create);
+        createOperationReviewRequest(
+                OperationReviewRequestType.REPAIR_REPORT,
+                record.id(),
+                record.repairReportNo(),
+                record.faultReportId(),
+                task.deviceId(),
+                maintainer.id(),
+                "维修结果：%s；维修说明：%s".formatted(
+                        record.result().name(),
+                        record.processDescription()),
+                record.createdAt());
         auditLogService.recordSuccess(
                 AuditAction.REPAIR_REPORT,
                 record.id(),
@@ -609,6 +621,17 @@ public class OperationsService {
                 nextFaultStatus,
                 nextDeviceStatus,
                 create.createdAt());
+        createOperationReviewRequest(
+                OperationReviewRequestType.REINSPECTION_RECORD,
+                record.id(),
+                record.reinspectionRecordNo(),
+                record.faultReportId(),
+                faultReport.deviceId(),
+                reinspector.id(),
+                "复检结果：%s；复检说明：%s".formatted(
+                        record.result().name(),
+                        record.description()),
+                record.createdAt());
         auditLogService.recordSuccess(
                 AuditAction.REINSPECTION_RECORD,
                 record.id(),
@@ -616,6 +639,74 @@ public class OperationsService {
                 reinspector,
                 "Submitted reinspection record.");
         return record;
+    }
+
+    public OperationReviewRequestPage listOperationReviewRequests(
+            String status,
+            String type,
+            String keyword,
+            int page,
+            int pageSize) {
+        int normalizedPage = Math.max(1, page);
+        int normalizedPageSize = Math.max(1, Math.min(pageSize, MAX_OPERATION_LIST_ITEMS));
+        OperationReviewRequestStatus normalizedStatus = parseOptionalOperationReviewStatus(status);
+        OperationReviewRequestType normalizedType = parseOptionalOperationReviewType(type);
+        return operationsRepository.listOperationReviewRequests(
+                normalizedStatus,
+                normalizedType,
+                keyword,
+                normalizedPageSize,
+                (normalizedPage - 1) * normalizedPageSize);
+    }
+
+    @Transactional
+    public OperationReviewRequest reviewOperationRequest(
+            String requestId,
+            OperationReviewDecision decision,
+            String reviewedAtText,
+            String reviewComment,
+            AuthenticatedUser reviewer) {
+        String normalizedRequestId = normalizeId(requestId, "requestId");
+        OperationReviewRequest request = operationsRepository.findOperationReviewRequestById(normalizedRequestId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.OPERATION_REVIEW_REQUEST_NOT_FOUND));
+        if (request.status() != OperationReviewRequestStatus.PENDING_REVIEW) {
+            throw new BusinessException(ErrorCode.OPERATION_REVIEW_REQUEST_ALREADY_REVIEWED);
+        }
+
+        OperationReviewDecision normalizedDecision = requireEnum(decision, "decision");
+        String normalizedComment = normalizeOptionalText(reviewComment, MAX_REVIEW_COMMENT_LENGTH,
+                ErrorCode.OPERATION_REVIEW_REQUEST_INVALID);
+        if (normalizedDecision == OperationReviewDecision.REJECTED && normalizedComment.isBlank()) {
+            throw new BusinessException(
+                    ErrorCode.OPERATION_REVIEW_REQUEST_INVALID,
+                    "reviewComment is required when rejecting an operation review request.");
+        }
+
+        OffsetDateTime reviewedAt = parseDateTime(reviewedAtText, "reviewedAt");
+        OperationReviewRequestStatus nextStatus = normalizedDecision == OperationReviewDecision.APPROVED
+                ? OperationReviewRequestStatus.APPROVED
+                : OperationReviewRequestStatus.REJECTED;
+        boolean reviewed = operationsRepository.markOperationReviewRequestReviewed(
+                request.id(),
+                nextStatus,
+                reviewer.id(),
+                normalizedComment,
+                reviewedAt);
+        if (!reviewed) {
+            throw new BusinessException(ErrorCode.OPERATION_REVIEW_REQUEST_ALREADY_REVIEWED);
+        }
+
+        OperationReviewRequest updated = operationsRepository.findOperationReviewRequestById(request.id())
+                .orElseThrow(() -> new BusinessException(ErrorCode.OPERATION_REVIEW_REQUEST_NOT_FOUND));
+        auditLogService.recordSuccess(
+                AuditAction.OPERATION_REVIEW,
+                updated.id(),
+                updated.targetNo(),
+                reviewer,
+                normalizedDecision == OperationReviewDecision.APPROVED
+                        ? "Approved operation review request."
+                        : "Rejected operation review request.");
+        return updated;
     }
 
     private RepairReportRecord toRecord(RepairReportCreate create) {
@@ -631,6 +722,28 @@ public class OperationsService {
                 create.partsUsed(),
                 create.requiresReinspection(),
                 create.createdAt());
+    }
+
+    private void createOperationReviewRequest(
+            OperationReviewRequestType type,
+            String targetId,
+            String targetNo,
+            String faultReportId,
+            String deviceId,
+            String applicantId,
+            String summary,
+            OffsetDateTime submittedAt) {
+        operationsRepository.createOperationReviewRequest(new OperationReviewRequestCreate(
+                "operation-review-" + UUID.randomUUID(),
+                type,
+                targetId,
+                targetNo,
+                faultReportId,
+                deviceId,
+                applicantId,
+                normalizeOptionalText(summary, 500, ErrorCode.OPERATION_REVIEW_REQUEST_INVALID),
+                submittedAt,
+                now()));
     }
 
     private void recordRepairTaskAcceptFailure(
@@ -859,6 +972,30 @@ public class OperationsService {
         }
 
         return normalized;
+    }
+
+    private OperationReviewRequestStatus parseOptionalOperationReviewStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return null;
+        }
+
+        try {
+            return OperationReviewRequestStatus.valueOf(status.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "status is invalid.");
+        }
+    }
+
+    private OperationReviewRequestType parseOptionalOperationReviewType(String type) {
+        if (type == null || type.isBlank()) {
+            return null;
+        }
+
+        try {
+            return OperationReviewRequestType.valueOf(type.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "type is invalid.");
+        }
     }
 
     private String normalizeId(String id, String field) {

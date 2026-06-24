@@ -72,40 +72,63 @@ public class JdbcRecordQueryRepository implements RecordQueryRepository {
 
     @Override
     public RecordListResponse queryReviewRecords(String type, String keyword, int limit, int offset) {
-        List<String> conditions = new ArrayList<>();
         MapSqlParameterSource parameters = new MapSqlParameterSource()
                 .addValue("limit", limit)
                 .addValue("offset", offset);
 
-        conditions.add("cr.reviewed_at IS NOT NULL");
+        List<String> archiveConditions = new ArrayList<>();
+        List<String> operationConditions = new ArrayList<>();
+        archiveConditions.add("cr.reviewed_at IS NOT NULL");
+        operationConditions.add("orr.reviewed_at IS NOT NULL");
         if (type != null && !type.isBlank()) {
-            conditions.add("cr.request_type = :type");
+            archiveConditions.add("cr.request_type = :type");
+            operationConditions.add("orr.request_type = :type");
             parameters.addValue("type", type);
         }
         if (keyword != null && !keyword.isBlank()) {
-            conditions.add("(d.device_code ILIKE :keyword OR d.name ILIKE :keyword)");
+            archiveConditions.add("(d.device_code ILIKE :keyword OR d.name ILIKE :keyword)");
+            operationConditions.add("(d.device_code ILIKE :keyword OR d.name ILIKE :keyword)");
             parameters.addValue("keyword", "%" + keyword + "%");
         }
 
-        String where = " WHERE " + String.join(" AND ", conditions);
+        String archiveWhere = " WHERE " + String.join(" AND ", archiveConditions);
+        String operationWhere = " WHERE " + String.join(" AND ", operationConditions);
+        String unionSql = """
+                SELECT
+                    cr.request_type AS record_type,
+                    COALESCE(d.device_code, cr.target_device_code) AS device_code,
+                    cr.id AS task_no,
+                    COALESCE(reviewer.username, applicant.username, cr.reviewer_id, cr.applicant_id) AS operator_name,
+                    cr.reviewed_at AS occurred_at,
+                    cr.status AS business_status,
+                    cr.review_comment AS description,
+                    'REVIEW' AS record_category
+                FROM device_archive_requests cr
+                LEFT JOIN devices d ON d.id = cr.device_id
+                LEFT JOIN users applicant ON applicant.id = cr.applicant_id
+                LEFT JOIN users reviewer ON reviewer.id = cr.reviewer_id
+                """
+                + archiveWhere
+                + """
+                 UNION ALL
+                SELECT
+                    orr.request_type AS record_type,
+                    d.device_code AS device_code,
+                    orr.target_no AS task_no,
+                    COALESCE(reviewer.username, applicant.username, orr.reviewer_id, orr.applicant_id) AS operator_name,
+                    orr.reviewed_at AS occurred_at,
+                    orr.status AS business_status,
+                    orr.review_comment AS description,
+                    'REVIEW' AS record_category
+                FROM operation_review_requests orr
+                LEFT JOIN devices d ON d.id = orr.device_id
+                LEFT JOIN users applicant ON applicant.id = orr.applicant_id
+                LEFT JOIN users reviewer ON reviewer.id = orr.reviewer_id
+                """
+                + operationWhere;
 
         List<RecordItemResponse> items = jdbcTemplate.query(
-                """
-                        SELECT
-                            cr.request_type AS record_type,
-                            COALESCE(d.device_code, cr.target_device_code) AS device_code,
-                            cr.id AS task_no,
-                            COALESCE(reviewer.username, applicant.username, cr.reviewer_id, cr.applicant_id) AS operator_name,
-                            cr.reviewed_at AS occurred_at,
-                            cr.status AS business_status,
-                            cr.review_comment AS description,
-                            'REVIEW' AS record_category
-                        FROM device_archive_requests cr
-                        LEFT JOIN devices d ON d.id = cr.device_id
-                        LEFT JOIN users applicant ON applicant.id = cr.applicant_id
-                        LEFT JOIN users reviewer ON reviewer.id = cr.reviewer_id
-                        """
-                        + where
+                "SELECT * FROM (" + unionSql + ") records"
                         + " ORDER BY occurred_at DESC"
                         + " LIMIT :limit OFFSET :offset",
                 parameters,
@@ -118,10 +141,11 @@ public class JdbcRecordQueryRepository implements RecordQueryRepository {
                         rs.getObject("occurred_at", java.time.OffsetDateTime.class),
                         rs.getString("business_status"),
                         rs.getString("description")));
-        return new RecordListResponse(items, countRecords(
-                "device_archive_requests cr LEFT JOIN devices d ON d.id = cr.device_id LEFT JOIN users applicant ON applicant.id = cr.applicant_id LEFT JOIN users reviewer ON reviewer.id = cr.reviewer_id",
-                where,
-                parameters));
+        Long total = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM (" + unionSql + ") records",
+                parameters,
+                Long.class);
+        return new RecordListResponse(items, total == null ? 0 : total);
     }
 
     @Override

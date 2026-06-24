@@ -51,6 +51,10 @@ export class DashboardRefreshStore {
       return true;
     }
 
+    if (normalizedPath.startsWith('/api/v1/operation-review-requests')) {
+      return true;
+    }
+
     if (normalizedMethod !== 'GET' &&
       (normalizedPath.startsWith('/api/v1/fault-reports') ||
         normalizedPath.startsWith('/api/v1/repair-tasks') ||

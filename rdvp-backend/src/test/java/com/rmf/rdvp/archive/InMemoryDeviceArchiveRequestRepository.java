@@ -53,6 +53,8 @@ public class InMemoryDeviceArchiveRequestRepository implements DeviceArchiveRequ
                 .filter(item -> query.status() == null || item.status() == query.status())
                 .filter(item -> query.deviceCode() == null || item.deviceCode().equals(query.deviceCode()))
                 .filter(item -> query.applicantId() == null || item.applicantId().equals(query.applicantId()))
+                .filter(item -> query.type() == null || query.type().isBlank() ||
+                        item.type().name().equalsIgnoreCase(query.type()))
                 .sorted(Comparator.comparing(DeviceArchiveRequest::createdAt).reversed())
                 .skip((long) (query.page() - 1) * query.pageSize())
                 .limit(query.pageSize())
@@ -62,6 +64,8 @@ public class InMemoryDeviceArchiveRequestRepository implements DeviceArchiveRequ
                 .filter(item -> query.status() == null || item.status() == query.status())
                 .filter(item -> query.deviceCode() == null || item.deviceCode().equals(query.deviceCode()))
                 .filter(item -> query.applicantId() == null || item.applicantId().equals(query.applicantId()))
+                .filter(item -> query.type() == null || query.type().isBlank() ||
+                        item.type().name().equalsIgnoreCase(query.type()))
                 .count();
         return new DeviceArchiveRequestPage(items, total);
     }

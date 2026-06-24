@@ -97,7 +97,7 @@ struct ReinspectionReport {
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      Text('Reinspection Report')
+      Text('Reinspection Task Report')
         .fontSize(13)
         .fontWeight(FontWeight.Medium)
         .fontColor(AppColors.TextTertiary)

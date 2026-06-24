@@ -75,6 +75,18 @@ public enum ErrorCode {
             "REINSPECTION_REQUIRED",
             HttpStatus.UNPROCESSABLE_CONTENT,
             "Current fault is not pending reinspection."),
+    OPERATION_REVIEW_REQUEST_NOT_FOUND(
+            "OPERATION_REVIEW_REQUEST_NOT_FOUND",
+            HttpStatus.NOT_FOUND,
+            "Operation review request not found."),
+    OPERATION_REVIEW_REQUEST_ALREADY_REVIEWED(
+            "OPERATION_REVIEW_REQUEST_ALREADY_REVIEWED",
+            HttpStatus.CONFLICT,
+            "Operation review request has already been reviewed."),
+    OPERATION_REVIEW_REQUEST_INVALID(
+            "OPERATION_REVIEW_REQUEST_INVALID",
+            HttpStatus.UNPROCESSABLE_CONTENT,
+            "Operation review request is invalid."),
     INTERNAL_ERROR("INTERNAL_ERROR", HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error.");
 
     private final String code;

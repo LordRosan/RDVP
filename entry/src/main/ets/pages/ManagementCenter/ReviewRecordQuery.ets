@@ -1,12 +1,17 @@
 import { Filter, FilterParams, FilterResult, FilterType } from '@kit.ArkUI';
-import { AppColors } from '../../../styles/AppTheme';
-import { PermissionCode } from '../../../models/identity/PermissionModels';
-import { RecordCategory, RecordItem, RecordQueryFilter } from '../../../models/management/RecordQueryModels';
-import { RecordQueryService } from '../../../services/management/RecordQueryService';
-import { AuthGuard } from '../../../utils/AuthGuard';
+import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
+import { AppSectionTitle } from '../../components/AppSectionTitle';
+import { CenterTitleBar } from '../../components/CenterTitleBar';
+import { InlineMessageSurface } from '../../components/InlineMessageSurface';
+import { PermissionCode } from '../../models/identity/PermissionModels';
+import { RecordCategory, RecordItem, RecordQueryFilter } from '../../models/management/RecordQueryModels';
+import { RecordQueryService } from '../../services/management/RecordQueryService';
+import { AuthGuard } from '../../utils/AuthGuard';
+import { MainPageNavigator } from '../../utils/MainPageNavigator';
 
-const REVIEW_TYPE_OPTIONS: string[] = ['全部', '添加档案', '修改档案', '删除档案'];
-const REVIEW_TYPE_VALUES: string[] = ['', 'CREATE', 'UPDATE', 'DELETE'];
+const REVIEW_TYPE_OPTIONS: string[] = ['全部', '添加档案', '修改档案', '删除档案', '维修报告', '复检记录'];
+const REVIEW_TYPE_VALUES: string[] = ['', 'CREATE', 'UPDATE', 'DELETE', 'REPAIR_REPORT', 'REINSPECTION_RECORD'];
+const RECORD_FILTER_CONTROL_HEIGHT = 56;
 
 @Entry
 @Component
@@ -31,18 +36,24 @@ struct ReviewRecordQuery {
       Column() {
         this.PageTitleBar()
 
-        Column({ space: 18 }) {
-          this.ModeHeader()
-          this.SearchPanel()
+        Column({ space: AppSpacing.Section }) {
+          this.Header()
           this.RecordListPanel()
         }
         .alignItems(HorizontalAlign.Start)
-        .padding({ left: 24, right: 24, top: 0, bottom: 28 })
+        .justifyContent(FlexAlign.Start)
+        .padding({
+          left: AppSpacing.PageX,
+          right: AppSpacing.PageX,
+          top: 0,
+          bottom: AppSpacing.PageBottom
+        })
         .width('100%')
       }
       .width('100%')
       .constraintSize({ minHeight: '100%' })
       .alignItems(HorizontalAlign.Start)
+      .justifyContent(FlexAlign.Start)
     }
     .height('100%')
     .width('100%')
@@ -56,99 +67,122 @@ struct ReviewRecordQuery {
 
   @Builder
   PageTitleBar() {
-    Row({ space: 12 }) {
-      Button({ type: ButtonType.Circle, stateEffect: true }) {
-        SymbolGlyph($r('sys.symbol.chevron_backward'))
-          .fontSize(22)
-          .fontColor([AppColors.TextPrimary])
-      }
-      .width(44)
-      .height(44)
-      .backgroundColor(AppColors.Surface)
-      .border({ width: 1, color: AppColors.Divider })
-      .onClick(() => {
+    CenterTitleBar({
+      action: () => {
         this.backToParent();
-      })
-    }
-    .width('100%')
-    .height(60)
-    .alignItems(VerticalAlign.Center)
-    .padding({ left: 24, right: 24 })
-    .backgroundColor(AppColors.PageBackground)
+      }
+    })
   }
 
   @Builder
-  ModeHeader() {
-    Text('审核记录')
-      .fontSize(34)
-      .fontWeight(FontWeight.Bold)
-      .fontColor(AppColors.TextPrimary)
-      .maxLines(1)
-      .width('100%')
-      .padding({ top: 0, bottom: 2 })
+  Header() {
+    Column({ space: 5 }) {
+      Text('审核记录')
+        .fontSize(34)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+      Text('Review Records')
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextTertiary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+    .padding({ top: 12, bottom: 6 })
   }
 
   @Builder
   SearchPanel() {
-    Column({ space: 12 }) {
-      TextInput({ placeholder: '输入设备编号或操作人搜索', text: this.keyword })
-        .height(52)
-        .fontSize(15)
-        .backgroundColor(AppColors.FieldBackground)
-        .borderRadius(18)
-        .padding({ left: 16, right: 16 })
-        .border({ width: 1, color: AppColors.Border })
-        .onChange((value: string) => {
-          this.keyword = value;
-        })
-
-      if (this.message.length > 0) {
-        Text(this.message)
-          .fontSize(13)
-          .fontColor(AppColors.Danger)
-          .maxLines(2)
-          .width('100%')
-      }
-
-      Button({ type: ButtonType.Capsule, stateEffect: !this.refreshing }) {
-        Row({ space: 6 }) {
-          SymbolGlyph($r('sys.symbol.magnifyingglass'))
-            .fontSize(17)
-            .fontColor([this.refreshing ? AppColors.TextSecondary : AppColors.OnPrimary])
-          Text(this.refreshing ? '查询中' : '查询记录')
-            .fontSize(15)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(this.refreshing ? AppColors.TextSecondary : AppColors.OnPrimary)
-        }
-        .width('100%')
-        .justifyContent(FlexAlign.Center)
-      }
-      .height(46)
-      .width('100%')
-      .backgroundColor(this.refreshing ? AppColors.FieldBackground : AppColors.Primary)
-      .enabled(!this.refreshing)
-      .onClick(() => {
-        this.refreshRecords();
+    TextInput({ placeholder: '输入设备编号或操作人搜索', text: this.keyword })
+      .height(52)
+      .fontSize(15)
+      .backgroundColor(AppColors.FieldBackground)
+      .borderRadius(18)
+      .padding({ left: 16, right: 16 })
+      .border({ width: 1, color: AppColors.Border })
+      .onChange((value: string) => {
+        this.keyword = value;
       })
+      .width('100%')
+  }
+
+  @Builder
+  QueryButton() {
+    Button({ type: ButtonType.Capsule, stateEffect: !this.refreshing }) {
+      Row({ space: 6 }) {
+        SymbolGlyph($r('sys.symbol.magnifyingglass'))
+          .fontSize(17)
+          .fontColor([AppColors.OnPrimary])
+        Text(this.refreshing ? '查询中' : '查询记录')
+          .fontSize(17)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppColors.OnPrimary)
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
     }
+    .height(54)
     .width('100%')
+    .backgroundColor(this.refreshing ? AppColors.Disabled : AppColors.Primary)
+    .enabled(!this.refreshing)
+    .onClick(() => {
+      this.refreshRecords();
+    })
   }
 
   @Builder
   RecordListPanel() {
     Column({ space: 12 }) {
-      Filter({
-        multiFilters: this.getRecordFilterParams(),
-        onFilterChanged: (filterResults: FilterResult[]) => {
-          this.applyRecordFilterResults(filterResults);
-        },
-        filterType: FilterType.LIST_FILTER
-      }) {
-        Column({ space: 12 }) {
-          this.RecordFilterResultList()
-          this.ResultSummaryPanel()
+      AppSectionTitle({
+        title: '审核记录列表',
+        subtitle: ''
+      })
+
+      Column({ space: 14 }) {
+        this.SearchPanel()
+
+        Column() {
+          Filter({
+            multiFilters: this.getRecordFilterParams(),
+            onFilterChanged: (filterResults: FilterResult[]) => {
+              this.applyRecordFilterResults(filterResults);
+            },
+            filterType: FilterType.LIST_FILTER
+          }) {
+            Column()
+              .width('100%')
+              .height(1)
+          }
         }
+        .height(RECORD_FILTER_CONTROL_HEIGHT)
+        .width('100%')
+        .clip(true)
+
+        this.MessageText()
+        this.QueryButton()
+        this.RecordFilterResultList()
+        this.ResultSummaryPanel()
       }
+      .width('100%')
+      .padding({
+        left: 18,
+        right: 18,
+        top: 18,
+        bottom: 18
+      })
+      .backgroundColor(AppColors.SurfaceRaised)
+      .borderRadius(AppRadii.Large)
+      .border({
+        width: 1,
+        color: AppColors.Divider
+      })
+      .alignItems(HorizontalAlign.Start)
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -211,8 +245,9 @@ struct ReviewRecordQuery {
     }
     .padding(16)
     .width('100%')
-    .backgroundColor(AppColors.Surface)
-    .borderRadius(24)
+    .backgroundColor(AppColors.SurfaceRaised)
+    .borderRadius(AppRadii.Large)
+    .border({ width: 1, color: AppColors.Divider })
   }
 
   @Builder
@@ -252,8 +287,9 @@ struct ReviewRecordQuery {
     }
     .width('100%')
     .padding({ left: 18, right: 18, top: 28, bottom: 28 })
-    .backgroundColor(AppColors.Surface)
-    .borderRadius(24)
+    .backgroundColor(AppColors.SurfaceRaised)
+    .borderRadius(AppRadii.Large)
+    .border({ width: 1, color: AppColors.Divider })
     .alignItems(HorizontalAlign.Center)
   }
 
@@ -261,16 +297,31 @@ struct ReviewRecordQuery {
   ResultSummaryPanel() {
     Column() {
       this.RecordFieldRow('记录数量', `${this.records.length}条`)
-      Divider()
-        .height(1)
-        .backgroundColor(AppColors.Divider)
-        .margin({ left: 18, right: 18 })
+      this.CardDivider()
       this.RecordFieldRow('筛选类型', REVIEW_TYPE_OPTIONS[this.selectedTypeIndex])
     }
     .width('100%')
-    .padding({ left: 18, right: 18 })
-    .backgroundColor(AppColors.Surface)
-    .borderRadius(24)
+    .backgroundColor(AppColors.SurfaceRaised)
+    .borderRadius(AppRadii.Large)
+    .border({ width: 1, color: AppColors.Divider })
+  }
+
+  @Builder
+  MessageText() {
+    if (this.message.length > 0) {
+      InlineMessageSurface({
+        message: this.message,
+        tone: AppColors.Danger
+      })
+    }
+  }
+
+  @Builder
+  CardDivider() {
+    Divider()
+      .height(1)
+      .backgroundColor(AppColors.Divider)
+      .margin({ left: 18, right: 18 })
   }
 
   async refreshRecords(): Promise<void> {
@@ -333,15 +384,11 @@ struct ReviewRecordQuery {
   }
 
   backToParent(): void {
-    try {
-      const router = this.getUIContext().getRouter();
-      if (router.getState().index > 1) {
-        router.back();
-        return;
+    if (!MainPageNavigator.backOrReplace(this.getUIContext(), 'pages/ManagementCenter/RecordQuery')) {
+      try {
+        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+      } catch (toastErr) {
       }
-
-      router.replaceUrl({ url: 'pages/ManagementCenter/RecordQuery/RecordQuery' });
-    } catch (err) {
     }
   }
 }

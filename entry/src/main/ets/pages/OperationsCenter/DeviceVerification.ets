@@ -91,7 +91,7 @@ struct DeviceVerification {
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      Text('Verification and fault reporting')
+      Text('Verification and Fault Report')
         .fontSize(13)
         .fontWeight(FontWeight.Medium)
         .fontColor(AppColors.TextTertiary)

@@ -243,13 +243,12 @@ struct ManagementCenter {
     }
 
     if (action.id === MainPageActionId.OperationsReview) {
-      this.message = '运维审核功能后续开放';
-      this.messageTargetId = `${action.id}`;
+      this.openPage('pages/ManagementCenter/OperationsReview', '运维审核不可用');
       return;
     }
 
     if (action.id === MainPageActionId.RecordQuery) {
-      this.openPage('pages/ManagementCenter/RecordQuery/RecordQuery', '记录查询不可用');
+      this.openPage('pages/ManagementCenter/RecordQuery', '记录查询不可用');
       return;
     }
 
@@ -271,7 +270,11 @@ struct ManagementCenter {
       return `${MainPageActionId.DeviceArchiveReview}`;
     }
 
-    if (url === 'pages/ManagementCenter/RecordQuery/RecordQuery') {
+    if (url === 'pages/ManagementCenter/OperationsReview') {
+      return `${MainPageActionId.OperationsReview}`;
+    }
+
+    if (url === 'pages/ManagementCenter/RecordQuery') {
       return `${MainPageActionId.RecordQuery}`;
     }
 

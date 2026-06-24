@@ -18,9 +18,10 @@
     "pages/OperationsCenter/RepairReport",
     "pages/OperationsCenter/ReinspectionReport",
     "pages/ManagementCenter/DeviceArchiveReview",
-    "pages/ManagementCenter/RecordQuery/RecordQuery",
-    "pages/ManagementCenter/RecordQuery/ArchiveRecordQuery",
-    "pages/ManagementCenter/RecordQuery/OperationRecordQuery",
-    "pages/ManagementCenter/RecordQuery/ReviewRecordQuery"
+    "pages/ManagementCenter/OperationsReview",
+    "pages/ManagementCenter/RecordQuery",
+    "pages/ManagementCenter/ArchiveRecordQuery",
+    "pages/ManagementCenter/OperationsRecordQuery",
+    "pages/ManagementCenter/ReviewRecordQuery"
   ]
 }

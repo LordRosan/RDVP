@@ -3,29 +3,28 @@ import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
 import { AppSectionTitle } from '../../components/AppSectionTitle';
 import { CenterTitleBar } from '../../components/CenterTitleBar';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
-import {
-  DeviceArchiveRequestFieldDiff,
-  DeviceArchiveReviewDecision,
-  DeviceArchiveReviewItem,
-  DeviceArchiveReviewRequestType
-} from '../../models/archive/DeviceArchiveReviewModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
-import { DeviceArchiveReviewService } from '../../services/management/DeviceArchiveReviewService';
+import {
+  OperationReviewDecision,
+  OperationReviewItem,
+  OperationReviewRequestType
+} from '../../models/management/OperationReviewModels';
+import { OperationReviewService } from '../../services/management/OperationReviewService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
 
-const REVIEW_TYPE_FILTER_OPTIONS: string[] = ['全部类型', '添加档案', '删除档案', '修改档案'];
-const REVIEW_TYPE_FILTER_VALUES: string[] = ['', 'CREATE', 'DELETE', 'UPDATE'];
+const OPERATION_REVIEW_TYPE_OPTIONS: string[] = ['全部类型', '维修报告', '复检记录'];
+const OPERATION_REVIEW_TYPE_VALUES: string[] = ['', 'REPAIR_REPORT', 'REINSPECTION_RECORD'];
 const REVIEW_FILTER_CONTROL_HEIGHT = 56;
 
 @Entry
 @Component
-struct DeviceArchiveReview {
+struct OperationsReview {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
-  @State allRequests: DeviceArchiveReviewItem[] = [];
-  @State requests: DeviceArchiveReviewItem[] = [];
+  @State requests: OperationReviewItem[] = [];
   @State requestTypeFilterIndex: number = 0;
+  @State keyword: string = '';
   @State selectedRequestId: string = '';
   @State reviewDecision: string = '';
   @State reviewedAt: string = '';
@@ -39,7 +38,7 @@ struct DeviceArchiveReview {
   @State reviewReady: boolean = false;
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ManagementCenterDeviceArchiveRequestReview)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ManagementCenterOperationsReview)) {
       return;
     }
 
@@ -99,14 +98,14 @@ struct DeviceArchiveReview {
   @Builder
   Header() {
     Column({ space: 5 }) {
-      Text('档案审核')
+      Text('运维审核')
         .fontSize(34)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      Text('Archive Review')
+      Text('Operations Review')
         .fontSize(13)
         .fontWeight(FontWeight.Medium)
         .fontColor(AppColors.TextTertiary)
@@ -122,11 +121,13 @@ struct DeviceArchiveReview {
   RequestListPanel() {
     Column({ space: 12 }) {
       AppSectionTitle({
-        title: '审核申请列表',
+        title: '待审核运维列表',
         subtitle: ''
       })
 
       Column({ space: 14 }) {
+        this.SearchPanel()
+
         Column() {
           Filter({
             multiFilters: this.getRequestFilterParams(),
@@ -168,6 +169,22 @@ struct DeviceArchiveReview {
   }
 
   @Builder
+  SearchPanel() {
+    TextInput({ placeholder: '输入设备编号、设备名称或报告编号搜索', text: this.keyword })
+      .height(52)
+      .fontSize(15)
+      .backgroundColor(AppColors.FieldBackground)
+      .borderRadius(18)
+      .padding({ left: 16, right: 16 })
+      .border({ width: 1, color: AppColors.Border })
+      .enabled(!this.refreshing && !this.submitting)
+      .onChange((value: string) => {
+        this.keyword = value;
+      })
+      .width('100%')
+  }
+
+  @Builder
   RefreshButton() {
     Button({ type: ButtonType.Capsule, stateEffect: !this.refreshing && !this.submitting }) {
       Row({ space: 8 }) {
@@ -200,16 +217,16 @@ struct DeviceArchiveReview {
       if (this.requests.length === 0) {
         this.EmptyState()
       } else {
-        ForEach(this.requests, (item: DeviceArchiveReviewItem) => {
+        ForEach(this.requests, (item: OperationReviewItem) => {
           this.RequestItem(item)
-        }, (item: DeviceArchiveReviewItem) => item.id)
+        }, (item: OperationReviewItem) => item.id)
       }
     }
     .width('100%')
   }
 
   @Builder
-  RequestItem(item: DeviceArchiveReviewItem) {
+  RequestItem(item: OperationReviewItem) {
     Column({ space: 10 }) {
       Row({ space: 12 }) {
         Stack() {
@@ -220,17 +237,17 @@ struct DeviceArchiveReview {
         .width(44)
         .height(44)
         .borderRadius(22)
-        .backgroundColor(DeviceArchiveReviewService.getRequestTypeTone(item.type))
+        .backgroundColor(OperationReviewService.getRequestTypeTone(item.type))
 
         Column({ space: 4 }) {
-          Text(DeviceArchiveReviewService.formatRequestType(item.type))
+          Text(OperationReviewService.formatRequestType(item.type))
             .fontSize(17)
             .fontWeight(FontWeight.Bold)
             .fontColor(AppColors.TextPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-          Text(item.deviceCode)
+          Text(item.targetNo)
             .fontSize(13)
             .fontColor(AppColors.TextSecondary)
             .maxLines(1)
@@ -239,36 +256,29 @@ struct DeviceArchiveReview {
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
 
-        Text(DeviceArchiveReviewService.formatStatus(item.status))
+        Text(OperationReviewService.formatStatus(item.status))
           .fontSize(13)
-          .fontColor(DeviceArchiveReviewService.getStatusTone(item.status))
+          .fontColor(OperationReviewService.getStatusTone(item.status))
           .fontWeight(FontWeight.Medium)
           .maxLines(1)
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
 
-      this.RequestTimeRow('设备标准编号', item.deviceCode)
-      this.RequestTimeRow('标准审核编号', item.id)
-      this.RequestTimeRow('申请人', this.getApplicantName(item))
-      this.RequestTimeRow('提交时间', this.formatReviewTime(item.submittedAt))
+      this.RequestFieldRow('设备标准编号', item.deviceCode)
+      this.RequestFieldRow('设备名称', item.deviceName)
+      this.RequestFieldRow('申请人', this.getApplicantName(item))
+      this.RequestFieldRow('提交时间', this.formatReviewTime(item.submittedAt))
 
-      Row() {
-        Text(item.reason)
+      if (item.summary.length > 0) {
+        Text(item.summary)
           .fontSize(14)
           .fontColor(AppColors.TextSecondary)
           .lineHeight(20)
-          .maxLines(2)
+          .maxLines(3)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
       }
-      .width('100%')
-
-      Column({ space: 8 }) {
-        ForEach(item.changes, (change: DeviceArchiveRequestFieldDiff) => {
-          this.ChangeDiffRow(change)
-        }, (change: DeviceArchiveRequestFieldDiff) => `${item.id}-${change.field}`)
-      }
-      .width('100%')
 
       this.SelectRequestButton(item)
     }
@@ -283,7 +293,7 @@ struct DeviceArchiveReview {
   }
 
   @Builder
-  RequestTimeRow(label: string, value: string) {
+  RequestFieldRow(label: string, value: string) {
     Row() {
       Text(label)
         .fontSize(13)
@@ -304,34 +314,7 @@ struct DeviceArchiveReview {
   }
 
   @Builder
-  ChangeDiffRow(change: DeviceArchiveRequestFieldDiff) {
-    Column({ space: 4 }) {
-      Text(change.label)
-        .fontSize(13)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
-
-      Text(`${change.oldValue} -> ${change.newValue}`)
-        .fontSize(13)
-        .fontColor(AppColors.TextSecondary)
-        .lineHeight(19)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
-    .width('100%')
-    .padding({
-      left: 12,
-      right: 12,
-      top: 10,
-      bottom: 10
-    })
-    .backgroundColor(AppColors.FieldBackground)
-    .borderRadius(14)
-  }
-
-  @Builder
-  SelectRequestButton(item: DeviceArchiveReviewItem) {
+  SelectRequestButton(item: OperationReviewItem) {
     Button({ type: ButtonType.Capsule, stateEffect: true }) {
       Row({ space: 8 }) {
         SymbolGlyph(
@@ -370,7 +353,7 @@ struct DeviceArchiveReview {
         this.RequestIdField()
         this.DecisionSelector()
         this.ReviewedAtField()
-        if (this.reviewDecision === `${DeviceArchiveReviewDecision.Rejected}`) {
+        if (this.reviewDecision === `${OperationReviewDecision.Rejected}`) {
           this.ReviewCommentField()
         }
       }
@@ -396,7 +379,7 @@ struct DeviceArchiveReview {
   @Builder
   RequestIdField() {
     Column({ space: 10 }) {
-      this.FieldTitle('标准审核编号')
+      this.FieldTitle('运维审核编号')
 
       TextInput({
         placeholder: '请先选择待审核申请',
@@ -421,8 +404,8 @@ struct DeviceArchiveReview {
       this.FieldTitle('审核结论')
 
       Row({ space: 10 }) {
-        this.DecisionOption(DeviceArchiveReviewDecision.Approved, $r('sys.symbol.checkmark_circle'))
-        this.DecisionOption(DeviceArchiveReviewDecision.Rejected, $r('sys.symbol.xmark_circle'))
+        this.DecisionOption(OperationReviewDecision.Approved, $r('sys.symbol.checkmark_circle'))
+        this.DecisionOption(OperationReviewDecision.Rejected, $r('sys.symbol.xmark_circle'))
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
@@ -432,14 +415,14 @@ struct DeviceArchiveReview {
   }
 
   @Builder
-  DecisionOption(decision: DeviceArchiveReviewDecision, icon: Resource) {
+  DecisionOption(decision: OperationReviewDecision, icon: Resource) {
     Button({ type: ButtonType.Capsule, stateEffect: true }) {
       Row({ space: 6 }) {
         SymbolGlyph(icon)
           .fontSize(18)
           .fontColor([this.reviewDecision === `${decision}` ? AppColors.OnPrimary : AppColors.TextPrimary])
 
-        Text(DeviceArchiveReviewService.formatDecision(decision))
+        Text(OperationReviewService.formatDecision(decision))
           .fontSize(15)
           .fontWeight(FontWeight.Medium)
           .fontColor(this.reviewDecision === `${decision}` ? AppColors.OnPrimary : AppColors.TextPrimary)
@@ -554,7 +537,7 @@ struct DeviceArchiveReview {
       .borderRadius(32)
       .backgroundColor(AppColors.PrimarySurface)
 
-      Text('暂无待审核申请')
+      Text('暂无待审核运维申请')
         .fontSize(18)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
@@ -635,24 +618,25 @@ struct DeviceArchiveReview {
     }
 
     if (!this.canReview()) {
-      this.refreshMessage = '当前账号无权审核设备档案申请';
+      this.refreshMessage = '当前账号无权审核运维申请';
       this.refreshMessageTone = AppColors.Danger;
       return;
     }
 
     this.refreshing = true;
-    const response = await DeviceArchiveReviewService.listPendingReviewsRemoteFirst();
+    const response = await OperationReviewService.listPendingReviewsRemoteFirst(
+      OPERATION_REVIEW_TYPE_VALUES[this.requestTypeFilterIndex],
+      this.keyword);
     this.refreshing = false;
 
     if (!response.success) {
       const error = response.error;
-      this.refreshMessage = error ? error.message : '档案申请刷新失败';
+      this.refreshMessage = error ? error.message : '运维申请刷新失败';
       this.refreshMessageTone = AppColors.Danger;
       return;
     }
 
-    this.allRequests = response.data === undefined ? [] : response.data.items;
-    this.applyRequestFilters();
+    this.requests = response.data === undefined ? [] : response.data.items;
     if (this.selectedRequestId.length > 0 && !this.hasRequest(this.selectedRequestId)) {
       this.clearReviewForm();
     }
@@ -666,7 +650,7 @@ struct DeviceArchiveReview {
     }
   }
 
-  selectRequest(item: DeviceArchiveReviewItem): void {
+  selectRequest(item: OperationReviewItem): void {
     this.selectedRequestId = item.id;
     this.reviewDecision = '';
     this.reviewComment = '';
@@ -676,25 +660,18 @@ struct DeviceArchiveReview {
     this.updateReviewReady();
   }
 
-  applyRequestFilters(): void {
-    const typeValue = REVIEW_TYPE_FILTER_VALUES[this.requestTypeFilterIndex];
-    this.requests = this.allRequests.filter((item: DeviceArchiveReviewItem) => {
-      return typeValue.length === 0 || item.type === typeValue;
-    });
-  }
-
   applyRequestFilterResults(filterResults: FilterResult[]): void {
     const result = filterResults.find((item: FilterResult) => {
       return item.name === '申请类型';
     });
     this.requestTypeFilterIndex = result === undefined ? 0 :
-      this.normalizeFilterIndex(result.index, REVIEW_TYPE_FILTER_VALUES.length);
-    this.applyRequestFilters();
+      this.normalizeFilterIndex(result.index, OPERATION_REVIEW_TYPE_VALUES.length);
+    this.refreshRequests();
   }
 
   getRequestFilterParams(): FilterParams[] {
     return [
-      this.createFilterParams('申请类型', REVIEW_TYPE_FILTER_OPTIONS)
+      this.createFilterParams('申请类型', OPERATION_REVIEW_TYPE_OPTIONS)
     ];
   }
 
@@ -725,8 +702,8 @@ struct DeviceArchiveReview {
     }
 
     this.submitting = true;
-    const decision = this.reviewDecision as DeviceArchiveReviewDecision;
-    const response = await DeviceArchiveReviewService.reviewArchiveRequestRemoteFirst({
+    const decision = this.reviewDecision as OperationReviewDecision;
+    const response = await OperationReviewService.reviewOperationRequestRemoteFirst({
       requestId: this.selectedRequestId,
       decision,
       reviewedAt: this.reviewedAt,
@@ -736,12 +713,12 @@ struct DeviceArchiveReview {
 
     if (!response.success) {
       const error = response.error;
-      this.message = error ? error.message : '档案审核失败';
+      this.message = error ? error.message : '运维审核失败';
       this.messageTone = AppColors.Danger;
       return;
     }
 
-    this.message = `${DeviceArchiveReviewService.formatDecision(decision)}完成`;
+    this.message = `${OperationReviewService.formatDecision(decision)}完成`;
     this.messageTone = AppColors.Success;
     this.clearReviewForm();
     await this.refreshRequests(false);
@@ -759,21 +736,21 @@ struct DeviceArchiveReview {
     return this.selectedRequestId.length > 0 &&
       this.hasReviewDecision() &&
       this.reviewedAt.length > 0 &&
-      (this.reviewDecision !== `${DeviceArchiveReviewDecision.Rejected}` || this.reviewComment.trim().length > 0);
+      (this.reviewDecision !== `${OperationReviewDecision.Rejected}` || this.reviewComment.trim().length > 0);
   }
 
   fillSubmitValidationMessage(): void {
     if (this.refreshing) {
       this.message = '申请列表正在刷新，请稍后提交审核结果';
     } else if (!this.canReview()) {
-      this.message = '当前账号无权审核设备档案申请';
+      this.message = '当前账号无权审核运维申请';
     } else if (this.selectedRequestId.length === 0) {
       this.message = '请先选择待审核申请';
     } else if (!this.hasReviewDecision()) {
       this.message = '请选择审核结论';
     } else if (this.reviewedAt.length === 0) {
       this.message = '请选择审核时间';
-    } else if (this.reviewDecision === `${DeviceArchiveReviewDecision.Rejected}` &&
+    } else if (this.reviewDecision === `${OperationReviewDecision.Rejected}` &&
       this.reviewComment.trim().length === 0) {
       this.message = '驳回申请时必须填写审核意见';
     } else {
@@ -791,21 +768,21 @@ struct DeviceArchiveReview {
   }
 
   canReview(): boolean {
-    return SessionStore.hasPermission(PermissionCode.ManagementCenterDeviceArchiveRequestReview);
+    return SessionStore.hasPermission(PermissionCode.ManagementCenterOperationsReview);
   }
 
   hasRequest(requestId: string): boolean {
-    return this.requests.some((item: DeviceArchiveReviewItem) => {
+    return this.requests.some((item: OperationReviewItem) => {
       return item.id === requestId;
     });
   }
 
   hasReviewDecision(): boolean {
-    return this.reviewDecision === `${DeviceArchiveReviewDecision.Approved}` ||
-      this.reviewDecision === `${DeviceArchiveReviewDecision.Rejected}`;
+    return this.reviewDecision === `${OperationReviewDecision.Approved}` ||
+      this.reviewDecision === `${OperationReviewDecision.Rejected}`;
   }
 
-  getApplicantName(item: DeviceArchiveReviewItem): string {
+  getApplicantName(item: OperationReviewItem): string {
     return item.applicantName === undefined || item.applicantName.length === 0 ? '-' : item.applicantName;
   }
 
@@ -813,19 +790,17 @@ struct DeviceArchiveReview {
     return this.submitting ? '提交中' : '提交审核结果';
   }
 
-  getDecisionTone(decision: DeviceArchiveReviewDecision): string {
-    return decision === DeviceArchiveReviewDecision.Approved ? AppColors.Success : AppColors.Danger;
+  getDecisionTone(decision: OperationReviewDecision): string {
+    return decision === OperationReviewDecision.Approved ? AppColors.Success : AppColors.Danger;
   }
 
-  getRequestTypeIcon(type: DeviceArchiveReviewRequestType): Resource {
+  getRequestTypeIcon(type: OperationReviewRequestType): Resource {
     switch (type) {
-      case DeviceArchiveReviewRequestType.Create:
-        return $r('sys.symbol.plus_circle');
-      case DeviceArchiveReviewRequestType.Delete:
-        return $r('sys.symbol.trash');
-      case DeviceArchiveReviewRequestType.Update:
+      case OperationReviewRequestType.ReinspectionRecord:
+        return $r('sys.symbol.doc_text_badge_checkmark');
+      case OperationReviewRequestType.RepairReport:
       default:
-        return $r('sys.symbol.text_clipboard');
+        return $r('sys.symbol.wrench_and_screwdriver');
     }
   }
 
@@ -835,7 +810,7 @@ struct DeviceArchiveReview {
       return '-';
     }
 
-    return normalized.replace('T', ' ').replace('Z', '');
+    return normalized.replace('T', ' ').replace('Z', '').split('.')[0];
   }
 
   showReviewedAtPicker(): void {
@@ -909,5 +884,3 @@ struct DeviceArchiveReview {
     }
   }
 }
-
-

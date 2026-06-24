@@ -228,6 +228,59 @@ class DashboardControllerTests {
     }
 
     @Test
+    void countsPendingAndReviewedOperationReviews() throws Exception {
+        String managerToken = login("manager", "password");
+        String operatorToken = login("operator", "password");
+
+        String faultId = createFaultReport(operatorToken);
+        String repairTaskId = acceptFaultReport(operatorToken, faultId);
+        mockMvc.perform(post("/api/v1/repair-tasks/{repairTaskId}/repair-reports", repairTaskId)
+                        .header("Authorization", "Bearer " + operatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "result": "REPAIRED",
+                                  "repairedAt": "2026-05-29T06:30:00Z",
+                                  "processDescription": "已完成维修。",
+                                  "partsUsed": ""
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/dashboard")
+                        .header("Authorization", "Bearer " + managerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.management.reviewedTotal").value(0))
+                .andExpect(jsonPath("$.data.management.pendingOperationsReviews").value(1));
+
+        String pendingResponse = mockMvc.perform(get("/api/v1/operation-review-requests?status=PENDING_REVIEW")
+                        .header("Authorization", "Bearer " + managerToken))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        String requestId = objectMapper.readTree(pendingResponse).path("data").path("items").get(0).path("id").asText();
+
+        mockMvc.perform(post("/api/v1/operation-review-requests/{requestId}/review", requestId)
+                        .header("Authorization", "Bearer " + managerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "decision": "APPROVED",
+                                  "reviewedAt": "2026-06-01T08:00:00Z",
+                                  "reviewComment": "通过。"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/dashboard")
+                        .header("Authorization", "Bearer " + managerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.management.reviewedTotal").value(1))
+                .andExpect(jsonPath("$.data.management.pendingOperationsReviews").value(0));
+    }
+
+    @Test
     void countsArchiveMutationsOnlyAfterApproval() throws Exception {
         String archiveAdminToken = login("archiveadmin", "password");
         String adminToken = login("admin", "password");

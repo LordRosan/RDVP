@@ -612,6 +612,66 @@ class OperationsControllerTests {
     }
 
     @Test
+    void createsAndReviewsPendingOperationsReviewForRepairReport() throws Exception {
+        String operatorToken = login("operator", "password");
+        String operatorWorkerToken = login("operator", "password");
+        String reviewerToken = login("operationsadmin", "password");
+
+        String faultId = createFaultReport(
+                operatorToken,
+                "RDVP-DEVICE-0001",
+                "ENERGY_FAULT",
+                "GENERAL",
+                "Power supply fluctuates under load.");
+        String repairTaskId = acceptFaultReport(operatorWorkerToken, faultId);
+        submitRepairReport(operatorWorkerToken, repairTaskId);
+
+        String listResponse = mockMvc.perform(get("/api/v1/operation-review-requests?status=PENDING_REVIEW")
+                        .header("Authorization", "Bearer " + reviewerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items[0].type").value("REPAIR_REPORT"))
+                .andExpect(jsonPath("$.data.items[0].status").value("PENDING_REVIEW"))
+                .andExpect(jsonPath("$.data.items[0].targetId").isString())
+                .andExpect(jsonPath("$.data.items[0].deviceCode").value("RDVP-DEVICE-0001"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        String requestId = objectMapper.readTree(listResponse).path("data").path("items").get(0).path("id").asText();
+
+        mockMvc.perform(post("/api/v1/operation-review-requests/{requestId}/review", requestId)
+                        .header("Authorization", "Bearer " + reviewerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "decision": "APPROVED",
+                                  "reviewedAt": "2026-06-01T08:00:00Z",
+                                  "reviewComment": "Repair report accepted."
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(requestId))
+                .andExpect(jsonPath("$.data.status").value("APPROVED"))
+                .andExpect(jsonPath("$.data.reviewedAt").value("2026-06-01T08:00:00Z"));
+
+        mockMvc.perform(get("/api/v1/operation-review-requests?status=PENDING_REVIEW")
+                        .header("Authorization", "Bearer " + reviewerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0));
+    }
+
+    @Test
+    void requiresOperationsReviewPermissionForManagementReviewEndpoints() throws Exception {
+        String operatorToken = login("operator", "password");
+
+        mockMvc.perform(get("/api/v1/operation-review-requests?status=PENDING_REVIEW")
+                        .header("Authorization", "Bearer " + operatorToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("FORBIDDEN"));
+    }
+
+    @Test
     void requeuesEmergencyTemporaryRepairWithoutReinspection() throws Exception {
         String operatorToken = login("operator", "password");
         String operatorWorkerToken = login("operator", "password");

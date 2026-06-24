@@ -1,11 +1,14 @@
-import { ActionTile } from '../../../components/ActionTile';
-import { StatusInfoRow } from '../../../components/StatusInfoRow';
-import { MainPageAction, MainPageActionId } from '../../../models/app/MainPageModels';
-import { ManagementCenterRecordPermissions, PermissionCode } from '../../../models/identity/PermissionModels';
-import { SessionStore } from '../../../stores/SessionStore';
-import { AppColors } from '../../../styles/AppTheme';
-import { AuthGuard } from '../../../utils/AuthGuard';
-import { PermissionTextFormatter } from '../../../utils/PermissionTextFormatter';
+import { ActionTile } from '../../components/ActionTile';
+import { AppSectionTitle } from '../../components/AppSectionTitle';
+import { CenterTitleBar } from '../../components/CenterTitleBar';
+import { InlineMessageSurface } from '../../components/InlineMessageSurface';
+import { StatusInfoRow } from '../../components/StatusInfoRow';
+import { MainPageAction, MainPageActionId } from '../../models/app/MainPageModels';
+import { ManagementCenterRecordPermissions, PermissionCode } from '../../models/identity/PermissionModels';
+import { SessionStore } from '../../stores/SessionStore';
+import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
+import { AuthGuard } from '../../utils/AuthGuard';
+import { PermissionTextFormatter } from '../../utils/PermissionTextFormatter';
 
 @Entry
 @Component
@@ -34,18 +37,18 @@ struct RecordQuery {
       Column() {
         this.PageTitleBar()
 
-        Column({ space: 18 }) {
-          this.ModeHeader()
+        Column({ space: AppSpacing.Section }) {
+          this.Header()
           this.OverviewPanel()
           this.ActionSection()
         }
         .alignItems(HorizontalAlign.Start)
         .justifyContent(FlexAlign.Start)
         .padding({
-          left: 24,
-          right: 24,
+          left: AppSpacing.PageX,
+          right: AppSpacing.PageX,
           top: 0,
-          bottom: 28
+          bottom: AppSpacing.PageBottom
         })
         .width('100%')
       }
@@ -66,57 +69,42 @@ struct RecordQuery {
 
   @Builder
   PageTitleBar() {
-    Row({ space: 12 }) {
-      Button({ type: ButtonType.Circle, stateEffect: true }) {
-        SymbolGlyph($r('sys.symbol.chevron_backward'))
-          .fontSize(22)
-          .fontColor([AppColors.TextPrimary])
-      }
-      .width(44)
-      .height(44)
-      .backgroundColor(AppColors.Surface)
-      .border({
-        width: 1,
-        color: AppColors.Divider
-      })
-      .onClick(() => {
+    CenterTitleBar({
+      action: () => {
         this.backToManagementCenter();
-      })
-    }
-    .width('100%')
-    .height(60)
-    .alignItems(VerticalAlign.Center)
-    .padding({
-      left: 24,
-      right: 24
+      }
     })
-    .backgroundColor(AppColors.PageBackground)
   }
 
   @Builder
-  ModeHeader() {
-    Row({ space: 16 }) {
+  Header() {
+    Column({ space: 5 }) {
       Text('记录查询')
         .fontSize(34)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .layoutWeight(1)
+
+      Text('Record Query')
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextTertiary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .width('100%')
-    .alignItems(VerticalAlign.Center)
-    .padding({ top: 0, bottom: 2 })
+    .alignItems(HorizontalAlign.Start)
+    .padding({ top: 12, bottom: 6 })
   }
 
   @Builder
   OverviewPanel() {
-    Column({ space: 10 }) {
-      Text('中心概览')
-        .fontSize(22)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
+    Column({ space: 12 }) {
+      AppSectionTitle({
+        title: '功能权限',
+        subtitle: ''
+      })
 
       Column() {
         StatusInfoRow({
@@ -130,8 +118,12 @@ struct RecordQuery {
         })
       }
       .width('100%')
-      .backgroundColor(AppColors.Surface)
-      .borderRadius(24)
+      .backgroundColor(AppColors.SurfaceRaised)
+      .borderRadius(AppRadii.Large)
+      .border({
+        width: 1,
+        color: AppColors.Divider
+      })
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
@@ -140,11 +132,10 @@ struct RecordQuery {
   @Builder
   ActionSection() {
     Column({ space: 12 }) {
-      Text('功能入口')
-        .fontSize(22)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
+      AppSectionTitle({
+        title: '功能入口',
+        subtitle: ''
+      })
 
       Column({ space: 10 }) {
         ForEach(this.actions, (item: MainPageAction) => {
@@ -170,12 +161,10 @@ struct RecordQuery {
   @Builder
   MessageText() {
     if (this.message.length > 0) {
-      Text(this.message)
-        .fontSize(13)
-        .fontColor(AppColors.Danger)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
+      InlineMessageSurface({
+        message: this.message,
+        tone: AppColors.Danger
+      })
     }
   }
 
@@ -225,17 +214,17 @@ struct RecordQuery {
     this.message = '';
     this.messageTargetId = '';
     if (action.id === MainPageActionId.ArchiveRecordQuery) {
-      this.openSubPage('pages/ManagementCenter/RecordQuery/ArchiveRecordQuery', '档案记录不可用', action.id);
+      this.openSubPage('pages/ManagementCenter/ArchiveRecordQuery', '档案记录不可用', action.id);
       return;
     }
 
     if (action.id === MainPageActionId.OperationRecordQuery) {
-      this.openSubPage('pages/ManagementCenter/RecordQuery/OperationRecordQuery', '运维记录不可用', action.id);
+      this.openSubPage('pages/ManagementCenter/OperationRecordQuery', '运维记录不可用', action.id);
       return;
     }
 
     if (action.id === MainPageActionId.ReviewRecordQuery) {
-      this.openSubPage('pages/ManagementCenter/RecordQuery/ReviewRecordQuery', '审核记录不可用', action.id);
+      this.openSubPage('pages/ManagementCenter/ReviewRecordQuery', '审核记录不可用', action.id);
       return;
     }
 
