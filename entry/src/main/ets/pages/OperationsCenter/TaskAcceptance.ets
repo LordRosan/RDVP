@@ -21,10 +21,13 @@ import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
 
 const REFRESH_TIMEOUT_MS = 5000;
-const TASK_ACCEPTANCE_TYPE_FILTER_OPTIONS: string[] = ['全部', '运行异常', '部件损坏', '通信故障', '逻辑故障', '能源故障', '外部因素', '其他'];
-const TASK_ACCEPTANCE_TYPE_FILTER_VALUES: string[] = ['', `${FaultType.OperationAbnormal}`, `${FaultType.HardwareDamage}`,
-  `${FaultType.CommunicationFault}`, `${FaultType.LogicFault}`, `${FaultType.EnergyFault}`, `${FaultType.ExternalFactor}`,
-  `${FaultType.Other}`];
+const TASK_ACCEPTANCE_TYPE_FILTER_OPTIONS: string[] =
+  ['全部', '运行异常', '部件损坏', '通信故障', '逻辑故障', '能源故障', '外部因素', '其他'];
+const TASK_ACCEPTANCE_TYPE_FILTER_VALUES: string[] =
+  ['', `${FaultType.OperationAbnormal}`, `${FaultType.HardwareDamage}`,
+    `${FaultType.CommunicationFault}`, `${FaultType.LogicFault}`, `${FaultType.EnergyFault}`,
+    `${FaultType.ExternalFactor}`,
+    `${FaultType.Other}`];
 const TASK_ACCEPTANCE_SEVERITY_FILTER_OPTIONS: string[] = ['全部', '紧急', '严重', '一般', '轻微'];
 const TASK_ACCEPTANCE_SEVERITY_FILTER_VALUES: string[] = ['', `${FaultSeverity.Emergency}`, `${FaultSeverity.Severe}`,
   `${FaultSeverity.General}`, `${FaultSeverity.Minor}`];
@@ -234,10 +237,6 @@ struct TaskAcceptance {
     Column({ space: 14 }) {
       this.RadiusPicker()
 
-      Divider()
-        .height(1)
-        .backgroundColor(AppColors.Divider)
-
       Column() {
         Filter({
           multiFilters: this.getTaskFilterParams(),
@@ -254,10 +253,6 @@ struct TaskAcceptance {
       .height(TASK_FILTER_CONTROL_HEIGHT)
       .width('100%')
       .clip(true)
-
-      Divider()
-        .height(1)
-        .backgroundColor(AppColors.Divider)
 
       this.TaskResultContent()
     }
@@ -581,7 +576,8 @@ struct TaskAcceptance {
           selectedTask.distanceKm !== undefined &&
           selectedTask.distanceKm > this.workloadSnapshot.maxRadiusKm)) {
         this.acceptActionMessage = this.workloadSnapshot.canAccept ?
-          `当前处于${RepairTaskService.formatWorkloadStatus(this.workloadSnapshot.status)}状态，仅可接取${this.workloadSnapshot.maxRadiusKm}公里内的维修任务。` :
+          `当前处于${RepairTaskService.formatWorkloadStatus(
+            this.workloadSnapshot.status)}状态，仅可接取${this.workloadSnapshot.maxRadiusKm}公里内的维修任务。` :
           this.workloadSnapshot.message;
         this.acceptActionMessageTone = AppColors.Danger;
         return;
