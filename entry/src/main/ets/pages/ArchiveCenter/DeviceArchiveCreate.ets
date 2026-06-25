@@ -6,11 +6,11 @@ import {
   DeviceArchiveCreateRequestForm,
   DeviceArchiveRequestStatus
 } from '../../models/archive/DeviceArchiveRequestModels';
-import { ApiErrorCode } from '../../models/common/ApiModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
 import { DeviceArchiveRequestService } from '../../services/archive/DeviceArchiveRequestService';
 import { DeviceService } from '../../services/archive/DeviceService';
 import { ApiClient } from '../../services/common/ApiClient';
+import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { AuthService } from '../../services/identity/AuthService';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
@@ -478,7 +478,7 @@ struct DeviceArchiveCreate {
     this.deviceCode = deviceCode;
     this.normalizedDeviceCode = deviceCode;
     if (!ApiClient.isConfigured()) {
-      this.verifyMessage = '核验功能暂不可用，请稍后重试';
+      this.verifyMessage = UiFeedbackService.operationUnavailable('核验');
       return;
     }
 
@@ -490,18 +490,18 @@ struct DeviceArchiveCreate {
 
       if (!response.success) {
         const error = response.error;
-        this.verifyMessage = this.normalizeVerifyErrorMessage(error === undefined ? '' : `${error.code}`);
+        this.verifyMessage = UiFeedbackService.codeQueryError(error, '设备编号', '核验');
         return;
       }
 
       if (response.data === undefined) {
-        this.verifyMessage = '核验功能暂不可用，请稍后重试';
+        this.verifyMessage = UiFeedbackService.operationUnavailable('核验');
         return;
       }
 
       this.verifyResult = response.data;
       if (!response.data.available) {
-        this.verifyMessage = '设备编号不可用，请重新输入';
+        this.verifyMessage = UiFeedbackService.incorrect('设备编号');
       }
     } finally {
       this.verifying = false;
@@ -514,7 +514,7 @@ struct DeviceArchiveCreate {
     }
 
     if (!this.isDeviceCodeAvailable()) {
-      this.message = '请先完成编号核验';
+      this.message = UiFeedbackService.requiredAction('先完成编号核验');
       this.messageTone = AppColors.Danger;
       return;
     }
@@ -534,7 +534,7 @@ struct DeviceArchiveCreate {
     }
 
     if (this.password.length === 0) {
-      this.message = '请输入密码';
+      this.message = UiFeedbackService.requiredInput('密码');
       this.messageTone = AppColors.Danger;
       return;
     }
@@ -548,7 +548,7 @@ struct DeviceArchiveCreate {
 
       const response = await DeviceArchiveRequestService.submitCreateRequestRemoteFirst(form);
       if (!response.success) {
-        this.message = '添加功能暂不可用，请稍后重试';
+        this.message = UiFeedbackService.operationUnavailable('添加');
         this.messageTone = AppColors.Danger;
         return;
       }
@@ -556,7 +556,7 @@ struct DeviceArchiveCreate {
       this.requestStatus =
         response.data === undefined ? DeviceArchiveRequestStatus.PendingReview : response.data.status;
       this.password = '';
-      this.message = '提交成功，等待审核';
+      this.message = UiFeedbackService.operationSuccess('提交');
       this.messageTone = AppColors.Success;
     } finally {
       this.submitting = false;
@@ -569,8 +569,7 @@ struct DeviceArchiveCreate {
       return true;
     }
 
-    const errorCode = response.error === undefined ? '' : `${response.error.code}`;
-    this.message = this.mapPasswordVerifyErrorMessage(errorCode);
+    this.message = UiFeedbackService.passwordVerificationError(response.error, '添加');
     this.messageTone = AppColors.Danger;
     return false;
   }
@@ -644,27 +643,6 @@ struct DeviceArchiveCreate {
     return $r('sys.symbol.checkmark_circle');
   }
 
-  normalizeVerifyErrorMessage(errorCode: string): string {
-    if (errorCode === 'DEVICE_CODE_INVALID' || errorCode === ApiErrorCode.BadRequest ||
-      errorCode === ApiErrorCode.ValidationFailed) {
-      return '设备编号无效，请重新输入';
-    }
-
-    return '核验功能暂不可用，请稍后重试';
-  }
-
-  mapPasswordVerifyErrorMessage(errorCode: string): string {
-    if (errorCode === 'PASSWORD_REQUIRED') {
-      return '请输入密码';
-    }
-
-    if (errorCode === 'INVALID_CREDENTIALS' || errorCode === 'LOGIN_FAILED' || errorCode === 'UNAUTHORIZED') {
-      return '密码不正确，请重新输入';
-    }
-
-    return '添加功能暂不可用，请稍后重试';
-  }
-
   showCreateTimePicker(): void {
     if (this.submitting || this.isSubmitted()) {
       return;
@@ -724,7 +702,7 @@ struct DeviceArchiveCreate {
   backToArchiveCenter(): void {
     if (!MainPageNavigator.backOrReplace(this.getUIContext(), 'pages/ArchiveCenter/ArchiveCenter')) {
       try {
-        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
       } catch (toastErr) {
       }
     }

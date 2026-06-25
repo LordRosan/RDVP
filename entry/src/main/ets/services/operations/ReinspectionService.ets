@@ -11,6 +11,7 @@ import {
   ReinspectionValidationResult
 } from '../../models/operations/ReinspectionModels';
 import { ApiClient } from '../common/ApiClient';
+import { UiFeedbackService } from '../common/UiFeedbackService';
 
 const MAX_REINSPECTION_DESCRIPTION_LENGTH = 800;
 
@@ -81,21 +82,21 @@ export class ReinspectionService {
     if (form.taskId.trim().length === 0) {
       return {
         valid: false,
-        message: '请选择复检任务'
+        message: UiFeedbackService.requiredSelection('复检任务')
       };
     }
 
     if (!ReinspectionService.isKnownResult(form.result)) {
       return {
         valid: false,
-        message: '请选择复检结果'
+        message: UiFeedbackService.requiredSelection('复检结果')
       };
     }
 
     if (form.reinspectedAt.trim().length === 0) {
       return {
         valid: false,
-        message: '请选择复检时间'
+        message: UiFeedbackService.requiredTime('复检')
       };
     }
 
@@ -103,14 +104,14 @@ export class ReinspectionService {
     if (description.length === 0) {
       return {
         valid: false,
-        message: '请输入复检说明'
+        message: UiFeedbackService.requiredInput('复检说明')
       };
     }
 
     if (description.length > MAX_REINSPECTION_DESCRIPTION_LENGTH) {
       return {
         valid: false,
-        message: '复检说明不能超过800字'
+        message: UiFeedbackService.fieldTooLong('复检说明', 800, '字')
       };
     }
 
@@ -177,7 +178,7 @@ export class ReinspectionService {
         success: false,
         error: {
           code: 'REINSPECTION_RECORD_RESPONSE_INVALID',
-          message: '复检报告响应无效'
+          message: UiFeedbackService.operationUnavailable('提交')
         },
         requestId: response.requestId,
         timestamp: response.timestamp

@@ -11,6 +11,7 @@ import {
 } from '../../models/management/OperationsReviewModels';
 import { DateTimeFormatUtil } from '../../utils/DateTimeFormatUtil';
 import { ApiClient } from '../common/ApiClient';
+import { UiFeedbackService } from '../common/UiFeedbackService';
 
 interface ApiListResult<T> {
   items: T[];
@@ -92,7 +93,7 @@ export class OperationsReviewService {
         success: false,
         error: {
           code: 'OPERATIONS_REVIEW_REQUEST_INVALID',
-          message: '缺少审核编号'
+          message: UiFeedbackService.requiredSelection('待审核操作')
         }
       };
     }
@@ -102,7 +103,7 @@ export class OperationsReviewService {
         success: false,
         error: {
           code: 'OPERATIONS_REVIEW_COMMENT_REQUIRED',
-          message: '驳回申请时必须填写审核意见'
+          message: UiFeedbackService.requiredInput('审核意见')
         }
       };
     }
@@ -113,7 +114,7 @@ export class OperationsReviewService {
         success: false,
         error: {
           code: 'OPERATIONS_REVIEW_TIME_INVALID',
-          message: '请选择审核时间'
+          message: UiFeedbackService.requiredTime('审核')
         }
       };
     }

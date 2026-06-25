@@ -290,7 +290,7 @@ class DeviceArchiveControllerTests {
                                 """))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
+                .andExpect(jsonPath("$.error.code").value("PASSWORD_INCORRECT"));
 
         String managerToken = login("manager", "password");
         mockMvc.perform(get("/api/v1/audit-logs?action=AUTH_PASSWORD_VERIFY&keyword=archiveadmin")
@@ -327,7 +327,7 @@ class DeviceArchiveControllerTests {
                                 """))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
+                .andExpect(jsonPath("$.error.code").value("PASSWORD_INCORRECT"));
 
         String managerToken = login("manager", "password");
         mockMvc.perform(get("/api/v1/audit-logs?action=AUTH_PASSWORD_VERIFY&keyword=archiveadmin")
@@ -352,7 +352,7 @@ class DeviceArchiveControllerTests {
                                     """))
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.success").value(false))
-                    .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
+                    .andExpect(jsonPath("$.error.code").value("PASSWORD_INCORRECT"));
         }
 
         mockMvc.perform(post("/api/v1/auth/password-verification")

@@ -2,6 +2,7 @@ import { AppColors, AppRadii, AppSpacing } from '../styles/AppTheme';
 import { InlineMessageSurface } from '../components/InlineMessageSurface';
 import { AuthService } from '../services/identity/AuthService';
 import { SessionStore } from '../stores/SessionStore';
+import { UiFeedbackService } from '../services/common/UiFeedbackService';
 
 @Entry
 @Component
@@ -9,6 +10,7 @@ struct Login {
   @State username: string = '';
   @State password: string = '';
   @State message: string = '';
+  @State messageTone: string = AppColors.Danger;
   @State submitting: boolean = false;
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
 
@@ -145,6 +147,7 @@ struct Login {
             this.username = value;
           }
           this.message = '';
+          this.messageTone = AppColors.Danger;
         })
     }
     .width('100%')
@@ -156,7 +159,7 @@ struct Login {
     if (this.message.length > 0) {
       InlineMessageSurface({
         message: this.message,
-        tone: AppColors.Danger
+        tone: this.messageTone
       })
     }
   }
@@ -197,6 +200,7 @@ struct Login {
     const validationMessage = this.validateBeforeRemoteLogin();
     if (validationMessage.length > 0) {
       this.message = validationMessage;
+      this.messageTone = AppColors.Danger;
       this.submitting = false;
       return;
     }
@@ -208,8 +212,8 @@ struct Login {
     this.submitting = false;
 
     if (!response.success) {
-      const error = response.error;
-      this.message = this.normalizeLoginErrorMessage(error === undefined ? '' : `${error.code}`, error === undefined ? '' : error.message);
+      this.message = UiFeedbackService.loginError(response.error);
+      this.messageTone = AppColors.Danger;
       return;
     }
 
@@ -217,44 +221,37 @@ struct Login {
       SessionStore.setSession(response.data);
     }
 
-    this.openMainPage();
+    this.message = UiFeedbackService.operationSuccess('登录');
+    this.messageTone = AppColors.Success;
+    setTimeout(() => {
+      this.openMainPage();
+    }, 300);
   }
 
   validateBeforeRemoteLogin(): string {
     const usernameEmpty = this.username.trim().length === 0;
     const passwordEmpty = this.password.length === 0;
     if (usernameEmpty && passwordEmpty) {
-      return '请输入账号和密码';
+      return UiFeedbackService.requiredInput('账号');
     }
 
     if (usernameEmpty) {
-      return '请输入账号';
+      return UiFeedbackService.requiredInput('账号');
     }
 
     if (passwordEmpty) {
-      return '请输入密码';
+      return UiFeedbackService.requiredInput('密码');
     }
 
     return '';
-  }
-
-  normalizeLoginErrorMessage(errorCode: string, fallbackMessage: string): string {
-    if (errorCode === 'UNAUTHORIZED' || errorCode === 'INVALID_CREDENTIALS' || errorCode === 'LOGIN_FAILED') {
-      return '账号或密码不正确，请重新输入';
-    }
-
-    if (errorCode === 'SERVICE_UNAVAILABLE' || errorCode === 'INTERNAL_ERROR' || errorCode.length === 0) {
-      return '登录功能暂不可用，请稍后重试';
-    }
-
-    return fallbackMessage.length > 0 ? fallbackMessage : '登录失败';
   }
 
   openMainPage(): void {
     try {
       this.getUIContext().getRouter().replaceUrl({ url: 'pages/MainPage' });
     } catch (err) {
-      this.message = '页面跳转失败';
+      this.message = UiFeedbackService.operationUnavailable('页面跳转');
+      this.messageTone = AppColors.Danger;
     }
   }
 }

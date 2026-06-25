@@ -5,6 +5,7 @@ import { CenterTitleBar } from '../../components/CenterTitleBar';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { PermissionCode } from '../../models/identity/PermissionModels';
 import { RecordCategory, RecordItem, RecordQueryFilter } from '../../models/management/RecordQueryModels';
+import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { RecordQueryService } from '../../services/management/RecordQueryService';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
@@ -340,7 +341,7 @@ struct ReviewRecordQuery {
     const response = await RecordQueryService.queryRecords(filter);
     this.refreshing = false;
     if (!response.success) {
-      this.message = response.error ? response.error.message : '查询失败';
+      this.message = UiFeedbackService.operationError(response.error, '查询');
       return;
     }
 
@@ -386,7 +387,7 @@ struct ReviewRecordQuery {
   backToParent(): void {
     if (!MainPageNavigator.backOrReplace(this.getUIContext(), 'pages/ManagementCenter/RecordQuery')) {
       try {
-        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
       } catch (toastErr) {
       }
     }

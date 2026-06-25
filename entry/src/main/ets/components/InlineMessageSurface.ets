@@ -1,4 +1,5 @@
 import { AppColors, AppRadii } from '../styles/AppTheme';
+import { UiFeedbackService } from '../services/common/UiFeedbackService';
 
 @Component
 export struct InlineMessageSurface {
@@ -8,11 +9,11 @@ export struct InlineMessageSurface {
   build() {
     if (this.message.length > 0) {
       Row({ space: 8 }) {
-        SymbolGlyph($r('sys.symbol.exclamationmark_circle'))
+        SymbolGlyph(this.getSymbol())
           .fontSize(17)
           .fontColor([this.tone])
 
-        Text(this.message)
+        Text(UiFeedbackService.sanitize(this.message))
           .fontSize(13)
           .fontColor(this.tone)
           .lineHeight(18)
@@ -44,5 +45,15 @@ export struct InlineMessageSurface {
       return AppColors.PrimarySurface;
     }
     return AppColors.DangerSurface;
+  }
+
+  getSymbol(): Resource {
+    if (this.tone === AppColors.Success) {
+      return $r('sys.symbol.checkmark_circle');
+    }
+    if (this.tone === AppColors.Warning) {
+      return $r('sys.symbol.exclamationmark_triangle');
+    }
+    return $r('sys.symbol.exclamationmark_circle');
   }
 }

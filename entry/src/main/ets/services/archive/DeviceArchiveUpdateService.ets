@@ -9,6 +9,7 @@ import {
 import { ApiClient } from '../common/ApiClient';
 import { DeviceService } from './DeviceService';
 import { DateTimeFormatUtil } from '../../utils/DateTimeFormatUtil';
+import { UiFeedbackService } from '../common/UiFeedbackService';
 
 interface DeviceArchiveUpdateApiResult {
   id: string;
@@ -41,7 +42,7 @@ export class DeviceArchiveUpdateService {
     if (updatedFieldCount === 0) {
       return {
         valid: false,
-        message: '请修改档案信息',
+        message: UiFeedbackService.requiredAction('修改档案信息'),
         normalizedDeviceCode,
         fieldCount: updatedFieldCount
       };
@@ -50,7 +51,7 @@ export class DeviceArchiveUpdateService {
     if (form.initiatedAt === undefined || form.initiatedAt.trim().length === 0) {
       return {
         valid: false,
-        message: '请选择修改时间',
+        message: UiFeedbackService.requiredTime('修改'),
         normalizedDeviceCode,
         fieldCount: updatedFieldCount
       };
@@ -59,7 +60,7 @@ export class DeviceArchiveUpdateService {
     if (DeviceArchiveUpdateService.hasUpdatedFromBaseline(form.baseline, 'deviceName', deviceName) && deviceName.length === 0) {
       return {
         valid: false,
-        message: '修改后的设备名称不能为空',
+        message: UiFeedbackService.requiredInput('设备名称'),
         normalizedDeviceCode,
         fieldCount: updatedFieldCount
       };
@@ -68,7 +69,7 @@ export class DeviceArchiveUpdateService {
     if (deviceName.length > 80) {
       return {
         valid: false,
-        message: '设备名称不能超过80个字符',
+        message: UiFeedbackService.fieldTooLong('设备名称', 80),
         normalizedDeviceCode,
         fieldCount: updatedFieldCount
       };
@@ -77,7 +78,7 @@ export class DeviceArchiveUpdateService {
     if (DeviceArchiveUpdateService.hasUpdatedFromBaseline(form.baseline, 'model', model) && model.length === 0) {
       return {
         valid: false,
-        message: '修改后的设备型号不能为空',
+        message: UiFeedbackService.requiredInput('设备型号'),
         normalizedDeviceCode,
         fieldCount: updatedFieldCount
       };
@@ -86,7 +87,7 @@ export class DeviceArchiveUpdateService {
     if (model.length > 80) {
       return {
         valid: false,
-        message: '设备型号不能超过80个字符',
+        message: UiFeedbackService.fieldTooLong('设备型号', 80),
         normalizedDeviceCode,
         fieldCount: updatedFieldCount
       };
@@ -95,7 +96,7 @@ export class DeviceArchiveUpdateService {
     if (DeviceArchiveUpdateService.hasUpdatedFromBaseline(form.baseline, 'manufacturer', manufacturer) && manufacturer.length === 0) {
       return {
         valid: false,
-        message: '修改后的生产厂商不能为空',
+        message: UiFeedbackService.requiredInput('生产厂商'),
         normalizedDeviceCode,
         fieldCount: updatedFieldCount
       };
@@ -104,7 +105,7 @@ export class DeviceArchiveUpdateService {
     if (manufacturer.length > 100) {
       return {
         valid: false,
-        message: '生产厂商不能超过100个字符',
+        message: UiFeedbackService.fieldTooLong('生产厂商', 100),
         normalizedDeviceCode,
         fieldCount: updatedFieldCount
       };
@@ -114,7 +115,7 @@ export class DeviceArchiveUpdateService {
       locationAddress.length === 0) {
       return {
         valid: false,
-        message: '修改后的设备位置不能为空',
+        message: UiFeedbackService.requiredInput('设备位置'),
         normalizedDeviceCode,
         fieldCount: updatedFieldCount
       };
@@ -123,7 +124,7 @@ export class DeviceArchiveUpdateService {
     if (locationAddress.length > 200) {
       return {
         valid: false,
-        message: '设备位置不能超过200个字符',
+        message: UiFeedbackService.fieldTooLong('设备位置', 200),
         normalizedDeviceCode,
         fieldCount: updatedFieldCount
       };
@@ -132,7 +133,7 @@ export class DeviceArchiveUpdateService {
     if (reason.length === 0) {
       return {
         valid: false,
-        message: '请输入修改原因',
+        message: UiFeedbackService.requiredInput('修改原因'),
         normalizedDeviceCode,
         fieldCount: updatedFieldCount
       };
@@ -141,7 +142,7 @@ export class DeviceArchiveUpdateService {
     if (reason.length > 500) {
       return {
         valid: false,
-        message: '修改原因不能超过500个字符',
+        message: UiFeedbackService.fieldTooLong('修改原因', 500),
         normalizedDeviceCode,
         fieldCount: updatedFieldCount
       };
@@ -179,7 +180,7 @@ export class DeviceArchiveUpdateService {
         success: false,
         error: {
           code: 'DEVICE_ARCHIVE_UPDATE_BASELINE_MISSING',
-          message: '缺少设备档案基准信息，请重新查询后提交'
+          message: UiFeedbackService.operationUnavailable('提交')
         }
       };
     }
@@ -201,7 +202,7 @@ export class DeviceArchiveUpdateService {
         success: false,
         error: {
           code: 'DEVICE_ARCHIVE_REQUEST_RESPONSE_INVALID',
-          message: '档案申请响应无效'
+          message: UiFeedbackService.operationUnavailable('提交')
         },
         requestId: response.requestId,
         timestamp: response.timestamp

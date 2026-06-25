@@ -5,7 +5,8 @@ import org.springframework.http.HttpStatus;
 public enum ErrorCode {
     BAD_REQUEST("BAD_REQUEST", HttpStatus.BAD_REQUEST, "Request parameters are invalid."),
     UNAUTHORIZED("UNAUTHORIZED", HttpStatus.UNAUTHORIZED, "Authentication is required."),
-    INVALID_CREDENTIALS("INVALID_CREDENTIALS", HttpStatus.UNAUTHORIZED, "Username or password is incorrect."),
+    ACCOUNT_INCORRECT("ACCOUNT_INCORRECT", HttpStatus.UNAUTHORIZED, "Account is incorrect."),
+    PASSWORD_INCORRECT("PASSWORD_INCORRECT", HttpStatus.UNAUTHORIZED, "Password is incorrect."),
     PASSWORD_VERIFICATION_LOCKED(
             "PASSWORD_VERIFICATION_LOCKED",
             HttpStatus.TOO_MANY_REQUESTS,

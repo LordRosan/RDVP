@@ -6,6 +6,7 @@ import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { PermissionCode } from '../../models/identity/PermissionModels';
 import { MainPageAction, MainPageActionId } from '../../models/app/MainPageModels';
 import { MainPageService } from '../../services/app/MainPageService';
+import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
@@ -241,7 +242,7 @@ struct ArchiveCenter {
       try {
         this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveQuery' });
       } catch (err) {
-        this.message = '查询设备档案不可用';
+        this.message = UiFeedbackService.operationUnavailable('查询设备档案');
         this.messageTargetId = `${action.id}`;
       }
       return;
@@ -251,20 +252,20 @@ struct ArchiveCenter {
       try {
         this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveCreate' });
       } catch (err) {
-        this.message = '添加设备档案不可用';
+        this.message = UiFeedbackService.operationUnavailable('添加设备档案');
         this.messageTargetId = `${action.id}`;
       }
       return;
     }
 
-    this.message = '功能暂不可用';
+    this.message = UiFeedbackService.operationUnavailable('操作');
     this.messageTargetId = `${action.id}`;
   }
 
   backToMainPage(): void {
     if (!MainPageNavigator.replaceToMainPage(this.getUIContext())) {
       try {
-        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
       } catch (toastErr) {
       }
     }

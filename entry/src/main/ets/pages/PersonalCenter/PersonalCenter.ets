@@ -4,6 +4,7 @@ import { CenterTitleBar } from '../../components/CenterTitleBar';
 import { HeroSurface } from '../../components/HeroSurface';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { CurrentUserSnapshot } from '../../models/identity/SessionModels';
+import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { SessionStore } from '../../stores/SessionStore';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
 
@@ -374,7 +375,7 @@ struct PersonalCenter {
   backToMainPage(): void {
     if (!MainPageNavigator.replaceToMainPage(this.getUIContext())) {
       try {
-        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
       } catch (toastErr) {
       }
     }
@@ -390,7 +391,7 @@ struct PersonalCenter {
     try {
       this.getUIContext().getRouter().pushUrl({ url: 'pages/PersonalCenter/ApplicationSettings' });
     } catch (err) {
-      this.settingsMessage = '应用设置不可用';
+      this.settingsMessage = UiFeedbackService.operationUnavailable('应用设置');
     }
   }
 
@@ -399,13 +400,13 @@ struct PersonalCenter {
       this.getUIContext().getRouter().replaceUrl({ url: 'pages/Login' });
     } catch (err) {
       if (source === 'logout') {
-        this.logoutActionMessage = '页面跳转失败';
+        this.logoutActionMessage = UiFeedbackService.operationUnavailable('页面跳转');
         this.logoutActionMessageTone = AppColors.Danger;
         return;
       }
 
       try {
-        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
       } catch (toastErr) {
       }
     }

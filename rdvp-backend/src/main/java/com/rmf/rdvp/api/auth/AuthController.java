@@ -51,7 +51,7 @@ public class AuthController {
         AuthenticatedUser user = requireUser(authentication);
         boolean verified = authenticationService.verifyPassword(user, requestBody.password());
         if (!verified) {
-            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
+            throw new BusinessException(ErrorCode.PASSWORD_INCORRECT);
         }
 
         return ResponseEntity.ok(ApiResponse.success(new PasswordVerificationResponse(true), RequestIds.resolve(request)));

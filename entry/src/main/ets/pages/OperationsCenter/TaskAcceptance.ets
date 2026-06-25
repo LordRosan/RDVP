@@ -14,6 +14,7 @@ import {
 } from '../../models/operations/RepairTaskModels';
 import { ApiResponse } from '../../models/common/ApiModels';
 import { ApiClient } from '../../services/common/ApiClient';
+import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { FaultReportService } from '../../services/operations/FaultReportService';
 import { LocationService, LocationResolutionResult } from '../../services/operations/LocationService';
 import { RepairTaskService } from '../../services/operations/RepairTaskService';
@@ -508,12 +509,12 @@ struct TaskAcceptance {
 
       const response = await this.withRefreshTimeout(
         RepairTaskService.queryTaskAcceptanceRemoteFirst(query, this.workloadSnapshot),
-        '任务刷新超时，请稍后手动刷新'
+        UiFeedbackService.operationUnavailable('刷新')
       );
 
       if (!response.success) {
         const error = response.error;
-        this.message = error ? error.message : '任务刷新失败';
+        this.message = UiFeedbackService.operationError(error, '刷新');
         this.messageTone = AppColors.Danger;
         return;
       }
@@ -531,11 +532,11 @@ struct TaskAcceptance {
         this.message = this.workloadSnapshot.message;
         this.messageTone = AppColors.Primary;
       } else {
-        this.message = '';
-        this.messageTone = AppColors.Danger;
+        this.message = UiFeedbackService.operationSuccess('刷新');
+        this.messageTone = AppColors.Success;
       }
     } catch (err) {
-      this.message = '任务刷新失败，请稍后手动刷新';
+      this.message = UiFeedbackService.operationUnavailable('刷新');
       this.messageTone = AppColors.Danger;
     } finally {
       this.refreshing = false;
@@ -545,7 +546,7 @@ struct TaskAcceptance {
   clearTaskListForUnavailableOnlineMode(): void {
     this.allTaskItems = [];
     this.taskItems = [];
-    this.message = '任务接取功能暂不可用，请稍后重试';
+    this.message = UiFeedbackService.operationUnavailable('任务接取');
     this.messageTone = AppColors.Danger;
     this.taskListMessage = '';
     this.acceptActionMessage = '';
@@ -566,7 +567,7 @@ struct TaskAcceptance {
     try {
       const selectedTask = this.findTaskItem(taskId);
       if (selectedTask !== undefined && selectedTask.distanceKm === undefined) {
-        this.acceptActionMessage = '任务距离未定位，暂不可接取。请授权位置并刷新后再操作。';
+        this.acceptActionMessage = UiFeedbackService.operationUnavailable('任务接取');
         this.acceptActionMessageTone = AppColors.Danger;
         return;
       }
@@ -576,15 +577,15 @@ struct TaskAcceptance {
           selectedTask.distanceKm !== undefined &&
           selectedTask.distanceKm > this.workloadSnapshot.maxRadiusKm)) {
         this.acceptActionMessage = this.workloadSnapshot.canAccept ?
-          `当前处于${RepairTaskService.formatWorkloadStatus(
-            this.workloadSnapshot.status)}状态，仅可接取${this.workloadSnapshot.maxRadiusKm}公里内的维修任务。` :
-          this.workloadSnapshot.message;
+          UiFeedbackService.sanitize(`当前处于${RepairTaskService.formatWorkloadStatus(
+            this.workloadSnapshot.status)}状态，仅可接取${this.workloadSnapshot.maxRadiusKm}公里内的维修任务。`) :
+          UiFeedbackService.sanitize(this.workloadSnapshot.message);
         this.acceptActionMessageTone = AppColors.Danger;
         return;
       }
 
       if (ApiClient.isConfigured() && !this.hasCurrentLocation) {
-        this.acceptActionMessage = '当前位置未确认，暂不可接取。请先刷新任务。';
+        this.acceptActionMessage = UiFeedbackService.operationUnavailable('任务接取');
         this.acceptActionMessageTone = AppColors.Danger;
         return;
       }
@@ -598,7 +599,7 @@ struct TaskAcceptance {
 
       if (!response.success) {
         const error = response.error;
-        this.acceptActionMessage = error ? error.message : '任务接取失败';
+        this.acceptActionMessage = UiFeedbackService.operationError(error, '任务接取');
         this.acceptActionMessageTone = AppColors.Danger;
         return;
       }
@@ -609,13 +610,11 @@ struct TaskAcceptance {
       this.applyTaskFilters();
       this.acceptActionMessage = '';
       this.acceptActionTaskId = '';
-      this.taskListMessage = selectedTask !== undefined && selectedTask.taskType === 'REINSPECTION' ?
-        '复检任务已接取，可在复检任务中处理' :
-        '维修任务已接取，可在维修任务中处理';
+      this.taskListMessage = UiFeedbackService.operationSuccess('任务接取');
       this.taskListMessageTone = AppColors.Success;
       this.applyWorkloadSnapshot(RepairTaskService.createWorkloadSnapshot(this.workloadSnapshot.activeTaskCount + 1));
     } catch (err) {
-      this.acceptActionMessage = '任务接取失败，请稍后重试';
+      this.acceptActionMessage = UiFeedbackService.operationUnavailable('任务接取');
       this.acceptActionMessageTone = AppColors.Danger;
     } finally {
       this.acceptingTaskId = '';
@@ -778,7 +777,7 @@ struct TaskAcceptance {
           success: false,
           error: {
             code: 'REFRESH_FAILED',
-            message: '任务刷新失败，请稍后手动刷新'
+            message: UiFeedbackService.operationUnavailable('刷新')
           },
           timestamp: new Date().toISOString()
         });
@@ -808,7 +807,7 @@ struct TaskAcceptance {
   backToOperationsCenter(): void {
     if (!MainPageNavigator.backOrReplace(this.getUIContext(), 'pages/OperationsCenter/OperationsCenter')) {
       try {
-        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
       } catch (toastErr) {
       }
     }

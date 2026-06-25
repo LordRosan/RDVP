@@ -6,6 +6,7 @@ import { FaultSeverity } from '../../models/operations/FaultModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
 import { RepairReportForm, RepairTaskItem, RepairReportResult, RepairTaskStatus } from '../../models/operations/RepairTaskModels';
 import { ApiClient } from '../../services/common/ApiClient';
+import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { AuthService } from '../../services/identity/AuthService';
 import { FaultReportService } from '../../services/operations/FaultReportService';
 import { RepairTaskService } from '../../services/operations/RepairTaskService';
@@ -24,6 +25,7 @@ struct RepairReport {
   @State processDescription: string = '';
   @State password: string = '';
   @State taskMessage: string = '';
+  @State taskMessageTone: string = AppColors.Danger;
   @State reportMessage: string = '';
   @State reportMessageTone: string = AppColors.Danger;
   @State normalizedTaskId: string = '-';
@@ -522,7 +524,7 @@ struct RepairReport {
     if (this.taskMessage.length > 0) {
       InlineMessageSurface({
         message: this.taskMessage,
-        tone: AppColors.Danger
+        tone: this.taskMessageTone
       })
     }
   }
@@ -575,7 +577,8 @@ struct RepairReport {
 
     if (!response.success) {
       const error = response.error;
-      this.taskMessage = error ? error.message : '维修任务刷新失败';
+      this.taskMessage = UiFeedbackService.operationError(error, '刷新');
+      this.taskMessageTone = AppColors.Danger;
       return;
     }
 
@@ -583,7 +586,8 @@ struct RepairReport {
     this.allTaskItems = data ? data.items : [];
     this.taskItems = [...this.allTaskItems];
     this.ensureSelectedTaskStillAvailable();
-    this.taskMessage = '';
+    this.taskMessage = UiFeedbackService.operationSuccess('刷新');
+    this.taskMessageTone = AppColors.Success;
   }
 
   async submitRepairReport(): Promise<void> {
@@ -600,7 +604,7 @@ struct RepairReport {
     }
 
     if (this.password.length === 0) {
-      this.reportMessage = '请输入密码';
+      this.reportMessage = UiFeedbackService.requiredInput('密码');
       this.reportMessageTone = AppColors.Danger;
       return;
     }
@@ -615,13 +619,12 @@ struct RepairReport {
       const response = await RepairTaskService.submitRepairReportRemoteFirst(form);
       if (!response.success) {
         const error = response.error;
-        this.reportMessage = error ? error.message : '维修报告提交失败';
+        this.reportMessage = UiFeedbackService.operationError(error, '提交');
         this.reportMessageTone = AppColors.Danger;
         return;
       }
 
-      const reportNo = response.data ? response.data.reportNo : '';
-      this.reportMessage = reportNo.length > 0 ? `维修报告已提交：${reportNo}` : '维修报告已提交';
+      this.reportMessage = UiFeedbackService.operationSuccess('提交');
       this.reportMessageTone = AppColors.Success;
       this.submittedRepairTaskId = this.normalizedTaskId;
       this.allTaskItems = this.allTaskItems.filter((item: RepairTaskItem) => {
@@ -651,22 +654,9 @@ struct RepairReport {
       return true;
     }
 
-    const errorCode = response.error === undefined ? '' : `${response.error.code}`;
-    this.reportMessage = this.mapPasswordVerifyErrorMessage(errorCode);
+    this.reportMessage = UiFeedbackService.passwordVerificationError(response.error, '提交');
     this.reportMessageTone = AppColors.Danger;
     return false;
-  }
-
-  mapPasswordVerifyErrorMessage(errorCode: string): string {
-    if (errorCode === 'PASSWORD_REQUIRED') {
-      return '请输入密码';
-    }
-
-    if (errorCode === 'INVALID_CREDENTIALS' || errorCode === 'LOGIN_FAILED' || errorCode === 'UNAUTHORIZED') {
-      return '密码不正确，请重新输入';
-    }
-
-    return '维修报告提交失败，请稍后重试';
   }
 
   getSubmitButtonLabel(): string {
@@ -822,7 +812,7 @@ struct RepairReport {
   backToOperationsCenter(): void {
     if (!MainPageNavigator.backOrReplace(this.getUIContext(), 'pages/OperationsCenter/OperationsCenter')) {
       try {
-        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
       } catch (toastErr) {
       }
     }

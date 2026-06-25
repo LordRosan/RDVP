@@ -1,5 +1,6 @@
 import { DeviceService } from './DeviceService';
 import { ApiResponse } from '../../models/common/ApiModels';
+import { UiFeedbackService } from '../common/UiFeedbackService';
 
 const DELETE_LOCK_STORAGE_KEY = 'rdvp_archive_delete_locks';
 const QR_EXPORT_LOCK_STORAGE_KEY = 'rdvp_archive_qrcode_export_locks';
@@ -76,7 +77,7 @@ export class DeviceArchiveDeleteGuardService {
     }
 
     const errorCode = `${response.error.code}`;
-    return errorCode === 'INVALID_CREDENTIALS' || errorCode === 'LOGIN_FAILED';
+    return errorCode === 'PASSWORD_INCORRECT';
   }
 
   static registerQrExportPasswordFailure(deviceCode: string): DeviceArchivePasswordGuardResult {
@@ -93,7 +94,7 @@ export class DeviceArchiveDeleteGuardService {
 
     return {
       verified: false,
-      message: `密码错误，还可尝试${MAX_PASSWORD_FAILURES - record.failedPasswordAttempts}次`,
+      message: `${UiFeedbackService.incorrect('密码')}，还可尝试${MAX_PASSWORD_FAILURES - record.failedPasswordAttempts}次`,
       failedPasswordAttempts: record.failedPasswordAttempts
     };
   }
@@ -112,7 +113,7 @@ export class DeviceArchiveDeleteGuardService {
 
     return {
       verified: false,
-      message: `密码错误，还可尝试${MAX_PASSWORD_FAILURES - record.failedPasswordAttempts}次`,
+      message: `${UiFeedbackService.incorrect('密码')}，还可尝试${MAX_PASSWORD_FAILURES - record.failedPasswordAttempts}次`,
       failedPasswordAttempts: record.failedPasswordAttempts
     };
   }

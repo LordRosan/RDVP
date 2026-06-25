@@ -4,6 +4,7 @@ import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { util } from '@kit.ArkTS';
 import { ApiErrorCode, ApiResponse } from '../../models/common/ApiModels';
 import { ApiClient } from '../common/ApiClient';
+import { UiFeedbackService } from '../common/UiFeedbackService';
 
 const MEDIA_WRITE_PERMISSION: Permissions = 'ohos.permission.WRITE_IMAGEVIDEO';
 
@@ -52,14 +53,14 @@ export class DeviceQrCodeExportService {
     result: DeviceQrCodeExportResult
   ): Promise<ApiResponse<string>> {
     if (result.qrImageBase64.trim().length === 0) {
-      return DeviceQrCodeExportService.createFailureResponse('二维码图片数据无效');
+      return DeviceQrCodeExportService.createFailureResponse(UiFeedbackService.operationUnavailable('导出'));
     }
 
     let tempFilePath = '';
     try {
       const mediaWriteGranted = await DeviceQrCodeExportService.requestMediaWritePermission(context);
       if (!mediaWriteGranted) {
-        return DeviceQrCodeExportService.createFailureResponse('请授权相册写入权限后再导出二维码');
+        return DeviceQrCodeExportService.createFailureResponse(UiFeedbackService.operationUnavailable('导出'));
       }
 
       const fileName = DeviceQrCodeExportService.normalizeFileName(result.fileName, result.deviceCode);
@@ -93,7 +94,7 @@ export class DeviceQrCodeExportService {
         timestamp: new Date().toISOString()
       };
     } catch (err) {
-      return DeviceQrCodeExportService.createFailureResponse('二维码保存失败，请检查相册写入权限');
+      return DeviceQrCodeExportService.createFailureResponse(UiFeedbackService.operationUnavailable('导出'));
     } finally {
       DeviceQrCodeExportService.deleteTempFile(tempFilePath);
     }
@@ -109,7 +110,7 @@ export class DeviceQrCodeExportService {
 
   private static validateForm(form: DeviceQrCodeExportForm): string {
     if (form.deviceId.trim().length === 0) {
-      return '未获取设备档案';
+      return UiFeedbackService.requiredSelection('设备档案');
     }
 
     return '';

@@ -46,11 +46,14 @@ public class AuthenticationService {
     public LoginResponse login(LoginRequest request) {
         String username = request.username().trim().toLowerCase(Locale.ROOT);
         Optional<BootstrapUser> optionalUser = userStore.findByUsername(username);
-        if (optionalUser.isEmpty()
-                || optionalUser.get().status() != UserStatus.ACTIVE
-                || !passwordEncoder.matches(request.password(), optionalUser.get().passwordHash())) {
+        if (optionalUser.isEmpty() || optionalUser.get().status() != UserStatus.ACTIVE) {
             recordLoginFailure(username, optionalUser);
-            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
+            throw new BusinessException(ErrorCode.ACCOUNT_INCORRECT);
+        }
+
+        if (!passwordEncoder.matches(request.password(), optionalUser.get().passwordHash())) {
+            recordLoginFailure(username, optionalUser);
+            throw new BusinessException(ErrorCode.PASSWORD_INCORRECT);
         }
 
         BootstrapUser user = optionalUser.get();
@@ -127,7 +130,7 @@ public class AuthenticationService {
                 authenticatedUser.id(),
                 authenticatedUser.username(),
                 authenticatedUser,
-                "用户密码复核失败：INVALID_CREDENTIALS。");
+                "用户密码复核失败：PASSWORD_INCORRECT。");
         return false;
     }
 

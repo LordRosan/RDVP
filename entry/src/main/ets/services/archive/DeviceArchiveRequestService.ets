@@ -9,6 +9,7 @@ import {
 import { ApiClient } from '../common/ApiClient';
 import { DeviceService } from './DeviceService';
 import { DateTimeFormatUtil } from '../../utils/DateTimeFormatUtil';
+import { UiFeedbackService } from '../common/UiFeedbackService';
 
 interface DeviceArchiveRequestApiResult {
   id: string;
@@ -40,7 +41,7 @@ export class DeviceArchiveRequestService {
     if (deviceName.length === 0) {
       return {
         valid: false,
-        message: '请输入设备名称',
+        message: UiFeedbackService.requiredInput('设备名称'),
         normalizedDeviceCode
       };
     }
@@ -48,7 +49,7 @@ export class DeviceArchiveRequestService {
     if (deviceName.length > 80) {
       return {
         valid: false,
-        message: '设备名称不能超过80个字符',
+        message: UiFeedbackService.fieldTooLong('设备名称', 80),
         normalizedDeviceCode
       };
     }
@@ -56,7 +57,7 @@ export class DeviceArchiveRequestService {
     if (model.length === 0) {
       return {
         valid: false,
-        message: '请输入设备型号',
+        message: UiFeedbackService.requiredInput('设备型号'),
         normalizedDeviceCode
       };
     }
@@ -64,7 +65,7 @@ export class DeviceArchiveRequestService {
     if (model.length > 80) {
       return {
         valid: false,
-        message: '设备型号不能超过80个字符',
+        message: UiFeedbackService.fieldTooLong('设备型号', 80),
         normalizedDeviceCode
       };
     }
@@ -72,7 +73,7 @@ export class DeviceArchiveRequestService {
     if (manufacturer.length === 0) {
       return {
         valid: false,
-        message: '请输入生产厂商',
+        message: UiFeedbackService.requiredInput('生产厂商'),
         normalizedDeviceCode
       };
     }
@@ -80,7 +81,7 @@ export class DeviceArchiveRequestService {
     if (manufacturer.length > 100) {
       return {
         valid: false,
-        message: '生产厂商不能超过100个字符',
+        message: UiFeedbackService.fieldTooLong('生产厂商', 100),
         normalizedDeviceCode
       };
     }
@@ -88,7 +89,7 @@ export class DeviceArchiveRequestService {
     if (locationAddress.length === 0) {
       return {
         valid: false,
-        message: '请输入设备位置',
+        message: UiFeedbackService.requiredInput('设备位置'),
         normalizedDeviceCode
       };
     }
@@ -96,7 +97,7 @@ export class DeviceArchiveRequestService {
     if (locationAddress.length > 200) {
       return {
         valid: false,
-        message: '设备位置不能超过200个字符',
+        message: UiFeedbackService.fieldTooLong('设备位置', 200),
         normalizedDeviceCode
       };
     }
@@ -104,7 +105,7 @@ export class DeviceArchiveRequestService {
     if (form.initiatedAt === undefined || form.initiatedAt.trim().length === 0) {
       return {
         valid: false,
-        message: '请选择添加时间',
+        message: UiFeedbackService.requiredTime('添加'),
         normalizedDeviceCode
       };
     }
@@ -112,7 +113,7 @@ export class DeviceArchiveRequestService {
     if (reason.length === 0) {
       return {
         valid: false,
-        message: '请输入添加原因',
+        message: UiFeedbackService.requiredInput('添加原因'),
         normalizedDeviceCode
       };
     }
@@ -120,7 +121,7 @@ export class DeviceArchiveRequestService {
     if (reason.length > 500) {
       return {
         valid: false,
-        message: '添加原因不能超过500个字符',
+        message: UiFeedbackService.fieldTooLong('添加原因', 500),
         normalizedDeviceCode
       };
     }
@@ -137,7 +138,7 @@ export class DeviceArchiveRequestService {
     if (form.initiatedAt === undefined || form.initiatedAt.trim().length === 0) {
       return {
         valid: false,
-        message: '请选择删除时间',
+        message: UiFeedbackService.requiredTime('删除'),
         normalizedDeviceCode: form.device.deviceCode
       };
     }
@@ -146,7 +147,7 @@ export class DeviceArchiveRequestService {
     if (reason.length === 0) {
       return {
         valid: false,
-        message: '请输入删除原因',
+        message: UiFeedbackService.requiredInput('删除原因'),
         normalizedDeviceCode: form.device.deviceCode
       };
     }
@@ -154,7 +155,7 @@ export class DeviceArchiveRequestService {
     if (reason.length > 500) {
       return {
         valid: false,
-        message: '删除原因不能超过500个字符',
+        message: UiFeedbackService.fieldTooLong('删除原因', 500),
         normalizedDeviceCode: form.device.deviceCode
       };
     }
@@ -259,7 +260,7 @@ export class DeviceArchiveRequestService {
         success: false,
         error: {
           code: 'DEVICE_ARCHIVE_REQUEST_RESPONSE_INVALID',
-          message: '档案申请响应无效'
+          message: UiFeedbackService.operationUnavailable('提交')
         },
         requestId: response.requestId,
         timestamp: response.timestamp

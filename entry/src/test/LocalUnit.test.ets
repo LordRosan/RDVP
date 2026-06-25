@@ -1,9 +1,74 @@
 import { describe, expect, it } from '@ohos/hypium';
 import { DeviceStatus } from '../main/ets/models/archive/DeviceModels';
+import { UiFeedbackService } from '../main/ets/services/common/UiFeedbackService';
+import { AuthService } from '../main/ets/services/identity/AuthService';
 import { DeviceArchiveRequestService } from '../main/ets/services/archive/DeviceArchiveRequestService';
 import { DeviceArchiveUpdateService } from '../main/ets/services/archive/DeviceArchiveUpdateService';
+import { ApiClient } from '../main/ets/services/common/ApiClient';
+import { RepairTaskService } from '../main/ets/services/operations/RepairTaskService';
 
 export default function localUnitTest() {
+  describe('uiFeedbackMessages', () => {
+    it('formatsRequiredInputMessage', 0, () => {
+      expect(UiFeedbackService.requiredInput('账号')).assertEqual('请输入账号');
+    });
+
+    it('formatsRequiredTimeMessage', 0, () => {
+      expect(UiFeedbackService.requiredTime('审核')).assertEqual('请选择审核时间');
+    });
+
+    it('formatsIncorrectMessage', 0, () => {
+      expect(UiFeedbackService.incorrect('密码')).assertEqual('密码不正确，请重新输入');
+    });
+
+    it('formatsOperationMessages', 0, () => {
+      expect(UiFeedbackService.operationSuccess('登录')).assertEqual('登录成功');
+      expect(UiFeedbackService.operationUnavailable('导出')).assertEqual('导出功能暂不可用，请稍后重试');
+    });
+
+    it('formatsLoginCredentialErrorsByField', 0, () => {
+      expect(UiFeedbackService.loginError({
+        code: 'ACCOUNT_INCORRECT',
+        message: ''
+      })).assertEqual('账号不正确，请重新输入');
+      expect(UiFeedbackService.loginError({
+        code: 'PASSWORD_INCORRECT',
+        message: ''
+      })).assertEqual('密码不正确，请重新输入');
+    });
+
+    it('removesForbiddenEndingPunctuation', 0, () => {
+      expect(UiFeedbackService.sanitize('任务刷新失败，请稍后手动刷新。')).assertEqual('任务刷新失败，请稍后手动刷新');
+      expect(UiFeedbackService.sanitize('当前位置未确认，暂不可接取？')).assertEqual('当前位置未确认，暂不可接取');
+      expect(UiFeedbackService.sanitize('密码不正确，请重新输入，')).assertEqual('密码不正确，请重新输入，');
+    });
+
+    it('formatsUnavailableApiResponse', 0, () => {
+      const response = ApiClient.createServiceUnavailableResponse<string>();
+
+      expect(response.success).assertEqual(false);
+      expect(response.error?.message).assertEqual('后端服务功能暂不可用，请稍后重试');
+    });
+
+    it('formatsTaskAcceptanceBusinessLimit', 0, () => {
+      const response = RepairTaskService.createWorkloadSnapshot(3);
+
+      expect(response.message).assertEqual('任务接取功能暂不可用，请稍后重试');
+    });
+  });
+
+  describe('identityValidationFeedback', () => {
+    it('validatesLoginFormByVisualOrder', 0, () => {
+      const result = AuthService.validateLoginForm({
+        username: '',
+        password: ''
+      });
+
+      expect(result.valid).assertEqual(false);
+      expect(result.message).assertEqual('请输入账号');
+    });
+  });
+
   describe('archiveMutationValidation', () => {
     it('validatesArchiveUpdateRequiresChangedField', 0, () => {
       const result = DeviceArchiveUpdateService.validateUpdateRequestForm({

@@ -17,6 +17,7 @@ import {
   RepairTaskValidationResult
 } from '../../models/operations/RepairTaskModels';
 import { ApiClient } from '../common/ApiClient';
+import { UiFeedbackService } from '../common/UiFeedbackService';
 
 const DEFAULT_RADIUS_KM = 10;
 const MIN_RADIUS_KM = 0;
@@ -125,7 +126,7 @@ export class RepairTaskService {
         maxActiveTaskCount: MAX_ACTIVE_REPAIR_TASK_COUNT,
         maxRadiusKm: 0,
         recommendedRadiusKm: 0,
-        message: '当前进行中的维修任务已达到上限，暂不可继续接取。请完成并提交维修报告后再刷新任务。',
+        message: UiFeedbackService.operationUnavailable('任务接取'),
         canAccept: false
       };
     }
@@ -137,7 +138,7 @@ export class RepairTaskService {
         maxActiveTaskCount: MAX_ACTIVE_REPAIR_TASK_COUNT,
         maxRadiusKm: MEDIUM_LOAD_MAX_RADIUS_KM,
         recommendedRadiusKm: MEDIUM_LOAD_MAX_RADIUS_KM,
-        message: '当前进行中的维修任务较多，系统已限制可接取范围。请优先处理已接取任务。',
+        message: UiFeedbackService.sanitize('当前进行中的维修任务较多，系统已限制可接取范围，请优先处理已接取任务'),
         canAccept: true
       };
     }
@@ -149,7 +150,7 @@ export class RepairTaskService {
         maxActiveTaskCount: MAX_ACTIVE_REPAIR_TASK_COUNT,
         maxRadiusKm: LOW_LOAD_MAX_RADIUS_KM,
         recommendedRadiusKm: LOW_LOAD_MAX_RADIUS_KM,
-        message: '当前已有进行中的维修任务，系统已限制可接取范围。请优先处理已接取任务。',
+        message: UiFeedbackService.sanitize('当前已有进行中的维修任务，系统已限制可接取范围，请优先处理已接取任务'),
         canAccept: true
       };
     }
@@ -160,7 +161,7 @@ export class RepairTaskService {
       maxActiveTaskCount: MAX_ACTIVE_REPAIR_TASK_COUNT,
       maxRadiusKm: IDLE_MAX_RADIUS_KM,
       recommendedRadiusKm: DEFAULT_RADIUS_KM,
-      message: '当前无进行中的维修任务，可接取服务范围内的故障任务。',
+      message: UiFeedbackService.sanitize('当前无进行中的维修任务，可接取服务范围内的故障任务'),
       canAccept: true
     };
   }
@@ -205,14 +206,14 @@ export class RepairTaskService {
     if (radiusKm !== radiusKm || radiusKm < MIN_RADIUS_KM || radiusKm > MAX_RADIUS_KM) {
       return {
         valid: false,
-        message: '查询范围必须在0到30公里之间'
+        message: UiFeedbackService.incorrect('查询范围')
       };
     }
 
     if ((query.longitude === undefined) !== (query.latitude === undefined)) {
       return {
         valid: false,
-        message: '经纬度必须同时提供'
+        message: UiFeedbackService.requiredSelection('经纬度')
       };
     }
 
@@ -221,7 +222,7 @@ export class RepairTaskService {
         query.latitude === undefined || query.latitude < -90 || query.latitude > 90)) {
       return {
         valid: false,
-        message: '经纬度超出有效范围'
+        message: UiFeedbackService.incorrect('经纬度')
       };
     }
 
@@ -234,7 +235,7 @@ export class RepairTaskService {
     if (radiusKm > workload.maxRadiusKm) {
       return {
         valid: false,
-        message: `当前处于${RepairTaskService.formatWorkloadStatus(workload.status)}状态，查询范围不能超过${workload.maxRadiusKm}公里。`
+        message: UiFeedbackService.incorrect('查询范围')
       };
     }
 
@@ -359,7 +360,7 @@ export class RepairTaskService {
         success: false,
         error: {
           code: 'REPAIR_TASK_ACCEPT_RESPONSE_INVALID',
-          message: '任务接取响应无效'
+          message: UiFeedbackService.operationUnavailable('任务接取')
         },
         requestId: response.requestId,
         timestamp: response.timestamp
@@ -412,21 +413,21 @@ export class RepairTaskService {
     if (taskId.length === 0) {
       return {
         valid: false,
-        message: '请输入维修任务编号'
+        message: UiFeedbackService.requiredInput('维修任务编号')
       };
     }
 
     if (taskId.length > 64) {
       return {
         valid: false,
-        message: '维修任务编号不能超过64字'
+        message: UiFeedbackService.fieldTooLong('维修任务编号', 64, '字')
       };
     }
 
     if (!RepairTaskService.isKnownRepairReportResult(form.result)) {
       return {
         valid: false,
-        message: '请选择维修结果'
+        message: UiFeedbackService.requiredSelection('维修结果')
       };
     }
 
@@ -434,14 +435,14 @@ export class RepairTaskService {
     if (repairedAt.length === 0) {
       return {
         valid: false,
-        message: '请选择维修时间'
+        message: UiFeedbackService.requiredTime('维修')
       };
     }
 
     if (repairedAt.length > 64) {
       return {
         valid: false,
-        message: '维修时间不能超过64字'
+        message: UiFeedbackService.fieldTooLong('维修时间', 64, '字')
       };
     }
 
@@ -449,14 +450,14 @@ export class RepairTaskService {
     if (processDescription.length === 0) {
       return {
         valid: false,
-        message: '请输入维修说明'
+        message: UiFeedbackService.requiredInput('维修说明')
       };
     }
 
     if (processDescription.length > MAX_REPAIR_PROCESS_LENGTH) {
       return {
         valid: false,
-        message: '维修说明不能超过1000字'
+        message: UiFeedbackService.fieldTooLong('维修说明', 1000, '字')
       };
     }
 
@@ -509,7 +510,7 @@ export class RepairTaskService {
         success: false,
         error: {
           code: 'REPAIR_REPORT_RESPONSE_INVALID',
-          message: '维修报告响应无效'
+          message: UiFeedbackService.operationUnavailable('提交')
         },
         requestId: response.requestId,
         timestamp: response.timestamp
@@ -534,14 +535,14 @@ export class RepairTaskService {
     if (taskId.trim().length === 0) {
       return {
         valid: false,
-        message: '请选择需要接取的任务'
+        message: UiFeedbackService.requiredSelection('需要接取的任务')
       };
     }
 
     if (taskId.trim().length > 64) {
       return {
         valid: false,
-        message: '任务标识不能超过64字'
+        message: UiFeedbackService.fieldTooLong('任务标识', 64, '字')
       };
     }
 
@@ -604,7 +605,7 @@ export class RepairTaskService {
       maxActiveTaskCount: MAX_ACTIVE_REPAIR_TASK_COUNT,
       maxRadiusKm: 0,
       recommendedRadiusKm: 0,
-      message: '任务接取功能暂不可用，请稍后重试',
+      message: UiFeedbackService.operationUnavailable('任务接取'),
       canAccept: false
     };
   }
@@ -613,27 +614,27 @@ export class RepairTaskService {
     if (errorCode === 'REPAIRER_BUSY') {
       return {
         code: errorCode,
-        message: '当前状态暂不可接取任务，请先处理已接取任务'
+        message: UiFeedbackService.operationUnavailable('任务接取')
       };
     }
 
     if (errorCode === 'REPAIR_TASK_RADIUS_INVALID') {
       return {
         code: errorCode,
-        message: '可接取半径无效，请重新选择'
+        message: UiFeedbackService.incorrect('可接取半径')
       };
     }
 
     if (errorCode === 'REPAIR_TASK_RADIUS_EXCEEDS_WORKLOAD') {
       return {
         code: errorCode,
-        message: '当前半径超过可接取范围，请重新选择'
+        message: UiFeedbackService.incorrect('可接取半径')
       };
     }
 
     return {
       code: errorCode.length > 0 ? errorCode : 'TASK_ACCEPTANCE_UNAVAILABLE',
-      message: '任务接取功能暂不可用，请稍后重试'
+      message: UiFeedbackService.operationUnavailable('任务接取')
     };
   }
 

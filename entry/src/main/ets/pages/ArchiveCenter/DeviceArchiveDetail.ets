@@ -7,6 +7,7 @@ import { DeviceStatus, DeviceSummary } from '../../models/archive/DeviceModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
 import { DeviceArchiveDeleteGuardService } from '../../services/archive/DeviceArchiveDeleteGuardService';
 import { DeviceService } from '../../services/archive/DeviceService';
+import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
@@ -69,7 +70,7 @@ struct DeviceArchiveDetail {
       this.canChangeArchive = false;
       this.canDeleteArchive = false;
       this.canExportArchive = false;
-      this.detailMessage = '未获取设备档案，请重新查询';
+      this.detailMessage = UiFeedbackService.requiredSelection('设备档案');
       this.detailMessageTone = AppColors.Danger;
       this.changeActionMessage = '';
       this.deleteActionMessage = '';
@@ -443,7 +444,7 @@ struct DeviceArchiveDetail {
 
   openChangePage(): void {
     if (!SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveUpdateRequestSubmit)) {
-      this.changeActionMessage = '当前账号无权申请修改设备档案';
+      this.changeActionMessage = UiFeedbackService.operationUnavailable('修改设备档案');
       this.changeActionMessageTone = AppColors.Danger;
       return;
     }
@@ -457,14 +458,14 @@ struct DeviceArchiveDetail {
     try {
       this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveUpdate' });
     } catch (err) {
-      this.changeActionMessage = '修改设备档案不可用';
+      this.changeActionMessage = UiFeedbackService.operationUnavailable('修改设备档案');
       this.changeActionMessageTone = AppColors.Danger;
     }
   }
 
   openDeletePage(): void {
     if (!SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveDeleteRequestSubmit)) {
-      this.deleteActionMessage = '当前账号无权申请删除设备档案';
+      this.deleteActionMessage = UiFeedbackService.operationUnavailable('删除设备档案');
       this.deleteActionMessageTone = AppColors.Danger;
       return;
     }
@@ -484,14 +485,14 @@ struct DeviceArchiveDetail {
     try {
       this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveDelete' });
     } catch (err) {
-      this.deleteActionMessage = '删除设备档案不可用';
+      this.deleteActionMessage = UiFeedbackService.operationUnavailable('删除设备档案');
       this.deleteActionMessageTone = AppColors.Danger;
     }
   }
 
   openExportVerifyPage(): void {
     if (!SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveExport)) {
-      this.exportActionMessage = '当前账号无权导出设备档案';
+      this.exportActionMessage = UiFeedbackService.operationUnavailable('导出设备档案');
       this.exportActionMessageTone = AppColors.Danger;
       return;
     }
@@ -499,7 +500,7 @@ struct DeviceArchiveDetail {
     try {
       this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveExport' });
     } catch (err) {
-      this.exportActionMessage = '导出设备档案不可用';
+      this.exportActionMessage = UiFeedbackService.operationUnavailable('导出设备档案');
       this.exportActionMessageTone = AppColors.Danger;
     }
   }
@@ -514,7 +515,7 @@ struct DeviceArchiveDetail {
         this.getUIContext().getRouter().replaceUrl({ url: 'pages/ArchiveCenter/DeviceArchiveQuery' });
       } catch (replaceErr) {
         try {
-          this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+          this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
         } catch (toastErr) {
         }
       }
@@ -522,7 +523,7 @@ struct DeviceArchiveDetail {
   }
 
   async reloadDeviceByCode(deviceCode: string): Promise<void> {
-    this.detailMessage = '正在重新获取设备档案...';
+    this.detailMessage = UiFeedbackService.sanitize('正在重新获取设备档案');
     this.detailMessageTone = AppColors.TextSecondary;
     const response = await DeviceService.queryByCodeRemoteFirst({
       deviceCode
@@ -536,7 +537,7 @@ struct DeviceArchiveDetail {
       this.canDeleteArchive = false;
       this.canExportArchive = false;
       this.exportActionMessage = '';
-      this.detailMessage = '重新获取设备档案失败，请返回查询';
+      this.detailMessage = UiFeedbackService.operationUnavailable('查询');
       this.detailMessageTone = AppColors.Danger;
     }
   }

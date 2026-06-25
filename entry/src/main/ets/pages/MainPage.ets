@@ -6,6 +6,7 @@ import { InlineMessageSurface } from '../components/InlineMessageSurface';
 import { DashboardMetric, MainPageAction, MainPageActionId, MainPageDashboard } from '../models/app/MainPageModels';
 import { CurrentUserSnapshot } from '../models/identity/SessionModels';
 import { MainPageService } from '../services/app/MainPageService';
+import { UiFeedbackService } from '../services/common/UiFeedbackService';
 import { DashboardRefreshStore } from '../stores/DashboardRefreshStore';
 import { MainPageViewportStore } from '../stores/MainPageViewportStore';
 import { SessionStore } from '../stores/SessionStore';
@@ -646,7 +647,7 @@ struct MainPage {
       try {
         this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/ArchiveCenter' });
       } catch (err) {
-        this.actionMessage = '档案中心不可用';
+        this.actionMessage = UiFeedbackService.operationUnavailable('档案中心');
         this.actionMessageTargetId = `${action.id}`;
       }
       return;
@@ -656,7 +657,7 @@ struct MainPage {
       try {
         this.getUIContext().getRouter().pushUrl({ url: 'pages/OperationsCenter/OperationsCenter' });
       } catch (err) {
-        this.actionMessage = '运维中心不可用';
+        this.actionMessage = UiFeedbackService.operationUnavailable('运维中心');
         this.actionMessageTargetId = `${action.id}`;
       }
       return;
@@ -666,13 +667,13 @@ struct MainPage {
       try {
         this.getUIContext().getRouter().pushUrl({ url: 'pages/ManagementCenter/ManagementCenter' });
       } catch (err) {
-        this.actionMessage = '管理中心不可用';
+        this.actionMessage = UiFeedbackService.operationUnavailable('管理中心');
         this.actionMessageTargetId = `${action.id}`;
       }
       return;
     }
 
-    this.actionMessage = '中心入口暂不可用';
+    this.actionMessage = UiFeedbackService.operationUnavailable('中心入口');
     this.actionMessageTargetId = `${action.id}`;
   }
 
@@ -952,7 +953,7 @@ struct MainPage {
     try {
       this.getUIContext().getRouter().pushUrl({ url: 'pages/PersonalCenter/ApplicationSettings' });
     } catch (err) {
-      this.settingsMessage = '应用设置不可用';
+      this.settingsMessage = UiFeedbackService.operationUnavailable('应用设置');
     }
   }
 
@@ -961,11 +962,11 @@ struct MainPage {
       this.getUIContext().getRouter().replaceUrl({ url: 'pages/Login' });
     } catch (err) {
       if (source === 'logout') {
-        this.logoutActionMessage = '页面跳转失败';
+        this.logoutActionMessage = UiFeedbackService.operationUnavailable('页面跳转');
         return;
       }
 
-      this.actionMessage = '登录页不可用';
+      this.actionMessage = UiFeedbackService.operationUnavailable('登录页');
       this.actionMessageTargetId = `${MainPageActionId.ArchiveCenter}`;
     }
   }

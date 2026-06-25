@@ -6,6 +6,7 @@ import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { util } from '@kit.ArkTS';
 import { ApiErrorCode, ApiResponse } from '../../models/common/ApiModels';
 import { ApiClient } from '../common/ApiClient';
+import { UiFeedbackService } from '../common/UiFeedbackService';
 
 const MEDIA_WRITE_PERMISSION: Permissions = 'ohos.permission.WRITE_IMAGEVIDEO';
 
@@ -56,7 +57,7 @@ export class DeviceArchiveExportService {
     deviceCode: string
   ): Promise<ApiResponse<string>> {
     if (componentId.trim().length === 0) {
-      return DeviceArchiveExportService.createFailureResponse('档案详情导出失败');
+      return DeviceArchiveExportService.createFailureResponse(UiFeedbackService.operationUnavailable('导出'));
     }
 
     let tempFilePath = '';
@@ -65,7 +66,7 @@ export class DeviceArchiveExportService {
     try {
       const mediaWriteGranted = await DeviceArchiveExportService.requestMediaWritePermission(context);
       if (!mediaWriteGranted) {
-        return DeviceArchiveExportService.createFailureResponse('导出功能暂不可用，请稍后重试');
+        return DeviceArchiveExportService.createFailureResponse(UiFeedbackService.operationUnavailable('导出'));
       }
 
       pixelMap = await uiContext.getComponentSnapshot().get(componentId, {
@@ -103,7 +104,7 @@ export class DeviceArchiveExportService {
         timestamp: new Date().toISOString()
       };
     } catch (err) {
-      return DeviceArchiveExportService.createFailureResponse('档案详情导出失败，请检查相册写入权限');
+      return DeviceArchiveExportService.createFailureResponse(UiFeedbackService.operationUnavailable('导出'));
     } finally {
       if (packer !== undefined) {
         try {
@@ -126,7 +127,7 @@ export class DeviceArchiveExportService {
     componentId: string
   ): Promise<ApiResponse<string>> {
     if (componentId.trim().length === 0) {
-      return DeviceArchiveExportService.createFailureResponse('档案详情预览失败');
+      return DeviceArchiveExportService.createFailureResponse(UiFeedbackService.operationUnavailable('导出'));
     }
 
     let pixelMap: image.PixelMap | undefined = undefined;
@@ -148,7 +149,7 @@ export class DeviceArchiveExportService {
         timestamp: new Date().toISOString()
       };
     } catch (err) {
-      return DeviceArchiveExportService.createFailureResponse('档案详情预览失败');
+      return DeviceArchiveExportService.createFailureResponse(UiFeedbackService.operationUnavailable('导出'));
     } finally {
       if (packer !== undefined) {
         try {
@@ -167,7 +168,7 @@ export class DeviceArchiveExportService {
 
   private static validateVerificationForm(form: DeviceArchiveExportVerificationForm): string {
     if (form.deviceId.trim().length === 0) {
-      return '未获取设备档案';
+      return UiFeedbackService.requiredSelection('设备档案');
     }
 
     return '';

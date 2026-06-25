@@ -3,9 +3,9 @@ import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { detectBarcode, scanBarcode, scanCore } from '@kit.ScanKit';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { DeviceArchiveQueryMode, DeviceSummary } from '../../models/archive/DeviceModels';
-import { ApiErrorCode } from '../../models/common/ApiModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
 import { DeviceService } from '../../services/archive/DeviceService';
+import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { AppColors, AppSpacing } from '../../styles/AppTheme';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
 import { AuthGuard } from '../../utils/AuthGuard';
@@ -447,7 +447,7 @@ struct DeviceArchiveQuery {
 
       if (!response.success) {
         const error = response.error;
-        this.codeQueryMessage = this.normalizeCodeQueryError(error === undefined ? '' : `${error.code}`);
+        this.codeQueryMessage = UiFeedbackService.codeQueryError(error, '设备编号', '查询');
         return;
       }
 
@@ -469,14 +469,14 @@ struct DeviceArchiveQuery {
     this.qrQueryMessage = '';
     const context = this.getUIContext().getHostContext();
     if (context === undefined) {
-      this.qrActionMessage = '扫描取消或失败';
+      this.qrActionMessage = UiFeedbackService.operationUnavailable('扫描');
       return;
     }
 
     try {
       const cameraGranted = await this.ensureCameraPermission();
       if (!cameraGranted) {
-        this.qrActionMessage = '扫描取消或失败';
+        this.qrActionMessage = UiFeedbackService.operationUnavailable('扫描');
         return;
       }
 
@@ -486,7 +486,7 @@ struct DeviceArchiveQuery {
       });
       this.applyQrContent(result.originalValue, true);
     } catch (err) {
-      this.qrActionMessage = '扫描取消或失败';
+      this.qrActionMessage = UiFeedbackService.operationUnavailable('扫描');
     }
   }
 
@@ -525,7 +525,7 @@ struct DeviceArchiveQuery {
       });
 
       if (selection.photoUris.length === 0) {
-        this.qrActionMessage = '上传取消或失败';
+        this.qrActionMessage = UiFeedbackService.operationUnavailable('上传');
         return;
       }
 
@@ -537,13 +537,13 @@ struct DeviceArchiveQuery {
 
       if (results.length === 0) {
         this.qrContent = '';
-        this.qrActionMessage = '上传取消或失败';
+        this.qrActionMessage = UiFeedbackService.operationUnavailable('上传');
         return;
       }
 
       this.applyQrContent(results[0].originalValue, false);
     } catch (err) {
-      this.qrActionMessage = '上传取消或失败';
+      this.qrActionMessage = UiFeedbackService.operationUnavailable('上传');
     }
   }
 
@@ -570,8 +570,9 @@ struct DeviceArchiveQuery {
 
       if (!response.success) {
         const error = response.error;
-        this.qrQueryMessage = this.normalizeQrQueryError(error === undefined ? '' : `${error.code}`);
-        if (this.isQrValidationErrorCode(error === undefined ? '' : `${error.code}`)) {
+        this.qrQueryMessage = UiFeedbackService.qrQueryError(error, '查询');
+        const errorCode = error === undefined ? '' : `${error.code}`;
+        if (errorCode.startsWith('QR_')) {
           this.qrContent = '';
         }
         return;
@@ -589,7 +590,8 @@ struct DeviceArchiveQuery {
     const qrContent = DeviceService.normalizeQrContent(content);
     if (qrContent.length === 0) {
       this.qrContent = '';
-      this.qrActionMessage = scanned ? '扫描取消或失败' : '上传取消或失败';
+      this.qrActionMessage = scanned ? UiFeedbackService.operationUnavailable('扫描') :
+        UiFeedbackService.operationUnavailable('上传');
       return;
     }
 
@@ -598,43 +600,13 @@ struct DeviceArchiveQuery {
     });
     if (!validation.valid) {
       this.qrContent = '';
-      this.qrActionMessage = '二维码无效，请重新扫描或上传';
+      this.qrActionMessage = UiFeedbackService.incorrect('二维码');
       return;
     }
 
     this.qrContent = qrContent;
     this.qrActionMessage = '';
     this.qrQueryMessage = '';
-  }
-
-  normalizeCodeQueryError(errorCode: string): string {
-    if (errorCode === 'DEVICE_CODE_INVALID' || errorCode === ApiErrorCode.BadRequest ||
-      errorCode === ApiErrorCode.ValidationFailed) {
-      return '设备编号无效，请重新输入';
-    }
-
-    if (errorCode === 'DEVICE_NOT_FOUND' || errorCode === ApiErrorCode.NotFound) {
-      return '未查询到对应设备，请重新输入';
-    }
-
-    return '查询功能暂不可用，请稍后重试';
-  }
-
-  normalizeQrQueryError(errorCode: string): string {
-    if (errorCode === 'DEVICE_NOT_FOUND') {
-      return '未查询到对应设备，请重新扫描或上传';
-    }
-
-    if (this.isQrValidationErrorCode(errorCode) || errorCode === ApiErrorCode.BadRequest ||
-      errorCode === ApiErrorCode.ValidationFailed || errorCode === ApiErrorCode.NotFound) {
-      return '二维码无效，请重新扫描或上传';
-    }
-
-    return '查询功能暂不可用，请稍后重试';
-  }
-
-  isQrValidationErrorCode(errorCode: string): boolean {
-    return errorCode.startsWith('QR_');
   }
 
   getQrDeviceCodeDisplay(): string {
@@ -653,9 +625,9 @@ struct DeviceArchiveQuery {
       this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveDetail' });
     } catch (err) {
       if (this.queryMode === DeviceArchiveQueryMode.Code) {
-        this.codeQueryMessage = '查询功能暂不可用，请稍后重试';
+        this.codeQueryMessage = UiFeedbackService.operationUnavailable('查询');
       } else {
-        this.qrQueryMessage = '查询功能暂不可用，请稍后重试';
+        this.qrQueryMessage = UiFeedbackService.operationUnavailable('查询');
       }
     }
   }
@@ -664,7 +636,7 @@ struct DeviceArchiveQuery {
     DeviceArchiveFlowStore.clearFlow();
     if (!MainPageNavigator.backOrReplace(this.getUIContext(), 'pages/ArchiveCenter/ArchiveCenter')) {
       try {
-        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
       } catch (toastErr) {
       }
     }

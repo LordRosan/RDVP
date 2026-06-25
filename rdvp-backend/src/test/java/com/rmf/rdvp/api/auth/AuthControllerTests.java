@@ -112,7 +112,7 @@ class AuthControllerTests {
     }
 
     @Test
-    void rejectsInvalidCredentials() throws Exception {
+    void rejectsIncorrectPassword() throws Exception {
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -123,7 +123,24 @@ class AuthControllerTests {
                                 """))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
+                .andExpect(jsonPath("$.error.code").value("PASSWORD_INCORRECT"))
+                .andExpect(jsonPath("$.error.message").value("Password is incorrect."));
+    }
+
+    @Test
+    void rejectsIncorrectAccount() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "missing-user",
+                                  "password": "password"
+                                }
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("ACCOUNT_INCORRECT"))
+                .andExpect(jsonPath("$.error.message").value("Account is incorrect."));
     }
 
     @Test
@@ -176,7 +193,7 @@ class AuthControllerTests {
                                 }
                                 """))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
+                .andExpect(jsonPath("$.error.code").value("PASSWORD_INCORRECT"));
 
         mockMvc.perform(get("/api/v1/auth/me")
                         .header("Authorization", "Bearer " + token))
@@ -198,7 +215,7 @@ class AuthControllerTests {
                                     }
                                     """))
                     .andExpect(status().isUnauthorized())
-                    .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
+                    .andExpect(jsonPath("$.error.code").value("PASSWORD_INCORRECT"));
         }
 
         mockMvc.perform(post("/api/v1/auth/password-verification")
@@ -210,7 +227,7 @@ class AuthControllerTests {
                                 }
                                 """))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
+                .andExpect(jsonPath("$.error.code").value("PASSWORD_INCORRECT"));
 
         mockMvc.perform(post("/api/v1/auth/password-verification")
                         .header("Authorization", "Bearer " + token)

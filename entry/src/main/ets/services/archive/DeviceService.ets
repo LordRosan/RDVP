@@ -10,6 +10,7 @@ import {
   DeviceQrValidationResult,
   DeviceSummary
 } from '../../models/archive/DeviceModels';
+import { UiFeedbackService } from '../common/UiFeedbackService';
 
 interface QrVerifyApiResult {
   valid: boolean;
@@ -34,14 +35,14 @@ export class DeviceService {
     if (deviceCode.length === 0) {
       return {
         valid: false,
-        message: '请输入设备编号'
+        message: UiFeedbackService.requiredInput('设备编号')
       };
     }
 
     if (!DEVICE_CODE_PATTERN.test(deviceCode)) {
       return {
         valid: false,
-        message: '设备编号无效，请重新输入'
+        message: UiFeedbackService.incorrect('设备编号')
       };
     }
 
@@ -61,21 +62,21 @@ export class DeviceService {
     if (qrContent.length === 0) {
       return {
         valid: false,
-        message: '请扫描或上传二维码'
+        message: UiFeedbackService.requiredSelection('二维码')
       };
     }
 
     if (qrContent.length > QR_CONTENT_MAX_LENGTH) {
       return {
         valid: false,
-        message: '二维码无效，请重新扫描或上传'
+        message: UiFeedbackService.incorrect('二维码')
       };
     }
 
     if (!DeviceService.isValidQrContentStructure(qrContent)) {
       return {
         valid: false,
-        message: '二维码无效，请重新扫描或上传'
+        message: UiFeedbackService.incorrect('二维码')
       };
     }
 
@@ -143,7 +144,7 @@ export class DeviceService {
         success: false,
         error: {
           code: 'QR_CODE_INVALID',
-          message: '二维码校验未通过'
+          message: UiFeedbackService.incorrect('二维码')
         },
         requestId: response.requestId,
         timestamp: response.timestamp

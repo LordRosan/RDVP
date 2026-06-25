@@ -3,6 +3,7 @@ import { ApiErrorCode, ApiRequestOptions, ApiResponse } from '../../models/commo
 import { DashboardRefreshStore } from '../../stores/DashboardRefreshStore';
 import { SessionStore } from '../../stores/SessionStore';
 import { SecureRandomService } from './SecureRandomService';
+import { UiFeedbackService } from './UiFeedbackService';
 
 const DEFAULT_API_BASE_URL = 'http://localhost:8080';
 const API_BASE_URL_STORAGE_KEY = 'rdvp_api_base_url';
@@ -41,7 +42,7 @@ export class ApiClient {
       success: false,
       error: {
         code: ApiErrorCode.ServiceUnavailable,
-        message: '后端服务暂不可用，请稍后重试'
+        message: UiFeedbackService.operationUnavailable('后端服务')
       }
     };
   }
@@ -107,7 +108,7 @@ export class ApiClient {
         success: false,
         error: {
           code: ApiErrorCode.ServiceUnavailable,
-          message: '后端服务暂不可用，请检查网络或服务地址'
+          message: UiFeedbackService.operationUnavailable('后端服务')
         },
         timestamp: new Date().toISOString()
       };
@@ -133,7 +134,7 @@ export class ApiClient {
     }
 
     if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
-      return '后端服务地址必须以 http:// 或 https:// 开头';
+      return UiFeedbackService.incorrect('后端服务地址');
     }
 
     return '';
@@ -142,7 +143,7 @@ export class ApiClient {
   static validateRequiredBaseUrlInput(baseUrl: string): string {
     const normalized = baseUrl.trim();
     if (normalized.length === 0) {
-      return '请输入后端服务地址';
+      return UiFeedbackService.requiredInput('后端服务地址');
     }
 
     return ApiClient.validateBaseUrlInput(normalized);
@@ -273,7 +274,7 @@ export class ApiClient {
           success: false,
           error: {
             code: ApiErrorCode.InternalError,
-            message: '后端响应解析失败'
+            message: UiFeedbackService.operationUnavailable('后端服务')
           },
           timestamp: new Date().toISOString()
         };
@@ -321,21 +322,21 @@ export class ApiClient {
   private static mapStatusToMessage(responseCode: number): string {
     switch (responseCode) {
       case 400:
-        return '请求参数无效';
+        return UiFeedbackService.incorrect('请求参数');
       case 401:
-        return '登录状态已失效，请重新登录';
+        return UiFeedbackService.operationUnavailable('登录');
       case 403:
-        return '当前账号无权执行该操作';
+        return UiFeedbackService.operationUnavailable('操作');
       case 404:
-        return '未找到请求资源';
+        return UiFeedbackService.operationUnavailable('查询');
       case 409:
-        return '当前状态不允许执行该操作';
+        return UiFeedbackService.operationUnavailable('操作');
       case 422:
-        return '提交内容未通过校验，请检查后重试';
+        return UiFeedbackService.incorrect('提交内容');
       case 429:
-        return '请求过于频繁，请稍后再试';
+        return UiFeedbackService.operationUnavailable('请求');
       default:
-        return '后端服务处理失败';
+        return UiFeedbackService.operationUnavailable('后端服务');
     }
   }
 }

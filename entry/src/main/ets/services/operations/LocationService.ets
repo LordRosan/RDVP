@@ -1,5 +1,6 @@
 import { abilityAccessCtrl, Context, Permissions } from '@kit.AbilityKit';
 import { geoLocationManager } from '@kit.LocationKit';
+import { UiFeedbackService } from '../common/UiFeedbackService';
 
 const PRECISE_LOCATION_PERMISSION: Permissions = 'ohos.permission.LOCATION';
 const APPROXIMATE_LOCATION_PERMISSION: Permissions = 'ohos.permission.APPROXIMATELY_LOCATION';
@@ -31,12 +32,12 @@ interface LocationPermissionGrant {
 export class LocationService {
   static async resolveCurrentLocation(context: Context | undefined): Promise<LocationResolutionResult> {
     if (context === undefined) {
-      return LocationService.createFailureResult('无法获取页面上下文，已按未定位列表刷新');
+      return LocationService.createFailureResult(UiFeedbackService.operationUnavailable('定位'));
     }
 
     const permission = await LocationService.requestLocationPermission(context);
     if (!permission.granted) {
-      return LocationService.createFailureResult('未授权位置权限，已按未定位列表刷新');
+      return LocationService.createFailureResult(UiFeedbackService.operationUnavailable('定位'));
     }
 
     try {
@@ -44,7 +45,7 @@ export class LocationService {
       const location = await geoLocationManager.getCurrentLocation(request);
       if (!LocationService.isValidCoordinate(location.longitude, -180, 180) ||
         !LocationService.isValidCoordinate(location.latitude, -90, 90)) {
-        return LocationService.createFailureResult('当前位置无效，已按未定位列表刷新');
+        return LocationService.createFailureResult(UiFeedbackService.operationUnavailable('定位'));
       }
 
       const coordinates: LocationCoordinates = {
@@ -55,11 +56,11 @@ export class LocationService {
       };
       return {
         success: true,
-        message: '已获取当前位置',
+        message: UiFeedbackService.operationSuccess('定位'),
         coordinates
       };
     } catch (err) {
-      return LocationService.createFailureResult('当前位置获取失败，已按未定位列表刷新');
+      return LocationService.createFailureResult(UiFeedbackService.operationUnavailable('定位'));
     }
   }
 

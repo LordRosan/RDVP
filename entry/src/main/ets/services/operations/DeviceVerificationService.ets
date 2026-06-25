@@ -11,6 +11,7 @@ import {
 import { ApiClient } from '../common/ApiClient';
 import { DeviceService } from '../archive/DeviceService';
 import { FaultReportService } from './FaultReportService';
+import { UiFeedbackService } from '../common/UiFeedbackService';
 
 const MAX_DESCRIPTION_LENGTH = 500;
 const MAX_REMARK_LENGTH = 300;
@@ -56,7 +57,7 @@ export class DeviceVerificationService {
     if (!DeviceVerificationService.isKnownResult(form.result)) {
       return {
         valid: false,
-        message: '请选择核验结果'
+        message: UiFeedbackService.requiredSelection('核验结果')
       };
     }
 
@@ -64,14 +65,14 @@ export class DeviceVerificationService {
     if (verifiedAt.length === 0) {
       return {
         valid: false,
-        message: '请选择核验时间'
+        message: UiFeedbackService.requiredTime('核验')
       };
     }
 
     if (verifiedAt.length > 64) {
       return {
         valid: false,
-        message: '核验时间不能超过64字'
+        message: UiFeedbackService.fieldTooLong('核验时间', 64, '字')
       };
     }
 
@@ -79,14 +80,14 @@ export class DeviceVerificationService {
     if (description.length === 0) {
       return {
         valid: false,
-        message: '请输入核验说明'
+        message: UiFeedbackService.requiredInput('核验说明')
       };
     }
 
     if (description.length > MAX_DESCRIPTION_LENGTH) {
       return {
         valid: false,
-        message: '核验说明不能超过500字'
+        message: UiFeedbackService.fieldTooLong('核验说明', 500, '字')
       };
     }
 
@@ -94,7 +95,7 @@ export class DeviceVerificationService {
     if (remark.length > MAX_REMARK_LENGTH) {
       return {
         valid: false,
-        message: '备注不能超过300字'
+        message: UiFeedbackService.fieldTooLong('备注', 300, '字')
       };
     }
 
@@ -119,14 +120,14 @@ export class DeviceVerificationService {
     if (!DeviceVerificationService.isKnownResult(form.verification.result)) {
       return {
         valid: false,
-        message: '请选择核验结果'
+        message: UiFeedbackService.requiredSelection('核验结果')
       };
     }
 
     if (form.verification.result === VerificationResult.Normal) {
       return {
         valid: false,
-        message: '正常核验不需要提交报修信息'
+        message: UiFeedbackService.operationUnavailable('提交')
       };
     }
 
@@ -142,7 +143,7 @@ export class DeviceVerificationService {
     if (verificationDescription.length > MAX_DESCRIPTION_LENGTH) {
       return {
         valid: false,
-        message: '故障说明不能超过500字'
+        message: UiFeedbackService.fieldTooLong('故障说明', 500, '字')
       };
     }
 
@@ -236,7 +237,7 @@ export class DeviceVerificationService {
         success: false,
         error: {
           code: 'DEVICE_VERIFICATION_RESPONSE_INVALID',
-          message: '核验记录响应无效'
+          message: UiFeedbackService.operationUnavailable('提交')
         },
         requestId: response.requestId,
         timestamp: response.timestamp
@@ -305,7 +306,7 @@ export class DeviceVerificationService {
         success: false,
         error: {
           code: 'DEVICE_VERIFICATION_FAULT_REPORT_RESPONSE_INVALID',
-          message: '核验与报修响应无效'
+          message: UiFeedbackService.operationUnavailable('提交')
         },
         requestId: response.requestId,
         timestamp: response.timestamp

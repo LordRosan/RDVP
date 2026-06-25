@@ -9,6 +9,7 @@ import { PermissionCode } from '../../models/identity/PermissionModels';
 import { DeviceArchiveDeleteGuardService } from '../../services/archive/DeviceArchiveDeleteGuardService';
 import { DeviceArchiveRequestService } from '../../services/archive/DeviceArchiveRequestService';
 import { DeviceService } from '../../services/archive/DeviceService';
+import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { AuthService } from '../../services/identity/AuthService';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
 import { AuthGuard } from '../../utils/AuthGuard';
@@ -337,7 +338,7 @@ struct DeviceArchiveDelete {
       }
 
       this.hasDevice = false;
-      this.message = '未获取设备档案，请返回后重新查询';
+      this.message = UiFeedbackService.operationUnavailable('查询');
       this.messageTone = AppColors.Danger;
       return;
     }
@@ -373,7 +374,7 @@ struct DeviceArchiveDelete {
     }
 
     if (this.password.length === 0) {
-      this.message = '请输入密码';
+      this.message = UiFeedbackService.requiredInput('密码');
       this.messageTone = AppColors.Danger;
       return;
     }
@@ -392,7 +393,7 @@ struct DeviceArchiveDelete {
       });
 
       if (!response.success) {
-        this.message = '删除功能暂不可用，请稍后重试';
+        this.message = UiFeedbackService.operationUnavailable('删除');
         this.messageTone = AppColors.Danger;
         return;
       }
@@ -406,7 +407,7 @@ struct DeviceArchiveDelete {
         this.device = pendingDevice;
       }
       this.password = '';
-      this.message = '提交成功，等待审核';
+      this.message = UiFeedbackService.operationSuccess('提交');
       this.messageTone = AppColors.Success;
     } finally {
       this.submitting = false;
@@ -422,27 +423,14 @@ struct DeviceArchiveDelete {
 
     if (DeviceArchiveDeleteGuardService.isPasswordIncorrectResponse(response)) {
       const result = DeviceArchiveDeleteGuardService.registerDeletePasswordFailure(this.device.deviceCode);
-      this.message = result.lockedUntil === undefined ? '密码不正确，请重新输入' : result.message;
+      this.message = result.lockedUntil === undefined ? UiFeedbackService.incorrect('密码') : UiFeedbackService.sanitize(result.message);
       this.messageTone = AppColors.Danger;
       return false;
     }
 
-    const errorCode = response.error === undefined ? '' : `${response.error.code}`;
-    this.message = this.mapPasswordVerifyErrorMessage(errorCode);
+    this.message = UiFeedbackService.passwordVerificationError(response.error, '删除');
     this.messageTone = AppColors.Danger;
     return false;
-  }
-
-  mapPasswordVerifyErrorMessage(errorCode: string): string {
-    if (errorCode === 'PASSWORD_REQUIRED') {
-      return '请输入密码';
-    }
-
-    if (errorCode === 'INVALID_CREDENTIALS' || errorCode === 'LOGIN_FAILED' || errorCode === 'UNAUTHORIZED') {
-      return '密码不正确，请重新输入';
-    }
-
-    return '删除功能暂不可用，请稍后重试';
   }
 
   canSubmitDelete(): boolean {
@@ -484,14 +472,14 @@ struct DeviceArchiveDelete {
       router.replaceUrl({ url: 'pages/ArchiveCenter/DeviceArchiveDetail' });
     } catch (err) {
       try {
-        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
       } catch (toastErr) {
       }
     }
   }
 
   async reloadDeviceByCode(deviceCode: string): Promise<void> {
-    this.message = '正在重新获取设备档案...';
+    this.message = UiFeedbackService.sanitize('正在重新获取设备档案');
     this.messageTone = AppColors.TextSecondary;
     const response = await DeviceService.queryByCodeRemoteFirst({
       deviceCode
@@ -501,7 +489,7 @@ struct DeviceArchiveDelete {
       this.loadArchiveContext();
     } else {
       this.hasDevice = false;
-      this.message = '重新获取设备档案失败，请返回查询';
+      this.message = UiFeedbackService.operationUnavailable('查询');
       this.messageTone = AppColors.Danger;
     }
   }
@@ -566,5 +554,3 @@ struct DeviceArchiveDelete {
     return value < 10 ? `0${value}` : `${value}`;
   }
 }
-
-

@@ -10,6 +10,7 @@ import {
   OperationsReviewRequestType
 } from '../../models/management/OperationsReviewModels';
 import { OperationsReviewService } from '../../services/management/OperationsReviewService';
+import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { AuthService } from '../../services/identity/AuthService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
@@ -650,7 +651,7 @@ struct OperationsReview {
     }
 
     if (!this.canReview()) {
-      this.refreshMessage = '当前账号无权审核运维申请';
+      this.refreshMessage = UiFeedbackService.operationUnavailable('审核');
       this.refreshMessageTone = AppColors.Danger;
       return;
     }
@@ -662,7 +663,7 @@ struct OperationsReview {
 
     if (!response.success) {
       const error = response.error;
-      this.refreshMessage = error ? error.message : '待审核操作刷新失败';
+      this.refreshMessage = UiFeedbackService.operationError(error, '刷新');
       this.refreshMessageTone = AppColors.Danger;
       return;
     }
@@ -673,8 +674,8 @@ struct OperationsReview {
     }
     this.updateReviewReady();
 
-    this.refreshMessage = '';
-    this.refreshMessageTone = AppColors.Danger;
+    this.refreshMessage = UiFeedbackService.operationSuccess('刷新');
+    this.refreshMessageTone = AppColors.Success;
     if (clearMessage) {
       this.message = '';
       this.messageTone = AppColors.Danger;
@@ -750,12 +751,12 @@ struct OperationsReview {
 
       if (!response.success) {
         const error = response.error;
-        this.message = error ? error.message : '运维审核失败';
+        this.message = UiFeedbackService.operationError(error, '审核');
         this.messageTone = AppColors.Danger;
         return;
       }
 
-      this.message = `${OperationsReviewService.formatDecision(decision)}完成`;
+      this.message = UiFeedbackService.operationSuccess('审核');
       this.messageTone = AppColors.Success;
       this.clearReviewForm();
       await this.refreshRequests(false);
@@ -782,22 +783,22 @@ struct OperationsReview {
 
   fillSubmitValidationMessage(): void {
     if (this.refreshing) {
-      this.message = '操作列表正在刷新，请稍后提交报告';
+      this.message = UiFeedbackService.operationUnavailable('审核');
     } else if (!this.canReview()) {
-      this.message = '当前账号无权审核运维申请';
+      this.message = UiFeedbackService.operationUnavailable('审核');
     } else if (this.selectedRequestId.length === 0) {
-      this.message = '请选择待审核操作';
+      this.message = UiFeedbackService.requiredSelection('待审核操作');
     } else if (!this.hasReviewDecision()) {
-      this.message = '请选择审核结果';
+      this.message = UiFeedbackService.requiredSelection('审核结果');
     } else if (this.reviewedAt.length === 0) {
-      this.message = '请选择审核时间';
+      this.message = UiFeedbackService.requiredTime('审核');
     } else if (this.reviewDecision === `${OperationsReviewDecision.Rejected}` &&
       this.reviewComment.trim().length === 0) {
-      this.message = '驳回申请时必须填写审核意见';
+      this.message = UiFeedbackService.requiredInput('审核意见');
     } else if (this.password.length === 0) {
-      this.message = '请输入密码';
+      this.message = UiFeedbackService.requiredInput('密码');
     } else {
-      this.message = '当前不可提交报告';
+      this.message = UiFeedbackService.operationUnavailable('审核');
     }
     this.messageTone = AppColors.Danger;
   }
@@ -849,22 +850,9 @@ struct OperationsReview {
       return true;
     }
 
-    const errorCode = response.error === undefined ? '' : `${response.error.code}`;
-    this.message = this.mapPasswordVerifyErrorMessage(errorCode);
+    this.message = UiFeedbackService.passwordVerificationError(response.error, '审核');
     this.messageTone = AppColors.Danger;
     return false;
-  }
-
-  mapPasswordVerifyErrorMessage(errorCode: string): string {
-    if (errorCode === 'PASSWORD_REQUIRED') {
-      return '请输入密码';
-    }
-
-    if (errorCode === 'INVALID_CREDENTIALS' || errorCode === 'LOGIN_FAILED' || errorCode === 'UNAUTHORIZED') {
-      return '密码不正确，请重新输入';
-    }
-
-    return '审核功能暂不可用，请稍后重试';
   }
 
   getDecisionTone(decision: OperationsReviewDecision): string {
@@ -959,7 +947,7 @@ struct OperationsReview {
   backToManagementCenter(): void {
     if (!MainPageNavigator.backOrReplace(this.getUIContext(), 'pages/ManagementCenter/ManagementCenter')) {
       try {
-        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
       } catch (toastErr) {
       }
     }

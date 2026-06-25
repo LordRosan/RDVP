@@ -9,6 +9,7 @@ import {
 } from '../../models/operations/FaultModels';
 import { ApiClient } from '../common/ApiClient';
 import { DeviceService } from '../archive/DeviceService';
+import { UiFeedbackService } from '../common/UiFeedbackService';
 
 const MAX_DESCRIPTION_LENGTH = 800;
 const MAX_SCENE_CONDITION_LENGTH = 500;
@@ -40,14 +41,14 @@ export class FaultReportService {
     if (!FaultReportService.isKnownFaultType(form.faultType)) {
       return {
         valid: false,
-        message: '请选择故障类型'
+        message: UiFeedbackService.requiredSelection('故障类型')
       };
     }
 
     if (!FaultReportService.isKnownSeverity(form.severity)) {
       return {
         valid: false,
-        message: '请选择故障等级'
+        message: UiFeedbackService.requiredSelection('故障等级')
       };
     }
 
@@ -55,14 +56,14 @@ export class FaultReportService {
     if (occurredAt.length === 0) {
       return {
         valid: false,
-        message: '请选择故障时间'
+        message: UiFeedbackService.requiredTime('故障')
       };
     }
 
     if (occurredAt.length > 64) {
       return {
         valid: false,
-        message: '故障时间不能超过64字'
+        message: UiFeedbackService.fieldTooLong('故障时间', 64, '字')
       };
     }
 
@@ -70,14 +71,14 @@ export class FaultReportService {
     if (description.length === 0) {
       return {
         valid: false,
-        message: '请输入故障说明'
+        message: UiFeedbackService.requiredInput('故障说明')
       };
     }
 
     if (description.length > MAX_DESCRIPTION_LENGTH) {
       return {
         valid: false,
-        message: '故障说明不能超过800字'
+        message: UiFeedbackService.fieldTooLong('故障说明', 800, '字')
       };
     }
 
@@ -85,7 +86,7 @@ export class FaultReportService {
     if (sceneCondition.length > MAX_SCENE_CONDITION_LENGTH) {
       return {
         valid: false,
-        message: '备注不能超过500字'
+        message: UiFeedbackService.fieldTooLong('备注', 500, '字')
       };
     }
 
@@ -140,7 +141,7 @@ export class FaultReportService {
         success: false,
         error: {
           code: 'FAULT_REPORT_RESPONSE_INVALID',
-          message: '故障报告响应无效'
+          message: UiFeedbackService.operationUnavailable('提交')
         },
         requestId: response.requestId,
         timestamp: response.timestamp
@@ -277,13 +278,13 @@ export class FaultReportService {
     if (code === 'DEVICE_ACTIVE_FAULT_EXISTS') {
       return {
         code,
-        message: '该设备已有进行中的故障处理流程，请勿重复提交报修信息'
+        message: UiFeedbackService.operationUnavailable('报修')
       };
     }
 
     return {
       code: code.length === 0 ? 'FAULT_REPORT_SUBMIT_FAILED' : code,
-      message: fallbackMessage.length === 0 ? '设备报修提交失败' : fallbackMessage
+      message: fallbackMessage.length === 0 ? UiFeedbackService.operationUnavailable('提交') : UiFeedbackService.sanitize(fallbackMessage)
     };
   }
 }

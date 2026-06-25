@@ -2,6 +2,7 @@ import { ApiClient } from '../common/ApiClient';
 import { ApiResponse } from '../../models/common/ApiModels';
 import { AuthenticatedUser, AuthSession, LoginForm, LoginValidationResult } from '../../models/identity/AuthModels';
 import { SessionStore } from '../../stores/SessionStore';
+import { UiFeedbackService } from '../common/UiFeedbackService';
 
 interface LoginApiResult {
   accessToken: string;
@@ -20,14 +21,14 @@ export class AuthService {
     if (username.length === 0) {
       return {
         valid: false,
-        message: '请输入账号'
+        message: UiFeedbackService.requiredInput('账号')
       };
     }
 
     if (form.password.length === 0) {
       return {
         valid: false,
-        message: '请输入密码'
+        message: UiFeedbackService.requiredInput('密码')
       };
     }
 
@@ -78,7 +79,7 @@ export class AuthService {
         success: false,
         error: {
           code: 'LOGIN_RESPONSE_INVALID',
-          message: '登录响应无效'
+          message: UiFeedbackService.operationUnavailable('登录')
         },
         requestId: response.requestId,
         timestamp: response.timestamp
@@ -99,7 +100,7 @@ export class AuthService {
         success: false,
         error: {
           code: 'AUTH_SESSION_REQUIRED',
-          message: '请先登录'
+          message: UiFeedbackService.requiredAction('先登录')
         }
       };
     }
@@ -109,7 +110,7 @@ export class AuthService {
         success: false,
         error: {
           code: 'PASSWORD_REQUIRED',
-          message: '请输入当前账号密码'
+          message: UiFeedbackService.requiredInput('密码')
         }
       };
     }
@@ -120,7 +121,7 @@ export class AuthService {
         success: false,
         error: {
           code: 'AUTH_USER_INVALID',
-          message: '当前账号信息无效'
+          message: UiFeedbackService.incorrect('账号')
         }
       };
     }

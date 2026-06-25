@@ -6,6 +6,7 @@ import { FaultSeverity, FaultType } from '../../models/operations/FaultModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
 import { VerificationResult } from '../../models/operations/VerificationModels';
 import { DeviceService } from '../../services/archive/DeviceService';
+import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { DeviceVerificationService } from '../../services/operations/DeviceVerificationService';
 import { FaultReportService } from '../../services/operations/FaultReportService';
 import { AuthService } from '../../services/identity/AuthService';
@@ -678,7 +679,7 @@ struct DeviceVerification {
     }
 
     if (this.password.length === 0) {
-      this.message = '请输入密码';
+      this.message = UiFeedbackService.requiredInput('密码');
       this.messageTone = AppColors.Danger;
       return;
     }
@@ -709,13 +710,12 @@ struct DeviceVerification {
     });
     if (!response.success) {
       const error = response.error;
-      this.message = error ? error.message : '核验功能暂不可用，请稍后重试';
+      this.message = UiFeedbackService.operationError(error, '提交');
       this.messageTone = AppColors.Danger;
       return;
     }
 
-    const recordId = response.data ? response.data.id : '';
-    this.message = recordId.length > 0 ? `核验记录已提交：${recordId}` : '核验记录已提交';
+    this.message = UiFeedbackService.operationSuccess('提交');
     this.messageTone = AppColors.Success;
     this.password = '';
     this.submitted = true;
@@ -723,7 +723,7 @@ struct DeviceVerification {
 
   async submitVerificationWithFaultReport(): Promise<void> {
     if (!SessionStore.hasPermission(PermissionCode.OperationsCenterDeviceFaultReportSubmit)) {
-      this.message = '当前账号无权提交报修信息，无法提交异常核验';
+      this.message = UiFeedbackService.operationUnavailable('提交');
       this.messageTone = AppColors.Danger;
       return;
     }
@@ -746,12 +746,12 @@ struct DeviceVerification {
     });
     if (!response.success) {
       const error = response.error;
-      this.message = error ? error.message : '核验功能暂不可用，请稍后重试';
+      this.message = UiFeedbackService.operationError(error, '提交');
       this.messageTone = AppColors.Danger;
       return;
     }
 
-    this.message = '核验与报修已提交';
+    this.message = UiFeedbackService.operationSuccess('提交');
     this.messageTone = AppColors.Success;
     this.password = '';
     this.submitted = true;
@@ -859,22 +859,9 @@ struct DeviceVerification {
       return true;
     }
 
-    const errorCode = response.error === undefined ? '' : `${response.error.code}`;
-    this.message = this.mapPasswordVerifyErrorMessage(errorCode);
+    this.message = UiFeedbackService.passwordVerificationError(response.error, '提交');
     this.messageTone = AppColors.Danger;
     return false;
-  }
-
-  mapPasswordVerifyErrorMessage(errorCode: string): string {
-    if (errorCode === 'PASSWORD_REQUIRED') {
-      return '请输入密码';
-    }
-
-    if (errorCode === 'INVALID_CREDENTIALS' || errorCode === 'LOGIN_FAILED' || errorCode === 'UNAUTHORIZED') {
-      return '密码不正确，请重新输入';
-    }
-
-    return '核验功能暂不可用，请稍后重试';
   }
 
   showOccurredAtPicker(): void {
@@ -954,11 +941,9 @@ struct DeviceVerification {
   backToOperationsCenter(): void {
     if (!MainPageNavigator.backOrReplace(this.getUIContext(), 'pages/OperationsCenter/OperationsCenter')) {
       try {
-        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
       } catch (toastErr) {
       }
     }
   }
 }
-
-

@@ -1,7 +1,9 @@
 import { AppColors } from '../../styles/AppTheme';
 import { common } from '@kit.AbilityKit';
+import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { AppThemeMode } from '../../models/app/ThemeModels';
 import { AppThemeService } from '../../services/app/AppThemeService';
+import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { SessionStore } from '../../stores/SessionStore';
 
 @Entry
@@ -9,7 +11,7 @@ import { SessionStore } from '../../stores/SessionStore';
 struct ApplicationSettings {
   @State selectedThemeMode: string = AppThemeService.getThemeMode();
   @State themeModeMessage: string = '';
-  @State themeModeMessageTone: string = AppColors.Primary;
+  @State themeModeMessageTone: string = AppColors.Success;
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
 
   aboutToAppear(): void {
@@ -179,13 +181,10 @@ struct ApplicationSettings {
   @Builder
   ThemeModeMessageText() {
     if (this.themeModeMessage.length > 0) {
-      Text(this.themeModeMessage)
-        .fontSize(13)
-        .fontColor(this.themeModeMessageTone)
-        .lineHeight(18)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
+      InlineMessageSurface({
+        message: this.themeModeMessage,
+        tone: this.themeModeMessageTone
+      })
     }
   }
 
@@ -223,7 +222,7 @@ struct ApplicationSettings {
     this.selectedThemeMode = mode;
     const context = this.getUIContext().getHostContext();
     if (context === undefined) {
-      this.themeModeMessage = '显示模式设置失败';
+      this.themeModeMessage = UiFeedbackService.operationUnavailable('设置');
       this.themeModeMessageTone = AppColors.Danger;
       return;
     }
@@ -231,8 +230,8 @@ struct ApplicationSettings {
     const abilityContext = context as common.UIAbilityContext;
     AppThemeService.setThemeMode(mode, abilityContext.getApplicationContext(), abilityContext.config);
     this.selectedThemeMode = AppThemeService.getThemeMode();
-    this.themeModeMessage = `已切换为${AppThemeService.getThemeModeLabel(mode)}`;
-    this.themeModeMessageTone = AppColors.Primary;
+    this.themeModeMessage = UiFeedbackService.operationSuccess('设置');
+    this.themeModeMessageTone = AppColors.Success;
   }
 
   getSelectedThemeMode(): AppThemeMode {
@@ -259,7 +258,7 @@ struct ApplicationSettings {
         this.getUIContext().getRouter().replaceUrl({ url: 'pages/PersonalCenter/PersonalCenter' });
       } catch (innerErr) {
         try {
-          this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+          this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
         } catch (toastErr) {
         }
       }
@@ -271,7 +270,7 @@ struct ApplicationSettings {
       this.getUIContext().getRouter().replaceUrl({ url: 'pages/Login' });
     } catch (err) {
       try {
-        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
       } catch (toastErr) {
       }
     }

@@ -4,6 +4,7 @@ import { CenterTitleBar } from '../../components/CenterTitleBar';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { MainPageAction, MainPageActionId } from '../../models/app/MainPageModels';
 import { ManagementCenterRecordPermissions, PermissionCode } from '../../models/identity/PermissionModels';
+import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AppColors, AppSpacing } from '../../styles/AppTheme';
 import { AuthGuard } from '../../utils/AuthGuard';
@@ -246,21 +247,21 @@ struct RecordQuery {
     this.message = '';
     this.messageTargetId = '';
     if (action.id === MainPageActionId.ArchiveRecordQuery) {
-      this.openSubPage('pages/ManagementCenter/ArchiveRecordQuery', '档案记录不可用', action.id);
+      this.openSubPage('pages/ManagementCenter/ArchiveRecordQuery', UiFeedbackService.operationUnavailable('档案记录'), action.id);
       return;
     }
 
     if (action.id === MainPageActionId.OperationRecordQuery) {
-      this.openSubPage('pages/ManagementCenter/OperationsRecordQuery', '运维记录不可用', action.id);
+      this.openSubPage('pages/ManagementCenter/OperationsRecordQuery', UiFeedbackService.operationUnavailable('运维记录'), action.id);
       return;
     }
 
     if (action.id === MainPageActionId.ReviewRecordQuery) {
-      this.openSubPage('pages/ManagementCenter/ReviewRecordQuery', '审核记录不可用', action.id);
+      this.openSubPage('pages/ManagementCenter/ReviewRecordQuery', UiFeedbackService.operationUnavailable('审核记录'), action.id);
       return;
     }
 
-    this.message = '功能暂不可用';
+    this.message = UiFeedbackService.operationUnavailable('操作');
     this.messageTargetId = `${action.id}`;
   }
 
@@ -284,7 +285,7 @@ struct RecordQuery {
       router.replaceUrl({ url: 'pages/ManagementCenter/ManagementCenter' });
     } catch (err) {
       try {
-        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
       } catch (toastErr) {
       }
     }

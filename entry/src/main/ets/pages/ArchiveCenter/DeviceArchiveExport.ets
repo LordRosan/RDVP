@@ -10,6 +10,7 @@ import {
   DeviceQrCodeExportService
 } from '../../services/archive/DeviceQrCodeExportService';
 import { DeviceService } from '../../services/archive/DeviceService';
+import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { AuthService } from '../../services/identity/AuthService';
 import { DashboardRefreshStore } from '../../stores/DashboardRefreshStore';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
@@ -439,7 +440,7 @@ struct DeviceArchiveExport {
     const device = DeviceArchiveFlowStore.getCurrentDevice();
     if (device === undefined) {
       this.hasDevice = false;
-      this.message = '未获取设备档案，请重新查询';
+      this.message = UiFeedbackService.requiredSelection('设备档案');
       this.messageTone = AppColors.Danger;
       return;
     }
@@ -459,7 +460,7 @@ struct DeviceArchiveExport {
 
     const password = this.getPassword(tab);
     if (password.length === 0) {
-      this.message = '请输入密码';
+      this.message = UiFeedbackService.requiredInput('密码');
       this.messageTone = AppColors.Danger;
       return;
     }
@@ -492,8 +493,7 @@ struct DeviceArchiveExport {
   async verifyPasswordForExport(password: string): Promise<boolean> {
     const response = await AuthService.verifyCurrentUserPasswordRemoteFirst(password);
     if (!response.success || response.data !== true) {
-      const errorCode = response.error === undefined ? '' : `${response.error.code}`;
-      this.message = this.mapPasswordVerifyErrorMessage(errorCode);
+      this.message = UiFeedbackService.passwordVerificationError(response.error, '导出');
       this.messageTone = AppColors.Danger;
       return false;
     }
@@ -556,14 +556,14 @@ struct DeviceArchiveExport {
   handleExportSuccess(tab: string): void {
     this.markPasswordClearingAfterSuccess(tab);
     this.setPassword(tab, '');
-    this.message = '导出成功，已保存至图库';
+    this.message = UiFeedbackService.operationSuccess('导出');
     this.messageTone = AppColors.Success;
     DashboardRefreshStore.notifyChanged();
   }
 
   handleExportFailure(errorCode: string): void {
     if (errorCode === 'SENSITIVE_OPERATION_VERIFICATION_REQUIRED') {
-      this.message = '导出功能暂不可用，请稍后重试';
+      this.message = UiFeedbackService.operationUnavailable('导出');
       this.messageTone = AppColors.Danger;
       return;
     }
@@ -611,20 +611,8 @@ struct DeviceArchiveExport {
     this.clearingQrPasswordAfterSuccess = false;
   }
 
-  mapPasswordVerifyErrorMessage(errorCode: string): string {
-    if (errorCode === 'PASSWORD_REQUIRED') {
-      return '请输入密码';
-    }
-
-    if (errorCode === 'INVALID_CREDENTIALS' || errorCode === 'LOGIN_FAILED' || errorCode === 'UNAUTHORIZED') {
-      return '密码不正确，请重新输入';
-    }
-
-    return '导出功能暂不可用，请稍后重试';
-  }
-
   setExportUnavailableMessage(): void {
-    this.message = '导出功能暂不可用，请稍后重试';
+    this.message = UiFeedbackService.operationUnavailable('导出');
     this.messageTone = AppColors.Danger;
   }
 
@@ -639,7 +627,7 @@ struct DeviceArchiveExport {
   backToDetail(): void {
     if (!MainPageNavigator.backOrReplace(this.getUIContext(), 'pages/ArchiveCenter/DeviceArchiveDetail', true)) {
       try {
-        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
       } catch (toastErr) {
       }
     }

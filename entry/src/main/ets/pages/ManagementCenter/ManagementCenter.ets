@@ -6,6 +6,7 @@ import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { ManagementCenterPermissions, PermissionCode } from '../../models/identity/PermissionModels';
 import { MainPageAction, MainPageActionId } from '../../models/app/MainPageModels';
 import { MainPageService } from '../../services/app/MainPageService';
+import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
@@ -238,21 +239,21 @@ struct ManagementCenter {
     this.message = '';
     this.messageTargetId = '';
     if (action.id === MainPageActionId.DeviceArchiveReview) {
-      this.openPage('pages/ManagementCenter/ArchiveReview', '档案审核不可用');
+      this.openPage('pages/ManagementCenter/ArchiveReview', UiFeedbackService.operationUnavailable('档案审核'));
       return;
     }
 
     if (action.id === MainPageActionId.OperationsReview) {
-      this.openPage('pages/ManagementCenter/OperationsReview', '运维审核不可用');
+      this.openPage('pages/ManagementCenter/OperationsReview', UiFeedbackService.operationUnavailable('运维审核'));
       return;
     }
 
     if (action.id === MainPageActionId.RecordQuery) {
-      this.openPage('pages/ManagementCenter/RecordQuery', '记录查询不可用');
+      this.openPage('pages/ManagementCenter/RecordQuery', UiFeedbackService.operationUnavailable('记录查询'));
       return;
     }
 
-    this.message = '功能暂不可用';
+    this.message = UiFeedbackService.operationUnavailable('操作');
     this.messageTargetId = `${action.id}`;
   }
 
@@ -284,7 +285,7 @@ struct ManagementCenter {
   backToMainPage(): void {
     if (!MainPageNavigator.replaceToMainPage(this.getUIContext())) {
       try {
-        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
       } catch (toastErr) {
       }
     }

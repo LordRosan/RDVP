@@ -11,6 +11,7 @@ import {
 import { PermissionCode } from '../../models/identity/PermissionModels';
 import { DeviceArchiveUpdateService } from '../../services/archive/DeviceArchiveUpdateService';
 import { DeviceService } from '../../services/archive/DeviceService';
+import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { AuthService } from '../../services/identity/AuthService';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
 import { AuthGuard } from '../../utils/AuthGuard';
@@ -518,7 +519,7 @@ struct DeviceArchiveUpdate {
     }
 
     if (this.password.length === 0) {
-      this.message = '请输入密码';
+      this.message = UiFeedbackService.requiredInput('密码');
       this.messageTone = AppColors.Danger;
       return;
     }
@@ -532,7 +533,7 @@ struct DeviceArchiveUpdate {
 
       const response = await DeviceArchiveUpdateService.submitUpdateRequestRemoteFirst(form);
       if (!response.success) {
-        this.message = '修改功能暂不可用，请稍后重试';
+        this.message = UiFeedbackService.operationUnavailable('修改');
         this.messageTone = AppColors.Danger;
         return;
       }
@@ -545,7 +546,7 @@ struct DeviceArchiveUpdate {
       this.applyDraft(submittedDraft);
       this.updatedFieldCount = DeviceArchiveUpdateService.countUpdatedFields(this.buildForm());
       this.password = '';
-      this.message = '提交成功，等待审核';
+      this.message = UiFeedbackService.operationSuccess('提交');
       this.messageTone = AppColors.Success;
     } finally {
       this.submitting = false;
@@ -558,22 +559,9 @@ struct DeviceArchiveUpdate {
       return true;
     }
 
-    const errorCode = response.error === undefined ? '' : `${response.error.code}`;
-    this.message = this.mapPasswordVerifyErrorMessage(errorCode);
+    this.message = UiFeedbackService.passwordVerificationError(response.error, '修改');
     this.messageTone = AppColors.Danger;
     return false;
-  }
-
-  mapPasswordVerifyErrorMessage(errorCode: string): string {
-    if (errorCode === 'PASSWORD_REQUIRED') {
-      return '请输入密码';
-    }
-
-    if (errorCode === 'INVALID_CREDENTIALS' || errorCode === 'LOGIN_FAILED' || errorCode === 'UNAUTHORIZED') {
-      return '密码不正确，请重新输入';
-    }
-
-    return '修改功能暂不可用，请稍后重试';
   }
 
   buildForm(): DeviceArchiveUpdateRequestForm {
@@ -643,7 +631,7 @@ struct DeviceArchiveUpdate {
       }
 
       this.hasDevice = false;
-      this.message = '未获取设备档案，请返回后重新查询';
+      this.message = UiFeedbackService.operationUnavailable('查询');
       this.messageTone = AppColors.Danger;
       return;
     }
@@ -663,7 +651,7 @@ struct DeviceArchiveUpdate {
       this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(this.deviceCode);
       this.updatedFieldCount = DeviceArchiveUpdateService.countUpdatedFields(this.buildForm());
       this.requestStatus = DeviceArchiveFlowStore.getPendingRequestStatus();
-      this.message = '提交成功，等待审核';
+      this.message = UiFeedbackService.operationSuccess('提交');
       this.messageTone = AppColors.Success;
       return;
     }
@@ -727,14 +715,14 @@ struct DeviceArchiveUpdate {
       router.replaceUrl({ url: 'pages/ArchiveCenter/DeviceArchiveDetail' });
     } catch (err) {
       try {
-        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
       } catch (toastErr) {
       }
     }
   }
 
   async reloadDeviceByCode(deviceCode: string): Promise<void> {
-    this.message = '正在重新获取设备档案...';
+    this.message = UiFeedbackService.sanitize('正在重新获取设备档案');
     this.messageTone = AppColors.TextSecondary;
     const response = await DeviceService.queryByCodeRemoteFirst({
       deviceCode
@@ -744,7 +732,7 @@ struct DeviceArchiveUpdate {
       this.loadArchiveContext();
     } else {
       this.hasDevice = false;
-      this.message = '重新获取设备档案失败，请返回查询';
+      this.message = UiFeedbackService.operationUnavailable('查询');
       this.messageTone = AppColors.Danger;
     }
   }
@@ -806,5 +794,3 @@ struct DeviceArchiveUpdate {
     return value < 10 ? `0${value}` : `${value}`;
   }
 }
-
-

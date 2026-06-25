@@ -89,7 +89,7 @@ class AuditLogControllerTests {
                                 }
                                 """))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
+                .andExpect(jsonPath("$.error.code").value("PASSWORD_INCORRECT"));
         String managerToken = login("manager", "password");
 
         mockMvc.perform(get("/api/v1/audit-logs?action=AUTH_LOGIN")
@@ -136,7 +136,7 @@ class AuditLogControllerTests {
                                 }
                                 """))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
+                .andExpect(jsonPath("$.error.code").value("PASSWORD_INCORRECT"));
         String managerToken = login("manager", "password");
 
         mockMvc.perform(get("/api/v1/audit-logs?action=AUTH_PASSWORD_VERIFY")
@@ -146,7 +146,7 @@ class AuditLogControllerTests {
                 .andExpect(jsonPath("$.data.items[0].status").value("FAILED"))
                 .andExpect(jsonPath("$.data.items[0].targetNo").value("archiveadmin"))
                 .andExpect(jsonPath("$.data.items[0].actorName").value("档案管理员"))
-                .andExpect(jsonPath("$.data.items[0].description").value("用户密码复核失败：INVALID_CREDENTIALS。"));
+                .andExpect(jsonPath("$.data.items[0].description").value("用户密码复核失败：PASSWORD_INCORRECT。"));
     }
 
     @Test

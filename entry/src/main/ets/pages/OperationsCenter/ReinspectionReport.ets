@@ -11,6 +11,7 @@ import {
 } from '../../models/operations/ReinspectionModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
 import { ApiClient } from '../../services/common/ApiClient';
+import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { AuthService } from '../../services/identity/AuthService';
 import { ReinspectionService } from '../../services/operations/ReinspectionService';
 import { AuthGuard } from '../../utils/AuthGuard';
@@ -28,6 +29,7 @@ struct ReinspectionReport {
   @State description: string = '';
   @State password: string = '';
   @State taskMessage: string = '';
+  @State taskMessageTone: string = AppColors.Danger;
   @State recordMessage: string = '';
   @State recordMessageTone: string = AppColors.Danger;
   @State normalizedTaskId: string = '-';
@@ -530,7 +532,7 @@ struct ReinspectionReport {
     if (this.taskMessage.length > 0) {
       InlineMessageSurface({
         message: this.taskMessage,
-        tone: AppColors.Danger
+        tone: this.taskMessageTone
       })
     }
   }
@@ -583,7 +585,8 @@ struct ReinspectionReport {
 
     if (!response.success) {
       const error = response.error;
-      this.taskMessage = error ? error.message : '复检任务刷新失败';
+      this.taskMessage = UiFeedbackService.operationError(error, '刷新');
+      this.taskMessageTone = AppColors.Danger;
       return;
     }
 
@@ -591,7 +594,8 @@ struct ReinspectionReport {
     this.allTaskItems = data ? data.items : [];
     this.taskItems = [...this.allTaskItems];
     this.ensureSelectedTaskStillAvailable();
-    this.taskMessage = '';
+    this.taskMessage = UiFeedbackService.operationSuccess('刷新');
+    this.taskMessageTone = AppColors.Success;
   }
 
   async submitRecord(): Promise<void> {
@@ -608,7 +612,7 @@ struct ReinspectionReport {
     }
 
     if (this.password.length === 0) {
-      this.recordMessage = '请输入密码';
+      this.recordMessage = UiFeedbackService.requiredInput('密码');
       this.recordMessageTone = AppColors.Danger;
       return;
     }
@@ -623,13 +627,12 @@ struct ReinspectionReport {
       const response = await ReinspectionService.submitRecordRemoteFirst(form);
       if (!response.success) {
         const error = response.error;
-        this.recordMessage = error ? error.message : '复检报告提交失败';
+        this.recordMessage = UiFeedbackService.operationError(error, '提交');
         this.recordMessageTone = AppColors.Danger;
         return;
       }
 
-      const recordNo = response.data ? response.data.recordNo : '';
-      this.recordMessage = recordNo.length > 0 ? `复检报告已提交：${recordNo}` : '复检报告已提交';
+      this.recordMessage = UiFeedbackService.operationSuccess('提交');
       this.recordMessageTone = AppColors.Success;
       this.submittedReinspectionTaskId = this.normalizedTaskId;
       this.allTaskItems = this.allTaskItems.filter((item: ReinspectionTaskSummary) => {
@@ -658,22 +661,9 @@ struct ReinspectionReport {
       return true;
     }
 
-    const errorCode = response.error === undefined ? '' : `${response.error.code}`;
-    this.recordMessage = this.mapPasswordVerifyErrorMessage(errorCode);
+    this.recordMessage = UiFeedbackService.passwordVerificationError(response.error, '提交');
     this.recordMessageTone = AppColors.Danger;
     return false;
-  }
-
-  mapPasswordVerifyErrorMessage(errorCode: string): string {
-    if (errorCode === 'PASSWORD_REQUIRED') {
-      return '请输入密码';
-    }
-
-    if (errorCode === 'INVALID_CREDENTIALS' || errorCode === 'LOGIN_FAILED' || errorCode === 'UNAUTHORIZED') {
-      return '密码不正确，请重新输入';
-    }
-
-    return '复检报告提交失败，请稍后重试';
   }
 
   getSubmitButtonLabel(): string {
@@ -801,7 +791,7 @@ struct ReinspectionReport {
   backToOperationsCenter(): void {
     if (!MainPageNavigator.backOrReplace(this.getUIContext(), 'pages/OperationsCenter/OperationsCenter')) {
       try {
-        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
       } catch (toastErr) {
       }
     }

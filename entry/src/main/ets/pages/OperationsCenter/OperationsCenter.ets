@@ -6,6 +6,7 @@ import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { OperationsCenterPermissions, PermissionCode } from '../../models/identity/PermissionModels';
 import { MainPageAction, MainPageActionId } from '../../models/app/MainPageModels';
 import { MainPageService } from '../../services/app/MainPageService';
+import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
@@ -239,26 +240,26 @@ struct OperationsCenter {
     this.message = '';
     this.messageTargetId = '';
     if (action.id === MainPageActionId.DeviceVerification) {
-      this.openPage('pages/OperationsCenter/DeviceVerification', '核验与报修不可用');
+      this.openPage('pages/OperationsCenter/DeviceVerification', UiFeedbackService.operationUnavailable('核验与报修'));
       return;
     }
 
     if (action.id === MainPageActionId.TaskAcceptance) {
-      this.openPage('pages/OperationsCenter/TaskAcceptance', '任务接取不可用');
+      this.openPage('pages/OperationsCenter/TaskAcceptance', UiFeedbackService.operationUnavailable('任务接取'));
       return;
     }
 
     if (action.id === MainPageActionId.RepairReport) {
-      this.openPage('pages/OperationsCenter/RepairReport', '维修任务不可用');
+      this.openPage('pages/OperationsCenter/RepairReport', UiFeedbackService.operationUnavailable('维修任务'));
       return;
     }
 
     if (action.id === MainPageActionId.ReinspectionReport) {
-      this.openPage('pages/OperationsCenter/ReinspectionReport', '复检任务不可用');
+      this.openPage('pages/OperationsCenter/ReinspectionReport', UiFeedbackService.operationUnavailable('复检任务'));
       return;
     }
 
-    this.message = '功能暂不可用';
+    this.message = UiFeedbackService.operationUnavailable('操作');
     this.messageTargetId = `${action.id}`;
   }
 
@@ -294,7 +295,7 @@ struct OperationsCenter {
   backToMainPage(): void {
     if (!MainPageNavigator.replaceToMainPage(this.getUIContext())) {
       try {
-        this.getUIContext().getPromptAction().showToast({ message: '页面跳转失败' });
+        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
       } catch (toastErr) {
       }
     }
