@@ -16,7 +16,7 @@ import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
 
-const REVIEW_TYPE_FILTER_OPTIONS: string[] = ['全部类型', '添加档案', '删除档案', '修改档案'];
+const REVIEW_TYPE_FILTER_OPTIONS: string[] = ['全部', '添加档案', '删除档案', '修改档案'];
 const REVIEW_TYPE_FILTER_VALUES: string[] = ['', 'CREATE', 'DELETE', 'UPDATE'];
 const REVIEW_FILTER_CONTROL_HEIGHT = 56;
 
@@ -242,7 +242,7 @@ struct DeviceArchiveReview {
       this.RequestTimeRow('审核编号', item.id)
       this.RequestTimeRow('操作人', this.getOperatorName(item))
       this.RequestTimeRow('提交时间', this.formatReviewTime(item.submittedAt))
-      this.RequestTimeRow('原因', item.reason)
+      this.ReasonBlock(item.reason)
 
       Column({ space: 8 }) {
         ForEach(item.changes, (change: DeviceArchiveRequestFieldDiff) => {
@@ -282,6 +282,33 @@ struct DeviceArchiveReview {
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .width('100%')
+  }
+
+  @Builder
+  ReasonBlock(value: string) {
+    Column({ space: 4 }) {
+      Text('原因')
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+
+      Text(this.normalizeReasonText(value))
+        .fontSize(13)
+        .fontColor(AppColors.TextSecondary)
+        .lineHeight(19)
+        .maxLines(3)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .width('100%')
+    .padding({
+      left: 12,
+      right: 12,
+      top: 10,
+      bottom: 10
+    })
+    .backgroundColor(AppColors.FieldBackground)
+    .borderRadius(14)
   }
 
   @Builder
@@ -354,7 +381,6 @@ struct DeviceArchiveReview {
         if (this.reviewDecision === `${DeviceArchiveReviewDecision.Rejected}`) {
           this.ReviewCommentField()
         }
-        this.PasswordField()
       }
       .padding({
         left: 18,
@@ -368,6 +394,7 @@ struct DeviceArchiveReview {
       .border({ width: 1, color: AppColors.Divider })
       .alignItems(HorizontalAlign.Start)
 
+      this.PasswordSection()
       this.MessageText()
       this.ReviewSubmitButton()
     }
@@ -494,7 +521,7 @@ struct DeviceArchiveReview {
       this.FieldTitle('审核意见')
 
       TextArea({
-        placeholder: '填写驳回依据、需补充材料或建议修正内容',
+        placeholder: '请输入审核意见',
         text: this.reviewComment
       })
         .height(104)
@@ -524,9 +551,12 @@ struct DeviceArchiveReview {
   }
 
   @Builder
-  PasswordField() {
-    Column({ space: 10 }) {
-      this.FieldTitle('密码')
+  PasswordSection() {
+    Column({ space: 12 }) {
+      AppSectionTitle({
+        title: '密码',
+        subtitle: ''
+      })
 
       TextInput({
         placeholder: '请输入密码',
@@ -838,6 +868,11 @@ struct DeviceArchiveReview {
 
   getOperatorName(item: DeviceArchiveReviewItem): string {
     return item.operatorName === undefined || item.operatorName.length === 0 ? '-' : item.operatorName;
+  }
+
+  normalizeReasonText(value: string): string {
+    const reason = value.trim();
+    return reason.length === 0 ? '-' : reason;
   }
 
   getSubmitButtonLabel(): string {

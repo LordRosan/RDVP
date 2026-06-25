@@ -15,7 +15,7 @@ import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
 
-const OPERATIONS_REVIEW_TYPE_OPTIONS: string[] = ['全部类型', '核验报告', '报修报告', '维修报告', '复检报告'];
+const OPERATIONS_REVIEW_TYPE_OPTIONS: string[] = ['全部', '核验报告', '报修报告', '维修报告', '复检报告'];
 const OPERATIONS_REVIEW_TYPE_VALUES: string[] = [
   '',
   'DEVICE_VERIFICATION_REPORT',
@@ -247,7 +247,7 @@ struct OperationsReview {
       this.RequestFieldRow('审核编号', item.id)
       this.RequestFieldRow('操作人', this.getOperatorName(item))
       this.RequestFieldRow('提交时间', this.formatReviewTime(item.submittedAt))
-      this.RequestFieldRow('原因', item.summary.length > 0 ? item.summary : '-')
+      this.ReasonBlock(item.summary)
 
       this.SelectRequestButton(item)
     }
@@ -283,6 +283,33 @@ struct OperationsReview {
   }
 
   @Builder
+  ReasonBlock(value: string) {
+    Column({ space: 4 }) {
+      Text('原因')
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+
+      Text(this.normalizeReasonText(value))
+        .fontSize(13)
+        .fontColor(AppColors.TextSecondary)
+        .lineHeight(19)
+        .maxLines(3)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .width('100%')
+    .padding({
+      left: 12,
+      right: 12,
+      top: 10,
+      bottom: 10
+    })
+    .backgroundColor(AppColors.FieldBackground)
+    .borderRadius(14)
+  }
+
+  @Builder
   SelectRequestButton(item: OperationsReviewItem) {
     Button({ type: ButtonType.Capsule, stateEffect: true }) {
       Row({ space: 8 }) {
@@ -304,7 +331,7 @@ struct OperationsReview {
     .height(46)
     .width('100%')
     .backgroundColor(this.selectedRequestId === item.id ? AppColors.Success : AppColors.Primary)
-    .enabled(this.hasSelectedRequest() && !this.submitting)
+    .enabled(!this.submitting)
     .onClick(() => {
       this.selectRequest(item);
     })
@@ -325,7 +352,6 @@ struct OperationsReview {
         if (this.reviewDecision === `${OperationsReviewDecision.Rejected}`) {
           this.ReviewCommentField()
         }
-        this.PasswordField()
       }
       .padding({
         left: 18,
@@ -339,6 +365,7 @@ struct OperationsReview {
       .border({ width: 1, color: AppColors.Divider })
       .alignItems(HorizontalAlign.Start)
 
+      this.PasswordSection()
       this.MessageText()
       this.ReviewSubmitButton()
     }
@@ -409,7 +436,7 @@ struct OperationsReview {
       width: 1,
       color: this.reviewDecision === `${decision}` ? this.getDecisionTone(decision) : AppColors.Border
     })
-    .enabled(!this.submitting)
+    .enabled(this.hasSelectedRequest() && !this.submitting)
     .onClick(() => {
       this.reviewDecision = `${decision}`;
       this.message = '';
@@ -465,7 +492,7 @@ struct OperationsReview {
       this.FieldTitle('审核意见')
 
       TextArea({
-        placeholder: '填写驳回依据、需补充材料或建议修正内容',
+        placeholder: '请输入审核意见',
         text: this.reviewComment
       })
         .height(104)
@@ -495,9 +522,12 @@ struct OperationsReview {
   }
 
   @Builder
-  PasswordField() {
-    Column({ space: 10 }) {
-      this.FieldTitle('密码')
+  PasswordSection() {
+    Column({ space: 12 }) {
+      AppSectionTitle({
+        title: '密码',
+        subtitle: ''
+      })
 
       TextInput({
         placeholder: '请输入密码',
@@ -802,6 +832,11 @@ struct OperationsReview {
 
   getOperatorName(item: OperationsReviewItem): string {
     return item.operatorName.length === 0 ? '-' : item.operatorName;
+  }
+
+  normalizeReasonText(value: string): string {
+    const reason = value.trim();
+    return reason.length === 0 ? '-' : reason;
   }
 
   getSubmitButtonLabel(): string {
