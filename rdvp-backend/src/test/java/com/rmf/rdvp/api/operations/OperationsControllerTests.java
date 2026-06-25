@@ -88,6 +88,7 @@ class OperationsControllerTests {
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items[0].id").value(repairTaskId));
 
+        verifyPassword(operatorWorkerToken, "password");
         mockMvc.perform(post("/api/v1/repair-tasks/{repairTaskId}/repair-reports", repairTaskId)
                         .header("Authorization", "Bearer " + operatorWorkerToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -216,6 +217,26 @@ class OperationsControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(0))
                 .andExpect(jsonPath("$.data.items").isEmpty());
+    }
+
+    @Test
+    void allowsZeroRadiusTaskAcceptanceQueryForNearbyTasks() throws Exception {
+        String operatorToken = login("operator", "password");
+        String operatorWorkerToken = login("operator", "password");
+
+        String faultId = createFaultReport(
+                operatorToken,
+                "RDVP-DEVICE-0001",
+                "ENERGY_FAULT",
+                "GENERAL",
+                "Power supply fluctuates under load.");
+
+        mockMvc.perform(get("/api/v1/operation-tasks/available?radiusKm=0&longitude=114.1694&latitude=22.3193")
+                        .header("Authorization", "Bearer " + operatorWorkerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.radiusKm").value(0))
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items[0].faultReportId").value(faultId));
     }
 
     @Test
@@ -484,6 +505,7 @@ class OperationsControllerTests {
                 "Primary bearing assembly is unstable.");
         String repairTaskId = acceptFaultReport(operatorWorkerToken, faultId);
 
+        verifyPassword(operatorWorkerToken, "password");
         mockMvc.perform(post("/api/v1/repair-tasks/{repairTaskId}/repair-reports", repairTaskId)
                         .header("Authorization", "Bearer " + operatorWorkerToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -517,6 +539,7 @@ class OperationsControllerTests {
                 .andExpect(jsonPath("$.data.items[0].faultReportId").value(faultId))
                 .andExpect(jsonPath("$.data.items[0].taskType").value("REINSPECTION"));
 
+        verifyPassword(operatorReinspectToken, "password");
         mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-records", faultId)
                         .header("Authorization", "Bearer " + operatorReinspectToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -596,6 +619,7 @@ class OperationsControllerTests {
 
         submitRepairReport(operatorWorkerToken, repairTaskId);
 
+        verifyPassword(operatorWorkerToken, "password");
         mockMvc.perform(post("/api/v1/repair-tasks/{repairTaskId}/repair-reports", repairTaskId)
                         .header("Authorization", "Bearer " + operatorWorkerToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -609,6 +633,62 @@ class OperationsControllerTests {
                                 """))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.error.code").value("REPAIR_TASK_STATUS_INVALID"));
+    }
+
+    @Test
+    void requiresRecentPasswordVerificationForRepairReportSubmission() throws Exception {
+        String operatorToken = login("operator", "password");
+        String operatorWorkerToken = login("operator", "password");
+
+        String faultId = createFaultReport(
+                operatorToken,
+                "RDVP-DEVICE-0001",
+                "ENERGY_FAULT",
+                "GENERAL",
+                "Power supply fluctuates under load.");
+        String repairTaskId = acceptFaultReport(operatorWorkerToken, faultId);
+
+        mockMvc.perform(post("/api/v1/repair-tasks/{repairTaskId}/repair-reports", repairTaskId)
+                        .header("Authorization", "Bearer " + operatorWorkerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "result": "REPAIRED",
+                                  "repairedAt": "2026-05-29T06:00:00Z",
+                                  "processDescription": "Replaced unstable connector and completed load verification.",
+                                  "partsUsed": "Connector x1"
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("SENSITIVE_OPERATION_VERIFICATION_REQUIRED"));
+    }
+
+    @Test
+    void requiresRecentPasswordVerificationForReinspectionReportSubmission() throws Exception {
+        String operatorToken = login("operator", "password");
+        String operatorWorkerToken = login("operator", "password");
+
+        String faultId = createFaultReport(
+                operatorToken,
+                "RDVP-DEVICE-0001",
+                "HARDWARE_DAMAGE",
+                "SEVERE",
+                "Primary bearing assembly is unstable.");
+        String repairTaskId = acceptFaultReport(operatorWorkerToken, faultId);
+        submitRepairReport(operatorWorkerToken, repairTaskId);
+
+        mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-records", faultId)
+                        .header("Authorization", "Bearer " + operatorWorkerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "result": "PASSED",
+                                  "reinspectedAt": "2026-05-29T07:00:00Z",
+                                  "description": "Reinspection confirms stable operation."
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("SENSITIVE_OPERATION_VERIFICATION_REQUIRED"));
     }
 
     @Test
@@ -641,6 +721,7 @@ class OperationsControllerTests {
         String faultId = objectMapper.readTree(verificationResponse).path("data").path("faultReport").path("id").asText();
         String repairTaskId = acceptFaultReport(operatorWorkerToken, faultId);
         submitRepairReport(operatorWorkerToken, repairTaskId);
+        verifyPassword(operatorWorkerToken, "password");
         mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-records", faultId)
                         .header("Authorization", "Bearer " + operatorWorkerToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -731,6 +812,7 @@ class OperationsControllerTests {
                 "Control loop enters unsafe repeated restart.");
         String repairTaskId = acceptFaultReport(operatorWorkerToken, faultId);
 
+        verifyPassword(operatorWorkerToken, "password");
         mockMvc.perform(post("/api/v1/repair-tasks/{repairTaskId}/repair-reports", repairTaskId)
                         .header("Authorization", "Bearer " + operatorWorkerToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -767,6 +849,7 @@ class OperationsControllerTests {
         String repairTaskId = acceptFaultReport(operatorWorkerToken, faultId);
         submitRepairReport(operatorWorkerToken, repairTaskId);
 
+        verifyPassword(operatorReinspectToken, "password");
         mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-records", faultId)
                         .header("Authorization", "Bearer " + operatorReinspectToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -779,6 +862,7 @@ class OperationsControllerTests {
                                 """))
                 .andExpect(status().isOk());
 
+        verifyPassword(operatorReinspectToken, "password");
         mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-records", faultId)
                         .header("Authorization", "Bearer " + operatorReinspectToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -842,6 +926,7 @@ class OperationsControllerTests {
     }
 
     private void submitRepairReport(String token, String repairTaskId) throws Exception {
+        verifyPassword(token, "password");
         mockMvc.perform(post("/api/v1/repair-tasks/{repairTaskId}/repair-reports", repairTaskId)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)

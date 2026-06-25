@@ -238,7 +238,7 @@ struct ManagementCenter {
     this.message = '';
     this.messageTargetId = '';
     if (action.id === MainPageActionId.DeviceArchiveReview) {
-      this.openPage('pages/ManagementCenter/DeviceArchiveReview', '档案审核不可用');
+      this.openPage('pages/ManagementCenter/ArchiveReview', '档案审核不可用');
       return;
     }
 
@@ -266,7 +266,7 @@ struct ManagementCenter {
   }
 
   resolveActionIdByUrl(url: string): string {
-    if (url === 'pages/ManagementCenter/DeviceArchiveReview') {
+    if (url === 'pages/ManagementCenter/ArchiveReview') {
       return `${MainPageActionId.DeviceArchiveReview}`;
     }
 

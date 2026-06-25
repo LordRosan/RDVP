@@ -4,12 +4,14 @@ import { CenterTitleBar } from '../../components/CenterTitleBar';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { FaultSeverity } from '../../models/operations/FaultModels';
 import {
+  ReinspectionRecordForm,
   ReinspectionResult,
   ReinspectionTaskStatus,
   ReinspectionTaskSummary
 } from '../../models/operations/ReinspectionModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
 import { ApiClient } from '../../services/common/ApiClient';
+import { AuthService } from '../../services/identity/AuthService';
 import { ReinspectionService } from '../../services/operations/ReinspectionService';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
@@ -24,6 +26,7 @@ struct ReinspectionReport {
   @State result: string = '';
   @State reinspectedAt: string = '';
   @State description: string = '';
+  @State password: string = '';
   @State taskMessage: string = '';
   @State recordMessage: string = '';
   @State recordMessageTone: string = AppColors.Danger;
@@ -300,6 +303,7 @@ struct ReinspectionReport {
       .border({ width: 1, color: AppColors.Divider })
       .alignItems(HorizontalAlign.Start)
 
+      this.PasswordSection()
       this.RecordMessageText()
       this.ActionButton(this.getSubmitButtonLabel(), this.getSubmitIcon(), this.canSubmitRecord(),
         () => {
@@ -488,6 +492,40 @@ struct ReinspectionReport {
   }
 
   @Builder
+  PasswordSection() {
+    Column({ space: 12 }) {
+      AppSectionTitle({
+        title: '密码',
+        subtitle: ''
+      })
+
+      TextInput({
+        placeholder: '请输入密码',
+        text: this.password
+      })
+        .type(InputType.Password)
+        .height(56)
+        .fontSize(16)
+        .backgroundColor(AppColors.FieldBackground)
+        .borderRadius(18)
+        .padding({ left: 16, right: 16 })
+        .border({ width: 1, color: AppColors.Border })
+        .enabled(this.canSubmitRecord())
+        .onChange((value: string) => {
+          if (!this.canSubmitRecord()) {
+            return;
+          }
+
+          this.password = value;
+          this.recordMessage = '';
+          this.recordMessageTone = AppColors.Danger;
+        })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
   TaskMessageText() {
     if (this.taskMessage.length > 0) {
       InlineMessageSurface({
@@ -561,32 +599,81 @@ struct ReinspectionReport {
       return;
     }
 
-    this.submitting = true;
-    const response = await ReinspectionService.submitRecordRemoteFirst({
-      taskId: this.taskId,
-      result: this.result as ReinspectionResult,
-      reinspectedAt: this.reinspectedAt,
-      description: this.description
-    });
-    this.submitting = false;
-
-    if (!response.success) {
-      const error = response.error;
-      this.recordMessage = error ? error.message : '复检报告提交失败';
+    const form = this.createReinspectionRecordForm();
+    const validation = ReinspectionService.validateRecordForm(form);
+    if (!validation.valid) {
+      this.recordMessage = validation.message;
       this.recordMessageTone = AppColors.Danger;
       return;
     }
 
-    const recordNo = response.data ? response.data.recordNo : '';
-    this.recordMessage = recordNo.length > 0 ? `复检报告已提交：${recordNo}` : '复检报告已提交';
-    this.recordMessageTone = AppColors.Success;
-    this.submittedReinspectionTaskId = this.normalizedTaskId;
-    this.allTaskItems = this.allTaskItems.filter((item: ReinspectionTaskSummary) => {
-      return item.taskNo !== this.normalizedTaskId && item.id !== this.normalizedTaskId;
-    });
-    this.taskItems = [...this.allTaskItems];
-    this.clearSelectedTask();
-    this.refreshTasks();
+    if (this.password.length === 0) {
+      this.recordMessage = '请输入密码';
+      this.recordMessageTone = AppColors.Danger;
+      return;
+    }
+
+    this.submitting = true;
+    try {
+      const verified = await this.verifyPasswordForSubmit(this.password);
+      if (!verified) {
+        return;
+      }
+
+      const response = await ReinspectionService.submitRecordRemoteFirst(form);
+      if (!response.success) {
+        const error = response.error;
+        this.recordMessage = error ? error.message : '复检报告提交失败';
+        this.recordMessageTone = AppColors.Danger;
+        return;
+      }
+
+      const recordNo = response.data ? response.data.recordNo : '';
+      this.recordMessage = recordNo.length > 0 ? `复检报告已提交：${recordNo}` : '复检报告已提交';
+      this.recordMessageTone = AppColors.Success;
+      this.submittedReinspectionTaskId = this.normalizedTaskId;
+      this.allTaskItems = this.allTaskItems.filter((item: ReinspectionTaskSummary) => {
+        return item.taskNo !== this.normalizedTaskId && item.id !== this.normalizedTaskId;
+      });
+      this.taskItems = [...this.allTaskItems];
+      this.clearSelectedTask();
+      this.refreshTasks();
+    } finally {
+      this.submitting = false;
+    }
+  }
+
+  createReinspectionRecordForm(): ReinspectionRecordForm {
+    return {
+      taskId: this.taskId,
+      result: this.result as ReinspectionResult,
+      reinspectedAt: this.reinspectedAt,
+      description: this.description
+    };
+  }
+
+  async verifyPasswordForSubmit(password: string): Promise<boolean> {
+    const response = await AuthService.verifyCurrentUserPasswordRemoteFirst(password);
+    if (response.success && response.data === true) {
+      return true;
+    }
+
+    const errorCode = response.error === undefined ? '' : `${response.error.code}`;
+    this.recordMessage = this.mapPasswordVerifyErrorMessage(errorCode);
+    this.recordMessageTone = AppColors.Danger;
+    return false;
+  }
+
+  mapPasswordVerifyErrorMessage(errorCode: string): string {
+    if (errorCode === 'PASSWORD_REQUIRED') {
+      return '请输入密码';
+    }
+
+    if (errorCode === 'INVALID_CREDENTIALS' || errorCode === 'LOGIN_FAILED' || errorCode === 'UNAUTHORIZED') {
+      return '密码不正确，请重新输入';
+    }
+
+    return '复检报告提交失败，请稍后重试';
   }
 
   getSubmitButtonLabel(): string {
@@ -638,6 +725,7 @@ struct ReinspectionReport {
     this.result = '';
     this.reinspectedAt = '';
     this.description = '';
+    this.password = '';
   }
 
   ensureSelectedTaskStillAvailable(): void {

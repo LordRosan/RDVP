@@ -202,7 +202,7 @@ struct TaskAcceptance {
 
       Slider({
         value: this.radiusKm,
-        min: 1,
+        min: 0,
         max: Math.max(1, this.workloadSnapshot.maxRadiusKm),
         step: 1,
         style: SliderStyle.OutSet
@@ -638,7 +638,7 @@ struct TaskAcceptance {
   }
 
   applyRadiusSliderValue(value: number): void {
-    const normalizedValue = Math.max(1, Math.min(this.workloadSnapshot.maxRadiusKm, Math.round(value)));
+    const normalizedValue = Math.max(0, Math.min(this.workloadSnapshot.maxRadiusKm, Math.round(value)));
     this.radiusKm = normalizedValue;
     this.message = '';
     this.messageTone = AppColors.Danger;
@@ -708,8 +708,8 @@ struct TaskAcceptance {
       this.radiusKm = workloadSnapshot.maxRadiusKm;
     }
 
-    if (this.radiusKm < 1) {
-      this.radiusKm = 1;
+    if (this.radiusKm < 0) {
+      this.radiusKm = 0;
     }
   }
 
@@ -726,7 +726,7 @@ struct TaskAcceptance {
       return '暂不可接取';
     }
 
-    return `1-${this.workloadSnapshot.maxRadiusKm} km`;
+    return `0-${this.workloadSnapshot.maxRadiusKm} km`;
   }
 
   isRefreshEnabled(): boolean {

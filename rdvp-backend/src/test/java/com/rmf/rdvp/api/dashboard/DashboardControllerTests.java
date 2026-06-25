@@ -165,6 +165,7 @@ class DashboardControllerTests {
 
         String faultId = createFaultReport(operatorToken);
         String repairTaskId = acceptFaultReport(operatorToken, faultId);
+        verifyPassword(operatorToken, "password");
         mockMvc.perform(post("/api/v1/repair-tasks/{repairTaskId}/repair-reports", repairTaskId)
                         .header("Authorization", "Bearer " + operatorToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -187,6 +188,7 @@ class DashboardControllerTests {
                                 }
                                 """))
                 .andExpect(status().isOk());
+        verifyPassword(operatorToken, "password");
         mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-records", faultId)
                         .header("Authorization", "Bearer " + operatorToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -235,6 +237,7 @@ class DashboardControllerTests {
 
         String faultId = createFaultReport(operatorToken);
         String repairTaskId = acceptFaultReport(operatorToken, faultId);
+        verifyPassword(operatorToken, "password");
         mockMvc.perform(post("/api/v1/repair-tasks/{repairTaskId}/repair-reports", repairTaskId)
                         .header("Authorization", "Bearer " + operatorToken)
                         .contentType(MediaType.APPLICATION_JSON)

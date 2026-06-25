@@ -19,7 +19,7 @@ import {
 import { ApiClient } from '../common/ApiClient';
 
 const DEFAULT_RADIUS_KM = 10;
-const MIN_RADIUS_KM = 1;
+const MIN_RADIUS_KM = 0;
 const IDLE_MAX_RADIUS_KM = 30;
 const LOW_LOAD_MAX_RADIUS_KM = 20;
 const MEDIUM_LOAD_MAX_RADIUS_KM = 10;
@@ -205,7 +205,7 @@ export class RepairTaskService {
     if (radiusKm !== radiusKm || radiusKm < MIN_RADIUS_KM || radiusKm > MAX_RADIUS_KM) {
       return {
         valid: false,
-        message: '查询范围必须在1到30公里之间'
+        message: '查询范围必须在0到30公里之间'
       };
     }
 
@@ -261,7 +261,7 @@ export class RepairTaskService {
       };
     }
 
-    const radiusKm = validation.normalizedRadiusKm ?
+    const radiusKm = validation.normalizedRadiusKm !== undefined ?
       validation.normalizedRadiusKm : RepairTaskService.normalizeRadiusKm(query.radiusKm);
     if (!ApiClient.isConfigured()) {
       return ApiClient.createServiceUnavailableResponse<TaskAcceptanceListResult>();

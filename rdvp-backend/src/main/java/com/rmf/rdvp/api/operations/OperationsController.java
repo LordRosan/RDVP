@@ -111,6 +111,7 @@ public class OperationsController {
             @Valid @RequestBody RepairReportRequest requestBody,
             @AuthenticationPrincipal AuthenticatedUser user,
             HttpServletRequest request) {
+        authenticationService.consumeRecentPasswordVerification(user);
         var result = operationsService.submitRepairReport(
                 repairTaskId,
                 parseEnum(RepairReportResult.class, requestBody.result(), "result"),
@@ -151,6 +152,7 @@ public class OperationsController {
             @Valid @RequestBody ReinspectionRecordRequest requestBody,
             @AuthenticationPrincipal AuthenticatedUser user,
             HttpServletRequest request) {
+        authenticationService.consumeRecentPasswordVerification(user);
         var result = operationsService.submitReinspectionRecord(
                 faultReportId,
                 parseEnum(ReinspectionResult.class, requestBody.result(), "result"),

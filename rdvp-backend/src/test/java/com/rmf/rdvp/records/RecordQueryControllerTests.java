@@ -150,6 +150,7 @@ class RecordQueryControllerTests {
     }
 
     private void submitRepairReport(String token, String repairTaskId) throws Exception {
+        verifyPassword(token, "password");
         mockMvc.perform(post("/api/v1/repair-tasks/{repairTaskId}/repair-reports", repairTaskId)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)

@@ -2,13 +2,11 @@ import { ActionTile } from '../../components/ActionTile';
 import { AppSectionTitle } from '../../components/AppSectionTitle';
 import { CenterTitleBar } from '../../components/CenterTitleBar';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
-import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { MainPageAction, MainPageActionId } from '../../models/app/MainPageModels';
 import { ManagementCenterRecordPermissions, PermissionCode } from '../../models/identity/PermissionModels';
 import { SessionStore } from '../../stores/SessionStore';
-import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
+import { AppColors, AppSpacing } from '../../styles/AppTheme';
 import { AuthGuard } from '../../utils/AuthGuard';
-import { PermissionTextFormatter } from '../../utils/PermissionTextFormatter';
 
 @Entry
 @Component
@@ -106,20 +104,29 @@ struct RecordQuery {
         subtitle: ''
       })
 
-      Column() {
-        StatusInfoRow({
-          label: '功能权限',
-          value: PermissionTextFormatter.formatTwoPerLine(this.getPermissionLabels()),
-          tone: AppColors.Primary,
-          valueWidth: '62%',
-          valueMaxLines: 3,
-          rowMinHeight: 72,
-          verticalPadding: 8
-        })
+      Column({ space: 16 }) {
+        Grid() {
+          GridItem() {
+            this.PermissionCell('档案记录', this.canQueryArchiveRecord())
+          }
+
+          GridItem() {
+            this.PermissionCell('运维记录', this.canQueryOperationRecord())
+          }
+
+          GridItem() {
+            this.PermissionCell('审核记录', this.canQueryReviewRecord())
+          }
+        }
+        .columnsTemplate('1fr 1fr')
+        .columnsGap(14)
+        .rowsGap(14)
+        .width('100%')
       }
       .width('100%')
+      .padding(18)
       .backgroundColor(AppColors.SurfaceRaised)
-      .borderRadius(AppRadii.Large)
+      .borderRadius(24)
       .border({
         width: 1,
         color: AppColors.Divider
@@ -127,6 +134,34 @@ struct RecordQuery {
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
+  }
+
+  @Builder
+  PermissionCell(label: string, available: boolean) {
+    Row({ space: 8 }) {
+      Text(label)
+        .fontSize(15)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .layoutWeight(1)
+
+      Text('')
+        .width(8)
+        .height(8)
+        .backgroundColor(available ? AppColors.Success : AppColors.Danger)
+        .borderRadius(4)
+    }
+    .width('100%')
+    .height(40)
+    .padding({
+      left: 12,
+      right: 12
+    })
+    .backgroundColor(AppColors.SurfaceMuted)
+    .borderRadius(16)
+    .alignItems(VerticalAlign.Center)
   }
 
   @Builder
@@ -195,19 +230,16 @@ struct RecordQuery {
     return actions;
   }
 
-  getPermissionLabels(): string[] {
-    const labels: string[] = [];
-    if (SessionStore.hasPermission(PermissionCode.ManagementCenterArchiveRecordQuery)) {
-      labels.push('可查看档案记录');
-    }
-    if (SessionStore.hasPermission(PermissionCode.ManagementCenterOperationRecordQuery)) {
-      labels.push('可查看运维记录');
-    }
-    if (SessionStore.hasPermission(PermissionCode.ManagementCenterReviewRecordQuery)) {
-      labels.push('可查看审核记录');
-    }
+  canQueryArchiveRecord(): boolean {
+    return SessionStore.hasPermission(PermissionCode.ManagementCenterArchiveRecordQuery);
+  }
 
-    return labels;
+  canQueryOperationRecord(): boolean {
+    return SessionStore.hasPermission(PermissionCode.ManagementCenterOperationRecordQuery);
+  }
+
+  canQueryReviewRecord(): boolean {
+    return SessionStore.hasPermission(PermissionCode.ManagementCenterReviewRecordQuery);
   }
 
   openFeature(action: MainPageAction): void {
@@ -219,7 +251,7 @@ struct RecordQuery {
     }
 
     if (action.id === MainPageActionId.OperationRecordQuery) {
-      this.openSubPage('pages/ManagementCenter/OperationRecordQuery', '运维记录不可用', action.id);
+      this.openSubPage('pages/ManagementCenter/OperationsRecordQuery', '运维记录不可用', action.id);
       return;
     }
 

@@ -332,6 +332,7 @@ class AuditLogControllerTests {
         String generalRepairTaskId = acceptFaultReport(operatorWorkerToken, generalFaultId);
 
         submitRepairReport(operatorWorkerToken, generalRepairTaskId);
+        verifyPassword(operatorWorkerToken, "password");
         mockMvc.perform(post("/api/v1/repair-tasks/{repairTaskId}/repair-reports", generalRepairTaskId)
                         .header("Authorization", "Bearer " + operatorWorkerToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -355,6 +356,7 @@ class AuditLogControllerTests {
         String severeRepairTaskId = acceptFaultReport(operatorWorkerToken, severeFaultId);
         submitRepairReport(operatorWorkerToken, severeRepairTaskId);
         submitReinspectionRecord(operatorReinspectToken, severeFaultId);
+        verifyPassword(operatorReinspectToken, "password");
         mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-records", severeFaultId)
                         .header("Authorization", "Bearer " + operatorReinspectToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -457,6 +459,7 @@ class AuditLogControllerTests {
     }
 
     private void submitRepairReport(String token, String repairTaskId) throws Exception {
+        verifyPassword(token, "password");
         mockMvc.perform(post("/api/v1/repair-tasks/{repairTaskId}/repair-reports", repairTaskId)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -472,6 +475,7 @@ class AuditLogControllerTests {
     }
 
     private void submitReinspectionRecord(String token, String faultId) throws Exception {
+        verifyPassword(token, "password");
         mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-records", faultId)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)

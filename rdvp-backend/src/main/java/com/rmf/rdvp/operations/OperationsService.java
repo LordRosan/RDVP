@@ -32,7 +32,7 @@ import com.rmf.rdvp.identity.PermissionCode;
 public class OperationsService {
 
     private static final int DEFAULT_RADIUS_KM = 10;
-    private static final int MIN_RADIUS_KM = 1;
+    private static final int MIN_RADIUS_KM = 0;
     private static final int IDLE_MAX_RADIUS_KM = 30;
     private static final int LOW_LOAD_MAX_RADIUS_KM = 20;
     private static final int MEDIUM_LOAD_MAX_RADIUS_KM = 10;
@@ -946,7 +946,7 @@ public class OperationsService {
 
     private int normalizeRadiusKm(int radiusKm) {
         if (radiusKm < MIN_RADIUS_KM || radiusKm > IDLE_MAX_RADIUS_KM) {
-            throw new BusinessException(ErrorCode.REPAIR_TASK_RADIUS_INVALID, "查询范围必须在1到30公里之间。");
+            throw new BusinessException(ErrorCode.REPAIR_TASK_RADIUS_INVALID, "查询范围必须在0到30公里之间。");
         }
 
         return radiusKm;
