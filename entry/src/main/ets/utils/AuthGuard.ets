@@ -1,4 +1,5 @@
 import { SessionStore } from '../stores/SessionStore';
+import { AppNavigator } from './AppNavigator';
 
 export class AuthGuard {
   static requireAuthenticated(uiContext: UIContext): boolean {
@@ -6,10 +7,7 @@ export class AuthGuard {
       return true;
     }
 
-    try {
-      uiContext.getRouter().replaceUrl({ url: 'pages/Login' });
-    } catch (err) {
-    }
+    AppNavigator.replace(uiContext, 'pages/Login');
     return false;
   }
 
@@ -26,10 +24,7 @@ export class AuthGuard {
       return true;
     }
 
-    try {
-      uiContext.getRouter().replaceUrl({ url: 'pages/MainPage' });
-    } catch (err) {
-    }
+    AppNavigator.replace(uiContext, 'pages/MainPage');
     return false;
   }
 
@@ -42,10 +37,7 @@ export class AuthGuard {
       return true;
     }
 
-    try {
-      uiContext.getRouter().replaceUrl({ url: 'pages/MainPage' });
-    } catch (err) {
-    }
+    AppNavigator.replace(uiContext, 'pages/MainPage');
     return false;
   }
 }

@@ -9,7 +9,7 @@ import { MainPageService } from '../../services/app/MainPageService';
 import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
-import { MainPageNavigator } from '../../utils/MainPageNavigator';
+import { AppNavigator } from '../../utils/AppNavigator';
 import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
 @Entry
@@ -259,12 +259,10 @@ struct ManagementCenter {
   }
 
   openPage(url: string, errorMessage: string): void {
-    try {
-      this.getUIContext().getRouter().pushUrl({ url });
-    } catch (err) {
+    AppNavigator.push(this.getUIContext(), url, () => {
       this.message = errorMessage;
       this.messageTargetId = this.resolveActionIdByUrl(url);
-    }
+    });
   }
 
   resolveActionIdByUrl(url: string): string {
@@ -284,12 +282,9 @@ struct ManagementCenter {
   }
 
   backToMainPage(): void {
-    if (!MainPageNavigator.replaceToMainPage(this.getUIContext())) {
-      try {
-        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
-      } catch (toastErr) {
-      }
-    }
+    AppNavigator.replaceToMainPage(this.getUIContext(), () => {
+      AppNavigator.showNavigationUnavailableToast(this.getUIContext());
+    });
   }
 }
 

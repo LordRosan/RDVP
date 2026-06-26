@@ -6,7 +6,7 @@ import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { CurrentUserSnapshot } from '../../models/identity/SessionModels';
 import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { SessionStore } from '../../stores/SessionStore';
-import { MainPageNavigator } from '../../utils/MainPageNavigator';
+import { AppNavigator } from '../../utils/AppNavigator';
 import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
 @Entry
@@ -298,12 +298,9 @@ struct PersonalCenter {
   }
 
   backToMainPage(): void {
-    if (!MainPageNavigator.replaceToMainPage(this.getUIContext())) {
-      try {
-        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
-      } catch (toastErr) {
-      }
-    }
+    AppNavigator.replaceToMainPage(this.getUIContext(), () => {
+      AppNavigator.showNavigationUnavailableToast(this.getUIContext());
+    });
   }
 
   logout(): void {
@@ -313,27 +310,20 @@ struct PersonalCenter {
 
   openApplicationSettings(): void {
     this.settingsMessage = '';
-    try {
-      this.getUIContext().getRouter().pushUrl({ url: 'pages/PersonalCenter/ApplicationSettings' });
-    } catch (err) {
+    AppNavigator.push(this.getUIContext(), 'pages/PersonalCenter/ApplicationSettings', () => {
       this.settingsMessage = UiFeedbackService.operationUnavailable('应用设置');
-    }
+    });
   }
 
   openLoginPage(source: string = ''): void {
-    try {
-      this.getUIContext().getRouter().replaceUrl({ url: 'pages/Login' });
-    } catch (err) {
+    AppNavigator.replace(this.getUIContext(), 'pages/Login', () => {
       if (source === 'logout') {
         this.logoutActionMessage = UiFeedbackService.operationUnavailable('页面跳转');
         this.logoutActionMessageTone = UiFeedbackTone.Danger;
         return;
       }
 
-      try {
-        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
-      } catch (toastErr) {
-      }
-    }
+      AppNavigator.showNavigationUnavailableToast(this.getUIContext());
+    });
   }
 }

@@ -12,6 +12,7 @@ import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
+import { AppNavigator } from '../../utils/AppNavigator';
 
 
 @Entry
@@ -456,12 +457,10 @@ struct DeviceArchiveDetail {
       return;
     }
 
-    try {
-      this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveUpdate' });
-    } catch (err) {
+    AppNavigator.push(this.getUIContext(), 'pages/ArchiveCenter/DeviceArchiveUpdate', () => {
       this.changeActionMessage = UiFeedbackService.operationUnavailable('修改设备档案');
       this.changeActionMessageTone = UiFeedbackTone.Danger;
-    }
+    });
   }
 
   openDeletePage(): void {
@@ -483,12 +482,10 @@ struct DeviceArchiveDetail {
       return;
     }
 
-    try {
-      this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveDelete' });
-    } catch (err) {
+    AppNavigator.push(this.getUIContext(), 'pages/ArchiveCenter/DeviceArchiveDelete', () => {
       this.deleteActionMessage = UiFeedbackService.operationUnavailable('删除设备档案');
       this.deleteActionMessageTone = UiFeedbackTone.Danger;
-    }
+    });
   }
 
   openExportVerifyPage(): void {
@@ -498,29 +495,25 @@ struct DeviceArchiveDetail {
       return;
     }
 
-    try {
-      this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveExport' });
-    } catch (err) {
+    AppNavigator.push(this.getUIContext(), 'pages/ArchiveCenter/DeviceArchiveExport', () => {
       this.exportActionMessage = UiFeedbackService.operationUnavailable('导出设备档案');
       this.exportActionMessageTone = UiFeedbackTone.Danger;
-    }
+    });
   }
 
   returnToQuery(): void {
-    try {
-      DeviceArchiveFlowStore.clearFlow();
-      const router = this.getUIContext().getRouter();
-      router.back({ url: 'pages/ArchiveCenter/DeviceArchiveQuery' });
-    } catch (err) {
-      try {
-        this.getUIContext().getRouter().replaceUrl({ url: 'pages/ArchiveCenter/DeviceArchiveQuery' });
-      } catch (replaceErr) {
-        try {
-          this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
-        } catch (toastErr) {
-        }
-      }
+    DeviceArchiveFlowStore.clearFlow();
+    if (!AppNavigator.back(this.getUIContext(), () => {
+      this.replaceToQuery();
+    }, 'pages/ArchiveCenter/DeviceArchiveQuery')) {
+      this.replaceToQuery();
     }
+  }
+
+  replaceToQuery(): void {
+    AppNavigator.replace(this.getUIContext(), 'pages/ArchiveCenter/DeviceArchiveQuery', () => {
+      AppNavigator.showNavigationUnavailableToast(this.getUIContext());
+    });
   }
 
   async reloadDeviceByCode(deviceCode: string): Promise<void> {

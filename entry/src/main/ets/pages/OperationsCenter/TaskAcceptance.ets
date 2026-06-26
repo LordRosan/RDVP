@@ -19,7 +19,7 @@ import { FaultReportService } from '../../services/operations/FaultReportService
 import { LocationService, LocationResolutionResult } from '../../services/operations/LocationService';
 import { RepairTaskService } from '../../services/operations/RepairTaskService';
 import { AuthGuard } from '../../utils/AuthGuard';
-import { MainPageNavigator } from '../../utils/MainPageNavigator';
+import { AppNavigator } from '../../utils/AppNavigator';
 import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
 const REFRESH_TIMEOUT_MS = 5000;
@@ -806,12 +806,11 @@ struct TaskAcceptance {
   }
 
   backToOperationsCenter(): void {
-    if (!MainPageNavigator.backOrReplace(this.getUIContext(), 'pages/OperationsCenter/OperationsCenter')) {
-      try {
-        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
-      } catch (toastErr) {
+    AppNavigator.backOrReplace(this.getUIContext(), 'pages/OperationsCenter/OperationsCenter', {
+      onFailure: () => {
+        AppNavigator.showNavigationUnavailableToast(this.getUIContext());
       }
-    }
+    });
   }
 }
 

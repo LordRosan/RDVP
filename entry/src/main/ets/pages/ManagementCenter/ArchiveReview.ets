@@ -15,7 +15,7 @@ import { DeviceArchiveReviewService } from '../../services/management/DeviceArch
 import { AuthService } from '../../services/identity/AuthService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
-import { MainPageNavigator } from '../../utils/MainPageNavigator';
+import { AppNavigator } from '../../utils/AppNavigator';
 import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
 const REVIEW_TYPE_FILTER_OPTIONS: string[] = ['全部', '添加档案', '删除档案', '修改档案'];
@@ -980,12 +980,11 @@ struct DeviceArchiveReview {
   }
 
   backToManagementCenter(): void {
-    if (!MainPageNavigator.backOrReplace(this.getUIContext(), 'pages/ManagementCenter/ManagementCenter')) {
-      try {
-        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
-      } catch (toastErr) {
+    AppNavigator.backOrReplace(this.getUIContext(), 'pages/ManagementCenter/ManagementCenter', {
+      onFailure: () => {
+        AppNavigator.showNavigationUnavailableToast(this.getUIContext());
       }
-    }
+    });
   }
 }
 

@@ -15,7 +15,7 @@ import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { AuthService } from '../../services/identity/AuthService';
 import { ReinspectionService } from '../../services/operations/ReinspectionService';
 import { AuthGuard } from '../../utils/AuthGuard';
-import { MainPageNavigator } from '../../utils/MainPageNavigator';
+import { AppNavigator } from '../../utils/AppNavigator';
 import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
 @Entry
@@ -790,11 +790,10 @@ struct ReinspectionReport {
   }
 
   backToOperationsCenter(): void {
-    if (!MainPageNavigator.backOrReplace(this.getUIContext(), 'pages/OperationsCenter/OperationsCenter')) {
-      try {
-        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
-      } catch (toastErr) {
+    AppNavigator.backOrReplace(this.getUIContext(), 'pages/OperationsCenter/OperationsCenter', {
+      onFailure: () => {
+        AppNavigator.showNavigationUnavailableToast(this.getUIContext());
       }
-    }
+    });
   }
 }

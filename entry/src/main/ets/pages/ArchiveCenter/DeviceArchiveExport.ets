@@ -16,7 +16,7 @@ import { DashboardRefreshStore } from '../../stores/DashboardRefreshStore';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
 import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
 import { AuthGuard } from '../../utils/AuthGuard';
-import { MainPageNavigator } from '../../utils/MainPageNavigator';
+import { AppNavigator } from '../../utils/AppNavigator';
 import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
 const ARCHIVE_EXPORT_PREVIEW_BODY_ID = 'rdvp_archive_export_preview_body';
@@ -626,11 +626,11 @@ struct DeviceArchiveExport {
   }
 
   backToDetail(): void {
-    if (!MainPageNavigator.backOrReplace(this.getUIContext(), 'pages/ArchiveCenter/DeviceArchiveDetail', true)) {
-      try {
-        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
-      } catch (toastErr) {
+    AppNavigator.backOrReplace(this.getUIContext(), 'pages/ArchiveCenter/DeviceArchiveDetail', {
+      notifyDashboard: true,
+      onFailure: () => {
+        AppNavigator.showNavigationUnavailableToast(this.getUIContext());
       }
-    }
+    });
   }
 }

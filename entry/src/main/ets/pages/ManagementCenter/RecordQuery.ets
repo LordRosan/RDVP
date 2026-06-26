@@ -9,6 +9,7 @@ import { SessionStore } from '../../stores/SessionStore';
 import { AppColors, AppSpacing, AppTone } from '../../styles/AppTheme';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
+import { AppNavigator } from '../../utils/AppNavigator';
 
 @Entry
 @Component
@@ -267,28 +268,17 @@ struct RecordQuery {
   }
 
   openSubPage(url: string, errorMessage: string, actionId: MainPageActionId): void {
-    try {
-      this.getUIContext().getRouter().pushUrl({ url });
-    } catch (err) {
+    AppNavigator.push(this.getUIContext(), url, () => {
       this.message = errorMessage;
       this.messageTargetId = `${actionId}`;
-    }
+    });
   }
 
   backToManagementCenter(): void {
-    try {
-      const router = this.getUIContext().getRouter();
-      if (router.getState().index > 1) {
-        router.back();
-        return;
+    AppNavigator.backOrReplace(this.getUIContext(), 'pages/ManagementCenter/ManagementCenter', {
+      onFailure: () => {
+        AppNavigator.showNavigationUnavailableToast(this.getUIContext());
       }
-
-      router.replaceUrl({ url: 'pages/ManagementCenter/ManagementCenter' });
-    } catch (err) {
-      try {
-        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
-      } catch (toastErr) {
-      }
-    }
+    });
   }
 }

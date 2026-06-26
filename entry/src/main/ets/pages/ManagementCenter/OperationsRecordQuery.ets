@@ -8,7 +8,7 @@ import { RecordCategory, RecordItem, RecordQueryFilter } from '../../models/mana
 import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { RecordQueryService } from '../../services/management/RecordQueryService';
 import { AuthGuard } from '../../utils/AuthGuard';
-import { MainPageNavigator } from '../../utils/MainPageNavigator';
+import { AppNavigator } from '../../utils/AppNavigator';
 import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
 const OPERATION_RECORD_TYPE_OPTIONS: string[] = ['全部', '核验', '报修', '接取', '维修', '复检'];
@@ -372,11 +372,10 @@ struct OperationRecordQuery {
   }
 
   backToParent(): void {
-    if (!MainPageNavigator.backOrReplace(this.getUIContext(), 'pages/ManagementCenter/RecordQuery')) {
-      try {
-        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
-      } catch (toastErr) {
+    AppNavigator.backOrReplace(this.getUIContext(), 'pages/ManagementCenter/RecordQuery', {
+      onFailure: () => {
+        AppNavigator.showNavigationUnavailableToast(this.getUIContext());
       }
-    }
+    });
   }
 }

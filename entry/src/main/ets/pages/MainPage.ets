@@ -11,6 +11,7 @@ import { DashboardRefreshStore } from '../stores/DashboardRefreshStore';
 import { MainPageViewportStore } from '../stores/MainPageViewportStore';
 import { SessionStore } from '../stores/SessionStore';
 import { UiFeedbackTone } from '../models/common/UiFeedbackModels';
+import { AppNavigator } from '../utils/AppNavigator';
 
 @Entry
 @Component
@@ -610,32 +611,26 @@ struct MainPage {
     }
 
     if (action.id === MainPageActionId.ArchiveCenter) {
-      try {
-        this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/ArchiveCenter' });
-      } catch (err) {
+      AppNavigator.push(this.getUIContext(), 'pages/ArchiveCenter/ArchiveCenter', () => {
         this.actionMessage = UiFeedbackService.operationUnavailable('档案中心');
         this.actionMessageTargetId = `${action.id}`;
-      }
+      });
       return;
     }
 
     if (action.id === MainPageActionId.OperationsCenter) {
-      try {
-        this.getUIContext().getRouter().pushUrl({ url: 'pages/OperationsCenter/OperationsCenter' });
-      } catch (err) {
+      AppNavigator.push(this.getUIContext(), 'pages/OperationsCenter/OperationsCenter', () => {
         this.actionMessage = UiFeedbackService.operationUnavailable('运维中心');
         this.actionMessageTargetId = `${action.id}`;
-      }
+      });
       return;
     }
 
     if (action.id === MainPageActionId.ManagementCenter) {
-      try {
-        this.getUIContext().getRouter().pushUrl({ url: 'pages/ManagementCenter/ManagementCenter' });
-      } catch (err) {
+      AppNavigator.push(this.getUIContext(), 'pages/ManagementCenter/ManagementCenter', () => {
         this.actionMessage = UiFeedbackService.operationUnavailable('管理中心');
         this.actionMessageTargetId = `${action.id}`;
-      }
+      });
       return;
     }
 
@@ -903,17 +898,13 @@ struct MainPage {
 
   openApplicationSettings(): void {
     this.settingsMessage = '';
-    try {
-      this.getUIContext().getRouter().pushUrl({ url: 'pages/PersonalCenter/ApplicationSettings' });
-    } catch (err) {
+    AppNavigator.push(this.getUIContext(), 'pages/PersonalCenter/ApplicationSettings', () => {
       this.settingsMessage = UiFeedbackService.operationUnavailable('应用设置');
-    }
+    });
   }
 
   openLoginPage(source: string = ''): void {
-    try {
-      this.getUIContext().getRouter().replaceUrl({ url: 'pages/Login' });
-    } catch (err) {
+    AppNavigator.replace(this.getUIContext(), 'pages/Login', () => {
       if (source === 'logout') {
         this.logoutActionMessage = UiFeedbackService.operationUnavailable('页面跳转');
         return;
@@ -921,6 +912,6 @@ struct MainPage {
 
       this.actionMessage = UiFeedbackService.operationUnavailable('登录页');
       this.actionMessageTargetId = `${MainPageActionId.ArchiveCenter}`;
-    }
+    });
   }
 }

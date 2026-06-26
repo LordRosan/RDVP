@@ -10,6 +10,7 @@ import { DeviceArchiveRequestService } from '../main/ets/services/archive/Device
 import { DeviceArchiveUpdateService } from '../main/ets/services/archive/DeviceArchiveUpdateService';
 import { ApiClient } from '../main/ets/services/common/ApiClient';
 import { RepairTaskService } from '../main/ets/services/operations/RepairTaskService';
+import { AppNavigator } from '../main/ets/utils/AppNavigator';
 
 export default function localUnitTest() {
   describe('uiFeedbackMessages', () => {
@@ -111,6 +112,32 @@ export default function localUnitTest() {
 
       expect(result.valid).assertEqual(false);
       expect(result.message).assertEqual('请输入账号');
+    });
+  });
+
+  describe('appNavigation', () => {
+    it('reportsRejectedNavigationPromises', 0, async (): Promise<void> => {
+      let failed = false;
+
+      void Promise.reject(new Error('route rejected')).catch(
+        AppNavigator.createNavigationFailureHandler(() => {
+          failed = true;
+        }));
+      await Promise.resolve();
+
+      expect(failed).assertEqual(true);
+    });
+
+    it('ignoresResolvedNavigationPromises', 0, async (): Promise<void> => {
+      let failed = false;
+
+      void Promise.resolve().catch(
+        AppNavigator.createNavigationFailureHandler(() => {
+          failed = true;
+        }));
+      await Promise.resolve();
+
+      expect(failed).assertEqual(false);
     });
   });
 

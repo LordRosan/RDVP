@@ -4,6 +4,7 @@ import { AuthService } from '../services/identity/AuthService';
 import { SessionStore } from '../stores/SessionStore';
 import { UiFeedbackService } from '../services/common/UiFeedbackService';
 import { UiFeedbackTone } from '../models/common/UiFeedbackModels';
+import { AppNavigator } from '../utils/AppNavigator';
 
 @Entry
 @Component
@@ -248,11 +249,9 @@ struct Login {
   }
 
   openMainPage(): void {
-    try {
-      this.getUIContext().getRouter().replaceUrl({ url: 'pages/MainPage' });
-    } catch (err) {
+    AppNavigator.replace(this.getUIContext(), 'pages/MainPage', () => {
       this.message = UiFeedbackService.operationUnavailable('页面跳转');
       this.messageTone = UiFeedbackTone.Danger;
-    }
+    });
   }
 }

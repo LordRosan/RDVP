@@ -8,6 +8,7 @@ import { AppThemeService } from '../../services/app/AppThemeService';
 import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { SessionStore } from '../../stores/SessionStore';
 import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
+import { AppNavigator } from '../../utils/AppNavigator';
 
 @Entry
 @Component
@@ -249,28 +250,16 @@ struct ApplicationSettings {
   }
 
   backToPersonalCenter(): void {
-    try {
-      this.getUIContext().getRouter().back();
-    } catch (err) {
-      try {
-        this.getUIContext().getRouter().replaceUrl({ url: 'pages/PersonalCenter/PersonalCenter' });
-      } catch (innerErr) {
-        try {
-          this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
-        } catch (toastErr) {
-        }
+    AppNavigator.backOrReplace(this.getUIContext(), 'pages/PersonalCenter/PersonalCenter', {
+      onFailure: () => {
+        AppNavigator.showNavigationUnavailableToast(this.getUIContext());
       }
-    }
+    });
   }
 
   openLoginPage(): void {
-    try {
-      this.getUIContext().getRouter().replaceUrl({ url: 'pages/Login' });
-    } catch (err) {
-      try {
-        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
-      } catch (toastErr) {
-      }
-    }
+    AppNavigator.replace(this.getUIContext(), 'pages/Login', () => {
+      AppNavigator.showNavigationUnavailableToast(this.getUIContext());
+    });
   }
 }

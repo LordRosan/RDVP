@@ -9,7 +9,7 @@ import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { AppColors, AppSpacing } from '../../styles/AppTheme';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
 import { AuthGuard } from '../../utils/AuthGuard';
-import { MainPageNavigator } from '../../utils/MainPageNavigator';
+import { AppNavigator } from '../../utils/AppNavigator';
 import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
 @Entry
@@ -622,24 +622,21 @@ struct DeviceArchiveQuery {
   openDeviceArchiveDetail(device: DeviceSummary): void {
     DeviceArchiveFlowStore.startFlow(device);
 
-    try {
-      this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveDetail' });
-    } catch (err) {
+    AppNavigator.push(this.getUIContext(), 'pages/ArchiveCenter/DeviceArchiveDetail', () => {
       if (this.queryMode === DeviceArchiveQueryMode.Code) {
         this.codeQueryMessage = UiFeedbackService.operationUnavailable('查询');
       } else {
         this.qrQueryMessage = UiFeedbackService.operationUnavailable('查询');
       }
-    }
+    });
   }
 
   backToArchiveCenter(): void {
     DeviceArchiveFlowStore.clearFlow();
-    if (!MainPageNavigator.backOrReplace(this.getUIContext(), 'pages/ArchiveCenter/ArchiveCenter')) {
-      try {
-        this.getUIContext().getPromptAction().showToast({ message: UiFeedbackService.operationUnavailable('页面跳转') });
-      } catch (toastErr) {
+    AppNavigator.backOrReplace(this.getUIContext(), 'pages/ArchiveCenter/ArchiveCenter', {
+      onFailure: () => {
+        AppNavigator.showNavigationUnavailableToast(this.getUIContext());
       }
-    }
+    });
   }
 }
