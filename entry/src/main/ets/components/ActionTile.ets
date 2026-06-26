@@ -76,7 +76,7 @@ export struct ActionTile {
       this.action.id === MainPageActionId.ReviewRecordQuery) {
       return $r('sys.symbol.checkmark_shield');
     }
-    if (this.action.id === MainPageActionId.OperationRecordQuery) {
+    if (this.action.id === MainPageActionId.OperationsRecordQuery) {
       return $r('sys.symbol.clock');
     }
     if (this.action.id === MainPageActionId.ArchiveRecordQuery) {

@@ -13,6 +13,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.rmf.rdvp.domain.common.BusinessException;
 import com.rmf.rdvp.domain.common.ErrorCode;
@@ -111,6 +112,18 @@ public class GlobalExceptionHandler {
                 ErrorCode.CONFLICT.status(),
                 ErrorCode.CONFLICT.code(),
                 ErrorCode.CONFLICT.defaultMessage(),
+                request,
+                null);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    ResponseEntity<ApiResponse<Void>> handleNoResourceFound(
+            NoResourceFoundException exception,
+            HttpServletRequest request) {
+        return build(
+                ErrorCode.NOT_FOUND.status(),
+                ErrorCode.NOT_FOUND.code(),
+                ErrorCode.NOT_FOUND.defaultMessage(),
                 request,
                 null);
     }

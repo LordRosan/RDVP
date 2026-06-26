@@ -11,6 +11,8 @@ import { DeviceArchiveUpdateService } from '../main/ets/services/archive/DeviceA
 import { ApiClient } from '../main/ets/services/common/ApiClient';
 import { RepairTaskService } from '../main/ets/services/operations/RepairTaskService';
 import { AppNavigator } from '../main/ets/utils/AppNavigator';
+import { RecordCategory } from '../main/ets/models/management/RecordQueryModels';
+import { RecordQueryService } from '../main/ets/services/management/RecordQueryService';
 
 export default function localUnitTest() {
   describe('uiFeedbackMessages', () => {
@@ -100,6 +102,27 @@ export default function localUnitTest() {
 
       expect(result.valid).assertEqual(false);
       expect(result.message).assertEqual('查询范围不正确，请重新输入');
+    });
+
+    it('buildsRecordQueryPathWithDateRange', 0, () => {
+      const path = RecordQueryService.buildRecordQueryPath({
+        category: RecordCategory.Operations,
+        type: 'REPAIR_REPORT',
+        keyword: 'RDVP-DEVICE-0001',
+        startDate: '2026-06-01',
+        endDate: '2026-06-25',
+        page: 1,
+        pageSize: 50
+      });
+
+      expect(path).assertEqual('/api/v1/management-records?category=OPERATIONS&page=1&pageSize=50&keyword=RDVP-DEVICE-0001&type=REPAIR_REPORT&startDate=2026-06-01&endDate=2026-06-25');
+    });
+
+    it('formatsRecordTypesForRecords', 0, () => {
+      expect(RecordQueryService.formatTypeLabel('DEVICE_ARCHIVE_EXPORT', RecordCategory.Archive)).assertEqual('档案导出');
+      expect(RecordQueryService.formatTypeLabel('DEVICE_VERIFICATION', RecordCategory.Operations)).assertEqual('核验报告');
+      expect(RecordQueryService.formatTypeLabel('CREATE', RecordCategory.Review)).assertEqual('添加档案');
+      expect(RecordQueryService.formatTypeLabel('CREATE', RecordCategory.Archive)).assertEqual('档案添加');
     });
   });
 

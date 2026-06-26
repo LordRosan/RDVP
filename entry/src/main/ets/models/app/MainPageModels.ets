@@ -13,7 +13,7 @@ export enum MainPageActionId {
   DeviceArchiveReview = 'DEVICE_ARCHIVE_REVIEW',
   OperationsReview = 'OPERATIONS_REVIEW',
   ArchiveRecordQuery = 'ARCHIVE_RECORD_QUERY',
-  OperationRecordQuery = 'OPERATION_RECORD_QUERY',
+  OperationsRecordQuery = 'OPERATIONS_RECORD_QUERY',
   ReviewRecordQuery = 'REVIEW_RECORD_QUERY',
   RecordQuery = 'RECORD_QUERY'
 }

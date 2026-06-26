@@ -164,12 +164,12 @@ struct RepairReport {
       Stack() {
         SymbolGlyph($r('sys.symbol.wrench_and_screwdriver'))
           .fontSize(36)
-          .fontColor([AppColors.Primary])
+          .fontColor([AppColors.Success])
       }
       .width(64)
       .height(64)
       .borderRadius(32)
-      .backgroundColor(AppColors.PrimarySurface)
+      .backgroundColor(AppColors.SuccessSurface)
 
       Text('暂无维修任务')
         .fontSize(18)

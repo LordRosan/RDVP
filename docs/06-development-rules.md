@@ -69,9 +69,9 @@ RDVP/
 - `app` 表示应用级能力，用于主页、主题、应用设置等跨业务中心能力。
 - `common` 表示通用基础能力，用于 API 响应、通用工具和跨领域基础模型。
 
-实体、页面、函数和变量命名应使用单数业务对象表达一个具体概念，例如 `RepairTask`、`RepairReport`、`ReinspectionReport`、`DeviceArchiveRequest`、`OperationRecordQuery`。只有当名称表达领域集合或列表结果时才使用集合语义，例如 `operations` 目录、`OperationsCenter` 页面、`RepairTaskList`。
+实体、页面、函数和变量命名应使用单数业务对象表达一个具体概念，例如 `RepairTask`、`RepairReport`、`ReinspectionReport`、`DeviceArchiveRequest`。涉及运维领域时使用 `operations`，例如 `operations` 目录、`OperationsCenter` 页面、`OperationsRecordQuery`。
 
-记录查询作为管理中心下的功能，统一使用 `RecordQuery` 命名，不再使用 `RecordCenter`。运维记录使用 `OperationRecordQuery`，其中 `Operation` 是单条运维记录的领域修饰词；运维领域目录仍使用 `operations`。
+记录查询作为管理中心下的功能，统一使用 `RecordQuery` 命名，不再使用 `RecordCenter`。运维记录统一使用 `OperationsRecordQuery`，权限码统一使用 `MANAGEMENT_CENTER_OPERATIONS_RECORD_QUERY`。
 
 ## 4. Git 规则
 

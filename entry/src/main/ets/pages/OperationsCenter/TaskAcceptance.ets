@@ -308,12 +308,12 @@ struct TaskAcceptance {
       Stack() {
         SymbolGlyph($r('sys.symbol.location_up'))
           .fontSize(38)
-          .fontColor([AppColors.Primary])
+          .fontColor([AppColors.Success])
       }
       .width(64)
       .height(64)
       .borderRadius(32)
-      .backgroundColor(AppColors.PrimarySurface)
+      .backgroundColor(AppColors.SuccessSurface)
 
       Text('暂无可接取任务')
         .fontSize(18)

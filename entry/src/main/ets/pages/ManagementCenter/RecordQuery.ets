@@ -114,7 +114,7 @@ struct RecordQuery {
           }
 
           GridItem() {
-            this.PermissionCell('运维记录', this.canQueryOperationRecord())
+            this.PermissionCell('运维记录', this.canQueryOperationsRecord())
           }
 
           GridItem() {
@@ -215,9 +215,9 @@ struct RecordQuery {
         tone: AppTone.Warning
       });
     }
-    if (SessionStore.hasPermission(PermissionCode.ManagementCenterOperationRecordQuery)) {
+    if (SessionStore.hasPermission(PermissionCode.ManagementCenterOperationsRecordQuery)) {
       actions.push({
-        id: MainPageActionId.OperationRecordQuery,
+        id: MainPageActionId.OperationsRecordQuery,
         title: '运维记录',
         tone: AppTone.Warning
       });
@@ -237,8 +237,8 @@ struct RecordQuery {
     return SessionStore.hasPermission(PermissionCode.ManagementCenterArchiveRecordQuery);
   }
 
-  canQueryOperationRecord(): boolean {
-    return SessionStore.hasPermission(PermissionCode.ManagementCenterOperationRecordQuery);
+  canQueryOperationsRecord(): boolean {
+    return SessionStore.hasPermission(PermissionCode.ManagementCenterOperationsRecordQuery);
   }
 
   canQueryReviewRecord(): boolean {
@@ -253,7 +253,7 @@ struct RecordQuery {
       return;
     }
 
-    if (action.id === MainPageActionId.OperationRecordQuery) {
+    if (action.id === MainPageActionId.OperationsRecordQuery) {
       this.openSubPage('pages/ManagementCenter/OperationsRecordQuery', UiFeedbackService.operationUnavailable('运维记录'), action.id);
       return;
     }

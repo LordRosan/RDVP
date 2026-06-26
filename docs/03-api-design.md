@@ -741,7 +741,7 @@ POST /api/v1/fault-reports
 }
 ```
 
-当前后端未开放独立的故障报告列表、详情和驳回接口。待接取故障通过 `GET /api/v1/operation-tasks/available` 查询；历史故障记录通过 `GET /api/v1/operation-records?category=OPERATIONS` 查询。
+当前后端未开放独立的故障报告列表、详情和驳回接口。待接取故障通过 `GET /api/v1/operation-tasks/available` 查询；历史故障记录通过 `GET /api/v1/management-records?category=OPERATIONS` 查询。
 
 ## 11. 维修任务接口
 
@@ -1032,7 +1032,7 @@ POST /api/v1/operations-review-requests/{requestId}/review
 ### 15.1 查询业务记录
 
 ```text
-GET /api/v1/operation-records
+GET /api/v1/management-records
 ```
 
 权限要求按记录分类拆分：
@@ -1040,7 +1040,7 @@ GET /api/v1/operation-records
 | `category` | 权限要求 |
 | --- | --- |
 | `ARCHIVE` | `MANAGEMENT_CENTER_ARCHIVE_RECORD_QUERY` |
-| `OPERATIONS` | `MANAGEMENT_CENTER_OPERATION_RECORD_QUERY` |
+| `OPERATIONS` | `MANAGEMENT_CENTER_OPERATIONS_RECORD_QUERY` |
 | `REVIEW` | `MANAGEMENT_CENTER_REVIEW_RECORD_QUERY` |
 
 查询参数：

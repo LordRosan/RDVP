@@ -81,7 +81,7 @@ class RecordQueryControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("APPROVED"));
 
-        mockMvc.perform(get("/api/v1/operation-records")
+        mockMvc.perform(get("/api/v1/management-records")
                         .queryParam("category", "REVIEW")
                         .queryParam("type", "REPAIR_REPORT")
                         .header("Authorization", "Bearer " + managerToken))
@@ -96,8 +96,96 @@ class RecordQueryControllerTests {
                 .andExpect(jsonPath("$.data.items[0].description").value("Repair report accepted."));
     }
 
+    @Test
+    void reviewRecordsCanBeFilteredByDateRange() throws Exception {
+        String operatorToken = login("operator", "password");
+        String managerToken = login("manager", "password");
+
+        String faultId = createFaultReport(operatorToken);
+        String repairTaskId = acceptFaultReport(operatorToken, faultId);
+        submitRepairReport(operatorToken, repairTaskId);
+        String requestId = findPendingOperationsReviewRequest(managerToken);
+
+        verifyPassword(managerToken, "password");
+        mockMvc.perform(post("/api/v1/operations-review-requests/{requestId}/review", requestId)
+                        .header("Authorization", "Bearer " + managerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "decision": "APPROVED",
+                                  "reviewedAt": "2026-06-01T08:00:00Z",
+                                  "reviewComment": "Repair report accepted."
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/management-records")
+                        .queryParam("category", "REVIEW")
+                        .queryParam("type", "REPAIR_REPORT")
+                        .queryParam("startDate", "2026-06-01")
+                        .queryParam("endDate", "2026-06-01")
+                        .header("Authorization", "Bearer " + managerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1));
+
+        mockMvc.perform(get("/api/v1/management-records")
+                        .queryParam("category", "REVIEW")
+                        .queryParam("type", "REPAIR_REPORT")
+                        .queryParam("startDate", "2026-06-02")
+                        .queryParam("endDate", "2026-06-02")
+                        .header("Authorization", "Bearer " + managerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0));
+    }
+
+    @Test
+    void rejectsRecordQueryEndDateLaterThanToday() throws Exception {
+        String managerToken = login("manager", "password");
+
+        mockMvc.perform(get("/api/v1/management-records")
+                        .queryParam("category", "REVIEW")
+                        .queryParam("endDate", "2099-01-01")
+                        .header("Authorization", "Bearer " + managerToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"));
+    }
+
+    @Test
+    void doesNotRetainLegacyOperationRecordsRoute() throws Exception {
+        String managerToken = login("manager", "password");
+
+        mockMvc.perform(get("/api/v1/operation-records")
+                        .queryParam("category", "OPERATIONS")
+                        .header("Authorization", "Bearer " + managerToken))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
+    }
+
+    @Test
+    void archiveRecordsIncludeArchiveQueryAuditLogs() throws Exception {
+        String archiveAdminToken = login("archiveadmin", "password");
+        String managerToken = login("manager", "password");
+
+        mockMvc.perform(get("/api/v1/devices/by-code/{deviceCode}", "RDVP-DEVICE-0001")
+                        .header("Authorization", "Bearer " + archiveAdminToken))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/management-records")
+                        .queryParam("category", "ARCHIVE")
+                        .queryParam("type", "DEVICE_ARCHIVE_QUERY")
+                        .queryParam("keyword", "RDVP-DEVICE-0001")
+                        .header("Authorization", "Bearer " + managerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items[0].recordCategory").value("ARCHIVE"))
+                .andExpect(jsonPath("$.data.items[0].recordType").value("DEVICE_ARCHIVE_QUERY"))
+                .andExpect(jsonPath("$.data.items[0].deviceCode").value("RDVP-DEVICE-0001"));
+    }
+
     private void expectRecordCategory(String token, String category, boolean allowed) throws Exception {
-        var request = get("/api/v1/operation-records")
+        var request = get("/api/v1/management-records")
                 .queryParam("category", category)
                 .header("Authorization", "Bearer " + token);
 

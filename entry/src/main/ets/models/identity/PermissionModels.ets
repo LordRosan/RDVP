@@ -13,7 +13,7 @@ export enum PermissionCode {
   ManagementCenterDeviceArchiveRequestReview = 'MANAGEMENT_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW',
   ManagementCenterOperationsReview = 'MANAGEMENT_CENTER_OPERATIONS_REVIEW',
   ManagementCenterArchiveRecordQuery = 'MANAGEMENT_CENTER_ARCHIVE_RECORD_QUERY',
-  ManagementCenterOperationRecordQuery = 'MANAGEMENT_CENTER_OPERATION_RECORD_QUERY',
+  ManagementCenterOperationsRecordQuery = 'MANAGEMENT_CENTER_OPERATIONS_RECORD_QUERY',
   ManagementCenterReviewRecordQuery = 'MANAGEMENT_CENTER_REVIEW_RECORD_QUERY'
 }
 
@@ -38,13 +38,13 @@ export const ManagementCenterPermissions: string[] = [
   PermissionCode.ManagementCenterDeviceArchiveRequestReview,
   PermissionCode.ManagementCenterOperationsReview,
   PermissionCode.ManagementCenterArchiveRecordQuery,
-  PermissionCode.ManagementCenterOperationRecordQuery,
+  PermissionCode.ManagementCenterOperationsRecordQuery,
   PermissionCode.ManagementCenterReviewRecordQuery
 ];
 
 export const ManagementCenterRecordPermissions: string[] = [
   PermissionCode.ManagementCenterArchiveRecordQuery,
-  PermissionCode.ManagementCenterOperationRecordQuery,
+  PermissionCode.ManagementCenterOperationsRecordQuery,
   PermissionCode.ManagementCenterReviewRecordQuery
 ];
 
@@ -63,7 +63,7 @@ export const AllPermissionCodes: string[] = [
   PermissionCode.ManagementCenterDeviceArchiveRequestReview,
   PermissionCode.ManagementCenterOperationsReview,
   PermissionCode.ManagementCenterArchiveRecordQuery,
-  PermissionCode.ManagementCenterOperationRecordQuery,
+  PermissionCode.ManagementCenterOperationsRecordQuery,
   PermissionCode.ManagementCenterReviewRecordQuery
 ];
 

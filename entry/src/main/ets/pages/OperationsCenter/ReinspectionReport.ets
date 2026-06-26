@@ -171,12 +171,12 @@ struct ReinspectionReport {
       Stack() {
         SymbolGlyph($r('sys.symbol.doc_text_badge_checkmark'))
           .fontSize(36)
-          .fontColor([AppColors.Primary])
+          .fontColor([AppColors.Success])
       }
       .width(64)
       .height(64)
       .borderRadius(32)
-      .backgroundColor(AppColors.PrimarySurface)
+      .backgroundColor(AppColors.SuccessSurface)
 
       Text('暂无复检任务')
         .fontSize(18)

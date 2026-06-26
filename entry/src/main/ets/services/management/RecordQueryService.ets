@@ -10,7 +10,7 @@ import { ApiClient } from '../common/ApiClient';
 
 const DEFAULT_RECORD_PAGE_SIZE = 50;
 
-interface ApiOperationRecordItem {
+interface ApiManagementRecordItem {
   recordCategory: string;
   recordType: string;
   deviceCode?: string;
@@ -22,7 +22,7 @@ interface ApiOperationRecordItem {
 }
 
 interface ApiListResult {
-  items: ApiOperationRecordItem[];
+  items: ApiManagementRecordItem[];
   total: number;
 }
 
@@ -34,6 +34,38 @@ export class RecordQueryService {
       return ApiClient.createServiceUnavailableResponse<RecordListResult>();
     }
 
+    const response = await ApiClient.request<ApiListResult>(
+      RecordQueryService.buildRecordQueryPath(filter),
+      'GET',
+      true
+    );
+
+    if (!response.success) {
+      return {
+        success: false,
+        error: response.error,
+        requestId: response.requestId,
+        timestamp: response.timestamp
+      };
+    }
+
+    const items = response.data === undefined ? [] :
+      response.data.items.map((item: ApiManagementRecordItem): RecordItem => {
+        return RecordQueryService.mapApiItem(item, filter.category);
+      });
+
+    return {
+      success: true,
+      data: {
+        items,
+        total: response.data === undefined ? items.length : response.data.total
+      },
+      requestId: response.requestId,
+      timestamp: response.timestamp
+    };
+  }
+
+  static buildRecordQueryPath(filter: RecordQueryFilter): string {
     const params: string[] = [];
     params.push(`category=${encodeURIComponent(filter.category)}`);
     params.push(`page=${filter.page}`);
@@ -49,36 +81,17 @@ export class RecordQueryService {
       params.push(`type=${encodeURIComponent(trimmedType)}`);
     }
 
-    const query = params.join('&');
-    const response = await ApiClient.request<ApiListResult>(
-      `/api/v1/operation-records?${query}`,
-      'GET',
-      true
-    );
-
-    if (!response.success) {
-      return {
-        success: false,
-        error: response.error,
-        requestId: response.requestId,
-        timestamp: response.timestamp
-      };
+    const trimmedStartDate = filter.startDate === undefined ? '' : filter.startDate.trim();
+    if (trimmedStartDate.length > 0) {
+      params.push(`startDate=${encodeURIComponent(trimmedStartDate)}`);
     }
 
-    const items = response.data === undefined ? [] :
-      response.data.items.map((item: ApiOperationRecordItem): RecordItem => {
-        return RecordQueryService.mapApiItem(item, filter.category);
-      });
+    const trimmedEndDate = filter.endDate === undefined ? '' : filter.endDate.trim();
+    if (trimmedEndDate.length > 0) {
+      params.push(`endDate=${encodeURIComponent(trimmedEndDate)}`);
+    }
 
-    return {
-      success: true,
-      data: {
-        items,
-        total: response.data === undefined ? items.length : response.data.total
-      },
-      requestId: response.requestId,
-      timestamp: response.timestamp
-    };
+    return `/api/v1/management-records?${params.join('&')}`;
   }
 
   static formatStatus(status: string): string {
@@ -126,24 +139,29 @@ export class RecordQueryService {
     }
   }
 
-  static formatTypeLabel(action: string): string {
+  static formatTypeLabel(action: string, category?: RecordCategory): string {
     switch (action) {
       case 'DEVICE_ARCHIVE_REQUEST':
         return '档案申请';
       case 'DEVICE_ARCHIVE_REVIEW':
         return '档案审核';
+      case 'DEVICE_ARCHIVE_QUERY':
+        return '档案查询';
+      case 'DEVICE_ARCHIVE_EXPORT':
+        return '档案导出';
       case 'CREATE':
-        return '添加档案';
+        return category === RecordCategory.Archive ? '档案添加' : '添加档案';
       case 'UPDATE':
-        return '修改档案';
+        return category === RecordCategory.Archive ? '档案修改' : '修改档案';
       case 'DELETE':
-        return '删除档案';
+        return category === RecordCategory.Archive ? '档案删除' : '删除档案';
       case 'DEVICE_VERIFICATION':
-        return '设备核验';
+      case 'DEVICE_VERIFICATION_REPORT':
+        return '核验报告';
       case 'FAULT_REPORT':
-        return '设备报修';
+        return '报修报告';
       case 'REPAIR_TASK_ACCEPT':
-        return '维修接取';
+        return '任务接取';
       case 'REPAIR_REPORT':
         return '维修报告';
       case 'REINSPECTION_REPORT':
@@ -155,12 +173,12 @@ export class RecordQueryService {
     }
   }
 
-  private static mapApiItem(item: ApiOperationRecordItem, category: RecordCategory): RecordItem {
+  private static mapApiItem(item: ApiManagementRecordItem, category: RecordCategory): RecordItem {
     return {
       id: `${item.recordCategory}-${item.recordType}-${item.taskNo}-${item.occurredAt}`,
       category,
       type: item.recordType,
-      typeLabel: RecordQueryService.formatTypeLabel(item.recordType),
+      typeLabel: RecordQueryService.formatTypeLabel(item.recordType, category),
       deviceCode: item.deviceCode ?? '-',
       taskNo: item.taskNo ?? '-',
       operatorName: item.operatorName ?? '-',

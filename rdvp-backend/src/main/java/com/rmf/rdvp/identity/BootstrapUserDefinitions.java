@@ -54,7 +54,7 @@ final class BootstrapUserDefinitions {
                         PermissionCode.OPERATIONS_CENTER_REINSPECTION_TASK_ACCEPT,
                         PermissionCode.OPERATIONS_CENTER_REINSPECTION_REPORT_SUBMIT,
                         PermissionCode.MANAGEMENT_CENTER_OPERATIONS_REVIEW,
-                        PermissionCode.MANAGEMENT_CENTER_OPERATION_RECORD_QUERY),
+                        PermissionCode.MANAGEMENT_CENTER_OPERATIONS_RECORD_QUERY),
                 create(
                         passwordEncoder,
                         defaultPassword,
@@ -79,7 +79,7 @@ final class BootstrapUserDefinitions {
                         PermissionCode.MANAGEMENT_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW,
                         PermissionCode.MANAGEMENT_CENTER_OPERATIONS_REVIEW,
                         PermissionCode.MANAGEMENT_CENTER_ARCHIVE_RECORD_QUERY,
-                        PermissionCode.MANAGEMENT_CENTER_OPERATION_RECORD_QUERY,
+                        PermissionCode.MANAGEMENT_CENTER_OPERATIONS_RECORD_QUERY,
                         PermissionCode.MANAGEMENT_CENTER_REVIEW_RECORD_QUERY));
     }
 

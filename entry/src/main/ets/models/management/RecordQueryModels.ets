@@ -22,6 +22,8 @@ export interface RecordQueryFilter {
   category: RecordCategory;
   type: string;
   keyword: string;
+  startDate?: string;
+  endDate?: string;
   page: number;
   pageSize: number;
 }

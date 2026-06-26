@@ -593,12 +593,12 @@ struct DeviceArchiveReview {
       Stack() {
         SymbolGlyph($r('sys.symbol.checkmark_shield'))
           .fontSize(36)
-          .fontColor([AppColors.Primary])
+          .fontColor([AppColors.Warning])
       }
       .width(64)
       .height(64)
       .borderRadius(32)
-      .backgroundColor(AppColors.PrimarySurface)
+      .backgroundColor(AppColors.WarningSurface)
 
       Text('暂无待审核操作')
         .fontSize(18)

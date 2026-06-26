@@ -26,11 +26,13 @@ public class RecordQueryController {
         this.recordQueryService = recordQueryService;
     }
 
-    @GetMapping("/operation-records")
-    public ResponseEntity<ApiResponse<RecordListResponse>> queryOperationRecords(
+    @GetMapping("/management-records")
+    public ResponseEntity<ApiResponse<RecordListResponse>> queryManagementRecords(
             @RequestParam String category,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int pageSize,
             Authentication authentication,
@@ -38,7 +40,7 @@ public class RecordQueryController {
         AuthenticatedUser user = requireUser(authentication);
         var normalizedCategory = normalizeCategory(category);
         requireCategoryPermission(user, normalizedCategory);
-        var result = recordQueryService.queryRecords(normalizedCategory, type, keyword, page, pageSize);
+        var result = recordQueryService.queryRecords(normalizedCategory, type, keyword, startDate, endDate, page, pageSize);
         return ResponseEntity.ok(ApiResponse.success(result, RequestIds.resolve(request)));
     }
 
@@ -61,7 +63,7 @@ public class RecordQueryController {
     private void requireCategoryPermission(AuthenticatedUser user, String category) {
         PermissionCode requiredPermission = switch (category) {
             case "ARCHIVE" -> PermissionCode.MANAGEMENT_CENTER_ARCHIVE_RECORD_QUERY;
-            case "OPERATIONS" -> PermissionCode.MANAGEMENT_CENTER_OPERATION_RECORD_QUERY;
+            case "OPERATIONS" -> PermissionCode.MANAGEMENT_CENTER_OPERATIONS_RECORD_QUERY;
             case "REVIEW" -> PermissionCode.MANAGEMENT_CENTER_REVIEW_RECORD_QUERY;
             default -> throw new BusinessException(ErrorCode.BAD_REQUEST, "category is invalid.");
         };

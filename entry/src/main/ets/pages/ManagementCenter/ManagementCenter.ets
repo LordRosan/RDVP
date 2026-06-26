@@ -127,7 +127,7 @@ struct ManagementCenter {
           }
 
           GridItem() {
-            this.PermissionCell('运维记录', this.canQueryOperationRecord())
+            this.PermissionCell('运维记录', this.canQueryOperationsRecord())
           }
 
           GridItem() {
@@ -228,8 +228,8 @@ struct ManagementCenter {
     return SessionStore.hasPermission(PermissionCode.ManagementCenterArchiveRecordQuery);
   }
 
-  canQueryOperationRecord(): boolean {
-    return SessionStore.hasPermission(PermissionCode.ManagementCenterOperationRecordQuery);
+  canQueryOperationsRecord(): boolean {
+    return SessionStore.hasPermission(PermissionCode.ManagementCenterOperationsRecordQuery);
   }
 
   canQueryReviewRecord(): boolean {

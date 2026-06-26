@@ -11,23 +11,26 @@ import { AuthGuard } from '../../utils/AuthGuard';
 import { AppNavigator } from '../../utils/AppNavigator';
 import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
-const OPERATION_RECORD_TYPE_OPTIONS: string[] = ['全部', '核验', '报修', '接取', '维修', '复检'];
-const OPERATION_RECORD_TYPE_VALUES: string[] = ['', 'DEVICE_VERIFICATION', 'FAULT_REPORT',
-  'REPAIR_TASK_ACCEPT', 'REPAIR_REPORT', 'REINSPECTION_RECORD'];
+const OPERATIONS_RECORD_TYPE_OPTIONS: string[] = ['全部', '核验报告', '报修报告', '任务接取', '维修报告', '复检报告'];
+const OPERATIONS_RECORD_TYPE_VALUES: string[] = ['', 'DEVICE_VERIFICATION', 'FAULT_REPORT',
+  'REPAIR_TASK_ACCEPT', 'REPAIR_REPORT', 'REINSPECTION_REPORT'];
 const RECORD_FILTER_CONTROL_HEIGHT = 56;
 
 @Entry
 @Component
-struct OperationRecordQuery {
+struct OperationsRecordQuery {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   @State records: RecordItem[] = [];
   @State selectedTypeIndex: number = 0;
   @State keyword: string = '';
+  @State startDate: string = '';
+  @State endDate: string = '';
+  @State resultTotal: number = 0;
   @State message: string = '';
   @State refreshing: boolean = false;
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ManagementCenterOperationRecordQuery)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ManagementCenterOperationsRecordQuery)) {
       return;
     }
 
@@ -81,7 +84,7 @@ struct OperationRecordQuery {
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      Text('Operation Records')
+      Text('Operations Records')
         .fontSize(13)
         .fontWeight(FontWeight.Medium)
         .fontColor(AppColors.TextTertiary)
@@ -95,7 +98,7 @@ struct OperationRecordQuery {
 
   @Builder
   SearchPanel() {
-    TextInput({ placeholder: '输入设备编号或操作人搜索', text: this.keyword })
+    TextInput({ placeholder: '请输入设备编号或操作人进行搜索', text: this.keyword })
       .height(52)
       .fontSize(15)
       .backgroundColor(AppColors.FieldBackground)
@@ -107,13 +110,62 @@ struct OperationRecordQuery {
   }
 
   @Builder
+  DateRangePanel() {
+    Row({ space: 10 }) {
+      this.DateField('开始日期', this.startDate, '请选择开始日期', () => {
+        this.showStartDatePicker();
+      })
+      this.DateField('结束日期', this.endDate, '请选择结束日期', () => {
+        this.showEndDatePicker();
+      })
+    }
+    .width('100%')
+    .alignItems(VerticalAlign.Center)
+  }
+
+  @Builder
+  DateField(label: string, value: string, placeholder: string, action: () => void) {
+    Column({ space: 8 }) {
+      Text(label)
+        .fontSize(14)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextSecondary)
+        .maxLines(1)
+
+      Row({ space: 8 }) {
+        SymbolGlyph($r('sys.symbol.calendar'))
+          .fontSize(18)
+          .fontColor([value.length > 0 ? AppColors.TextPrimary : AppColors.TextSecondary])
+
+        Text(value.length > 0 ? value : placeholder)
+          .fontSize(14)
+          .fontColor(value.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
+          .layoutWeight(1)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .height(52)
+      .width('100%')
+      .backgroundColor(AppColors.FieldBackground)
+      .borderRadius(18)
+      .padding({ left: 14, right: 14 })
+      .border({ width: 1, color: AppColors.Border })
+      .onClick(() => {
+        action();
+      })
+    }
+    .layoutWeight(1)
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
   QueryButton() {
     Button({ type: ButtonType.Capsule, stateEffect: !this.refreshing }) {
       Row({ space: 6 }) {
         SymbolGlyph($r('sys.symbol.magnifyingglass'))
           .fontSize(17)
           .fontColor([AppColors.OnPrimary])
-        Text(this.refreshing ? '查询中' : '查询记录')
+        Text(this.refreshing ? '查询中' : '查询')
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
           .fontColor(AppColors.OnPrimary)
@@ -127,6 +179,16 @@ struct OperationRecordQuery {
     .backgroundColor(this.refreshing ? AppColors.Disabled : AppColors.Primary)
     .enabled(!this.refreshing)
     .onClick(() => { this.refreshRecords(); })
+  }
+
+  @Builder
+  ResultCountText() {
+    Text(`共查询到${this.resultTotal}条记录`)
+      .fontSize(14)
+      .fontWeight(FontWeight.Medium)
+      .fontColor(AppColors.TextSecondary)
+      .width('100%')
+      .maxLines(1)
   }
 
   @Builder
@@ -157,10 +219,11 @@ struct OperationRecordQuery {
         .width('100%')
         .clip(true)
 
+        this.DateRangePanel()
         this.MessageText()
         this.QueryButton()
+        this.ResultCountText()
         this.RecordFilterResultList()
-        this.ResultSummaryPanel()
       }
       .width('100%')
       .padding({
@@ -188,7 +251,7 @@ struct OperationRecordQuery {
         this.EmptyState()
       } else {
         ForEach(this.records, (item: RecordItem) => {
-          this.OperationRecordQueryCard(item)
+          this.OperationsRecordQueryCard(item)
         }, (item: RecordItem) => item.id)
       }
     }
@@ -196,7 +259,7 @@ struct OperationRecordQuery {
   }
 
   @Builder
-  OperationRecordQueryCard(item: RecordItem) {
+  OperationsRecordQueryCard(item: RecordItem) {
     Column({ space: 10 }) {
       Row({ space: 12 }) {
         Stack() {
@@ -266,12 +329,12 @@ struct OperationRecordQuery {
       Stack() {
         SymbolGlyph($r('sys.symbol.wrench_and_screwdriver'))
           .fontSize(36)
-          .fontColor([AppColors.Primary])
+          .fontColor([AppColors.Warning])
       }
       .width(64)
       .height(64)
       .borderRadius(32)
-      .backgroundColor(AppColors.PrimarySurface)
+      .backgroundColor(AppColors.WarningSurface)
       Text('暂无运维记录')
         .fontSize(18)
         .fontWeight(FontWeight.Bold)
@@ -286,19 +349,6 @@ struct OperationRecordQuery {
   }
 
   @Builder
-  ResultSummaryPanel() {
-    Column() {
-      this.RecordFieldRow('记录数量', `${this.records.length}条`)
-      this.CardDivider()
-      this.RecordFieldRow('筛选类型', OPERATION_RECORD_TYPE_OPTIONS[this.selectedTypeIndex])
-    }
-    .width('100%')
-    .backgroundColor(AppColors.SurfaceRaised)
-    .borderRadius(AppRadii.Large)
-    .border({ width: 1, color: AppColors.Divider })
-  }
-
-  @Builder
   MessageText() {
     if (this.message.length > 0) {
       InlineMessageSurface({
@@ -308,21 +358,18 @@ struct OperationRecordQuery {
     }
   }
 
-  @Builder
-  CardDivider() {
-    Divider()
-      .height(1)
-      .backgroundColor(AppColors.Divider)
-      .margin({ left: 18, right: 18 })
-  }
-
   async refreshRecords(): Promise<void> {
     if (this.refreshing) { return; }
+    if (!this.validateDateRange()) {
+      return;
+    }
     this.refreshing = true;
     const filter: RecordQueryFilter = {
       category: RecordCategory.Operations,
-      type: OPERATION_RECORD_TYPE_VALUES[this.selectedTypeIndex],
+      type: OPERATIONS_RECORD_TYPE_VALUES[this.selectedTypeIndex],
       keyword: this.keyword,
+      startDate: this.startDate,
+      endDate: this.endDate,
       page: 1,
       pageSize: 50
     };
@@ -333,6 +380,7 @@ struct OperationRecordQuery {
       return;
     }
     this.records = response.data ? response.data.items : [];
+    this.resultTotal = response.data ? response.data.total : 0;
     this.message = '';
   }
 
@@ -341,13 +389,13 @@ struct OperationRecordQuery {
       return item.name === '记录类型';
     });
     this.selectedTypeIndex = result === undefined ? 0 :
-      this.normalizeFilterIndex(result.index, OPERATION_RECORD_TYPE_VALUES.length);
+      this.normalizeFilterIndex(result.index, OPERATIONS_RECORD_TYPE_VALUES.length);
     this.refreshRecords();
   }
 
   getRecordFilterParams(): FilterParams[] {
     return [
-      this.createFilterParams('记录类型', OPERATION_RECORD_TYPE_OPTIONS)
+      this.createFilterParams('记录类型', OPERATIONS_RECORD_TYPE_OPTIONS)
     ];
   }
 
@@ -369,6 +417,77 @@ struct OperationRecordQuery {
     }
 
     return Math.floor(index);
+  }
+
+  showStartDatePicker(): void {
+    this.getUIContext().showDatePickerDialog({
+      start: new Date(2000, 0, 1),
+      end: this.endDate.length > 0 ? this.resolveSelectedDate(this.endDate) : new Date(),
+      selected: this.startDate.length > 0 ? this.resolveSelectedDate(this.startDate) :
+        (this.endDate.length > 0 ? this.resolveSelectedDate(this.endDate) : new Date()),
+      showTime: false,
+      onDateAccept: (value: Date) => {
+        this.startDate = this.formatDate(value);
+        this.message = '';
+      }
+    });
+  }
+
+  showEndDatePicker(): void {
+    this.getUIContext().showDatePickerDialog({
+      start: this.startDate.length > 0 ? this.resolveSelectedDate(this.startDate) : new Date(2000, 0, 1),
+      end: new Date(),
+      selected: this.resolveSelectedDate(this.endDate),
+      showTime: false,
+      onDateAccept: (value: Date) => {
+        this.endDate = this.formatDate(value);
+        this.message = '';
+      }
+    });
+  }
+
+  validateDateRange(): boolean {
+    if (this.endDate.length > 0 && this.resolveSelectedDate(this.endDate).getTime() > this.todayStart().getTime()) {
+      this.message = '结束日期不能晚于今天';
+      return false;
+    }
+
+    if (this.startDate.length > 0 && this.endDate.length > 0 &&
+      this.resolveSelectedDate(this.startDate).getTime() > this.resolveSelectedDate(this.endDate).getTime()) {
+      this.message = '开始日期不能晚于结束日期';
+      return false;
+    }
+
+    return true;
+  }
+
+  resolveSelectedDate(value: string): Date {
+    const segments = value.trim().split('-');
+    if (segments.length !== 3) {
+      return this.todayStart();
+    }
+
+    const year = Number(segments[0]);
+    const month = Number(segments[1]);
+    const day = Number(segments[2]);
+    if (year !== year || month !== month || day !== day) {
+      return this.todayStart();
+    }
+
+    return new Date(year, month - 1, day);
+  }
+
+  todayStart(): Date {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+
+  formatDate(value: Date): string {
+    return `${value.getFullYear()}-${this.pad2(value.getMonth() + 1)}-${this.pad2(value.getDate())}`;
+  }
+
+  pad2(value: number): string {
+    return value < 10 ? `0${value}` : `${value}`;
   }
 
   backToParent(): void {

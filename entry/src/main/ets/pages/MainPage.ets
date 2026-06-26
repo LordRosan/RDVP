@@ -753,10 +753,10 @@ struct MainPage {
     }
 
     return [
-      { label: '核验', value: operations.verifications },
-      { label: '报修', value: operations.faultReports },
-      { label: '维修', value: operations.repairs },
-      { label: '复检', value: operations.reinspections }
+      { label: '核验报告', value: operations.verifications },
+      { label: '报修报告', value: operations.faultReports },
+      { label: '维修报告', value: operations.repairs },
+      { label: '复检报告', value: operations.reinspections }
     ];
   }
 
