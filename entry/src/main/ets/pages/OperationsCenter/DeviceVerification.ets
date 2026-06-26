@@ -13,6 +13,7 @@ import { AuthService } from '../../services/identity/AuthService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
+import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
 @Entry
 @Component
@@ -28,7 +29,7 @@ struct DeviceVerification {
   @State faultDescription: string = '';
   @State password: string = '';
   @State message: string = '';
-  @State messageTone: string = AppColors.Danger;
+  @State messageTone: string = UiFeedbackTone.Danger;
   @State normalizedDeviceCode: string = '-';
   @State submitting: boolean = false;
   @State submitted: boolean = false;
@@ -617,7 +618,7 @@ struct DeviceVerification {
 
           this.password = value;
           this.message = '';
-          this.messageTone = AppColors.Danger;
+          this.messageTone = UiFeedbackTone.Danger;
         })
     }
     .width('100%')
@@ -674,13 +675,13 @@ struct DeviceVerification {
     const validation = this.validateCurrentForm();
     if (!validation.valid) {
       this.message = validation.message;
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
       return;
     }
 
     if (this.password.length === 0) {
       this.message = UiFeedbackService.requiredInput('密码');
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
       return;
     }
 
@@ -711,12 +712,12 @@ struct DeviceVerification {
     if (!response.success) {
       const error = response.error;
       this.message = UiFeedbackService.operationError(error, '提交');
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
       return;
     }
 
     this.message = UiFeedbackService.operationSuccess('提交');
-    this.messageTone = AppColors.Success;
+    this.messageTone = UiFeedbackTone.Success;
     this.password = '';
     this.submitted = true;
   }
@@ -724,7 +725,7 @@ struct DeviceVerification {
   async submitVerificationWithFaultReport(): Promise<void> {
     if (!SessionStore.hasPermission(PermissionCode.OperationsCenterDeviceFaultReportSubmit)) {
       this.message = UiFeedbackService.operationUnavailable('提交');
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
       return;
     }
 
@@ -747,12 +748,12 @@ struct DeviceVerification {
     if (!response.success) {
       const error = response.error;
       this.message = UiFeedbackService.operationError(error, '提交');
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
       return;
     }
 
     this.message = UiFeedbackService.operationSuccess('提交');
-    this.messageTone = AppColors.Success;
+    this.messageTone = UiFeedbackTone.Success;
     this.password = '';
     this.submitted = true;
   }
@@ -819,7 +820,7 @@ struct DeviceVerification {
 
   markFormChanged(): void {
     this.message = '';
-    this.messageTone = AppColors.Danger;
+    this.messageTone = UiFeedbackTone.Danger;
     this.submitted = false;
   }
 
@@ -860,7 +861,7 @@ struct DeviceVerification {
     }
 
     this.message = UiFeedbackService.passwordVerificationError(response.error, '提交');
-    this.messageTone = AppColors.Danger;
+    this.messageTone = UiFeedbackTone.Danger;
     return false;
   }
 

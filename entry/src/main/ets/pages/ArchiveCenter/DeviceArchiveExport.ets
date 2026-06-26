@@ -17,6 +17,7 @@ import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
 import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
+import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
 const ARCHIVE_EXPORT_PREVIEW_BODY_ID = 'rdvp_archive_export_preview_body';
 const EXPORT_TAB_DETAIL = 'DETAIL';
@@ -43,7 +44,7 @@ struct DeviceArchiveExport {
   @State detailPassword: string = '';
   @State qrPassword: string = '';
   @State message: string = '';
-  @State messageTone: string = AppColors.Danger;
+  @State messageTone: string = UiFeedbackTone.Danger;
   @State exporting: boolean = false;
   @State detailPreviewDataUri: string = '';
   @State qrExportResult: DeviceQrCodeExportResult | undefined = undefined;
@@ -93,7 +94,7 @@ struct DeviceArchiveExport {
         this.currentTabIndex = index;
         this.activeTab = index === 0 ? EXPORT_TAB_DETAIL : EXPORT_TAB_QR;
         this.message = '';
-        this.messageTone = AppColors.Danger;
+        this.messageTone = UiFeedbackTone.Danger;
       })
       .height('100%')
       .width('100%')
@@ -339,7 +340,7 @@ struct DeviceArchiveExport {
 
           this.setPassword(tab, value);
           this.message = '';
-          this.messageTone = AppColors.Danger;
+          this.messageTone = UiFeedbackTone.Danger;
           this.clearExportPreviews();
         })
     }
@@ -441,7 +442,7 @@ struct DeviceArchiveExport {
     if (device === undefined) {
       this.hasDevice = false;
       this.message = UiFeedbackService.requiredSelection('设备档案');
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
       return;
     }
 
@@ -461,7 +462,7 @@ struct DeviceArchiveExport {
     const password = this.getPassword(tab);
     if (password.length === 0) {
       this.message = UiFeedbackService.requiredInput('密码');
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
       return;
     }
 
@@ -473,7 +474,7 @@ struct DeviceArchiveExport {
 
     this.exporting = true;
     this.message = '';
-    this.messageTone = AppColors.Danger;
+    this.messageTone = UiFeedbackTone.Danger;
     try {
       const verified = await this.verifyPasswordForExport(password);
       if (!verified) {
@@ -494,7 +495,7 @@ struct DeviceArchiveExport {
     const response = await AuthService.verifyCurrentUserPasswordRemoteFirst(password);
     if (!response.success || response.data !== true) {
       this.message = UiFeedbackService.passwordVerificationError(response.error, '导出');
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
       return false;
     }
 
@@ -557,14 +558,14 @@ struct DeviceArchiveExport {
     this.markPasswordClearingAfterSuccess(tab);
     this.setPassword(tab, '');
     this.message = UiFeedbackService.operationSuccess('导出');
-    this.messageTone = AppColors.Success;
+    this.messageTone = UiFeedbackTone.Success;
     DashboardRefreshStore.notifyChanged();
   }
 
   handleExportFailure(errorCode: string): void {
     if (errorCode === 'SENSITIVE_OPERATION_VERIFICATION_REQUIRED') {
       this.message = UiFeedbackService.operationUnavailable('导出');
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
       return;
     }
 
@@ -613,7 +614,7 @@ struct DeviceArchiveExport {
 
   setExportUnavailableMessage(): void {
     this.message = UiFeedbackService.operationUnavailable('导出');
-    this.messageTone = AppColors.Danger;
+    this.messageTone = UiFeedbackTone.Danger;
   }
 
   getQrExportImageDataUri(): string {

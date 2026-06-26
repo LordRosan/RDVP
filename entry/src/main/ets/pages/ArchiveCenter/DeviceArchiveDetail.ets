@@ -11,6 +11,7 @@ import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
+import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
 
 @Entry
@@ -30,16 +31,16 @@ struct DeviceArchiveDetail {
   };
   @State hasDevice: boolean = false;
   @State detailMessage: string = '';
-  @State detailMessageTone: string = AppColors.Danger;
+  @State detailMessageTone: string = UiFeedbackTone.Danger;
   @State changeActionMessage: string = '';
-  @State changeActionMessageTone: string = AppColors.Danger;
+  @State changeActionMessageTone: string = UiFeedbackTone.Danger;
   @State deleteActionMessage: string = '';
-  @State deleteActionMessageTone: string = AppColors.Danger;
+  @State deleteActionMessageTone: string = UiFeedbackTone.Danger;
   @State canChangeArchive: boolean = false;
   @State canDeleteArchive: boolean = false;
   @State canExportArchive: boolean = false;
   @State exportActionMessage: string = '';
-  @State exportActionMessageTone: string = AppColors.Danger;
+  @State exportActionMessageTone: string = UiFeedbackTone.Danger;
 
   aboutToAppear(): void {
     if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveCenterDeviceArchiveQuery)) {
@@ -71,7 +72,7 @@ struct DeviceArchiveDetail {
       this.canDeleteArchive = false;
       this.canExportArchive = false;
       this.detailMessage = UiFeedbackService.requiredSelection('设备档案');
-      this.detailMessageTone = AppColors.Danger;
+      this.detailMessageTone = UiFeedbackTone.Danger;
       this.changeActionMessage = '';
       this.deleteActionMessage = '';
       this.exportActionMessage = '';
@@ -87,19 +88,19 @@ struct DeviceArchiveDetail {
       !DeviceArchiveDeleteGuardService.isDeleteLocked(device.deviceCode);
     this.canExportArchive = SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveExport);
     this.detailMessage = '';
-    this.detailMessageTone = AppColors.Danger;
+    this.detailMessageTone = UiFeedbackTone.Danger;
     this.changeActionMessage = '';
-    this.changeActionMessageTone = AppColors.Danger;
+    this.changeActionMessageTone = UiFeedbackTone.Danger;
     this.exportActionMessage = '';
-    this.exportActionMessageTone = AppColors.Danger;
+    this.exportActionMessageTone = UiFeedbackTone.Danger;
     if (DeviceArchiveDeleteGuardService.isDeleteLocked(device.deviceCode)) {
       this.deleteActionMessage = DeviceArchiveDeleteGuardService.getDeleteLockMessage(device.deviceCode);
-      this.deleteActionMessageTone = AppColors.Danger;
+      this.deleteActionMessageTone = UiFeedbackTone.Danger;
       return;
     }
 
     this.deleteActionMessage = '';
-    this.deleteActionMessageTone = AppColors.Danger;
+    this.deleteActionMessageTone = UiFeedbackTone.Danger;
   }
 
   build() {
@@ -445,13 +446,13 @@ struct DeviceArchiveDetail {
   openChangePage(): void {
     if (!SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveUpdateRequestSubmit)) {
       this.changeActionMessage = UiFeedbackService.operationUnavailable('修改设备档案');
-      this.changeActionMessageTone = AppColors.Danger;
+      this.changeActionMessageTone = UiFeedbackTone.Danger;
       return;
     }
 
     if (DeviceService.isArchiveRequestLocked(this.device)) {
       this.changeActionMessage = DeviceService.formatArchiveRequestLockReason(this.device);
-      this.changeActionMessageTone = AppColors.Danger;
+      this.changeActionMessageTone = UiFeedbackTone.Danger;
       return;
     }
 
@@ -459,26 +460,26 @@ struct DeviceArchiveDetail {
       this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveUpdate' });
     } catch (err) {
       this.changeActionMessage = UiFeedbackService.operationUnavailable('修改设备档案');
-      this.changeActionMessageTone = AppColors.Danger;
+      this.changeActionMessageTone = UiFeedbackTone.Danger;
     }
   }
 
   openDeletePage(): void {
     if (!SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveDeleteRequestSubmit)) {
       this.deleteActionMessage = UiFeedbackService.operationUnavailable('删除设备档案');
-      this.deleteActionMessageTone = AppColors.Danger;
+      this.deleteActionMessageTone = UiFeedbackTone.Danger;
       return;
     }
 
     if (DeviceArchiveDeleteGuardService.isDeleteLocked(this.device.deviceCode)) {
       this.deleteActionMessage = DeviceArchiveDeleteGuardService.getDeleteLockMessage(this.device.deviceCode);
-      this.deleteActionMessageTone = AppColors.Danger;
+      this.deleteActionMessageTone = UiFeedbackTone.Danger;
       return;
     }
 
     if (DeviceService.isArchiveRequestLocked(this.device)) {
       this.deleteActionMessage = DeviceService.formatArchiveRequestLockReason(this.device);
-      this.deleteActionMessageTone = AppColors.Danger;
+      this.deleteActionMessageTone = UiFeedbackTone.Danger;
       return;
     }
 
@@ -486,14 +487,14 @@ struct DeviceArchiveDetail {
       this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveDelete' });
     } catch (err) {
       this.deleteActionMessage = UiFeedbackService.operationUnavailable('删除设备档案');
-      this.deleteActionMessageTone = AppColors.Danger;
+      this.deleteActionMessageTone = UiFeedbackTone.Danger;
     }
   }
 
   openExportVerifyPage(): void {
     if (!SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveExport)) {
       this.exportActionMessage = UiFeedbackService.operationUnavailable('导出设备档案');
-      this.exportActionMessageTone = AppColors.Danger;
+      this.exportActionMessageTone = UiFeedbackTone.Danger;
       return;
     }
 
@@ -501,7 +502,7 @@ struct DeviceArchiveDetail {
       this.getUIContext().getRouter().pushUrl({ url: 'pages/ArchiveCenter/DeviceArchiveExport' });
     } catch (err) {
       this.exportActionMessage = UiFeedbackService.operationUnavailable('导出设备档案');
-      this.exportActionMessageTone = AppColors.Danger;
+      this.exportActionMessageTone = UiFeedbackTone.Danger;
     }
   }
 
@@ -524,7 +525,7 @@ struct DeviceArchiveDetail {
 
   async reloadDeviceByCode(deviceCode: string): Promise<void> {
     this.detailMessage = UiFeedbackService.sanitize('正在重新获取设备档案');
-    this.detailMessageTone = AppColors.TextSecondary;
+    this.detailMessageTone = UiFeedbackTone.Info;
     const response = await DeviceService.queryByCodeRemoteFirst({
       deviceCode
     });
@@ -538,7 +539,7 @@ struct DeviceArchiveDetail {
       this.canExportArchive = false;
       this.exportActionMessage = '';
       this.detailMessage = UiFeedbackService.operationUnavailable('查询');
-      this.detailMessageTone = AppColors.Danger;
+      this.detailMessageTone = UiFeedbackTone.Danger;
     }
   }
 }

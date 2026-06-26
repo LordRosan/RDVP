@@ -20,6 +20,7 @@ import { LocationService, LocationResolutionResult } from '../../services/operat
 import { RepairTaskService } from '../../services/operations/RepairTaskService';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
+import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
 const REFRESH_TIMEOUT_MS = 5000;
 const TASK_ACCEPTANCE_TYPE_FILTER_OPTIONS: string[] =
@@ -43,11 +44,11 @@ struct TaskAcceptance {
   @State radiusKm: number = RepairTaskService.getDefaultRadiusKm();
   @State workloadSnapshot: RepairerWorkloadSnapshot = RepairTaskService.getCurrentWorkloadSnapshot();
   @State message: string = '';
-  @State messageTone: string = AppColors.Danger;
+  @State messageTone: string = UiFeedbackTone.Danger;
   @State taskListMessage: string = '';
-  @State taskListMessageTone: string = AppColors.Success;
+  @State taskListMessageTone: string = UiFeedbackTone.Success;
   @State acceptActionMessage: string = '';
-  @State acceptActionMessageTone: string = AppColors.Danger;
+  @State acceptActionMessageTone: string = UiFeedbackTone.Danger;
   @State acceptActionTaskId: string = '';
   @State hasCurrentLocation: boolean = false;
   @State currentLongitude: number = 0;
@@ -487,7 +488,7 @@ struct TaskAcceptance {
 
     this.refreshing = true;
     this.message = '';
-    this.messageTone = AppColors.Danger;
+    this.messageTone = UiFeedbackTone.Danger;
     this.taskListMessage = '';
     this.acceptActionMessage = '';
     this.acceptActionTaskId = '';
@@ -515,7 +516,7 @@ struct TaskAcceptance {
       if (!response.success) {
         const error = response.error;
         this.message = UiFeedbackService.operationError(error, '刷新');
-        this.messageTone = AppColors.Danger;
+        this.messageTone = UiFeedbackTone.Danger;
         return;
       }
 
@@ -527,17 +528,17 @@ struct TaskAcceptance {
       this.applyTaskFilters();
       if (locationMessage.length > 0) {
         this.message = locationMessage;
-        this.messageTone = AppColors.Warning;
+        this.messageTone = UiFeedbackTone.Warning;
       } else if (this.workloadSnapshot.status === RepairerWorkloadStatus.LowLoad) {
         this.message = this.workloadSnapshot.message;
-        this.messageTone = AppColors.Primary;
+        this.messageTone = UiFeedbackTone.Info;
       } else {
         this.message = UiFeedbackService.operationSuccess('刷新');
-        this.messageTone = AppColors.Success;
+        this.messageTone = UiFeedbackTone.Success;
       }
     } catch (err) {
       this.message = UiFeedbackService.operationUnavailable('刷新');
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
     } finally {
       this.refreshing = false;
     }
@@ -547,7 +548,7 @@ struct TaskAcceptance {
     this.allTaskItems = [];
     this.taskItems = [];
     this.message = UiFeedbackService.operationUnavailable('任务接取');
-    this.messageTone = AppColors.Danger;
+    this.messageTone = UiFeedbackTone.Danger;
     this.taskListMessage = '';
     this.acceptActionMessage = '';
     this.acceptActionTaskId = '';
@@ -562,13 +563,13 @@ struct TaskAcceptance {
     this.acceptingTaskId = taskId;
     this.acceptActionTaskId = taskId;
     this.acceptActionMessage = '';
-    this.acceptActionMessageTone = AppColors.Danger;
+    this.acceptActionMessageTone = UiFeedbackTone.Danger;
     this.taskListMessage = '';
     try {
       const selectedTask = this.findTaskItem(taskId);
       if (selectedTask !== undefined && selectedTask.distanceKm === undefined) {
         this.acceptActionMessage = UiFeedbackService.operationUnavailable('任务接取');
-        this.acceptActionMessageTone = AppColors.Danger;
+        this.acceptActionMessageTone = UiFeedbackTone.Danger;
         return;
       }
 
@@ -580,13 +581,13 @@ struct TaskAcceptance {
           UiFeedbackService.sanitize(`当前处于${RepairTaskService.formatWorkloadStatus(
             this.workloadSnapshot.status)}状态，仅可接取${this.workloadSnapshot.maxRadiusKm}公里内的维修任务。`) :
           UiFeedbackService.sanitize(this.workloadSnapshot.message);
-        this.acceptActionMessageTone = AppColors.Danger;
+        this.acceptActionMessageTone = UiFeedbackTone.Danger;
         return;
       }
 
       if (ApiClient.isConfigured() && !this.hasCurrentLocation) {
         this.acceptActionMessage = UiFeedbackService.operationUnavailable('任务接取');
-        this.acceptActionMessageTone = AppColors.Danger;
+        this.acceptActionMessageTone = UiFeedbackTone.Danger;
         return;
       }
 
@@ -600,7 +601,7 @@ struct TaskAcceptance {
       if (!response.success) {
         const error = response.error;
         this.acceptActionMessage = UiFeedbackService.operationError(error, '任务接取');
-        this.acceptActionMessageTone = AppColors.Danger;
+        this.acceptActionMessageTone = UiFeedbackTone.Danger;
         return;
       }
 
@@ -611,11 +612,11 @@ struct TaskAcceptance {
       this.acceptActionMessage = '';
       this.acceptActionTaskId = '';
       this.taskListMessage = UiFeedbackService.operationSuccess('任务接取');
-      this.taskListMessageTone = AppColors.Success;
+      this.taskListMessageTone = UiFeedbackTone.Success;
       this.applyWorkloadSnapshot(RepairTaskService.createWorkloadSnapshot(this.workloadSnapshot.activeTaskCount + 1));
     } catch (err) {
       this.acceptActionMessage = UiFeedbackService.operationUnavailable('任务接取');
-      this.acceptActionMessageTone = AppColors.Danger;
+      this.acceptActionMessageTone = UiFeedbackTone.Danger;
     } finally {
       this.acceptingTaskId = '';
     }
@@ -640,7 +641,7 @@ struct TaskAcceptance {
     const normalizedValue = Math.max(0, Math.min(this.workloadSnapshot.maxRadiusKm, Math.round(value)));
     this.radiusKm = normalizedValue;
     this.message = '';
-    this.messageTone = AppColors.Danger;
+    this.messageTone = UiFeedbackTone.Danger;
     this.taskListMessage = '';
   }
 

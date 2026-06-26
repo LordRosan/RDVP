@@ -1,7 +1,7 @@
-import { AppColors, AppSpacing } from '../styles/AppTheme';
+import { AppColors, AppRadii, AppSpacing } from '../styles/AppTheme';
+import { AccountActionTile } from '../components/AccountActionTile';
 import { ActionTile } from '../components/ActionTile';
 import { AppSectionTitle } from '../components/AppSectionTitle';
-import { HeroSurface } from '../components/HeroSurface';
 import { InlineMessageSurface } from '../components/InlineMessageSurface';
 import { DashboardMetric, MainPageAction, MainPageActionId, MainPageDashboard } from '../models/app/MainPageModels';
 import { CurrentUserSnapshot } from '../models/identity/SessionModels';
@@ -10,6 +10,7 @@ import { UiFeedbackService } from '../services/common/UiFeedbackService';
 import { DashboardRefreshStore } from '../stores/DashboardRefreshStore';
 import { MainPageViewportStore } from '../stores/MainPageViewportStore';
 import { SessionStore } from '../stores/SessionStore';
+import { UiFeedbackTone } from '../models/common/UiFeedbackModels';
 
 @Entry
 @Component
@@ -385,7 +386,7 @@ struct MainPage {
               if (this.actionMessageTargetId === `${item.id}` && this.actionMessage.length > 0) {
                 InlineMessageSurface({
                   message: this.actionMessage,
-                  tone: AppColors.Danger
+                  tone: UiFeedbackTone.Danger
                 })
               }
 
@@ -414,7 +415,6 @@ struct MainPage {
       Column({ space: AppSpacing.Section }) {
         this.ProfileHeader()
         this.ProfilePanel()
-        this.SessionPanel()
         this.ProfileActionPanel()
       }
       .alignItems(HorizontalAlign.Start)
@@ -432,79 +432,89 @@ struct MainPage {
 
   @Builder
   ProfileHeader() {
-    HeroSurface({
-      eyebrow: this.getProfileEyebrow(),
-      title: '我的',
-      subtitle: this.getProfileSubtitle(),
-      icon: $r('sys.symbol.person_crop_circle_fill'),
-      tone: AppColors.Primary
-    })
-  }
+    Column({ space: 5 }) {
+      Text('个人中心')
+        .fontSize(34)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
 
-  @Builder
-  ProfilePanel() {
-    Column({ space: 16 }) {
-      Row({ space: 14 }) {
-        Stack() {
-          SymbolGlyph($r('sys.symbol.person_fill'))
-            .fontSize(38)
-            .fontColor([AppColors.OnPrimary])
-        }
-        .width(64)
-        .height(64)
-        .borderRadius(32)
-        .backgroundColor(AppColors.Primary)
-
-        Column({ space: 5 }) {
-          Text(this.getDisplayName())
-            .fontSize(22)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(AppColors.TextPrimary)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-          Text(this.currentUser.username ?? '-')
-            .fontSize(14)
-            .fontColor(AppColors.TextSecondary)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-        .layoutWeight(1)
-        .alignItems(HorizontalAlign.Start)
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
-
-      this.InfoRow('用户权限', this.getRoleName(), AppColors.TextSecondary)
+      Text('Personal Center')
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextTertiary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
-    .padding(18)
     .width('100%')
-    .backgroundColor(AppColors.Surface)
-    .borderRadius(24)
+    .padding({
+      left: 0,
+      right: 0,
+      top: 12,
+      bottom: 6
+    })
     .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
-  SessionPanel() {
-    Column({ space: 10 }) {
+  ProfilePanel() {
+    Column({ space: 12 }) {
       AppSectionTitle({
-        title: '会话',
+        title: '账号信息',
         subtitle: ''
       })
 
-      Column() {
+      Column({ space: 16 }) {
+        Row({ space: 14 }) {
+          Stack() {
+            SymbolGlyph($r('sys.symbol.person_fill'))
+              .fontSize(24)
+              .fontColor([AppColors.Primary])
+          }
+          .width(48)
+          .height(48)
+          .borderRadius(18)
+          .backgroundColor(AppColors.PrimarySurface)
+
+          Column({ space: 5 }) {
+            Text(this.getDisplayName())
+              .fontSize(19)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(AppColors.TextPrimary)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+            Text(this.getRoleName())
+              .fontSize(14)
+              .fontColor(AppColors.TextSecondary)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+          }
+          .layoutWeight(1)
+          .alignItems(HorizontalAlign.Start)
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+
+        Divider()
+          .height(1)
+          .backgroundColor(AppColors.Divider)
+
+        this.InfoRow('账号', this.getUsername(), AppColors.TextSecondary)
+        this.InfoRow('用户权限', this.getRoleName(), AppColors.TextSecondary)
         this.InfoRow('有效期至', this.formatSessionExpiresAt(), AppColors.TextSecondary)
-        this.CardDivider()
         this.InfoRow('登录状态', SessionStore.isAuthenticated() ? '已登录' : '未登录',
           SessionStore.isAuthenticated() ? AppColors.Success : AppColors.Danger)
       }
+      .padding(18)
       .width('100%')
-      .padding({
-        left: 18,
-        right: 18
+      .backgroundColor(AppColors.SurfaceRaised)
+      .borderRadius(AppRadii.Large)
+      .border({
+        width: 1,
+        color: AppColors.Divider
       })
-      .backgroundColor(AppColors.Surface)
-      .borderRadius(24)
+      .alignItems(HorizontalAlign.Start)
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -513,14 +523,33 @@ struct MainPage {
   @Builder
   ProfileActionPanel() {
     Column({ space: 12 }) {
+      AppSectionTitle({
+        title: '账户操作',
+        subtitle: ''
+      })
+
       this.SettingsMessageText()
       this.LogoutActionMessageText()
-      this.SecondaryButton('应用设置', $r('sys.symbol.gearshape'), () => {
-        this.openApplicationSettings();
-      })
-      this.DangerButton('退出登录', $r('sys.symbol.person_badge_nosign'), () => {
-        this.logout();
-      })
+      Column({ space: 10 }) {
+        AccountActionTile({
+          label: '应用设置',
+          icon: $r('sys.symbol.gearshape'),
+          tone: AppColors.Primary
+        })
+          .onClick(() => {
+            this.openApplicationSettings();
+          })
+
+        AccountActionTile({
+          label: '退出登录',
+          icon: $r('sys.symbol.person_badge_nosign'),
+          tone: AppColors.Danger
+        })
+          .onClick(() => {
+            this.logout();
+          })
+      }
+      .width('100%')
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -531,7 +560,7 @@ struct MainPage {
     if (this.settingsMessage.length > 0) {
       InlineMessageSurface({
         message: this.settingsMessage,
-        tone: AppColors.Danger
+        tone: UiFeedbackTone.Danger
       })
     }
   }
@@ -541,7 +570,7 @@ struct MainPage {
     if (this.logoutActionMessage.length > 0) {
       InlineMessageSurface({
         message: this.logoutActionMessage,
-        tone: AppColors.Danger
+        tone: UiFeedbackTone.Danger
       })
     }
   }
@@ -568,69 +597,6 @@ struct MainPage {
     }
     .height(54)
     .width('100%')
-  }
-
-  @Builder
-  CardDivider() {
-    Divider()
-      .height(1)
-      .backgroundColor(AppColors.Divider)
-  }
-
-  @Builder
-  SecondaryButton(label: string, icon: Resource, action: () => void) {
-    Button({ type: ButtonType.Capsule, stateEffect: true }) {
-      Row({ space: 8 }) {
-        SymbolGlyph(icon)
-          .fontSize(20)
-          .fontColor([AppColors.TextPrimary])
-
-        Text(label)
-          .fontSize(17)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(AppColors.TextPrimary)
-          .maxLines(1)
-      }
-      .width('100%')
-      .justifyContent(FlexAlign.Center)
-      .alignItems(VerticalAlign.Center)
-    }
-    .height(54)
-    .width('100%')
-    .backgroundColor(AppColors.Surface)
-    .border({
-      width: 1,
-      color: AppColors.Border
-    })
-    .onClick(() => {
-      action();
-    })
-  }
-
-  @Builder
-  DangerButton(label: string, icon: Resource, action: () => void) {
-    Button({ type: ButtonType.Capsule, stateEffect: true }) {
-      Row({ space: 8 }) {
-        SymbolGlyph(icon)
-          .fontSize(20)
-          .fontColor([AppColors.OnPrimary])
-
-        Text(label)
-          .fontSize(17)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(AppColors.OnPrimary)
-          .maxLines(1)
-      }
-      .width('100%')
-      .justifyContent(FlexAlign.Center)
-      .alignItems(VerticalAlign.Center)
-    }
-    .height(54)
-    .width('100%')
-    .backgroundColor(AppColors.Danger)
-    .onClick(() => {
-      action();
-    })
   }
 
   openCenter(action: MainPageAction): void {
@@ -734,28 +700,19 @@ struct MainPage {
     }, 0);
   }
 
-  getProfileEyebrow(): string {
-    if (this.currentUser.roleName.length > 0) {
-      return this.currentUser.roleName;
-    }
-
-    return '个人中心';
-  }
-
-  getProfileSubtitle(): string {
-    const username = this.currentUser.username === undefined ? '' : this.currentUser.username;
-    if (username.length > 0) {
-      return `账号 ${username}`;
-    }
-
-    return '账号信息与会话管理';
-  }
-
   getDisplayName(): string {
     if (this.currentUser.displayName.length > 0) {
       return this.currentUser.displayName;
     }
 
+    if (this.currentUser.username !== undefined && this.currentUser.username.length > 0) {
+      return this.currentUser.username;
+    }
+
+    return '-';
+  }
+
+  getUsername(): string {
     if (this.currentUser.username !== undefined && this.currentUser.username.length > 0) {
       return this.currentUser.username;
     }

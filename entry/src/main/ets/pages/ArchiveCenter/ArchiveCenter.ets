@@ -10,6 +10,7 @@ import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
+import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
 @Entry
 @Component
@@ -193,7 +194,7 @@ struct ArchiveCenter {
             if (this.messageTargetId === `${item.id}` && this.message.length > 0) {
               InlineMessageSurface({
                 message: this.message,
-                tone: AppColors.Danger
+                tone: UiFeedbackTone.Danger
               })
             }
 

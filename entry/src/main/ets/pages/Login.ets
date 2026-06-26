@@ -3,6 +3,7 @@ import { InlineMessageSurface } from '../components/InlineMessageSurface';
 import { AuthService } from '../services/identity/AuthService';
 import { SessionStore } from '../stores/SessionStore';
 import { UiFeedbackService } from '../services/common/UiFeedbackService';
+import { UiFeedbackTone } from '../models/common/UiFeedbackModels';
 
 @Entry
 @Component
@@ -10,7 +11,7 @@ struct Login {
   @State username: string = '';
   @State password: string = '';
   @State message: string = '';
-  @State messageTone: string = AppColors.Danger;
+  @State messageTone: string = UiFeedbackTone.Danger;
   @State submitting: boolean = false;
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
 
@@ -147,7 +148,7 @@ struct Login {
             this.username = value;
           }
           this.message = '';
-          this.messageTone = AppColors.Danger;
+          this.messageTone = UiFeedbackTone.Danger;
         })
     }
     .width('100%')
@@ -200,7 +201,7 @@ struct Login {
     const validationMessage = this.validateBeforeRemoteLogin();
     if (validationMessage.length > 0) {
       this.message = validationMessage;
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
       this.submitting = false;
       return;
     }
@@ -213,7 +214,7 @@ struct Login {
 
     if (!response.success) {
       this.message = UiFeedbackService.loginError(response.error);
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
       return;
     }
 
@@ -222,7 +223,7 @@ struct Login {
     }
 
     this.message = UiFeedbackService.operationSuccess('登录');
-    this.messageTone = AppColors.Success;
+    this.messageTone = UiFeedbackTone.Success;
     setTimeout(() => {
       this.openMainPage();
     }, 300);
@@ -251,7 +252,7 @@ struct Login {
       this.getUIContext().getRouter().replaceUrl({ url: 'pages/MainPage' });
     } catch (err) {
       this.message = UiFeedbackService.operationUnavailable('页面跳转');
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
     }
   }
 }

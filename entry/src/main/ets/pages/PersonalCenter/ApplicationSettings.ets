@@ -1,17 +1,20 @@
-import { AppColors } from '../../styles/AppTheme';
+import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
 import { common } from '@kit.AbilityKit';
+import { AppSectionTitle } from '../../components/AppSectionTitle';
+import { CenterTitleBar } from '../../components/CenterTitleBar';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { AppThemeMode } from '../../models/app/ThemeModels';
 import { AppThemeService } from '../../services/app/AppThemeService';
 import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { SessionStore } from '../../stores/SessionStore';
+import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
 @Entry
 @Component
 struct ApplicationSettings {
   @State selectedThemeMode: string = AppThemeService.getThemeMode();
   @State themeModeMessage: string = '';
-  @State themeModeMessageTone: string = AppColors.Success;
+  @State themeModeMessageTone: string = UiFeedbackTone.Success;
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
 
   aboutToAppear(): void {
@@ -28,16 +31,16 @@ struct ApplicationSettings {
       Column() {
         this.PageTitleBar()
 
-        Column({ space: 18 }) {
+        Column({ space: AppSpacing.Section }) {
           this.ModeHeader()
           this.DisplayPanel()
         }
         .alignItems(HorizontalAlign.Start)
         .padding({
-          left: 24,
-          right: 24,
+          left: AppSpacing.PageX,
+          right: AppSpacing.PageX,
           top: 0,
-          bottom: 28
+          bottom: AppSpacing.PageBottom
         })
         .width('100%')
       }
@@ -57,59 +60,50 @@ struct ApplicationSettings {
 
   @Builder
   PageTitleBar() {
-    Row({ space: 12 }) {
-      Button({ type: ButtonType.Circle, stateEffect: true }) {
-        SymbolGlyph($r('sys.symbol.chevron_backward'))
-          .fontSize(22)
-          .fontColor([AppColors.TextPrimary])
-      }
-      .width(44)
-      .height(44)
-      .backgroundColor(AppColors.Surface)
-      .border({
-        width: 1,
-        color: AppColors.Divider
-      })
-      .onClick(() => {
+    CenterTitleBar({
+      action: () => {
         this.backToPersonalCenter();
-      })
-    }
-    .width('100%')
-    .height(60)
-    .alignItems(VerticalAlign.Center)
-    .padding({
-      left: 24,
-      right: 24
+      }
     })
-    .backgroundColor(AppColors.PageBackground)
   }
 
   @Builder
   ModeHeader() {
+    Column({ space: 5 }) {
       Text('应用设置')
         .fontSize(34)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+      Text('Application Settings')
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextTertiary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
     .width('100%')
-    .alignSelf(ItemAlign.Start)
     .padding({
-      bottom: 2
+      left: 0,
+      right: 0,
+      top: 12,
+      bottom: 6
     })
+    .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
   DisplayPanel() {
-    Column({ space: 10 }) {
-      Text('显示')
-        .fontSize(22)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(1)
+    Column({ space: 12 }) {
+      AppSectionTitle({
+        title: '显示设置',
+        subtitle: ''
+      })
 
       Column({ space: 12 }) {
-        this.InfoRow('显示模式', AppThemeService.getThemeModeLabel(AppThemeService.getThemeMode()), AppColors.TextSecondary)
+        this.InfoRow('显示模式', AppThemeService.getThemeModeLabel(this.getSelectedThemeMode()), AppColors.TextSecondary)
         this.CardDivider()
 
         this.ThemeModeMessageText()
@@ -140,8 +134,12 @@ struct ApplicationSettings {
         bottom: 18
       })
       .width('100%')
-      .backgroundColor(AppColors.Surface)
-      .borderRadius(24)
+      .backgroundColor(AppColors.SurfaceRaised)
+      .borderRadius(AppRadii.Large)
+      .border({
+        width: 1,
+        color: AppColors.Divider
+      })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -208,7 +206,7 @@ struct ApplicationSettings {
     }
     .height(42)
     .width('100%')
-    .backgroundColor(this.isThemeModeSelected(mode) ? AppColors.Primary : AppColors.Surface)
+    .backgroundColor(this.isThemeModeSelected(mode) ? AppColors.Primary : AppColors.SurfaceRaised)
     .border({
       width: 1,
       color: this.isThemeModeSelected(mode) ? AppColors.Primary : AppColors.Border
@@ -223,15 +221,15 @@ struct ApplicationSettings {
     const context = this.getUIContext().getHostContext();
     if (context === undefined) {
       this.themeModeMessage = UiFeedbackService.operationUnavailable('设置');
-      this.themeModeMessageTone = AppColors.Danger;
+      this.themeModeMessageTone = UiFeedbackTone.Danger;
       return;
     }
 
     const abilityContext = context as common.UIAbilityContext;
     AppThemeService.setThemeMode(mode, abilityContext.getApplicationContext(), abilityContext.config);
-    this.selectedThemeMode = AppThemeService.getThemeMode();
+    this.selectedThemeMode = mode;
     this.themeModeMessage = UiFeedbackService.operationSuccess('设置');
-    this.themeModeMessageTone = AppColors.Success;
+    this.themeModeMessageTone = UiFeedbackTone.Success;
   }
 
   getSelectedThemeMode(): AppThemeMode {

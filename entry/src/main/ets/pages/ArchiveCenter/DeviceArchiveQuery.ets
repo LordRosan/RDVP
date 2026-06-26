@@ -10,6 +10,7 @@ import { AppColors, AppSpacing } from '../../styles/AppTheme';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
+import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
 @Entry
 @Component
@@ -317,7 +318,7 @@ struct DeviceArchiveQuery {
     if (this.codeQueryMessage.length > 0) {
       InlineMessageSurface({
         message: this.codeQueryMessage,
-        tone: AppColors.Danger
+        tone: UiFeedbackTone.Danger
       })
     }
   }
@@ -327,7 +328,7 @@ struct DeviceArchiveQuery {
     if (this.qrActionMessage.length > 0) {
       InlineMessageSurface({
         message: this.qrActionMessage,
-        tone: AppColors.Danger
+        tone: UiFeedbackTone.Danger
       })
     }
   }
@@ -337,7 +338,7 @@ struct DeviceArchiveQuery {
     if (this.qrQueryMessage.length > 0) {
       InlineMessageSurface({
         message: this.qrQueryMessage,
-        tone: AppColors.Danger
+        tone: UiFeedbackTone.Danger
       })
     }
   }

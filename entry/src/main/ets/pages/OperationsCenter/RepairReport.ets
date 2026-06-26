@@ -12,6 +12,7 @@ import { FaultReportService } from '../../services/operations/FaultReportService
 import { RepairTaskService } from '../../services/operations/RepairTaskService';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
+import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
 @Entry
 @Component
@@ -25,9 +26,9 @@ struct RepairReport {
   @State processDescription: string = '';
   @State password: string = '';
   @State taskMessage: string = '';
-  @State taskMessageTone: string = AppColors.Danger;
+  @State taskMessageTone: string = UiFeedbackTone.Danger;
   @State reportMessage: string = '';
-  @State reportMessageTone: string = AppColors.Danger;
+  @State reportMessageTone: string = UiFeedbackTone.Danger;
   @State normalizedTaskId: string = '-';
   @State submittedRepairTaskId: string = '';
   @State refreshing: boolean = false;
@@ -388,7 +389,7 @@ struct RepairReport {
     .onClick(() => {
       this.reportResult = `${result}`;
       this.reportMessage = '';
-      this.reportMessageTone = AppColors.Danger;
+      this.reportMessageTone = UiFeedbackTone.Danger;
     })
   }
 
@@ -432,7 +433,7 @@ struct RepairReport {
 
         this.showRepairedAtPicker();
         this.reportMessage = '';
-        this.reportMessageTone = AppColors.Danger;
+        this.reportMessageTone = UiFeedbackTone.Danger;
       })
     }
     .width('100%')
@@ -469,7 +470,7 @@ struct RepairReport {
         .onChange((value: string) => {
           this.processDescription = value;
           this.reportMessage = '';
-          this.reportMessageTone = AppColors.Danger;
+          this.reportMessageTone = UiFeedbackTone.Danger;
         })
     }
     .width('100%')
@@ -512,7 +513,7 @@ struct RepairReport {
 
           this.password = value;
           this.reportMessage = '';
-          this.reportMessageTone = AppColors.Danger;
+          this.reportMessageTone = UiFeedbackTone.Danger;
         })
     }
     .width('100%')
@@ -578,7 +579,7 @@ struct RepairReport {
     if (!response.success) {
       const error = response.error;
       this.taskMessage = UiFeedbackService.operationError(error, '刷新');
-      this.taskMessageTone = AppColors.Danger;
+      this.taskMessageTone = UiFeedbackTone.Danger;
       return;
     }
 
@@ -587,7 +588,7 @@ struct RepairReport {
     this.taskItems = [...this.allTaskItems];
     this.ensureSelectedTaskStillAvailable();
     this.taskMessage = UiFeedbackService.operationSuccess('刷新');
-    this.taskMessageTone = AppColors.Success;
+    this.taskMessageTone = UiFeedbackTone.Success;
   }
 
   async submitRepairReport(): Promise<void> {
@@ -599,13 +600,13 @@ struct RepairReport {
     const validation = RepairTaskService.validateRepairReportForm(form);
     if (!validation.valid) {
       this.reportMessage = validation.message;
-      this.reportMessageTone = AppColors.Danger;
+      this.reportMessageTone = UiFeedbackTone.Danger;
       return;
     }
 
     if (this.password.length === 0) {
       this.reportMessage = UiFeedbackService.requiredInput('密码');
-      this.reportMessageTone = AppColors.Danger;
+      this.reportMessageTone = UiFeedbackTone.Danger;
       return;
     }
 
@@ -620,12 +621,12 @@ struct RepairReport {
       if (!response.success) {
         const error = response.error;
         this.reportMessage = UiFeedbackService.operationError(error, '提交');
-        this.reportMessageTone = AppColors.Danger;
+        this.reportMessageTone = UiFeedbackTone.Danger;
         return;
       }
 
       this.reportMessage = UiFeedbackService.operationSuccess('提交');
-      this.reportMessageTone = AppColors.Success;
+      this.reportMessageTone = UiFeedbackTone.Success;
       this.submittedRepairTaskId = this.normalizedTaskId;
       this.allTaskItems = this.allTaskItems.filter((item: RepairTaskItem) => {
         return item.taskNo !== this.normalizedTaskId && item.id !== this.normalizedTaskId;
@@ -655,7 +656,7 @@ struct RepairReport {
     }
 
     this.reportMessage = UiFeedbackService.passwordVerificationError(response.error, '提交');
-    this.reportMessageTone = AppColors.Danger;
+    this.reportMessageTone = UiFeedbackTone.Danger;
     return false;
   }
 
@@ -699,7 +700,7 @@ struct RepairReport {
       this.submittedRepairTaskId = '';
     }
     this.reportMessage = '';
-    this.reportMessageTone = AppColors.Danger;
+    this.reportMessageTone = UiFeedbackTone.Danger;
   }
 
   clearSelectedTask(): void {
@@ -766,7 +767,7 @@ struct RepairReport {
       onDateAccept: (value: Date) => {
         this.repairedAt = this.formatDateTime(value);
         this.reportMessage = '';
-        this.reportMessageTone = AppColors.Danger;
+        this.reportMessageTone = UiFeedbackTone.Danger;
       }
     });
   }

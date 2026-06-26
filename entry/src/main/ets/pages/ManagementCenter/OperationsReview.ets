@@ -15,6 +15,7 @@ import { AuthService } from '../../services/identity/AuthService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
+import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
 const OPERATIONS_REVIEW_TYPE_OPTIONS: string[] = ['全部', '核验报告', '报修报告', '维修报告', '复检报告'];
 const OPERATIONS_REVIEW_TYPE_VALUES: string[] = [
@@ -38,9 +39,9 @@ struct OperationsReview {
   @State reviewComment: string = '';
   @State password: string = '';
   @State message: string = '';
-  @State messageTone: string = AppColors.Danger;
+  @State messageTone: string = UiFeedbackTone.Danger;
   @State refreshMessage: string = '';
-  @State refreshMessageTone: string = AppColors.Danger;
+  @State refreshMessageTone: string = UiFeedbackTone.Danger;
   @State refreshing: boolean = false;
   @State submitting: boolean = false;
   @State reviewReady: boolean = false;
@@ -441,7 +442,7 @@ struct OperationsReview {
     .onClick(() => {
       this.reviewDecision = `${decision}`;
       this.message = '';
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
       this.updateReviewReady();
     })
   }
@@ -480,7 +481,7 @@ struct OperationsReview {
 
         this.showReviewedAtPicker();
         this.message = '';
-        this.messageTone = AppColors.Danger;
+        this.messageTone = UiFeedbackTone.Danger;
       })
     }
     .width('100%')
@@ -514,7 +515,7 @@ struct OperationsReview {
         .onChange((value: string) => {
           this.reviewComment = value;
           this.message = '';
-          this.messageTone = AppColors.Danger;
+          this.messageTone = UiFeedbackTone.Danger;
           this.updateReviewReady();
         })
     }
@@ -549,7 +550,7 @@ struct OperationsReview {
 
           this.password = value;
           this.message = '';
-          this.messageTone = AppColors.Danger;
+          this.messageTone = UiFeedbackTone.Danger;
           this.updateReviewReady();
         })
     }
@@ -652,7 +653,7 @@ struct OperationsReview {
 
     if (!this.canReview()) {
       this.refreshMessage = UiFeedbackService.operationUnavailable('审核');
-      this.refreshMessageTone = AppColors.Danger;
+      this.refreshMessageTone = UiFeedbackTone.Danger;
       return;
     }
 
@@ -664,7 +665,7 @@ struct OperationsReview {
     if (!response.success) {
       const error = response.error;
       this.refreshMessage = UiFeedbackService.operationError(error, '刷新');
-      this.refreshMessageTone = AppColors.Danger;
+      this.refreshMessageTone = UiFeedbackTone.Danger;
       return;
     }
 
@@ -675,10 +676,10 @@ struct OperationsReview {
     this.updateReviewReady();
 
     this.refreshMessage = UiFeedbackService.operationSuccess('刷新');
-    this.refreshMessageTone = AppColors.Success;
+    this.refreshMessageTone = UiFeedbackTone.Success;
     if (clearMessage) {
       this.message = '';
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
     }
   }
 
@@ -689,7 +690,7 @@ struct OperationsReview {
     this.reviewedAt = '';
     this.password = '';
     this.message = '';
-    this.messageTone = AppColors.Danger;
+    this.messageTone = UiFeedbackTone.Danger;
     this.updateReviewReady();
   }
 
@@ -752,12 +753,12 @@ struct OperationsReview {
       if (!response.success) {
         const error = response.error;
         this.message = UiFeedbackService.operationError(error, '审核');
-        this.messageTone = AppColors.Danger;
+        this.messageTone = UiFeedbackTone.Danger;
         return;
       }
 
       this.message = UiFeedbackService.operationSuccess('审核');
-      this.messageTone = AppColors.Success;
+      this.messageTone = UiFeedbackTone.Success;
       this.clearReviewForm();
       await this.refreshRequests(false);
     } finally {
@@ -800,7 +801,7 @@ struct OperationsReview {
     } else {
       this.message = UiFeedbackService.operationUnavailable('审核');
     }
-    this.messageTone = AppColors.Danger;
+    this.messageTone = UiFeedbackTone.Danger;
   }
 
   clearReviewForm(): void {
@@ -851,7 +852,7 @@ struct OperationsReview {
     }
 
     this.message = UiFeedbackService.passwordVerificationError(response.error, '审核');
-    this.messageTone = AppColors.Danger;
+    this.messageTone = UiFeedbackTone.Danger;
     return false;
   }
 
@@ -896,7 +897,7 @@ struct OperationsReview {
       onDateAccept: (value: Date) => {
         this.reviewedAt = this.formatDateTime(value);
         this.message = '';
-        this.messageTone = AppColors.Danger;
+        this.messageTone = UiFeedbackTone.Danger;
         this.updateReviewReady();
       }
     });

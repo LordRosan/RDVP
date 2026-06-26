@@ -14,6 +14,7 @@ import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { AuthService } from '../../services/identity/AuthService';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
+import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
 interface CodeAvailabilityResult {
   available: boolean;
@@ -33,9 +34,9 @@ struct DeviceArchiveCreate {
   @State reason: string = '';
   @State password: string = '';
   @State message: string = '';
-  @State messageTone: string = AppColors.Danger;
+  @State messageTone: string = UiFeedbackTone.Danger;
   @State verifyMessage: string = '';
-  @State verifyMessageTone: string = AppColors.Danger;
+  @State verifyMessageTone: string = UiFeedbackTone.Danger;
   @State verifyResult: CodeAvailabilityResult | undefined = undefined;
   @State normalizedDeviceCode: string = '-';
   @State requestStatus: DeviceArchiveRequestStatus = DeviceArchiveRequestStatus.Draft;
@@ -230,7 +231,7 @@ struct DeviceArchiveCreate {
             this.normalizedDeviceCode = '-';
           }
           this.verifyMessage = '';
-          this.verifyMessageTone = AppColors.Danger;
+          this.verifyMessageTone = UiFeedbackTone.Danger;
           this.verifyResult = undefined;
           this.clearCreateState();
         })
@@ -370,7 +371,7 @@ struct DeviceArchiveCreate {
 
           this.password = value;
           this.message = '';
-          this.messageTone = AppColors.Danger;
+          this.messageTone = UiFeedbackTone.Danger;
         })
     }
     .width('100%')
@@ -463,7 +464,7 @@ struct DeviceArchiveCreate {
     }
 
     this.verifyMessage = '';
-    this.verifyMessageTone = AppColors.Danger;
+    this.verifyMessageTone = UiFeedbackTone.Danger;
     this.verifyResult = undefined;
     this.clearCreateState();
     const validation = DeviceService.validateDeviceCodeQuery({
@@ -515,7 +516,7 @@ struct DeviceArchiveCreate {
 
     if (!this.isDeviceCodeAvailable()) {
       this.message = UiFeedbackService.requiredAction('先完成编号核验');
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
       return;
     }
 
@@ -529,13 +530,13 @@ struct DeviceArchiveCreate {
 
     if (!validation.valid) {
       this.message = validation.message;
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
       return;
     }
 
     if (this.password.length === 0) {
       this.message = UiFeedbackService.requiredInput('密码');
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
       return;
     }
 
@@ -549,7 +550,7 @@ struct DeviceArchiveCreate {
       const response = await DeviceArchiveRequestService.submitCreateRequestRemoteFirst(form);
       if (!response.success) {
         this.message = UiFeedbackService.operationUnavailable('添加');
-        this.messageTone = AppColors.Danger;
+        this.messageTone = UiFeedbackTone.Danger;
         return;
       }
 
@@ -557,7 +558,7 @@ struct DeviceArchiveCreate {
         response.data === undefined ? DeviceArchiveRequestStatus.PendingReview : response.data.status;
       this.password = '';
       this.message = UiFeedbackService.operationSuccess('提交');
-      this.messageTone = AppColors.Success;
+      this.messageTone = UiFeedbackTone.Success;
     } finally {
       this.submitting = false;
     }
@@ -570,7 +571,7 @@ struct DeviceArchiveCreate {
     }
 
     this.message = UiFeedbackService.passwordVerificationError(response.error, '添加');
-    this.messageTone = AppColors.Danger;
+    this.messageTone = UiFeedbackTone.Danger;
     return false;
   }
 
@@ -588,7 +589,7 @@ struct DeviceArchiveCreate {
 
   onFormChanged(): void {
     this.message = '';
-    this.messageTone = AppColors.Danger;
+    this.messageTone = UiFeedbackTone.Danger;
     if (!this.isSubmitted()) {
       this.requestStatus = DeviceArchiveRequestStatus.Draft;
     }
@@ -603,7 +604,7 @@ struct DeviceArchiveCreate {
     this.reason = '';
     this.password = '';
     this.message = '';
-    this.messageTone = AppColors.Danger;
+    this.messageTone = UiFeedbackTone.Danger;
     this.requestStatus = DeviceArchiveRequestStatus.Draft;
   }
 

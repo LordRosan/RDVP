@@ -13,6 +13,7 @@ import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { AuthService } from '../../services/identity/AuthService';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
 import { AuthGuard } from '../../utils/AuthGuard';
+import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
 @Entry
 @Component
@@ -33,7 +34,7 @@ struct DeviceArchiveDelete {
   @State reason: string = '';
   @State deleteTime: string = '';
   @State message: string = '';
-  @State messageTone: string = AppColors.Danger;
+  @State messageTone: string = UiFeedbackTone.Danger;
   @State requestStatus: DeviceArchiveRequestStatus = DeviceArchiveRequestStatus.Draft;
   @State submitting: boolean = false;
   @State password: string = '';
@@ -181,7 +182,7 @@ struct DeviceArchiveDelete {
 
           this.password = value;
           this.message = '';
-          this.messageTone = AppColors.Danger;
+          this.messageTone = UiFeedbackTone.Danger;
         })
     }
     .width('100%')
@@ -254,7 +255,7 @@ struct DeviceArchiveDelete {
         .onChange((value: string) => {
           this.reason = value;
           this.message = '';
-          this.messageTone = AppColors.Danger;
+          this.messageTone = UiFeedbackTone.Danger;
           if (!this.isSubmitted()) {
             this.requestStatus = DeviceArchiveRequestStatus.Draft;
           }
@@ -339,7 +340,7 @@ struct DeviceArchiveDelete {
 
       this.hasDevice = false;
       this.message = UiFeedbackService.operationUnavailable('查询');
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
       return;
     }
 
@@ -347,7 +348,7 @@ struct DeviceArchiveDelete {
     this.hasDevice = true;
     if (DeviceArchiveDeleteGuardService.isDeleteLocked(device.deviceCode)) {
       this.message = DeviceArchiveDeleteGuardService.getDeleteLockMessage(device.deviceCode);
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
     }
   }
 
@@ -363,19 +364,19 @@ struct DeviceArchiveDelete {
     });
     if (!validation.valid) {
       this.message = validation.message;
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
       return;
     }
 
     if (this.isDeleteLocked()) {
       this.message = DeviceArchiveDeleteGuardService.getDeleteLockMessage(this.device.deviceCode);
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
       return;
     }
 
     if (this.password.length === 0) {
       this.message = UiFeedbackService.requiredInput('密码');
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
       return;
     }
 
@@ -394,7 +395,7 @@ struct DeviceArchiveDelete {
 
       if (!response.success) {
         this.message = UiFeedbackService.operationUnavailable('删除');
-        this.messageTone = AppColors.Danger;
+        this.messageTone = UiFeedbackTone.Danger;
         return;
       }
 
@@ -408,7 +409,7 @@ struct DeviceArchiveDelete {
       }
       this.password = '';
       this.message = UiFeedbackService.operationSuccess('提交');
-      this.messageTone = AppColors.Success;
+      this.messageTone = UiFeedbackTone.Success;
     } finally {
       this.submitting = false;
     }
@@ -424,12 +425,12 @@ struct DeviceArchiveDelete {
     if (DeviceArchiveDeleteGuardService.isPasswordIncorrectResponse(response)) {
       const result = DeviceArchiveDeleteGuardService.registerDeletePasswordFailure(this.device.deviceCode);
       this.message = result.lockedUntil === undefined ? UiFeedbackService.incorrect('密码') : UiFeedbackService.sanitize(result.message);
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
       return false;
     }
 
     this.message = UiFeedbackService.passwordVerificationError(response.error, '删除');
-    this.messageTone = AppColors.Danger;
+    this.messageTone = UiFeedbackTone.Danger;
     return false;
   }
 
@@ -480,7 +481,7 @@ struct DeviceArchiveDelete {
 
   async reloadDeviceByCode(deviceCode: string): Promise<void> {
     this.message = UiFeedbackService.sanitize('正在重新获取设备档案');
-    this.messageTone = AppColors.TextSecondary;
+    this.messageTone = UiFeedbackTone.Info;
     const response = await DeviceService.queryByCodeRemoteFirst({
       deviceCode
     });
@@ -490,7 +491,7 @@ struct DeviceArchiveDelete {
     } else {
       this.hasDevice = false;
       this.message = UiFeedbackService.operationUnavailable('查询');
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
     }
   }
 
@@ -508,7 +509,7 @@ struct DeviceArchiveDelete {
       onDateAccept: (value: Date) => {
         this.deleteTime = this.formatDateTime(value);
         this.message = '';
-        this.messageTone = AppColors.Danger;
+        this.messageTone = UiFeedbackTone.Danger;
         if (!this.isSubmitted()) {
           this.requestStatus = DeviceArchiveRequestStatus.Draft;
         }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from '@ohos/hypium';
 import { DeviceStatus } from '../main/ets/models/archive/DeviceModels';
+import { UiFeedbackTone } from '../main/ets/models/common/UiFeedbackModels';
 import { UiFeedbackService } from '../main/ets/services/common/UiFeedbackService';
 import { AuthService } from '../main/ets/services/identity/AuthService';
 import { DeviceArchiveRequestService } from '../main/ets/services/archive/DeviceArchiveRequestService';
@@ -24,6 +25,13 @@ export default function localUnitTest() {
     it('formatsOperationMessages', 0, () => {
       expect(UiFeedbackService.operationSuccess('登录')).assertEqual('登录成功');
       expect(UiFeedbackService.operationUnavailable('导出')).assertEqual('导出功能暂不可用，请稍后重试');
+    });
+
+    it('storesFeedbackToneAsStableSemanticValue', 0, () => {
+      expect(UiFeedbackService.success('设置成功').tone).assertEqual(UiFeedbackTone.Success);
+      expect(UiFeedbackService.danger('设置失败').tone).assertEqual(UiFeedbackTone.Danger);
+      expect(UiFeedbackService.warning('设置提醒').tone).assertEqual(UiFeedbackTone.Warning);
+      expect(UiFeedbackService.info('设置提示').tone).assertEqual(UiFeedbackTone.Info);
     });
 
     it('formatsLoginCredentialErrorsByField', 0, () => {

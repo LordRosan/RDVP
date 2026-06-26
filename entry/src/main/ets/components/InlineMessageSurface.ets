@@ -1,21 +1,22 @@
 import { AppColors, AppRadii } from '../styles/AppTheme';
+import { UiFeedbackTone } from '../models/common/UiFeedbackModels';
 import { UiFeedbackService } from '../services/common/UiFeedbackService';
 
 @Component
 export struct InlineMessageSurface {
   @Prop message: string = '';
-  @Prop tone: string = AppColors.Danger;
+  @Prop tone: string = UiFeedbackTone.Danger;
 
   build() {
     if (this.message.length > 0) {
       Row({ space: 8 }) {
         SymbolGlyph(this.getSymbol())
           .fontSize(17)
-          .fontColor([this.tone])
+          .fontColor([this.getTextTone()])
 
         Text(UiFeedbackService.sanitize(this.message))
           .fontSize(13)
-          .fontColor(this.tone)
+          .fontColor(this.getTextTone())
           .lineHeight(18)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -35,25 +36,54 @@ export struct InlineMessageSurface {
   }
 
   getSurfaceTone(): string {
-    if (this.tone === AppColors.Success) {
+    const tone = this.getSemanticTone();
+    if (tone === UiFeedbackTone.Success) {
       return AppColors.SuccessSurface;
     }
-    if (this.tone === AppColors.Warning) {
+    if (tone === UiFeedbackTone.Warning) {
       return AppColors.WarningSurface;
     }
-    if (this.tone === AppColors.Primary) {
+    if (tone === UiFeedbackTone.Info) {
       return AppColors.PrimarySurface;
     }
     return AppColors.DangerSurface;
   }
 
   getSymbol(): Resource {
-    if (this.tone === AppColors.Success) {
+    const tone = this.getSemanticTone();
+    if (tone === UiFeedbackTone.Success) {
       return $r('sys.symbol.checkmark_circle');
     }
-    if (this.tone === AppColors.Warning) {
+    if (tone === UiFeedbackTone.Warning) {
       return $r('sys.symbol.exclamationmark_triangle');
     }
     return $r('sys.symbol.exclamationmark_circle');
+  }
+
+  getTextTone(): string {
+    const tone = this.getSemanticTone();
+    if (tone === UiFeedbackTone.Success) {
+      return AppColors.Success;
+    }
+    if (tone === UiFeedbackTone.Warning) {
+      return AppColors.Warning;
+    }
+    if (tone === UiFeedbackTone.Info) {
+      return AppColors.Primary;
+    }
+    return AppColors.Danger;
+  }
+
+  getSemanticTone(): UiFeedbackTone {
+    if (this.tone === UiFeedbackTone.Success) {
+      return UiFeedbackTone.Success;
+    }
+    if (this.tone === UiFeedbackTone.Warning) {
+      return UiFeedbackTone.Warning;
+    }
+    if (this.tone === UiFeedbackTone.Info) {
+      return UiFeedbackTone.Info;
+    }
+    return UiFeedbackTone.Danger;
   }
 }

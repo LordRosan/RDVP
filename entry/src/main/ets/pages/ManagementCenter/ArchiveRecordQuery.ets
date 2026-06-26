@@ -9,6 +9,7 @@ import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { RecordQueryService } from '../../services/management/RecordQueryService';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
+import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
 const ARCHIVE_TYPE_OPTIONS: string[] = ['全部', '添加档案', '修改档案', '删除档案'];
 const ARCHIVE_TYPE_VALUES: string[] = ['', 'CREATE', 'UPDATE', 'DELETE'];
@@ -301,7 +302,7 @@ struct ArchiveRecordQuery {
     if (this.message.length > 0) {
       InlineMessageSurface({
         message: this.message,
-        tone: AppColors.Danger
+        tone: UiFeedbackTone.Danger
       })
     }
   }

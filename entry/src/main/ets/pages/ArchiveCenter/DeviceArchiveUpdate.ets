@@ -15,6 +15,7 @@ import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { AuthService } from '../../services/identity/AuthService';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
 import { AuthGuard } from '../../utils/AuthGuard';
+import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
 @Entry
 @Component
@@ -27,7 +28,7 @@ struct DeviceArchiveUpdate {
   @State locationAddress: string = '';
   @State reason: string = '';
   @State message: string = '';
-  @State messageTone: string = AppColors.Danger;
+  @State messageTone: string = UiFeedbackTone.Danger;
   @State normalizedDeviceCode: string = '-';
   @State updatedFieldCount: number = 0;
   @State initiatedAt: string = '';
@@ -444,7 +445,7 @@ struct DeviceArchiveUpdate {
 
           this.password = value;
           this.message = '';
-          this.messageTone = AppColors.Danger;
+          this.messageTone = UiFeedbackTone.Danger;
         })
     }
     .width('100%')
@@ -514,13 +515,13 @@ struct DeviceArchiveUpdate {
 
     if (!validation.valid) {
       this.message = validation.message;
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
       return;
     }
 
     if (this.password.length === 0) {
       this.message = UiFeedbackService.requiredInput('密码');
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
       return;
     }
 
@@ -534,7 +535,7 @@ struct DeviceArchiveUpdate {
       const response = await DeviceArchiveUpdateService.submitUpdateRequestRemoteFirst(form);
       if (!response.success) {
         this.message = UiFeedbackService.operationUnavailable('修改');
-        this.messageTone = AppColors.Danger;
+        this.messageTone = UiFeedbackTone.Danger;
         return;
       }
 
@@ -547,7 +548,7 @@ struct DeviceArchiveUpdate {
       this.updatedFieldCount = DeviceArchiveUpdateService.countUpdatedFields(this.buildForm());
       this.password = '';
       this.message = UiFeedbackService.operationSuccess('提交');
-      this.messageTone = AppColors.Success;
+      this.messageTone = UiFeedbackTone.Success;
     } finally {
       this.submitting = false;
     }
@@ -560,7 +561,7 @@ struct DeviceArchiveUpdate {
     }
 
     this.message = UiFeedbackService.passwordVerificationError(response.error, '修改');
-    this.messageTone = AppColors.Danger;
+    this.messageTone = UiFeedbackTone.Danger;
     return false;
   }
 
@@ -632,7 +633,7 @@ struct DeviceArchiveUpdate {
 
       this.hasDevice = false;
       this.message = UiFeedbackService.operationUnavailable('查询');
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
       return;
     }
 
@@ -652,7 +653,7 @@ struct DeviceArchiveUpdate {
       this.updatedFieldCount = DeviceArchiveUpdateService.countUpdatedFields(this.buildForm());
       this.requestStatus = DeviceArchiveFlowStore.getPendingRequestStatus();
       this.message = UiFeedbackService.operationSuccess('提交');
-      this.messageTone = AppColors.Success;
+      this.messageTone = UiFeedbackTone.Success;
       return;
     }
 
@@ -723,7 +724,7 @@ struct DeviceArchiveUpdate {
 
   async reloadDeviceByCode(deviceCode: string): Promise<void> {
     this.message = UiFeedbackService.sanitize('正在重新获取设备档案');
-    this.messageTone = AppColors.TextSecondary;
+    this.messageTone = UiFeedbackTone.Info;
     const response = await DeviceService.queryByCodeRemoteFirst({
       deviceCode
     });
@@ -733,7 +734,7 @@ struct DeviceArchiveUpdate {
     } else {
       this.hasDevice = false;
       this.message = UiFeedbackService.operationUnavailable('查询');
-      this.messageTone = AppColors.Danger;
+      this.messageTone = UiFeedbackTone.Danger;
     }
   }
 

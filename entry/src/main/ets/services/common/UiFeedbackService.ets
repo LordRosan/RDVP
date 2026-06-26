@@ -1,10 +1,5 @@
 import { ApiError } from '../../models/common/ApiModels';
-import { AppColors } from '../../styles/AppTheme';
-
-export interface UiFeedbackMessage {
-  message: string;
-  tone: string;
-}
+import { UiFeedbackMessage, UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
 export class UiFeedbackService {
   static sanitize(message: string): string {
@@ -51,7 +46,7 @@ export class UiFeedbackService {
     return `${UiFeedbackService.normalizeLabel(label)}不能超过${limit}${unit}`;
   }
 
-  static message(message: string, tone: string): UiFeedbackMessage {
+  static message(message: string, tone: UiFeedbackTone): UiFeedbackMessage {
     return {
       message: UiFeedbackService.sanitize(message),
       tone
@@ -59,19 +54,19 @@ export class UiFeedbackService {
   }
 
   static success(message: string): UiFeedbackMessage {
-    return UiFeedbackService.message(message, AppColors.Success);
+    return UiFeedbackService.message(message, UiFeedbackTone.Success);
   }
 
   static danger(message: string): UiFeedbackMessage {
-    return UiFeedbackService.message(message, AppColors.Danger);
+    return UiFeedbackService.message(message, UiFeedbackTone.Danger);
   }
 
   static warning(message: string): UiFeedbackMessage {
-    return UiFeedbackService.message(message, AppColors.Warning);
+    return UiFeedbackService.message(message, UiFeedbackTone.Warning);
   }
 
   static info(message: string): UiFeedbackMessage {
-    return UiFeedbackService.message(message, AppColors.Primary);
+    return UiFeedbackService.message(message, UiFeedbackTone.Info);
   }
 
   static successFor(actionName: string): UiFeedbackMessage {

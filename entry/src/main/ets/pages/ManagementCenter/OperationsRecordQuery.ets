@@ -9,6 +9,7 @@ import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { RecordQueryService } from '../../services/management/RecordQueryService';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { MainPageNavigator } from '../../utils/MainPageNavigator';
+import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
 const OPERATION_RECORD_TYPE_OPTIONS: string[] = ['全部', '核验', '报修', '接取', '维修', '复检'];
 const OPERATION_RECORD_TYPE_VALUES: string[] = ['', 'DEVICE_VERIFICATION', 'FAULT_REPORT',
@@ -302,7 +303,7 @@ struct OperationRecordQuery {
     if (this.message.length > 0) {
       InlineMessageSurface({
         message: this.message,
-        tone: AppColors.Danger
+        tone: UiFeedbackTone.Danger
       })
     }
   }

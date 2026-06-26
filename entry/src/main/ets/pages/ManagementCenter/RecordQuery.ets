@@ -8,6 +8,7 @@ import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AppColors, AppSpacing } from '../../styles/AppTheme';
 import { AuthGuard } from '../../utils/AuthGuard';
+import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
 @Entry
 @Component
@@ -199,7 +200,7 @@ struct RecordQuery {
     if (this.message.length > 0) {
       InlineMessageSurface({
         message: this.message,
-        tone: AppColors.Danger
+        tone: UiFeedbackTone.Danger
       })
     }
   }
@@ -210,21 +211,21 @@ struct RecordQuery {
       actions.push({
         id: MainPageActionId.ArchiveRecordQuery,
         title: '档案记录',
-        tone: AppColors.Primary
+        tone: UiFeedbackTone.Info
       });
     }
     if (SessionStore.hasPermission(PermissionCode.ManagementCenterOperationRecordQuery)) {
       actions.push({
         id: MainPageActionId.OperationRecordQuery,
         title: '运维记录',
-        tone: AppColors.Primary
+        tone: UiFeedbackTone.Info
       });
     }
     if (SessionStore.hasPermission(PermissionCode.ManagementCenterReviewRecordQuery)) {
       actions.push({
         id: MainPageActionId.ReviewRecordQuery,
         title: '审核记录',
-        tone: AppColors.Primary
+        tone: UiFeedbackTone.Info
       });
     }
 
