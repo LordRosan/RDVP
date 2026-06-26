@@ -63,6 +63,15 @@ export default function localUnitTest() {
 
       expect(response.message).assertEqual('任务接取功能暂不可用，请稍后重试');
     });
+
+    it('validatesTaskAcceptanceQueryAgainstProvidedWorkload', 0, () => {
+      const result = RepairTaskService.validateTaskAcceptanceQuery({
+        radiusKm: 20
+      }, RepairTaskService.createWorkloadSnapshot(2));
+
+      expect(result.valid).assertEqual(false);
+      expect(result.message).assertEqual('查询范围不正确，请重新输入');
+    });
   });
 
   describe('identityValidationFeedback', () => {

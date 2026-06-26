@@ -20,13 +20,16 @@ import com.rmf.rdvp.domain.common.ErrorCode;
 public class AuthenticationService {
 
     private static final Duration ACCESS_TOKEN_TTL = Duration.ofDays(7);
+    private static final Duration LOGIN_ATTEMPT_LOCK_DURATION = Duration.ofMinutes(15);
     private static final Duration PASSWORD_VERIFICATION_LOCK_DURATION = Duration.ofHours(12);
     private static final Duration SENSITIVE_OPERATION_VERIFICATION_TTL = Duration.ofMinutes(5);
+    private static final int MAX_LOGIN_FAILURES = 5;
     private static final int MAX_PASSWORD_VERIFICATION_FAILURES = 5;
 
     private final UserAccountRepository userStore;
     private final PasswordEncoder passwordEncoder;
     private final TokenSessionStore tokenSessionStore;
+    private final LoginAttemptStore loginAttemptStore;
     private final PasswordVerificationAttemptStore passwordVerificationAttemptStore;
     private final AuditLogService auditLogService;
 
@@ -34,17 +37,27 @@ public class AuthenticationService {
             UserAccountRepository userStore,
             PasswordEncoder passwordEncoder,
             TokenSessionStore tokenSessionStore,
+            LoginAttemptStore loginAttemptStore,
             PasswordVerificationAttemptStore passwordVerificationAttemptStore,
             AuditLogService auditLogService) {
         this.userStore = userStore;
         this.passwordEncoder = passwordEncoder;
         this.tokenSessionStore = tokenSessionStore;
+        this.loginAttemptStore = loginAttemptStore;
         this.passwordVerificationAttemptStore = passwordVerificationAttemptStore;
         this.auditLogService = auditLogService;
     }
 
     public LoginResponse login(LoginRequest request) {
         String username = request.username().trim().toLowerCase(Locale.ROOT);
+        Instant now = Instant.now();
+        if (isLoginLocked(username, now)) {
+            recordLoginFailure(username, Optional.empty());
+            throw new BusinessException(
+                    ErrorCode.RATE_LIMITED,
+                    "Too many login attempts. Please retry later.");
+        }
+
         Optional<BootstrapUser> optionalUser = userStore.findByUsername(username);
         if (optionalUser.isEmpty() || optionalUser.get().status() != UserStatus.ACTIVE) {
             recordLoginFailure(username, optionalUser);
@@ -52,12 +65,14 @@ public class AuthenticationService {
         }
 
         if (!passwordEncoder.matches(request.password(), optionalUser.get().passwordHash())) {
+            registerLoginFailure(username, now);
             recordLoginFailure(username, optionalUser);
             throw new BusinessException(ErrorCode.PASSWORD_INCORRECT);
         }
 
+        loginAttemptStore.clear(username);
         BootstrapUser user = optionalUser.get();
-        Instant expiresAt = Instant.now().plus(ACCESS_TOKEN_TTL);
+        Instant expiresAt = now.plus(ACCESS_TOKEN_TTL);
         String token = tokenSessionStore.create(user.id(), request.clientDeviceId(), expiresAt);
         AuthenticatedUser authenticatedUser = user.toAuthenticatedUser();
         auditLogService.recordSuccess(
@@ -78,6 +93,29 @@ public class AuthenticationService {
                 optionalUser.map(BootstrapUser::id).orElse(null),
                 optionalUser.map(BootstrapUser::displayName).orElse(null),
                 "用户登录失败。");
+    }
+
+    private boolean isLoginLocked(String username, Instant now) {
+        Optional<LoginAttempt> optionalAttempt = loginAttemptStore.find(username);
+        if (optionalAttempt.isEmpty() || optionalAttempt.get().lockedUntil() == null) {
+            return false;
+        }
+
+        LoginAttempt attempt = optionalAttempt.get();
+        if (attempt.lockedUntil().isAfter(now)) {
+            return true;
+        }
+
+        loginAttemptStore.clear(username);
+        return false;
+    }
+
+    private void registerLoginFailure(String username, Instant now) {
+        loginAttemptStore.registerFailure(
+                username,
+                now,
+                LOGIN_ATTEMPT_LOCK_DURATION,
+                MAX_LOGIN_FAILURES);
     }
 
     public Optional<AuthenticatedUser> authenticate(String token) {

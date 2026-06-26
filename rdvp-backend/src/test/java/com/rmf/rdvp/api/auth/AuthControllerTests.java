@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.nio.charset.StandardCharsets;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -18,6 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rmf.rdvp.identity.LoginAttemptStore;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -29,6 +31,14 @@ class AuthControllerTests {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private LoginAttemptStore loginAttemptStore;
+
+    @BeforeEach
+    void clearLoginAttempts() {
+        loginAttemptStore.clear("operator");
+    }
 
     @Test
     void logsInAndReturnsCurrentUser() throws Exception {
@@ -141,6 +151,34 @@ class AuthControllerTests {
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("ACCOUNT_INCORRECT"))
                 .andExpect(jsonPath("$.error.message").value("Account is incorrect."));
+    }
+
+    @Test
+    void rateLimitsLoginAfterConsecutivePasswordFailures() throws Exception {
+        for (int index = 0; index < 5; index++) {
+            mockMvc.perform(post("/api/v1/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "username": "operator",
+                                      "password": "wrong"
+                                    }
+                                    """))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.error.code").value("PASSWORD_INCORRECT"));
+        }
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "operator",
+                                  "password": "password"
+                                }
+                                """))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("RATE_LIMITED"));
     }
 
     @Test

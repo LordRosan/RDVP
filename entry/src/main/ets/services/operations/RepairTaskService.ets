@@ -251,7 +251,7 @@ export class RepairTaskService {
     workloadSnapshot?: RepairerWorkloadSnapshot
   ): Promise<ApiResponse<TaskAcceptanceListResult>> {
     const workload = workloadSnapshot;
-    const validation = RepairTaskService.validateTaskAcceptanceQuery(query);
+    const validation = RepairTaskService.validateTaskAcceptanceQuery(query, workload);
     if (!validation.valid) {
       return {
         success: false,

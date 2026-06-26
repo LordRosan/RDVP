@@ -12,7 +12,7 @@
 
 ## 1. 设计范围
 
-本文档定义 RDVP 后端服务的核心数据模型。数据模型覆盖用户、角色权限、设备、二维码、设备核验、设备档案申请、故障报告、维修任务、维修报告、复检、附件、通知、离线同步、审计日志和安全事件。
+本文档定义 RDVP 后端服务的核心数据模型。当前迁移已覆盖用户、角色权限、设备、二维码、设备核验、设备档案申请、故障报告、维修任务、维修报告、复检报告、档案审核、运维审核、记录查询、审计日志、密码复核和登录失败限制。附件、通知、离线同步和独立安全事件表属于后续预留设计，当前版本未创建这些表。
 
 后端数据库基线采用 PostgreSQL + PostGIS。文档中的逻辑类型用于表达业务语义，物理实现优先映射为 PostgreSQL 类型，例如 `datetime` 映射为 `TIMESTAMPTZ`，`json` 映射为 `JSONB`。
 
@@ -54,7 +54,7 @@
 | `updated_by` | id | 否 | 更新人 |
 | `deleted_at` | datetime | 否 | 软删除时间 |
 
-审计日志、附件、离线同步记录等不可变或追加型数据可不使用 `updated_by` 和 `deleted_at`。
+审计日志、登录尝试、密码复核尝试等追加型或安全控制数据可不使用 `updated_by` 和 `deleted_at`。
 
 ## 5. 实体关系概览
 
@@ -75,8 +75,8 @@ erDiagram
   repair_tasks ||--o{ repair_reports : has
   fault_reports ||--o{ reinspection_records : has
 
-  attachments ||--o{ attachment_links : has
-  users ||--o{ notifications : receives
+  fault_reports ||--o{ operations_review_requests : has
+  users ||--o{ password_verification_attempts : verifies
   users ||--o{ operation_logs : acts
 ```
 
@@ -461,11 +461,11 @@ UNRESOLVED
 
 ### 11.1 reinspection_records
 
-复检记录表。
+复检报告表。当前物理表沿用 `reinspection_records` 命名。
 
 | 字段 | 类型 | 必填 | 约束 | 说明 |
 | --- | --- | --- | --- | --- |
-| `id` | id | 是 | PK | 复检记录 ID |
+| `id` | id | 是 | PK | 复检报告 ID |
 | `fault_report_id` | id | 是 | FK fault_reports.id, INDEX | 故障报告 ID |
 | `repair_report_id` | id | 是 | FK repair_reports.id, INDEX | 维修报告 ID |
 | `reinspector_id` | id | 是 | FK users.id, INDEX | 复检人员 |
@@ -484,7 +484,9 @@ INDEX(fault_report_id, reinspected_at)
 INDEX(reinspector_id, reinspected_at)
 ```
 
-## 12. 附件
+## 12. 后续预留：附件
+
+当前版本未创建附件相关表，以下结构仅作为后续附件能力设计预留。
 
 ### 12.1 attachments
 
@@ -532,7 +534,9 @@ UNIQUE(attachment_id, business_type, business_id)
 INDEX(business_type, business_id)
 ```
 
-## 13. 通知
+## 13. 后续预留：通知
+
+当前版本未创建通知相关表，以下结构仅作为后续消息中心或推送能力设计预留。
 
 ### 13.1 notifications
 
@@ -557,7 +561,9 @@ INDEX(recipient_id, read_at, created_at)
 INDEX(business_type, business_id)
 ```
 
-## 14. 离线同步
+## 14. 后续预留：离线同步
+
+当前版本采用在线提交优先架构，`V17__drop_offline_sync_tables.sql` 已移除早期离线同步表。以下结构仅作为后续离线同步能力设计预留。
 
 ### 14.1 offline_sync_batches
 
@@ -636,9 +642,36 @@ INDEX(action, created_at)
 INDEX(request_id)
 ```
 
-### 15.2 security_events
+### 15.2 login_attempts
 
-安全事件表。
+登录失败限制表。
+
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `username` | string(64) | 是 | PK | 归一化后的账号 |
+| `failed_count` | integer | 是 | CHECK failed_count >= 0 | 连续失败次数 |
+| `locked_until` | datetime | 否 | INDEX | 临时限制截止时间 |
+| `updated_at` | datetime | 是 |  | 更新时间 |
+
+该表用于登录防暴力尝试限制。`username` 保存归一化后的账号，不设外键，避免账号枚举和不存在账号产生持久化状态；密码正确且未被限制时，后端应清除对应账号的失败记录。
+
+### 15.3 password_verification_attempts
+
+二次密码校验尝试表。
+
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `user_id` | id | 是 | PK, FK users.id | 用户 ID |
+| `failed_count` | integer | 是 | CHECK failed_count >= 0 | 连续失败次数 |
+| `locked_until` | datetime | 否 | INDEX | 临时锁定截止时间 |
+| `verified_until` | datetime | 否 | INDEX | 敏感操作免重复校验截止时间 |
+| `updated_at` | datetime | 是 |  | 更新时间 |
+
+该表用于添加档案、删除档案、修改档案、维修报告、复检报告、档案审核和运维审核等敏感操作的密码复核流程。
+
+### 15.4 后续预留：security_events
+
+当前版本将安全相关行为写入 `operation_logs`，未创建独立 `security_events` 表。以下结构仅作为后续独立安全事件能力设计预留。
 
 | 字段 | 类型 | 必填 | 约束 | 说明 |
 | --- | --- | --- | --- | --- |
@@ -684,15 +717,15 @@ ATTACHMENT_TYPE_REJECTED
 
 `repair_reports.requires_reinspection` 为 `true` 时，故障必须进入 `PENDING_REINSPECTION`。复检通过后才能关闭故障并恢复设备状态。
 
-### 16.6 附件访问控制
+### 16.6 后续预留：附件访问控制
 
-附件文件内容不直接暴露存储路径。业务访问通过 `attachments` 和 `attachment_links` 判断附件归属，再结合用户权限返回文件内容。
+附件能力落地后，文件内容不应直接暴露存储路径。业务访问应通过附件元数据和业务关联判断附件归属，再结合用户权限返回文件内容。
 
 ## 17. 数据保留与删除
 
 - 用户、设备、故障、维修、复检和审计类数据默认采用逻辑删除或状态变更。
-- 审计日志和安全事件属于追溯数据，不参与普通业务删除。
-- 附件删除应同时处理业务关联和实际文件存储。
+- 审计日志属于追溯数据，不参与普通业务删除；后续独立安全事件表落地后同样按追溯数据处理。
+- 后续附件能力落地后，附件删除应同时处理业务关联和实际文件存储。
 - 涉及个人信息和敏感数据的保留周期需要在安全设计文档中进一步定义。
 
 ## 18. 待确认问题

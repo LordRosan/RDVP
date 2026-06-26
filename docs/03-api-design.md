@@ -12,7 +12,7 @@
 
 ## 1. 设计范围
 
-本文档定义 RDVP 后端服务对移动端应用提供的 HTTP API。接口覆盖用户认证、设备档案查询、二维码校验、设备核验、设备档案申请、故障报修、维修任务、维修报告、复检、附件、通知和审计日志等业务。
+本文档定义 RDVP 后端服务对移动端应用提供的 HTTP API。当前已实现接口覆盖用户认证、设备档案查询、二维码校验、设备核验、设备档案申请、故障报修、维修任务、维修报告、复检报告、档案审核、运维审核、记录查询和审计日志等业务。附件、离线同步和通知接口为后续增强预留，不属于当前可调用 API。
 
 API 采用版本化路径，第一版统一使用：
 
@@ -172,6 +172,8 @@ POST /api/v1/auth/login
 }
 ```
 
+账号不存在或不可用时返回 `ACCOUNT_INCORRECT`；密码不正确时返回 `PASSWORD_INCORRECT`；同一账号连续密码错误达到限制后返回 `RATE_LIMITED`。
+
 ### 5.2 当前用户信息
 
 ```text
@@ -216,7 +218,7 @@ POST /api/v1/auth/password-verification
 }
 ```
 
-校验失败时返回 `INVALID_CREDENTIALS`。
+校验失败时返回 `PASSWORD_INCORRECT`；连续失败达到限制后返回 `PASSWORD_VERIFICATION_LOCKED`。
 
 ### 5.4 退出登录
 
@@ -281,10 +283,10 @@ GET /api/v1/dashboard
 | `operations.verifications` | 设备核验记录总数 |
 | `operations.faultReports` | 故障报修记录总数 |
 | `operations.repairs` | 已提交维修报告总数 |
-| `operations.reinspections` | 已提交复检记录总数 |
-| `management.reviewedTotal` | 已完成审核的档案申请总数，后续包含运维审核 |
+| `operations.reinspections` | 已提交复检报告总数 |
+| `management.reviewedTotal` | 已完成审核的档案申请和运维审核总数 |
 | `management.pendingArchiveReviews` | 档案审核中的待审核申请数 |
-| `management.pendingOperationsReviews` | 运维审核中的待审核数；当前版本尚未启用运维审核，固定为 `0` |
+| `management.pendingOperationsReviews` | 运维审核中的待审核数 |
 
 权限裁剪：
 
@@ -382,20 +384,26 @@ GET /api/v1/devices/{deviceId}
 }
 ```
 
-### 6.3 查询设备列表
+### 6.3 校验设备编号可用性
 
 ```text
-GET /api/v1/devices
+GET /api/v1/device-codes/{deviceCode}/availability
 ```
 
-查询参数：
+权限要求：`ARCHIVE_CENTER_DEVICE_ARCHIVE_CREATE_REQUEST_SUBMIT`
 
-| 参数 | 说明 |
-| --- | --- |
-| `keyword` | 设备编号、名称或型号关键词 |
-| `status` | 设备状态 |
-| `page` | 页码 |
-| `pageSize` | 每页数量 |
+该接口用于添加设备档案申请前校验目标设备编号是否已被正式档案或待审核添加申请占用。
+
+响应数据：
+
+```json
+{
+  "available": true,
+  "reason": "设备编号可用于添加档案"
+}
+```
+
+当前后端未开放独立的设备列表分页查询接口；业务列表查询通过记录查询、任务接取和审核列表等专用接口完成。
 
 ## 7. 二维码接口
 
@@ -419,16 +427,9 @@ RDVP:<version>:<deviceCode>:<nonce>:<signature>
 
 ```json
 {
-  "qrContent": "RDVP:1:RDVP-DEVICE-0001:nonce:signature",
-  "scanLocation": {
-    "longitude": 114.1694,
-    "latitude": 22.3193
-  },
-  "scannedAt": "2026-05-27T07:30:00Z"
+  "qrContent": "RDVP:1:RDVP-DEVICE-0001:nonce:signature"
 }
 ```
-
-`scanLocation` 和 `scannedAt` 为预留字段，用于后续审计、风控和现场核验联动；当前最小实现只要求 `qrContent`。
 
 响应数据：
 
@@ -446,6 +447,45 @@ RDVP:<version>:<deviceCode>:<nonce>:<signature>
 
 二维码校验失败时返回 `QR_CODE_INVALID`、`QR_CODE_EXPIRED` 或 `QR_CODE_SIGNATURE_INVALID`。
 
+### 7.2 导出设备二维码
+
+```text
+POST /api/v1/devices/{deviceId}/qrcode-export
+```
+
+权限要求：`ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY` 和 `ARCHIVE_CENTER_DEVICE_ARCHIVE_EXPORT`。提交前必须完成当前用户密码校验。
+
+响应数据：
+
+```json
+{
+  "deviceId": "device-id",
+  "deviceCode": "RDVP-DEVICE-0001",
+  "fileName": "RDVP-DEVICE-0001-qrcode.png",
+  "qrImageBase64": "base64-encoded-png",
+  "qrContentDigest": "sha256-digest",
+  "exportedAt": "2026-05-27T07:30:00Z"
+}
+```
+
+### 7.3 校验档案导出权限
+
+```text
+POST /api/v1/devices/{deviceId}/archive-export-verification
+```
+
+权限要求：`ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY` 和 `ARCHIVE_CENTER_DEVICE_ARCHIVE_EXPORT`。提交前必须完成当前用户密码校验。
+
+响应数据：
+
+```json
+{
+  "verified": true,
+  "deviceId": "device-id",
+  "deviceCode": "RDVP-DEVICE-0001"
+}
+```
+
 ## 8. 设备核验接口
 
 ### 8.1 提交设备核验记录
@@ -461,11 +501,7 @@ POST /api/v1/devices/{deviceId}/verification-records
   "result": "NORMAL",
   "description": "Device is operating normally.",
   "remark": "No abnormal noise.",
-  "verifiedAt": "2026-05-27T07:30:00Z",
-  "location": {
-    "longitude": 114.1694,
-    "latitude": 22.3193
-  }
+  "verifiedAt": "2026-05-27T07:30:00Z"
 }
 ```
 
@@ -475,20 +511,65 @@ POST /api/v1/devices/{deviceId}/verification-records
 {
   "id": "verification-record-id",
   "deviceId": "device-id",
+  "operatorId": "user-id",
   "result": "NORMAL",
   "description": "Device is operating normally.",
+  "remark": "No abnormal noise.",
   "verifiedAt": "2026-05-27T07:30:00Z",
   "createdAt": "2026-05-27T07:30:00Z"
 }
 ```
 
-### 8.2 查询设备核验记录
+提交设备核验记录前必须完成当前用户密码校验。
+
+### 8.2 提交设备核验并联动报修
 
 ```text
-GET /api/v1/devices/{deviceId}/verification-records
+POST /api/v1/devices/{deviceId}/verification-records/fault-report
 ```
 
-支持分页参数。
+权限要求：`OPERATIONS_CENTER_DEVICE_VERIFICATION_SUBMIT` 和 `OPERATIONS_CENTER_DEVICE_FAULT_REPORT_SUBMIT`。提交前必须完成当前用户密码校验。
+
+请求体：
+
+```json
+{
+  "result": "ABNORMAL",
+  "description": "Device temperature is abnormal.",
+  "remark": "Need follow-up repair.",
+  "verifiedAt": "2026-05-27T07:20:00Z",
+  "faultType": "ENERGY_FAULT",
+  "severity": "SEVERE",
+  "occurredAt": "2026-05-27T07:30:00Z",
+  "faultDescription": "Device power supply is unstable.",
+  "sceneCondition": "The site has reduced the operating load.",
+  "longitude": 114.1694,
+  "latitude": 22.3193
+}
+```
+
+响应数据：
+
+```json
+{
+  "verificationRecord": {
+    "id": "verification-record-id",
+    "deviceId": "device-id",
+    "operatorId": "user-id",
+    "result": "ABNORMAL",
+    "description": "Device temperature is abnormal.",
+    "remark": "Need follow-up repair.",
+    "verifiedAt": "2026-05-27T07:20:00Z",
+    "createdAt": "2026-05-27T07:30:00Z"
+  },
+  "faultReport": {
+    "id": "fault-report-id",
+    "faultReportNo": "FR-20260527-0001",
+    "status": "PENDING_ACCEPTANCE",
+    "createdAt": "2026-05-27T07:30:00Z"
+  }
+}
+```
 
 ## 9. 设备档案申请接口
 
@@ -644,11 +725,8 @@ POST /api/v1/fault-reports
   "occurredAt": "2026-05-27T07:30:00Z",
   "description": "Device power supply is unstable.",
   "sceneCondition": "The site has reduced the operating load.",
-  "location": {
-    "longitude": 114.1694,
-    "latitude": 22.3193
-  },
-  "attachmentIds": ["attachment-id"]
+  "longitude": 114.1694,
+  "latitude": 22.3193
 }
 ```
 
@@ -663,45 +741,7 @@ POST /api/v1/fault-reports
 }
 ```
 
-### 10.2 查询故障报告列表
-
-```text
-GET /api/v1/fault-reports
-```
-
-查询参数：
-
-| 参数 | 说明 |
-| --- | --- |
-| `deviceCode` | 设备编号 |
-| `status` | 故障状态 |
-| `faultType` | 故障类型 |
-| `severity` | 故障等级 |
-| `nearLongitude` | 附近查询经度 |
-| `nearLatitude` | 附近查询纬度 |
-| `radiusKm` | 附近查询半径，单位 km |
-| `page` | 页码 |
-| `pageSize` | 每页数量 |
-
-### 10.3 获取故障报告详情
-
-```text
-GET /api/v1/fault-reports/{faultReportId}
-```
-
-### 10.4 驳回故障报告
-
-```text
-POST /api/v1/fault-reports/{faultReportId}/reject
-```
-
-请求体：
-
-```json
-{
-  "reason": "Invalid fault report."
-}
-```
+当前后端未开放独立的故障报告列表、详情和驳回接口。待接取故障通过 `GET /api/v1/operation-tasks/available` 查询；历史故障记录通过 `GET /api/v1/operation-records?category=OPERATIONS` 查询。
 
 ## 11. 维修任务接口
 
@@ -717,7 +757,7 @@ GET /api/v1/operation-tasks/available
 | --- | --- |
 | `longitude` | 当前经度 |
 | `latitude` | 当前纬度 |
-| `radiusKm` | 查询半径，默认 10，允许范围 1-20；低负载状态下不能超过系统限制范围 |
+| `radiusKm` | 查询半径，默认 10，允许范围 0-30；低负载状态下不能超过当前负载允许范围 |
 | `severity` | 故障等级 |
 | `page` | 页码 |
 | `pageSize` | 每页数量 |
@@ -730,9 +770,9 @@ GET /api/v1/operation-tasks/available
   "workload": {
     "status": "LOW_LOAD",
     "activeTaskCount": 1,
-    "maxActiveTaskCount": 2,
-    "maxRadiusKm": 10,
-    "recommendedRadiusKm": 10,
+    "maxActiveTaskCount": 3,
+    "maxRadiusKm": 20,
+    "recommendedRadiusKm": 20,
     "message": "当前已有进行中的维修任务，系统已限制可接取范围。请优先处理已接取任务。",
     "canAccept": true
   },
@@ -753,10 +793,8 @@ POST /api/v1/fault-reports/{faultReportId}/accept
 
 ```json
 {
-  "acceptedLocation": {
-    "longitude": 114.1694,
-    "latitude": 22.3193
-  }
+  "longitude": 114.1694,
+  "latitude": 22.3193
 }
 ```
 
@@ -773,7 +811,7 @@ POST /api/v1/fault-reports/{faultReportId}/accept
 
 同一故障只能被一个有效维修任务接取。并发接取失败时返回 `FAULT_ALREADY_ACCEPTED`。
 
-接取接口必须重新校验维修人员负载状态，不得只依赖查询列表时的前端状态。忙碌状态返回 `REPAIRER_BUSY`；若提供接取位置且目标故障超出当前负载允许范围，返回 `REPAIR_TASK_OUT_OF_WORKLOAD_RANGE`。
+接取接口必须重新校验维修人员负载状态，不得只依赖查询列表时的前端状态。忙碌状态返回 `REPAIRER_BUSY`；若提供接取位置且目标故障超出当前负载允许范围，返回 `REPAIR_TASK_RADIUS_EXCEEDS_WORKLOAD`。
 
 ### 11.3 查询已接取维修任务
 
@@ -804,8 +842,7 @@ POST /api/v1/repair-tasks/{repairTaskId}/repair-reports
   "result": "REPAIRED",
   "repairedAt": "2026-05-27T07:30:00Z",
   "processDescription": "Replaced the power module and completed verification.",
-  "partsUsed": "Power module x1",
-  "attachmentIds": ["attachment-id"]
+  "partsUsed": "Power module x1"
 }
 ```
 
@@ -857,7 +894,35 @@ GET /api/v1/reinspections/pending
 }
 ```
 
-### 13.2 提交复检记录
+### 13.2 接取复检任务
+
+```text
+POST /api/v1/reinspections/{faultReportId}/accept
+```
+
+权限要求：`OPERATIONS_CENTER_REINSPECTION_TASK_ACCEPT`
+
+请求体：
+
+```json
+{
+  "longitude": 114.1694,
+  "latitude": 22.3193
+}
+```
+
+响应数据：
+
+```json
+{
+  "repairTaskId": "repair-task-id",
+  "faultReportId": "fault-report-id",
+  "status": "ACCEPTED",
+  "acceptedAt": "2026-05-27T07:30:00Z"
+}
+```
+
+### 13.3 提交复检报告
 
 ```text
 POST /api/v1/fault-reports/{faultReportId}/reinspection-records
@@ -887,117 +952,132 @@ POST /api/v1/fault-reports/{faultReportId}/reinspection-records
 }
 ```
 
-## 14. 附件接口
+## 14. 运维审核接口
 
-### 14.1 上传附件
-
-```text
-POST /api/v1/attachments
-```
-
-请求格式：
+### 14.1 查询待审核操作列表
 
 ```text
-multipart/form-data
+GET /api/v1/operations-review-requests
 ```
 
-字段：
-
-| 字段 | 说明 |
-| --- | --- |
-| `file` | 文件内容 |
-| `businessType` | 业务类型 |
-| `businessId` | 业务对象 ID，可为空 |
-
-响应数据：
-
-```json
-{
-  "id": "attachment-id",
-  "fileName": "image.jpg",
-  "contentType": "image/jpeg",
-  "size": 102400,
-  "createdAt": "2026-05-27T07:30:00Z"
-}
-```
-
-### 14.2 获取附件元数据
-
-```text
-GET /api/v1/attachments/{attachmentId}
-```
-
-### 14.3 下载附件
-
-```text
-GET /api/v1/attachments/{attachmentId}/content
-```
-
-附件下载必须通过权限校验。
-
-## 15. 离线同步接口
-
-### 15.1 批量同步离线内容
-
-```text
-POST /api/v1/sync/offline-records
-```
-
-请求体：
-
-```json
-{
-  "clientBatchId": "client-batch-id",
-  "records": [
-    {
-      "clientRecordId": "local-record-id",
-      "recordType": "FAULT_REPORT",
-      "payload": {},
-      "createdOfflineAt": "2026-05-27T07:30:00Z"
-    }
-  ]
-}
-```
-
-响应数据：
-
-```json
-{
-  "clientBatchId": "client-batch-id",
-  "results": [
-    {
-      "clientRecordId": "local-record-id",
-      "success": true,
-      "serverRecordId": "fault-report-id",
-      "error": null
-    }
-  ]
-}
-```
-
-同步失败的单条记录应保留明确错误码和错误信息。
-
-## 16. 通知接口
-
-### 16.1 查询我的通知
-
-```text
-GET /api/v1/notifications/my
-```
+权限要求：`MANAGEMENT_CENTER_OPERATIONS_REVIEW`
 
 查询参数：
 
 | 参数 | 说明 |
 | --- | --- |
-| `unreadOnly` | 是否只查询未读通知 |
+| `status` | 审核状态，默认由客户端查询待审核数据 |
+| `type` | 审核类型：`DEVICE_VERIFICATION_REPORT`、`FAULT_REPORT`、`REPAIR_REPORT`、`REINSPECTION_REPORT` |
+| `keyword` | 设备编号、审核编号等关键词 |
 | `page` | 页码 |
 | `pageSize` | 每页数量 |
 
-### 16.2 标记通知已读
+响应数据：
+
+```json
+{
+  "items": [
+    {
+      "id": "operations-review-id",
+      "type": "REPAIR_REPORT",
+      "targetId": "repair-report-id",
+      "targetNo": "RDR-202606240001",
+      "faultReportId": "fault-id",
+      "deviceId": "device-id",
+      "deviceCode": "RDVP-DEVICE-0001",
+      "deviceName": "Cooling Pump A-01",
+      "operatorId": "usr-operator",
+      "operatorName": "运维员",
+      "summary": "维修结果：REPAIRED；维修说明：已完成维修并复测",
+      "status": "PENDING_REVIEW",
+      "submittedAt": "2026-06-24T07:30:00Z"
+    }
+  ],
+  "total": 1
+}
+```
+
+### 14.2 提交运维审核报告
 
 ```text
-POST /api/v1/notifications/{notificationId}/read
+POST /api/v1/operations-review-requests/{requestId}/review
 ```
+
+权限要求：`MANAGEMENT_CENTER_OPERATIONS_REVIEW`。提交前必须完成当前用户密码校验。
+
+请求体：
+
+```json
+{
+  "decision": "APPROVED",
+  "reviewedAt": "2026-06-24T08:30:00Z",
+  "reviewComment": "审核通过"
+}
+```
+
+响应数据：
+
+```json
+{
+  "id": "operations-review-id",
+  "status": "APPROVED",
+  "reviewedAt": "2026-06-24T08:30:00Z"
+}
+```
+
+同一运维审核请求只能审核一次。重复审核返回 `OPERATIONS_REVIEW_REQUEST_ALREADY_REVIEWED`。
+
+## 15. 记录查询接口
+
+### 15.1 查询业务记录
+
+```text
+GET /api/v1/operation-records
+```
+
+权限要求按记录分类拆分：
+
+| `category` | 权限要求 |
+| --- | --- |
+| `ARCHIVE` | `MANAGEMENT_CENTER_ARCHIVE_RECORD_QUERY` |
+| `OPERATIONS` | `MANAGEMENT_CENTER_OPERATION_RECORD_QUERY` |
+| `REVIEW` | `MANAGEMENT_CENTER_REVIEW_RECORD_QUERY` |
+
+查询参数：
+
+| 参数 | 说明 |
+| --- | --- |
+| `category` | 记录分类：`ARCHIVE`、`OPERATIONS`、`REVIEW` |
+| `type` | 业务类型，可为空 |
+| `keyword` | 设备编号、任务编号、操作人或描述关键词 |
+| `page` | 页码，默认 `1` |
+| `pageSize` | 每页数量，默认 `20`，最大 `100` |
+
+响应数据：
+
+```json
+{
+  "items": [
+    {
+      "recordCategory": "REVIEW",
+      "recordType": "REPAIR_REPORT",
+      "deviceCode": "RDVP-DEVICE-0001",
+      "taskNo": "RDR-202606240001",
+      "operatorName": "运维管理员",
+      "occurredAt": "2026-06-24T08:30:00Z",
+      "businessStatus": "APPROVED",
+      "description": "Repair report accepted."
+    }
+  ],
+  "total": 1
+}
+```
+
+当 `category` 为空或不属于允许值时返回 `BAD_REQUEST`；当前用户缺少对应分类权限时返回 `FORBIDDEN`。
+
+## 16. 后续预留接口
+
+附件上传、离线批量同步和通知查询属于后续增强能力。当前后端未开放 `/api/v1/attachments`、`/api/v1/sync/offline-records` 和 `/api/v1/notifications/*` 路由；客户端不得按这些预留设计发起当前版本联调。
 
 ## 17. 审计日志接口
 
@@ -1133,7 +1213,9 @@ SUCCESS
 FAILED
 ```
 
-### 18.10 离线记录类型
+### 18.10 后续预留离线记录类型
+
+以下枚举仅用于后续离线同步设计，当前版本未开放离线同步接口：
 
 ```text
 VERIFICATION_RECORD
@@ -1165,11 +1247,11 @@ REINSPECTION_RECORD
 | `REPAIR_TASK_RADIUS_INVALID` | 维修任务查询范围无效 |
 | `REPAIR_TASK_RADIUS_EXCEEDS_WORKLOAD` | 查询范围超过当前负载允许范围 |
 | `REPAIRER_BUSY` | 维修人员当前忙碌，不能接取更多任务 |
-| `REINSPECTION_RECORD_INVALID` | 复检记录内容无效 |
+| `REINSPECTION_RECORD_INVALID` | 复检报告内容无效 |
 | `REINSPECTION_REQUIRED` | 当前故障不处于待复检状态 |
-| `ATTACHMENT_NOT_FOUND` | 附件不存在 |
-| `ATTACHMENT_TYPE_NOT_ALLOWED` | 附件类型不允许 |
-| `OFFLINE_RECORD_CONFLICT` | 离线记录与服务端当前状态冲突 |
+| `OPERATIONS_REVIEW_REQUEST_NOT_FOUND` | 运维审核请求不存在 |
+| `OPERATIONS_REVIEW_REQUEST_ALREADY_REVIEWED` | 运维审核请求已审核 |
+| `OPERATIONS_REVIEW_REQUEST_INVALID` | 运维审核请求内容无效 |
 
 ## 20. 待确认问题
 

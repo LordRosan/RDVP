@@ -16,6 +16,7 @@ public enum ErrorCode {
             HttpStatus.FORBIDDEN,
             "Recent password verification is required for this sensitive operation."),
     FORBIDDEN("FORBIDDEN", HttpStatus.FORBIDDEN, "Permission is denied."),
+    RATE_LIMITED("RATE_LIMITED", HttpStatus.TOO_MANY_REQUESTS, "Too many attempts. Please retry later."),
     NOT_FOUND("NOT_FOUND", HttpStatus.NOT_FOUND, "Resource was not found."),
     CONFLICT("CONFLICT", HttpStatus.CONFLICT, "Resource state conflict."),
     VALIDATION_FAILED("VALIDATION_FAILED", HttpStatus.UNPROCESSABLE_CONTENT, "Request validation failed."),
