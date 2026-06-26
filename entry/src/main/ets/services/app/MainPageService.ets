@@ -1,4 +1,4 @@
-import { AppColors } from '../../styles/AppTheme';
+import { AppTone } from '../../styles/AppTheme';
 import {
   ArchiveDashboardStats,
   ManagementDashboardStats,
@@ -44,7 +44,7 @@ export class MainPageService {
       actions.push({
         id: MainPageActionId.ArchiveCenter,
         title: '档案中心',
-        tone: AppColors.Primary
+        tone: AppTone.Primary
       });
     }
 
@@ -52,7 +52,7 @@ export class MainPageService {
       actions.push({
         id: MainPageActionId.OperationsCenter,
         title: '运维中心',
-        tone: AppColors.Primary
+        tone: AppTone.Success
       });
     }
 
@@ -60,7 +60,7 @@ export class MainPageService {
       actions.push({
         id: MainPageActionId.ManagementCenter,
         title: '管理中心',
-        tone: AppColors.Primary
+        tone: AppTone.Warning
       });
     }
 
@@ -75,14 +75,14 @@ export class MainPageService {
     const actions: MainPageAction[] = [{
       id: MainPageActionId.DeviceArchiveQuery,
       title: '查询设备档案',
-      tone: AppColors.Primary
+      tone: AppTone.Primary
     }];
 
     if (SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveCreateRequestSubmit)) {
       actions.push({
         id: MainPageActionId.DeviceArchiveCreateRequest,
         title: '添加设备档案',
-        tone: AppColors.Primary
+        tone: AppTone.Primary
       });
     }
 
@@ -93,19 +93,19 @@ export class MainPageService {
     const actions: MainPageAction[] = [];
 
     if (SessionStore.hasPermission(PermissionCode.OperationsCenterDeviceVerificationSubmit)) {
-      actions.push(MainPageService.createAction(MainPageActionId.DeviceVerification, '核验与报修', AppColors.Primary));
+      actions.push(MainPageService.createAction(MainPageActionId.DeviceVerification, '核验与报修', AppTone.Success));
     }
 
     if (MainPageService.canAcceptAnyOperationTask()) {
-      actions.push(MainPageService.createAction(MainPageActionId.TaskAcceptance, '任务接取', AppColors.Primary));
+      actions.push(MainPageService.createAction(MainPageActionId.TaskAcceptance, '任务接取', AppTone.Success));
     }
 
     if (SessionStore.hasPermission(PermissionCode.OperationsCenterRepairReportSubmit)) {
-      actions.push(MainPageService.createAction(MainPageActionId.RepairReport, '维修任务', AppColors.Primary));
+      actions.push(MainPageService.createAction(MainPageActionId.RepairReport, '维修任务', AppTone.Success));
     }
 
     if (SessionStore.hasPermission(PermissionCode.OperationsCenterReinspectionReportSubmit)) {
-      actions.push(MainPageService.createAction(MainPageActionId.ReinspectionReport, '复检任务', AppColors.Primary));
+      actions.push(MainPageService.createAction(MainPageActionId.ReinspectionReport, '复检任务', AppTone.Success));
     }
 
     return actions;
@@ -117,7 +117,7 @@ export class MainPageService {
       actions.push({
         id: MainPageActionId.DeviceArchiveReview,
         title: '档案审核',
-        tone: AppColors.Primary
+        tone: AppTone.Warning
       });
     }
 
@@ -125,7 +125,7 @@ export class MainPageService {
       actions.push({
         id: MainPageActionId.OperationsReview,
         title: '运维审核',
-        tone: AppColors.Primary
+        tone: AppTone.Warning
       });
     }
 
@@ -133,7 +133,7 @@ export class MainPageService {
       actions.push({
         id: MainPageActionId.RecordQuery,
         title: '记录查询',
-        tone: AppColors.Primary
+        tone: AppTone.Warning
       });
     }
 
@@ -165,7 +165,7 @@ export class MainPageService {
       SessionStore.hasPermission(PermissionCode.OperationsCenterReinspectionTaskAccept);
   }
 
-  private static createAction(id: MainPageActionId, title: string, tone: string): MainPageAction {
+  private static createAction(id: MainPageActionId, title: string, tone: AppTone): MainPageAction {
     return {
       id,
       title,

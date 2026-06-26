@@ -1,3 +1,5 @@
+import { AppTone } from '../../styles/AppTheme';
+
 export enum MainPageActionId {
   ArchiveCenter = 'ARCHIVE_CENTER',
   OperationsCenter = 'OPERATIONS_CENTER',
@@ -19,7 +21,7 @@ export enum MainPageActionId {
 export interface MainPageAction {
   id: MainPageActionId;
   title: string;
-  tone: string;
+  tone: AppTone;
 }
 
 export interface ArchiveDashboardStats {

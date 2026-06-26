@@ -46,6 +46,7 @@ export class AppThemeService {
     AppThemeService.ensureInitialized();
     const normalizedMode = AppThemeService.parseThemeMode(mode);
     AppThemeService.themeMode = normalizedMode;
+    AppThemeService.syncEffectiveColorModeForThemeMode(normalizedMode);
     AppThemeService.persistThemeMode(normalizedMode);
     AppThemeService.applyToApplication(applicationContext, configuration);
     AppThemeService.notifyThemeChanged();
@@ -53,7 +54,11 @@ export class AppThemeService {
 
   static applyToApplication(applicationContext?: common.ApplicationContext, configuration?: Configuration): void {
     AppThemeService.ensureInitialized();
-    AppThemeService.updateEffectiveColorMode(configuration);
+    if (AppThemeService.themeMode === AppThemeMode.FollowSystem) {
+      AppThemeService.updateEffectiveColorMode(configuration);
+    } else {
+      AppThemeService.syncEffectiveColorModeForThemeMode(AppThemeService.themeMode);
+    }
 
     if (applicationContext === undefined) {
       return;
@@ -67,6 +72,15 @@ export class AppThemeService {
 
   static updateEffectiveColorMode(configuration?: Configuration): void {
     AppThemeService.ensureInitialized();
+    if (AppThemeService.themeMode !== AppThemeMode.FollowSystem) {
+      const previousEffectiveDarkMode = AppThemeService.effectiveDarkMode;
+      AppThemeService.syncEffectiveColorModeForThemeMode(AppThemeService.themeMode);
+      if (previousEffectiveDarkMode !== AppThemeService.effectiveDarkMode) {
+        AppThemeService.notifyThemeChanged();
+      }
+      return;
+    }
+
     if (configuration === undefined || configuration.colorMode === undefined) {
       return;
     }
@@ -112,6 +126,17 @@ export class AppThemeService {
     try {
       AppStorage.setOrCreate<string>(THEME_MODE_STORAGE_KEY, mode);
     } catch (err) {
+    }
+  }
+
+  private static syncEffectiveColorModeForThemeMode(mode: AppThemeMode): void {
+    if (mode === AppThemeMode.Light) {
+      AppThemeService.effectiveDarkMode = false;
+      return;
+    }
+
+    if (mode === AppThemeMode.Dark) {
+      AppThemeService.effectiveDarkMode = true;
     }
   }
 

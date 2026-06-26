@@ -1,4 +1,4 @@
-import { AppColors, AppRadii } from '../styles/AppTheme';
+import { AppColors, AppRadii, AppTone } from '../styles/AppTheme';
 import { UiFeedbackTone } from '../models/common/UiFeedbackModels';
 import { UiFeedbackService } from '../services/common/UiFeedbackService';
 
@@ -36,7 +36,7 @@ export struct InlineMessageSurface {
   }
 
   getSurfaceTone(): string {
-    return AppColors.surfaceForTone(this.getTextTone());
+    return AppColors.surfaceForTone(this.getAppTone());
   }
 
   getSymbol(): Resource {
@@ -51,17 +51,21 @@ export struct InlineMessageSurface {
   }
 
   getTextTone(): string {
+    return AppColors.colorForTone(this.getAppTone());
+  }
+
+  getAppTone(): AppTone {
     const tone = this.getSemanticTone();
     if (tone === UiFeedbackTone.Success) {
-      return AppColors.Success;
+      return AppTone.Success;
     }
     if (tone === UiFeedbackTone.Warning) {
-      return AppColors.Warning;
+      return AppTone.Warning;
     }
     if (tone === UiFeedbackTone.Info) {
-      return AppColors.Primary;
+      return AppTone.Primary;
     }
-    return AppColors.Danger;
+    return AppTone.Danger;
   }
 
   getSemanticTone(): UiFeedbackTone {

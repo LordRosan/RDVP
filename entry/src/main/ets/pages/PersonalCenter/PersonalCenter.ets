@@ -1,4 +1,4 @@
-import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
+import { AppColors, AppRadii, AppSpacing, AppTone } from '../../styles/AppTheme';
 import { AccountActionTile } from '../../components/AccountActionTile';
 import { AppSectionTitle } from '../../components/AppSectionTitle';
 import { CenterTitleBar } from '../../components/CenterTitleBar';
@@ -174,7 +174,7 @@ struct PersonalCenter {
         AccountActionTile({
           label: '应用设置',
           icon: $r('sys.symbol.gearshape'),
-          tone: AppColors.Primary
+          tone: AppTone.Primary
         })
           .onClick(() => {
             this.openApplicationSettings();
@@ -183,7 +183,7 @@ struct PersonalCenter {
         AccountActionTile({
           label: '退出登录',
           icon: $r('sys.symbol.person_badge_nosign'),
-          tone: AppColors.Danger
+          tone: AppTone.Danger
         })
           .onClick(() => {
             this.logout();

@@ -6,7 +6,7 @@ import { MainPageAction, MainPageActionId } from '../../models/app/MainPageModel
 import { ManagementCenterRecordPermissions, PermissionCode } from '../../models/identity/PermissionModels';
 import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { SessionStore } from '../../stores/SessionStore';
-import { AppColors, AppSpacing } from '../../styles/AppTheme';
+import { AppColors, AppSpacing, AppTone } from '../../styles/AppTheme';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
@@ -211,21 +211,21 @@ struct RecordQuery {
       actions.push({
         id: MainPageActionId.ArchiveRecordQuery,
         title: '档案记录',
-        tone: UiFeedbackTone.Info
+        tone: AppTone.Warning
       });
     }
     if (SessionStore.hasPermission(PermissionCode.ManagementCenterOperationRecordQuery)) {
       actions.push({
         id: MainPageActionId.OperationRecordQuery,
         title: '运维记录',
-        tone: UiFeedbackTone.Info
+        tone: AppTone.Warning
       });
     }
     if (SessionStore.hasPermission(PermissionCode.ManagementCenterReviewRecordQuery)) {
       actions.push({
         id: MainPageActionId.ReviewRecordQuery,
         title: '审核记录',
-        tone: UiFeedbackTone.Info
+        tone: AppTone.Warning
       });
     }
 

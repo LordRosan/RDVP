@@ -1,7 +1,9 @@
 import { describe, expect, it } from '@ohos/hypium';
 import { DeviceStatus } from '../main/ets/models/archive/DeviceModels';
 import { UiFeedbackTone } from '../main/ets/models/common/UiFeedbackModels';
-import { AppColors } from '../main/ets/styles/AppTheme';
+import { AppColors, AppTone } from '../main/ets/styles/AppTheme';
+import { AppThemeMode } from '../main/ets/models/app/ThemeModels';
+import { AppThemeService } from '../main/ets/services/app/AppThemeService';
 import { UiFeedbackService } from '../main/ets/services/common/UiFeedbackService';
 import { AuthService } from '../main/ets/services/identity/AuthService';
 import { DeviceArchiveRequestService } from '../main/ets/services/archive/DeviceArchiveRequestService';
@@ -66,10 +68,28 @@ export default function localUnitTest() {
     });
 
     it('mapsSemanticCenterTonesToMatchingSurfaces', 0, () => {
-      expect(AppColors.surfaceForTone(AppColors.Primary)).assertEqual(AppColors.PrimarySurface);
-      expect(AppColors.surfaceForTone(AppColors.Success)).assertEqual(AppColors.SuccessSurface);
-      expect(AppColors.surfaceForTone(AppColors.Warning)).assertEqual(AppColors.WarningSurface);
-      expect(AppColors.surfaceForTone(AppColors.Danger)).assertEqual(AppColors.DangerSurface);
+      expect(AppColors.colorForTone(AppTone.Primary)).assertEqual(AppColors.Primary);
+      expect(AppColors.colorForTone(AppTone.Success)).assertEqual(AppColors.Success);
+      expect(AppColors.colorForTone(AppTone.Warning)).assertEqual(AppColors.Warning);
+      expect(AppColors.colorForTone(AppTone.Danger)).assertEqual(AppColors.Danger);
+      expect(AppColors.surfaceForTone(AppTone.Primary)).assertEqual(AppColors.PrimarySurface);
+      expect(AppColors.surfaceForTone(AppTone.Success)).assertEqual(AppColors.SuccessSurface);
+      expect(AppColors.surfaceForTone(AppTone.Warning)).assertEqual(AppColors.WarningSurface);
+      expect(AppColors.surfaceForTone(AppTone.Danger)).assertEqual(AppColors.DangerSurface);
+    });
+
+    it('resolvesSemanticTonesAgainstCurrentThemeMode', 0, () => {
+      AppThemeService.setThemeMode(AppThemeMode.Light);
+      expect(AppThemeService.isDarkTheme()).assertEqual(false);
+      expect(AppColors.surfaceForTone(AppTone.Success)).assertEqual('#E7F7F0');
+      expect(AppColors.surfaceForTone(AppTone.Warning)).assertEqual('#FFF3DF');
+
+      AppThemeService.setThemeMode(AppThemeMode.Dark);
+      expect(AppThemeService.isDarkTheme()).assertEqual(true);
+      expect(AppColors.surfaceForTone(AppTone.Success)).assertEqual('#14382F');
+      expect(AppColors.surfaceForTone(AppTone.Warning)).assertEqual('#402D12');
+
+      AppThemeService.setThemeMode(AppThemeMode.Light);
     });
 
     it('validatesTaskAcceptanceQueryAgainstProvidedWorkload', 0, () => {

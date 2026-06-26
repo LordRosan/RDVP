@@ -1,5 +1,12 @@
 import { AppThemeService } from '../services/app/AppThemeService';
 
+export enum AppTone {
+  Primary = 'PRIMARY',
+  Success = 'SUCCESS',
+  Warning = 'WARNING',
+  Danger = 'DANGER'
+}
+
 export class AppColors {
   static get Primary(): string {
     return AppThemeService.isDarkTheme() ? '#6EA3FF' : '#0A59F7';
@@ -105,16 +112,32 @@ export class AppColors {
     return AppThemeService.isDarkTheme() ? '#335B8CFF' : '#1A0A59F7';
   }
 
-  static surfaceForTone(tone: string): string {
-    if (tone === AppColors.Success) {
+  static colorForTone(tone: AppTone): string {
+    if (tone === AppTone.Success) {
+      return AppColors.Success;
+    }
+
+    if (tone === AppTone.Warning) {
+      return AppColors.Warning;
+    }
+
+    if (tone === AppTone.Danger) {
+      return AppColors.Danger;
+    }
+
+    return AppColors.Primary;
+  }
+
+  static surfaceForTone(tone: AppTone): string {
+    if (tone === AppTone.Success) {
       return AppColors.SuccessSurface;
     }
 
-    if (tone === AppColors.Warning) {
+    if (tone === AppTone.Warning) {
       return AppColors.WarningSurface;
     }
 
-    if (tone === AppColors.Danger) {
+    if (tone === AppTone.Danger) {
       return AppColors.DangerSurface;
     }
 

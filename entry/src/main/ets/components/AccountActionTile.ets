@@ -1,17 +1,18 @@
-import { AppColors, AppRadii } from '../styles/AppTheme';
+import { AppColors, AppRadii, AppTone } from '../styles/AppTheme';
 
 @Component
 export struct AccountActionTile {
+  @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   label: string = '';
   icon: Resource = $r('sys.symbol.gearshape');
-  tone: string = AppColors.Primary;
+  tone: AppTone = AppTone.Primary;
 
   build() {
     Row({ space: 14 }) {
       Stack() {
         SymbolGlyph(this.icon)
           .fontSize(24)
-          .fontColor([this.tone])
+          .fontColor([this.getToneColor()])
       }
       .width(48)
       .height(48)
@@ -47,5 +48,9 @@ export struct AccountActionTile {
 
   getToneSurface(): string {
     return AppColors.surfaceForTone(this.tone);
+  }
+
+  getToneColor(): string {
+    return AppColors.colorForTone(this.tone);
   }
 }

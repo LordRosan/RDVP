@@ -1,12 +1,13 @@
-import { AppColors, AppRadii } from '../styles/AppTheme';
+import { AppColors, AppRadii, AppTone } from '../styles/AppTheme';
 import { MainPageAction, MainPageActionId } from '../models/app/MainPageModels';
 
 @Component
 export struct ActionTile {
+  @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   action: MainPageAction = {
     id: MainPageActionId.ArchiveCenter,
     title: '',
-    tone: AppColors.Primary
+    tone: AppTone.Primary
   };
 
   build() {
@@ -88,26 +89,14 @@ export struct ActionTile {
   }
 
   getTone(): string {
-    if (this.action.id === MainPageActionId.OperationsCenter ||
-      this.action.id === MainPageActionId.DeviceVerification ||
-      this.action.id === MainPageActionId.TaskAcceptance ||
-      this.action.id === MainPageActionId.RepairReport ||
-      this.action.id === MainPageActionId.ReinspectionReport) {
-      return AppColors.Success;
-    }
-    if (this.action.id === MainPageActionId.ManagementCenter ||
-      this.action.id === MainPageActionId.DeviceArchiveReview ||
-      this.action.id === MainPageActionId.OperationsReview ||
-      this.action.id === MainPageActionId.ArchiveRecordQuery ||
-      this.action.id === MainPageActionId.OperationRecordQuery ||
-      this.action.id === MainPageActionId.ReviewRecordQuery ||
-      this.action.id === MainPageActionId.RecordQuery) {
-      return AppColors.Warning;
-    }
-    return AppColors.Primary;
+    return AppColors.colorForTone(this.getSemanticTone());
+  }
+
+  getSemanticTone(): AppTone {
+    return this.action.tone;
   }
 
   getSurfaceTone(): string {
-    return AppColors.surfaceForTone(this.getTone());
+    return AppColors.surfaceForTone(this.getSemanticTone());
   }
 }

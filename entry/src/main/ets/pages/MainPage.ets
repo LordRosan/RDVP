@@ -1,4 +1,4 @@
-import { AppColors, AppRadii, AppSpacing } from '../styles/AppTheme';
+import { AppColors, AppRadii, AppSpacing, AppTone } from '../styles/AppTheme';
 import { AccountActionTile } from '../components/AccountActionTile';
 import { ActionTile } from '../components/ActionTile';
 import { AppSectionTitle } from '../components/AppSectionTitle';
@@ -225,9 +225,9 @@ struct MainPage {
   @Builder
   DashboardSection() {
     if (this.dashboardLoaded && this.hasDashboardContent()) {
-      ForEach([this.dashboardRenderRevision], () => {
+      ForEach([this.getDashboardRenderKey()], () => {
         this.DashboardContent()
-      }, (revision: number) => `${revision}`)
+      }, (revision: string) => revision)
     }
   }
 
@@ -246,7 +246,7 @@ struct MainPage {
           this.getArchivePrimaryValue(),
           this.getArchiveDashboardMetrics(),
           $r('sys.symbol.text_clipboard'),
-          AppColors.Primary)
+          AppTone.Primary)
       }
 
       if (this.shouldShowOperationsDashboard()) {
@@ -256,7 +256,7 @@ struct MainPage {
           this.getOperationsPrimaryValue(),
           this.getOperationsDashboardMetrics(),
           $r('sys.symbol.wrench_and_screwdriver'),
-          AppColors.Success)
+          AppTone.Success)
       }
 
       if (this.shouldShowManagementDashboard()) {
@@ -266,7 +266,7 @@ struct MainPage {
           this.getManagementPrimaryValue(),
           this.getManagementDashboardMetrics(),
           $r('sys.symbol.checkmark_shield'),
-          AppColors.Warning)
+          AppTone.Warning)
       }
     }
     .width('100%')
@@ -280,14 +280,14 @@ struct MainPage {
     primaryValue: number,
     metrics: DashboardMetric[],
     icon: Resource,
-    tone: string
+    tone: AppTone
   ) {
     Column({ space: 16 }) {
       Row({ space: 12 }) {
         Stack() {
           SymbolGlyph(icon)
             .fontSize(24)
-            .fontColor([tone])
+            .fontColor([AppColors.colorForTone(tone)])
         }
         .width(46)
         .height(46)
@@ -315,7 +315,7 @@ struct MainPage {
           Text(this.formatDashboardValue(primaryValue))
             .fontSize(34)
             .fontWeight(FontWeight.Bold)
-            .fontColor(tone)
+            .fontColor(AppColors.colorForTone(tone))
             .maxLines(1)
             .textAlign(TextAlign.End)
         }
@@ -534,7 +534,7 @@ struct MainPage {
         AccountActionTile({
           label: '应用设置',
           icon: $r('sys.symbol.gearshape'),
-          tone: AppColors.Primary
+          tone: AppTone.Primary
         })
           .onClick(() => {
             this.openApplicationSettings();
@@ -543,7 +543,7 @@ struct MainPage {
         AccountActionTile({
           label: '退出登录',
           icon: $r('sys.symbol.person_badge_nosign'),
-          tone: AppColors.Danger
+          tone: AppTone.Danger
         })
           .onClick(() => {
             this.logout();
@@ -869,8 +869,12 @@ struct MainPage {
     return `${value}`;
   }
 
-  getDashboardToneSurface(tone: string): string {
+  getDashboardToneSurface(tone: AppTone): string {
     return AppColors.surfaceForTone(tone);
+  }
+
+  getDashboardRenderKey(): string {
+    return `${this.dashboardRenderRevision}-${this.themeRevision}`;
   }
 
   formatSessionExpiresAt(): string {
