@@ -1,6 +1,7 @@
 import { describe, expect, it } from '@ohos/hypium';
 import { DeviceStatus } from '../main/ets/models/archive/DeviceModels';
 import { UiFeedbackTone } from '../main/ets/models/common/UiFeedbackModels';
+import { AppColors } from '../main/ets/styles/AppTheme';
 import { UiFeedbackService } from '../main/ets/services/common/UiFeedbackService';
 import { AuthService } from '../main/ets/services/identity/AuthService';
 import { DeviceArchiveRequestService } from '../main/ets/services/archive/DeviceArchiveRequestService';
@@ -62,6 +63,13 @@ export default function localUnitTest() {
       const response = RepairTaskService.createWorkloadSnapshot(3);
 
       expect(response.message).assertEqual('任务接取功能暂不可用，请稍后重试');
+    });
+
+    it('mapsSemanticCenterTonesToMatchingSurfaces', 0, () => {
+      expect(AppColors.surfaceForTone(AppColors.Primary)).assertEqual(AppColors.PrimarySurface);
+      expect(AppColors.surfaceForTone(AppColors.Success)).assertEqual(AppColors.SuccessSurface);
+      expect(AppColors.surfaceForTone(AppColors.Warning)).assertEqual(AppColors.WarningSurface);
+      expect(AppColors.surfaceForTone(AppColors.Danger)).assertEqual(AppColors.DangerSurface);
     });
 
     it('validatesTaskAcceptanceQueryAgainstProvidedWorkload', 0, () => {

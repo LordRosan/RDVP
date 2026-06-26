@@ -108,13 +108,6 @@ export struct ActionTile {
   }
 
   getSurfaceTone(): string {
-    const tone = this.getTone();
-    if (tone === AppColors.Success) {
-      return AppColors.SuccessSurface;
-    }
-    if (tone === AppColors.Warning) {
-      return AppColors.WarningSurface;
-    }
-    return AppColors.PrimarySurface;
+    return AppColors.surfaceForTone(this.getTone());
   }
 }

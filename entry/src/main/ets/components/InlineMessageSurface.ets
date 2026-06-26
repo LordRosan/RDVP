@@ -36,17 +36,7 @@ export struct InlineMessageSurface {
   }
 
   getSurfaceTone(): string {
-    const tone = this.getSemanticTone();
-    if (tone === UiFeedbackTone.Success) {
-      return AppColors.SuccessSurface;
-    }
-    if (tone === UiFeedbackTone.Warning) {
-      return AppColors.WarningSurface;
-    }
-    if (tone === UiFeedbackTone.Info) {
-      return AppColors.PrimarySurface;
-    }
-    return AppColors.DangerSurface;
+    return AppColors.surfaceForTone(this.getTextTone());
   }
 
   getSymbol(): Resource {

@@ -46,10 +46,6 @@ export struct AccountActionTile {
   }
 
   getToneSurface(): string {
-    if (this.tone === AppColors.Danger) {
-      return AppColors.DangerSurface;
-    }
-
-    return AppColors.PrimarySurface;
+    return AppColors.surfaceForTone(this.tone);
   }
 }

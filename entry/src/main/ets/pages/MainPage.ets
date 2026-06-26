@@ -870,15 +870,7 @@ struct MainPage {
   }
 
   getDashboardToneSurface(tone: string): string {
-    if (tone === AppColors.Success) {
-      return AppColors.SuccessSurface;
-    }
-
-    if (tone === AppColors.Warning) {
-      return AppColors.WarningSurface;
-    }
-
-    return AppColors.PrimarySurface;
+    return AppColors.surfaceForTone(tone);
   }
 
   formatSessionExpiresAt(): string {

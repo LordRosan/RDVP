@@ -104,6 +104,22 @@ export class AppColors {
   static get HeroGlow(): string {
     return AppThemeService.isDarkTheme() ? '#335B8CFF' : '#1A0A59F7';
   }
+
+  static surfaceForTone(tone: string): string {
+    if (tone === AppColors.Success) {
+      return AppColors.SuccessSurface;
+    }
+
+    if (tone === AppColors.Warning) {
+      return AppColors.WarningSurface;
+    }
+
+    if (tone === AppColors.Danger) {
+      return AppColors.DangerSurface;
+    }
+
+    return AppColors.PrimarySurface;
+  }
 }
 
 export class AppRadii {
