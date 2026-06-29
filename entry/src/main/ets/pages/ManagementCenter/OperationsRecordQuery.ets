@@ -111,22 +111,18 @@ struct OperationsRecordQuery {
 
   @Builder
   DateRangePanel() {
-    Row({ space: 10 }) {
-      this.DateField('开始日期', this.startDate, '请选择开始日期', () => {
-        this.showStartDatePicker();
-      })
-      this.DateField('结束日期', this.endDate, '请选择结束日期', () => {
-        this.showEndDatePicker();
-      })
+    Column({ space: 10 }) {
+      this.StartDateField()
+      this.EndDateField()
     }
     .width('100%')
-    .alignItems(VerticalAlign.Center)
+    .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
-  DateField(label: string, value: string, placeholder: string, action: () => void) {
+  StartDateField() {
     Column({ space: 8 }) {
-      Text(label)
+      Text('开始日期')
         .fontSize(14)
         .fontWeight(FontWeight.Medium)
         .fontColor(AppColors.TextSecondary)
@@ -135,11 +131,11 @@ struct OperationsRecordQuery {
       Row({ space: 8 }) {
         SymbolGlyph($r('sys.symbol.calendar'))
           .fontSize(18)
-          .fontColor([value.length > 0 ? AppColors.TextPrimary : AppColors.TextSecondary])
+          .fontColor([this.startDate.length > 0 ? AppColors.TextPrimary : AppColors.TextSecondary])
 
-        Text(value.length > 0 ? value : placeholder)
+        Text(this.startDate.length > 0 ? this.startDate : '请选择开始日期')
           .fontSize(14)
-          .fontColor(value.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
+          .fontColor(this.startDate.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
           .layoutWeight(1)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -151,10 +147,45 @@ struct OperationsRecordQuery {
       .padding({ left: 14, right: 14 })
       .border({ width: 1, color: AppColors.Border })
       .onClick(() => {
-        action();
+        this.showStartDatePicker();
       })
     }
-    .layoutWeight(1)
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  EndDateField() {
+    Column({ space: 8 }) {
+      Text('结束日期')
+        .fontSize(14)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextSecondary)
+        .maxLines(1)
+
+      Row({ space: 8 }) {
+        SymbolGlyph($r('sys.symbol.calendar'))
+          .fontSize(18)
+          .fontColor([this.endDate.length > 0 ? AppColors.TextPrimary : AppColors.TextSecondary])
+
+        Text(this.endDate.length > 0 ? this.endDate : '请选择结束日期')
+          .fontSize(14)
+          .fontColor(this.endDate.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
+          .layoutWeight(1)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .height(52)
+      .width('100%')
+      .backgroundColor(AppColors.FieldBackground)
+      .borderRadius(18)
+      .padding({ left: 14, right: 14 })
+      .border({ width: 1, color: AppColors.Border })
+      .onClick(() => {
+        this.showEndDatePicker();
+      })
+    }
+    .width('100%')
     .alignItems(HorizontalAlign.Start)
   }
 
@@ -277,18 +308,9 @@ struct OperationsRecordQuery {
             .fontWeight(FontWeight.Bold)
             .fontColor(AppColors.TextPrimary)
             .maxLines(1)
-          Text(item.deviceCode)
-            .fontSize(13)
-            .fontColor(AppColors.TextSecondary)
-            .maxLines(1)
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
-        Text(item.statusLabel)
-          .fontSize(13)
-          .fontColor(RecordQueryService.getStatusTone(item.status))
-          .fontWeight(FontWeight.Medium)
-          .maxLines(1)
       }
       .width('100%')
 
@@ -296,6 +318,7 @@ struct OperationsRecordQuery {
       if (item.taskNo.length > 0 && item.taskNo !== '-') {
         this.RecordFieldRow('任务编号', item.taskNo)
       }
+      this.RecordFieldRow('状态', item.statusLabel, RecordQueryService.getStatusTone(item.status))
       this.RecordFieldRow('操作人', item.operatorName)
       this.RecordFieldRow('时间', item.occurredAt)
     }
@@ -307,7 +330,7 @@ struct OperationsRecordQuery {
   }
 
   @Builder
-  RecordFieldRow(label: string, value: string) {
+  RecordFieldRow(label: string, value: string, tone: string = AppColors.TextSecondary) {
     Row() {
       Text(label)
         .fontSize(13)
@@ -317,7 +340,7 @@ struct OperationsRecordQuery {
         .maxLines(1)
       Text(value)
         .fontSize(13)
-        .fontColor(AppColors.TextSecondary)
+        .fontColor(tone)
         .maxLines(1)
     }
     .width('100%')
