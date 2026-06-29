@@ -100,6 +100,10 @@ export class RecordQueryService {
         return '成功';
       case 'FAILED':
         return '失败';
+      case 'NORMAL':
+        return '正常';
+      case 'ABNORMAL':
+        return '异常';
       case 'APPROVED':
         return '已通过';
       case 'REJECTED':
@@ -110,12 +114,24 @@ export class RecordQueryService {
         return '待接取';
       case 'ACCEPTED':
         return '已接取';
+      case 'PROCESSING':
+        return '维修中';
+      case 'REPORT_SUBMITTED':
+        return '报告已提交';
       case 'PENDING_REINSPECTION':
         return '待复检';
       case 'CLOSED':
         return '已完成';
       case 'UNDER_REPAIR':
         return '维修中';
+      case 'REPAIRED':
+        return '已修复';
+      case 'TEMPORARY_RESTORED':
+        return '临时修复';
+      case 'UNRESOLVED':
+        return '未修复';
+      case 'PASSED':
+        return '通过';
       default:
         return status;
     }

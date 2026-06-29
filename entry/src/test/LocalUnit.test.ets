@@ -13,6 +13,8 @@ import { RepairTaskService } from '../main/ets/services/operations/RepairTaskSer
 import { AppNavigator } from '../main/ets/utils/AppNavigator';
 import { RecordCategory } from '../main/ets/models/management/RecordQueryModels';
 import { RecordQueryService } from '../main/ets/services/management/RecordQueryService';
+import { ReinspectionService } from '../main/ets/services/operations/ReinspectionService';
+import { ReinspectionTaskStatus } from '../main/ets/models/operations/ReinspectionModels';
 
 export default function localUnitTest() {
   describe('uiFeedbackMessages', () => {
@@ -118,11 +120,37 @@ export default function localUnitTest() {
       expect(path).assertEqual('/api/v1/management-records?category=OPERATIONS&page=1&pageSize=50&keyword=RDVP-DEVICE-0001&type=REPAIR_REPORT&startDate=2026-06-01&endDate=2026-06-25');
     });
 
+    it('buildsDefaultRecordQueryPathAfterFilterReset', 0, () => {
+      const path = RecordQueryService.buildRecordQueryPath({
+        category: RecordCategory.Archive,
+        type: '',
+        keyword: '',
+        startDate: '',
+        endDate: '',
+        page: 1,
+        pageSize: 50
+      });
+
+      expect(path).assertEqual('/api/v1/management-records?category=ARCHIVE&page=1&pageSize=50');
+    });
+
     it('formatsRecordTypesForRecords', 0, () => {
       expect(RecordQueryService.formatTypeLabel('DEVICE_ARCHIVE_EXPORT', RecordCategory.Archive)).assertEqual('档案导出');
       expect(RecordQueryService.formatTypeLabel('DEVICE_VERIFICATION', RecordCategory.Operations)).assertEqual('核验报告');
       expect(RecordQueryService.formatTypeLabel('CREATE', RecordCategory.Review)).assertEqual('添加档案');
       expect(RecordQueryService.formatTypeLabel('CREATE', RecordCategory.Archive)).assertEqual('档案添加');
+    });
+
+    it('formatsRecordStatusesForSeedData', 0, () => {
+      expect(RecordQueryService.formatStatus('NORMAL')).assertEqual('正常');
+      expect(RecordQueryService.formatStatus('REPORT_SUBMITTED')).assertEqual('报告已提交');
+      expect(RecordQueryService.formatStatus('REPAIRED')).assertEqual('已修复');
+      expect(RecordQueryService.formatStatus('PASSED')).assertEqual('通过');
+    });
+
+    it('formatsReinspectionTaskStatusLabels', 0, () => {
+      expect(ReinspectionService.formatTaskStatus(ReinspectionTaskStatus.Pending)).assertEqual('待复检');
+      expect(ReinspectionService.formatTaskStatus(ReinspectionTaskStatus.Completed)).assertEqual('已完成');
     });
   });
 

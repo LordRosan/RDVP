@@ -45,6 +45,7 @@ struct OperationsReview {
   @State refreshing: boolean = false;
   @State submitting: boolean = false;
   @State reviewReady: boolean = false;
+  @State filterResetRevision: number = 0;
 
   aboutToAppear(): void {
     if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ManagementCenterOperationsReview)) {
@@ -135,25 +136,10 @@ struct OperationsReview {
       })
 
       Column({ space: 14 }) {
-        Column() {
-          Filter({
-            multiFilters: this.getRequestFilterParams(),
-            onFilterChanged: (filterResults: FilterResult[]) => {
-              this.applyRequestFilterResults(filterResults);
-            },
-            filterType: FilterType.LIST_FILTER
-          }) {
-            Column()
-              .width('100%')
-              .height(1)
-          }
-        }
-        .height(REVIEW_FILTER_CONTROL_HEIGHT)
-        .width('100%')
-        .clip(true)
+        this.RequestTypeFilterControl()
 
         this.RefreshMessageText()
-        this.RefreshButton()
+        this.ListActionButtons()
         this.RequestFilterResultList()
       }
       .width('100%')
@@ -176,6 +162,35 @@ struct OperationsReview {
   }
 
   @Builder
+  RequestTypeFilterControl() {
+    if (this.filterResetRevision % 2 === 0) {
+      this.RequestTypeFilterInstance()
+    } else {
+      this.RequestTypeFilterInstance()
+    }
+  }
+
+  @Builder
+  RequestTypeFilterInstance() {
+    Column() {
+      Filter({
+        multiFilters: this.getRequestFilterParams(),
+        onFilterChanged: (filterResults: FilterResult[]) => {
+          this.applyRequestFilterResults(filterResults);
+        },
+        filterType: FilterType.LIST_FILTER
+      }) {
+        Column()
+          .width('100%')
+          .height(1)
+      }
+    }
+    .height(REVIEW_FILTER_CONTROL_HEIGHT)
+    .width('100%')
+    .clip(true)
+  }
+
+  @Builder
   RefreshButton() {
     Button({ type: ButtonType.Capsule, stateEffect: !this.refreshing && !this.submitting }) {
       Row({ space: 8 }) {
@@ -194,12 +209,50 @@ struct OperationsReview {
       .alignItems(VerticalAlign.Center)
     }
     .height(54)
-    .width('100%')
+    .layoutWeight(1)
     .backgroundColor(this.refreshing || this.submitting ? AppColors.Disabled : AppColors.Primary)
     .enabled(!this.refreshing && !this.submitting)
     .onClick(() => {
       this.refreshRequests();
     })
+  }
+
+  @Builder
+  ResetButton() {
+    Button({ type: ButtonType.Capsule, stateEffect: !this.refreshing && !this.submitting }) {
+      Row({ space: 8 }) {
+        SymbolGlyph($r('sys.symbol.xmark_circle'))
+          .fontSize(20)
+          .fontColor([AppColors.TextPrimary])
+
+        Text('重置')
+          .fontSize(17)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppColors.TextPrimary)
+          .maxLines(1)
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+    }
+    .height(54)
+    .layoutWeight(1)
+    .backgroundColor(AppColors.FieldBackground)
+    .border({ width: 1, color: AppColors.Border })
+    .enabled(!this.refreshing && !this.submitting)
+    .onClick(() => {
+      this.resetFilters();
+    })
+  }
+
+  @Builder
+  ListActionButtons() {
+    Row({ space: 10 }) {
+      this.ResetButton()
+      this.RefreshButton()
+    }
+    .width('100%')
+    .alignItems(VerticalAlign.Center)
   }
 
   @Builder
@@ -240,6 +293,12 @@ struct OperationsReview {
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
+
+        Text(OperationsReviewService.formatStatus(item.status))
+          .fontSize(13)
+          .fontColor(OperationsReviewService.getStatusTone(item.status))
+          .fontWeight(FontWeight.Medium)
+          .maxLines(1)
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
@@ -684,6 +743,13 @@ struct OperationsReview {
   }
 
   selectRequest(item: OperationsReviewItem): void {
+    if (this.selectedRequestId === item.id) {
+      this.clearReviewForm();
+      this.message = '';
+      this.messageTone = UiFeedbackTone.Danger;
+      return;
+    }
+
     this.selectedRequestId = item.id;
     this.reviewDecision = '';
     this.reviewComment = '';
@@ -700,6 +766,14 @@ struct OperationsReview {
     });
     this.requestTypeFilterIndex = result === undefined ? 0 :
       this.normalizeFilterIndex(result.index, OPERATIONS_REVIEW_TYPE_VALUES.length);
+    this.refreshRequests();
+  }
+
+  resetFilters(): void {
+    this.requestTypeFilterIndex = 0;
+    this.refreshMessage = '';
+    this.refreshMessageTone = UiFeedbackTone.Danger;
+    this.filterResetRevision += 1;
     this.refreshRequests();
   }
 

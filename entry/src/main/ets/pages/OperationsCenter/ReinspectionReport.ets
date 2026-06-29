@@ -133,7 +133,7 @@ struct ReinspectionReport {
   TaskResultPanel() {
     Column({ space: 12 }) {
       this.TaskMessageText()
-      this.ActionButton(this.refreshing ? '刷新中' : '刷新任务', $r('sys.symbol.arrow_clockwise'),
+      this.ActionButton(this.refreshing ? '刷新中' : '刷新', $r('sys.symbol.arrow_clockwise'),
         !this.refreshing && !this.submitting, () => {
           this.refreshTasks();
         })
@@ -218,34 +218,22 @@ struct ReinspectionReport {
             .fontColor(AppColors.TextPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-          Text(item.taskNo)
-            .fontSize(12)
-            .fontColor(AppColors.TextSecondary)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
 
-      Row() {
-        Text(item.location)
+        Text(ReinspectionService.formatTaskStatus(item.status))
           .fontSize(13)
-          .fontColor(AppColors.TextSecondary)
-          .layoutWeight(1)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-        Text(ReinspectionService.formatSeverity(item.severity))
-          .fontSize(13)
-          .fontColor(ReinspectionService.getSeverityTone(item.severity))
+          .fontColor(this.getTaskStatusTone(item.status))
           .fontWeight(FontWeight.Medium)
           .maxLines(1)
       }
       .width('100%')
+      .alignItems(VerticalAlign.Center)
+
+      this.TaskFieldRow('任务编号', item.taskNo)
+      this.TaskFieldRow('位置', item.location)
+      this.TaskFieldRow('严重程度', ReinspectionService.formatSeverity(item.severity))
 
       Button({ type: ButtonType.Capsule, stateEffect: true }) {
         Row({ space: 8 }) {
@@ -278,6 +266,27 @@ struct ReinspectionReport {
       width: this.isTaskSelected(item) ? 2 : 1,
       color: this.isTaskSelected(item) ? AppColors.Primary : AppColors.Divider
     })
+  }
+
+  @Builder
+  TaskFieldRow(label: string, value: string) {
+    Row() {
+      Text(label)
+        .fontSize(13)
+        .fontColor(AppColors.TextSecondary)
+        .fontWeight(FontWeight.Medium)
+        .layoutWeight(1)
+        .maxLines(1)
+
+      Text(value)
+        .fontSize(13)
+        .fontColor(AppColors.TextSecondary)
+        .textAlign(TextAlign.End)
+        .width('58%')
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .width('100%')
   }
 
   @Builder
@@ -701,6 +710,13 @@ struct ReinspectionReport {
   }
 
   selectTask(item: ReinspectionTaskSummary): void {
+    if (this.isTaskSelected(item)) {
+      this.clearSelectedTask();
+      this.recordMessage = '';
+      this.recordMessageTone = UiFeedbackTone.Danger;
+      return;
+    }
+
     this.taskId = item.id;
     this.normalizedTaskId = item.id;
     if (this.normalizedTaskId !== this.submittedReinspectionTaskId) {
@@ -795,5 +811,16 @@ struct ReinspectionReport {
         AppNavigator.showNavigationUnavailableToast(this.getUIContext());
       }
     });
+  }
+
+  getTaskStatusTone(status: ReinspectionTaskStatus): string {
+    switch (status) {
+      case ReinspectionTaskStatus.Pending:
+        return AppColors.Warning;
+      case ReinspectionTaskStatus.Completed:
+        return AppColors.Success;
+      default:
+        return AppColors.TextSecondary;
+    }
   }
 }

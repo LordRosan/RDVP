@@ -60,6 +60,7 @@ struct TaskAcceptance {
   @State faultTypeFilterIndex: number = 0;
   @State severityFilterIndex: number = 0;
   @State taskTypeFilterIndex: number = 0;
+  @State filterResetRevision: number = 0;
 
   aboutToAppear(): void {
     if (!AuthGuard.requireAnyPermission(this.getUIContext(), [
@@ -239,22 +240,7 @@ struct TaskAcceptance {
     Column({ space: 14 }) {
       this.RadiusPicker()
 
-      Column() {
-        Filter({
-          multiFilters: this.getTaskFilterParams(),
-          onFilterChanged: (filterResults: FilterResult[]) => {
-            this.applyTaskFilterResults(filterResults);
-          },
-          filterType: FilterType.LIST_FILTER
-        }) {
-          Column()
-            .width('100%')
-            .height(1)
-        }
-      }
-      .height(TASK_FILTER_CONTROL_HEIGHT)
-      .width('100%')
-      .clip(true)
+      this.TaskFilterControl()
 
       this.TaskResultContent()
     }
@@ -275,17 +261,87 @@ struct TaskAcceptance {
   }
 
   @Builder
+  TaskFilterControl() {
+    if (this.filterResetRevision % 2 === 0) {
+      this.TaskFilterInstance()
+    } else {
+      this.TaskFilterInstance()
+    }
+  }
+
+  @Builder
+  TaskFilterInstance() {
+    Column() {
+      Filter({
+        multiFilters: this.getTaskFilterParams(),
+        onFilterChanged: (filterResults: FilterResult[]) => {
+          this.applyTaskFilterResults(filterResults);
+        },
+        filterType: FilterType.LIST_FILTER
+      }) {
+        Column()
+          .width('100%')
+          .height(1)
+      }
+    }
+    .height(TASK_FILTER_CONTROL_HEIGHT)
+    .width('100%')
+    .clip(true)
+  }
+
+  @Builder
   TaskResultContent() {
     Column({ space: 12 }) {
       this.MessageText()
-      this.ActionButton(this.refreshing ? '刷新中' : '刷新任务', $r('sys.symbol.arrow_clockwise'),
-        this.isRefreshEnabled(), () => {
-          this.refreshTasks();
-        })
+      this.ListActionButtons()
       this.TaskFilterResultList()
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  ListActionButtons() {
+    Row({ space: 10 }) {
+      this.ResetButton()
+      Column() {
+        this.ActionButton(this.refreshing ? '刷新中' : '刷新', $r('sys.symbol.arrow_clockwise'),
+          this.isRefreshEnabled(), () => {
+            this.refreshTasks();
+          })
+      }
+      .layoutWeight(1)
+    }
+    .width('100%')
+    .alignItems(VerticalAlign.Center)
+  }
+
+  @Builder
+  ResetButton() {
+    Button({ type: ButtonType.Capsule, stateEffect: this.isRefreshEnabled() }) {
+      Row({ space: 8 }) {
+        SymbolGlyph($r('sys.symbol.xmark_circle'))
+          .fontSize(20)
+          .fontColor([AppColors.TextPrimary])
+
+        Text('重置')
+          .fontSize(17)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppColors.TextPrimary)
+          .maxLines(1)
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+    }
+    .height(54)
+    .layoutWeight(1)
+    .backgroundColor(AppColors.FieldBackground)
+    .border({ width: 1, color: AppColors.Border })
+    .enabled(this.isRefreshEnabled())
+    .onClick(() => {
+      this.resetFilters();
+    })
   }
 
   @Builder
@@ -655,6 +711,27 @@ struct TaskAcceptance {
       const matchesTaskType = taskTypeValue.length === 0 || item.taskType === taskTypeValue;
       return matchesType && matchesSeverity && matchesTaskType;
     });
+  }
+
+  resetFilters(): void {
+    this.radiusKm = RepairTaskService.getDefaultRadiusKm();
+    if (this.radiusKm > this.workloadSnapshot.maxRadiusKm) {
+      this.radiusKm = this.workloadSnapshot.maxRadiusKm;
+    }
+    if (this.radiusKm < 0) {
+      this.radiusKm = 0;
+    }
+    this.taskTypeFilterIndex = 0;
+    this.faultTypeFilterIndex = 0;
+    this.severityFilterIndex = 0;
+    this.message = '';
+    this.messageTone = UiFeedbackTone.Danger;
+    this.taskListMessage = '';
+    this.acceptActionMessage = '';
+    this.acceptActionTaskId = '';
+    this.filterResetRevision += 1;
+    this.applyTaskFilters();
+    this.refreshTasks();
   }
 
   applyTaskFilterResults(filterResults: FilterResult[]): void {

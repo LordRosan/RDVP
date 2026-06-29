@@ -41,6 +41,7 @@ struct DeviceArchiveReview {
   @State refreshing: boolean = false;
   @State submitting: boolean = false;
   @State reviewReady: boolean = false;
+  @State filterResetRevision: number = 0;
 
   aboutToAppear(): void {
     if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ManagementCenterDeviceArchiveRequestReview)) {
@@ -131,25 +132,10 @@ struct DeviceArchiveReview {
       })
 
       Column({ space: 14 }) {
-        Column() {
-          Filter({
-            multiFilters: this.getRequestFilterParams(),
-            onFilterChanged: (filterResults: FilterResult[]) => {
-              this.applyRequestFilterResults(filterResults);
-            },
-            filterType: FilterType.LIST_FILTER
-          }) {
-            Column()
-              .width('100%')
-              .height(1)
-          }
-        }
-        .height(REVIEW_FILTER_CONTROL_HEIGHT)
-        .width('100%')
-        .clip(true)
+        this.RequestTypeFilterControl()
 
         this.RefreshMessageText()
-        this.RefreshButton()
+        this.ListActionButtons()
         this.RequestFilterResultList()
       }
       .width('100%')
@@ -172,6 +158,35 @@ struct DeviceArchiveReview {
   }
 
   @Builder
+  RequestTypeFilterControl() {
+    if (this.filterResetRevision % 2 === 0) {
+      this.RequestTypeFilterInstance()
+    } else {
+      this.RequestTypeFilterInstance()
+    }
+  }
+
+  @Builder
+  RequestTypeFilterInstance() {
+    Column() {
+      Filter({
+        multiFilters: this.getRequestFilterParams(),
+        onFilterChanged: (filterResults: FilterResult[]) => {
+          this.applyRequestFilterResults(filterResults);
+        },
+        filterType: FilterType.LIST_FILTER
+      }) {
+        Column()
+          .width('100%')
+          .height(1)
+      }
+    }
+    .height(REVIEW_FILTER_CONTROL_HEIGHT)
+    .width('100%')
+    .clip(true)
+  }
+
+  @Builder
   RefreshButton() {
     Button({ type: ButtonType.Capsule, stateEffect: !this.refreshing && !this.submitting }) {
       Row({ space: 8 }) {
@@ -190,12 +205,50 @@ struct DeviceArchiveReview {
       .alignItems(VerticalAlign.Center)
     }
     .height(54)
-    .width('100%')
+    .layoutWeight(1)
     .backgroundColor(this.refreshing || this.submitting ? AppColors.Disabled : AppColors.Primary)
     .enabled(!this.refreshing && !this.submitting)
     .onClick(() => {
       this.refreshRequests();
     })
+  }
+
+  @Builder
+  ResetButton() {
+    Button({ type: ButtonType.Capsule, stateEffect: !this.refreshing && !this.submitting }) {
+      Row({ space: 8 }) {
+        SymbolGlyph($r('sys.symbol.xmark_circle'))
+          .fontSize(20)
+          .fontColor([AppColors.TextPrimary])
+
+        Text('重置')
+          .fontSize(17)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppColors.TextPrimary)
+          .maxLines(1)
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+    }
+    .height(54)
+    .layoutWeight(1)
+    .backgroundColor(AppColors.FieldBackground)
+    .border({ width: 1, color: AppColors.Border })
+    .enabled(!this.refreshing && !this.submitting)
+    .onClick(() => {
+      this.resetFilters();
+    })
+  }
+
+  @Builder
+  ListActionButtons() {
+    Row({ space: 10 }) {
+      this.ResetButton()
+      this.RefreshButton()
+    }
+    .width('100%')
+    .alignItems(VerticalAlign.Center)
   }
 
   @Builder
@@ -236,6 +289,12 @@ struct DeviceArchiveReview {
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
+
+        Text(DeviceArchiveReviewService.formatStatus(item.status))
+          .fontSize(13)
+          .fontColor(DeviceArchiveReviewService.getStatusTone(item.status))
+          .fontWeight(FontWeight.Medium)
+          .maxLines(1)
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
@@ -713,6 +772,13 @@ struct DeviceArchiveReview {
   }
 
   selectRequest(item: DeviceArchiveReviewItem): void {
+    if (this.selectedRequestId === item.id) {
+      this.clearReviewForm();
+      this.message = '';
+      this.messageTone = UiFeedbackTone.Danger;
+      return;
+    }
+
     this.selectedRequestId = item.id;
     this.reviewDecision = '';
     this.reviewComment = '';
@@ -728,6 +794,14 @@ struct DeviceArchiveReview {
     this.requests = this.allRequests.filter((item: DeviceArchiveReviewItem) => {
       return typeValue.length === 0 || item.type === typeValue;
     });
+  }
+
+  resetFilters(): void {
+    this.requestTypeFilterIndex = 0;
+    this.refreshMessage = '';
+    this.refreshMessageTone = UiFeedbackTone.Danger;
+    this.filterResetRevision += 1;
+    this.applyRequestFilters();
   }
 
   applyRequestFilterResults(filterResults: FilterResult[]): void {

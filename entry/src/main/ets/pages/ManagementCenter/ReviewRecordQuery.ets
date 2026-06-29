@@ -28,6 +28,7 @@ struct ReviewRecordQuery {
   @State resultTotal: number = 0;
   @State message: string = '';
   @State refreshing: boolean = false;
+  @State filterResetRevision: number = 0;
 
   aboutToAppear(): void {
     if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ManagementCenterReviewRecordQuery)) {
@@ -214,12 +215,48 @@ struct ReviewRecordQuery {
       .alignItems(VerticalAlign.Center)
     }
     .height(54)
-    .width('100%')
+    .layoutWeight(1)
     .backgroundColor(this.refreshing ? AppColors.Disabled : AppColors.Primary)
     .enabled(!this.refreshing)
     .onClick(() => {
       this.refreshRecords();
     })
+  }
+
+  @Builder
+  ResetButton() {
+    Button({ type: ButtonType.Capsule, stateEffect: !this.refreshing }) {
+      Row({ space: 6 }) {
+        SymbolGlyph($r('sys.symbol.xmark_circle'))
+          .fontSize(17)
+          .fontColor([AppColors.TextPrimary])
+        Text('重置')
+          .fontSize(17)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppColors.TextPrimary)
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+    }
+    .height(54)
+    .layoutWeight(1)
+    .backgroundColor(AppColors.FieldBackground)
+    .border({ width: 1, color: AppColors.Border })
+    .enabled(!this.refreshing)
+    .onClick(() => {
+      this.resetFilters();
+    })
+  }
+
+  @Builder
+  ActionButtons() {
+    Row({ space: 10 }) {
+      this.ResetButton()
+      this.QueryButton()
+    }
+    .width('100%')
+    .alignItems(VerticalAlign.Center)
   }
 
   @Builder
@@ -243,26 +280,11 @@ struct ReviewRecordQuery {
       Column({ space: 14 }) {
         this.SearchPanel()
 
-        Column() {
-          Filter({
-            multiFilters: this.getRecordFilterParams(),
-            onFilterChanged: (filterResults: FilterResult[]) => {
-              this.applyRecordFilterResults(filterResults);
-            },
-            filterType: FilterType.LIST_FILTER
-          }) {
-            Column()
-              .width('100%')
-              .height(1)
-          }
-        }
-        .height(RECORD_FILTER_CONTROL_HEIGHT)
-        .width('100%')
-        .clip(true)
+        this.RecordTypeFilterControl()
 
         this.DateRangePanel()
         this.MessageText()
-        this.QueryButton()
+        this.ActionButtons()
         this.ResultCountText()
         this.RecordFilterResultList()
       }
@@ -283,6 +305,35 @@ struct ReviewRecordQuery {
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  RecordTypeFilterControl() {
+    if (this.filterResetRevision % 2 === 0) {
+      this.RecordTypeFilterInstance()
+    } else {
+      this.RecordTypeFilterInstance()
+    }
+  }
+
+  @Builder
+  RecordTypeFilterInstance() {
+    Column() {
+      Filter({
+        multiFilters: this.getRecordFilterParams(),
+        onFilterChanged: (filterResults: FilterResult[]) => {
+          this.applyRecordFilterResults(filterResults);
+        },
+        filterType: FilterType.LIST_FILTER
+      }) {
+        Column()
+          .width('100%')
+          .height(1)
+      }
+    }
+    .height(RECORD_FILTER_CONTROL_HEIGHT)
+    .width('100%')
+    .clip(true)
   }
 
   @Builder
@@ -322,12 +373,17 @@ struct ReviewRecordQuery {
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
+
+        Text(item.statusLabel)
+          .fontSize(13)
+          .fontColor(RecordQueryService.getStatusTone(item.status))
+          .fontWeight(FontWeight.Medium)
+          .maxLines(1)
       }
       .width('100%')
 
       this.RecordFieldRow('设备编号', item.deviceCode)
       this.RecordFieldRow('审核编号', item.taskNo)
-      this.RecordFieldRow('状态', item.statusLabel, RecordQueryService.getStatusTone(item.status))
       this.RecordFieldRow('操作人', item.operatorName)
       this.RecordFieldRow('时间', item.occurredAt)
     }
@@ -420,6 +476,16 @@ struct ReviewRecordQuery {
     this.records = response.data ? response.data.items : [];
     this.resultTotal = response.data ? response.data.total : 0;
     this.message = '';
+  }
+
+  resetFilters(): void {
+    this.selectedTypeIndex = 0;
+    this.keyword = '';
+    this.startDate = '';
+    this.endDate = '';
+    this.message = '';
+    this.filterResetRevision += 1;
+    this.refreshRecords();
   }
 
   applyRecordFilterResults(filterResults: FilterResult[]): void {

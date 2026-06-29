@@ -126,7 +126,7 @@ struct RepairReport {
   TaskResultPanel() {
     Column({ space: 12 }) {
       this.TaskMessageText()
-      this.ActionButton(this.refreshing ? '刷新中' : '刷新任务', $r('sys.symbol.arrow_clockwise'),
+      this.ActionButton(this.refreshing ? '刷新中' : '刷新', $r('sys.symbol.arrow_clockwise'),
         !this.refreshing && !this.submitting, () => {
           this.refreshTasks();
         })
@@ -211,33 +211,21 @@ struct RepairReport {
             .fontColor(AppColors.TextPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-          Text(item.taskNo)
-            .fontSize(12)
-            .fontColor(AppColors.TextSecondary)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
 
-      Row() {
-        Text(FaultReportService.formatFaultType(item.faultType))
+        Text(RepairTaskService.formatTaskStatus(item.status))
           .fontSize(13)
-          .fontColor(AppColors.TextSecondary)
-          .layoutWeight(1)
-          .maxLines(1)
-
-        Text(FaultReportService.formatSeverity(item.severity))
-          .fontSize(13)
-          .fontColor(this.getSeverityTone(item.severity))
+          .fontColor(this.getTaskStatusTone(item.status))
           .fontWeight(FontWeight.Medium)
           .maxLines(1)
       }
       .width('100%')
+      .alignItems(VerticalAlign.Center)
+
+      this.TaskFieldRow('任务编号', item.taskNo)
+      this.TaskFieldRow('故障类型', FaultReportService.formatFaultType(item.faultType))
 
       Button({ type: ButtonType.Capsule, stateEffect: true }) {
         Row({ space: 8 }) {
@@ -267,9 +255,30 @@ struct RepairReport {
     .backgroundColor(AppColors.SurfaceRaised)
     .borderRadius(AppRadii.Large)
     .border({
-      width: this.isTaskSelected(item) ? 2 : 0,
-      color: this.isTaskSelected(item) ? AppColors.Primary : AppColors.Transparent
+      width: this.isTaskSelected(item) ? 2 : 1,
+      color: this.isTaskSelected(item) ? AppColors.Primary : AppColors.Divider
     })
+  }
+
+  @Builder
+  TaskFieldRow(label: string, value: string) {
+    Row() {
+      Text(label)
+        .fontSize(13)
+        .fontColor(AppColors.TextSecondary)
+        .fontWeight(FontWeight.Medium)
+        .layoutWeight(1)
+        .maxLines(1)
+
+      Text(value)
+        .fontSize(13)
+        .fontColor(AppColors.TextSecondary)
+        .textAlign(TextAlign.End)
+        .width('58%')
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .width('100%')
   }
 
   @Builder
@@ -694,6 +703,13 @@ struct RepairReport {
   }
 
   selectTask(item: RepairTaskItem): void {
+    if (this.isTaskSelected(item)) {
+      this.clearSelectedTask();
+      this.reportMessage = '';
+      this.reportMessageTone = UiFeedbackTone.Danger;
+      return;
+    }
+
     this.taskId = item.id;
     this.normalizedTaskId = item.id;
     if (this.normalizedTaskId !== this.submittedRepairTaskId) {
@@ -816,5 +832,17 @@ struct RepairReport {
         AppNavigator.showNavigationUnavailableToast(this.getUIContext());
       }
     });
+  }
+
+  getTaskStatusTone(status: RepairTaskStatus): string {
+    switch (status) {
+      case RepairTaskStatus.Accepted:
+      case RepairTaskStatus.Processing:
+        return AppColors.Primary;
+      case RepairTaskStatus.ReportSubmitted:
+        return AppColors.Success;
+      default:
+        return AppColors.TextSecondary;
+    }
   }
 }

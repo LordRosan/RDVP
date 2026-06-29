@@ -225,6 +225,17 @@ export class ReinspectionService {
     }
   }
 
+  static formatTaskStatus(status: ReinspectionTaskStatus): string {
+    switch (status) {
+      case ReinspectionTaskStatus.Pending:
+        return '待复检';
+      case ReinspectionTaskStatus.Completed:
+        return '已完成';
+      default:
+        return '-';
+    }
+  }
+
   static getResultTone(result: ReinspectionResult): string {
     switch (result) {
       case ReinspectionResult.Passed:
