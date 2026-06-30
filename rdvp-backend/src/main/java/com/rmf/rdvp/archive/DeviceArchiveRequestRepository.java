@@ -21,6 +21,8 @@ public interface DeviceArchiveRequestRepository {
 
     Optional<OffsetDateTime> findActiveFreezeUntil(String deviceId, OffsetDateTime now);
 
+    Optional<OffsetDateTime> findActiveFreezeUntilByTargetDeviceCode(String deviceCode, OffsetDateTime now);
+
     void create(DeviceArchiveRequestCreate request);
 
     boolean applyApprovedReview(
@@ -42,5 +44,6 @@ public interface DeviceArchiveRequestRepository {
             String requestId,
             String reviewerId,
             String reviewComment,
-            OffsetDateTime reviewedAt);
+            OffsetDateTime reviewedAt,
+            OffsetDateTime freezeUntil);
 }

@@ -112,7 +112,7 @@ class DashboardControllerTests {
     }
 
     @Test
-    void includesCompletedArchiveFlowAndKeepsOperationsApprovalCountsZeroWithoutReviewFlow() throws Exception {
+    void includesCompletedArchiveFlowAndCountsOperationsRecordsFromCompletedWorkflow() throws Exception {
         String archiveAdminToken = login("archiveadmin", "password");
         String adminToken = login("admin", "password");
         String operatorToken = login("operator", "password");
@@ -223,10 +223,10 @@ class DashboardControllerTests {
                 .andExpect(jsonPath("$.data.archive.deviceTotal").value(4))
                 .andExpect(jsonPath("$.data.archive.archiveCreates").value(1))
                 .andExpect(jsonPath("$.data.archive.archiveQueries").value(1))
-                .andExpect(jsonPath("$.data.operations.verifications").value(0))
-                .andExpect(jsonPath("$.data.operations.faultReports").value(0))
-                .andExpect(jsonPath("$.data.operations.repairs").value(0))
-                .andExpect(jsonPath("$.data.operations.reinspections").value(0))
+                .andExpect(jsonPath("$.data.operations.verifications").value(1))
+                .andExpect(jsonPath("$.data.operations.faultReports").value(1))
+                .andExpect(jsonPath("$.data.operations.repairs").value(1))
+                .andExpect(jsonPath("$.data.operations.reinspections").value(1))
                 .andExpect(jsonPath("$.data.management.reviewedTotal").value(1));
     }
 
@@ -424,7 +424,7 @@ class DashboardControllerTests {
                         .content("""
                                 {
                                   "decision": "APPROVED",
-                                  "reviewedAt": "2026-06-01T08:10:00Z",
+                                  "reviewedAt": "2026-06-01T14:10:00Z",
                                   "reviewComment": "通过。"
                                 }
                                 """))

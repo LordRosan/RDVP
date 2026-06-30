@@ -112,9 +112,11 @@ public class InMemoryDeviceArchiveRequestRepository implements DeviceArchiveRequ
 
     @Override
     public Optional<OffsetDateTime> findActiveFreezeUntil(String deviceId, OffsetDateTime now) {
+        Optional<String> deviceCode = archiveRepository.findById(deviceId).map(DeviceArchive::deviceCode);
         Optional<OffsetDateTime> requestFreeze = requestsById.values()
                 .stream()
-                .filter(item -> deviceId.equals(item.deviceId()))
+                .filter(item -> deviceId.equals(item.deviceId()) ||
+                        deviceCode.filter(code -> code.equals(item.deviceCode())).isPresent())
                 .map(DeviceArchiveRequest::freezeUntil)
                 .filter(freezeUntil -> freezeUntil != null && freezeUntil.isAfter(now))
                 .max(Comparator.naturalOrder());
@@ -123,6 +125,16 @@ public class InMemoryDeviceArchiveRequestRepository implements DeviceArchiveRequ
                 .map(DeviceArchive.ArchiveRequestState::freezeUntil)
                 .filter(freezeUntil -> freezeUntil != null && freezeUntil.isAfter(now));
         return requestFreeze.isPresent() ? requestFreeze : archiveFreeze;
+    }
+
+    @Override
+    public Optional<OffsetDateTime> findActiveFreezeUntilByTargetDeviceCode(String deviceCode, OffsetDateTime now) {
+        return requestsById.values()
+                .stream()
+                .filter(item -> deviceCode.equals(item.deviceCode()))
+                .map(DeviceArchiveRequest::freezeUntil)
+                .filter(freezeUntil -> freezeUntil != null && freezeUntil.isAfter(now))
+                .max(Comparator.naturalOrder());
     }
 
     @Override
@@ -218,6 +230,8 @@ public class InMemoryDeviceArchiveRequestRepository implements DeviceArchiveRequ
                 freezeUntil));
         if (request.deviceId() != null) {
             archiveRepository.clearPending(request.deviceId());
+        } else if (freezeUntil != null) {
+            archiveRepository.freezeByCode(request.deviceCode(), freezeUntil);
         }
         return true;
     }
@@ -227,7 +241,8 @@ public class InMemoryDeviceArchiveRequestRepository implements DeviceArchiveRequ
             String requestId,
             String reviewerId,
             String reviewComment,
-            OffsetDateTime reviewedAt) {
+            OffsetDateTime reviewedAt,
+            OffsetDateTime freezeUntil) {
         DeviceArchiveRequest request = requestsById.get(requestId);
         if (request == null || request.status() != DeviceArchiveRequestStatus.PENDING_REVIEW) {
             return false;
@@ -249,9 +264,9 @@ public class InMemoryDeviceArchiveRequestRepository implements DeviceArchiveRequ
                 reviewerId,
                 reviewComment,
                 reviewedAt,
-                null));
+                freezeUntil));
         if (request.deviceId() != null) {
-            archiveRepository.clearPending(request.deviceId());
+            archiveRepository.freeze(request.deviceId(), freezeUntil);
         }
         return true;
     }

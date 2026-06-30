@@ -200,6 +200,21 @@ public class InMemoryDeviceArchiveRepository implements DeviceArchiveRepository 
         devicesById.put(deviceId, copyWithArchiveRequestState(device, new DeviceArchive.ArchiveRequestState(false, null, null)));
     }
 
+    public void freeze(String deviceId, OffsetDateTime freezeUntil) {
+        DeviceArchive device = devicesById.get(deviceId);
+        if (device == null) {
+            return;
+        }
+
+        devicesById.put(deviceId, copyWithArchiveRequestState(device, new DeviceArchive.ArchiveRequestState(true, null, freezeUntil)));
+    }
+
+    public void freezeByCode(String deviceCode, OffsetDateTime freezeUntil) {
+        findByCode(deviceCode).ifPresent(device ->
+                devicesById.put(device.id(),
+                        copyWithArchiveRequestState(device, new DeviceArchive.ArchiveRequestState(true, null, freezeUntil))));
+    }
+
     private DeviceArchive copyWithArchiveRequestState(
             DeviceArchive device,
             DeviceArchive.ArchiveRequestState archiveRequestState) {

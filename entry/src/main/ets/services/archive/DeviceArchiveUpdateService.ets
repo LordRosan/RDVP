@@ -17,6 +17,19 @@ interface DeviceArchiveUpdateApiResult {
   createdAt: string;
 }
 
+interface DeviceArchiveUpdateChangePayload {
+  oldValue: string;
+  newValue: string;
+}
+
+interface DeviceArchiveUpdateRequestPayload {
+  type: string;
+  deviceId: string;
+  reason: string;
+  changes: Record<string, DeviceArchiveUpdateChangePayload>;
+  initiatedAt?: string;
+}
+
 export class DeviceArchiveUpdateService {
   static validateUpdateRequestForm(form: DeviceArchiveUpdateRequestForm): DeviceArchiveRequestValidationResult {
     const deviceCodeValidation = DeviceService.validateDeviceCodeQuery({
@@ -290,52 +303,56 @@ export class DeviceArchiveUpdateService {
     return DeviceArchiveUpdateService.hasFieldUpdated(baseline, field, value);
   }
 
-  private static buildApiChangesPayload(form: DeviceArchiveUpdateRequestForm): string {
+  private static buildApiChangesPayload(form: DeviceArchiveUpdateRequestForm): Record<string, DeviceArchiveUpdateChangePayload> {
     const baseline = form.baseline;
     if (baseline === undefined) {
-      return '{}';
+      return {};
     }
 
-    const changeItems: string[] = [];
+    const changes: Record<string, DeviceArchiveUpdateChangePayload> = {};
     const deviceName = DeviceArchiveUpdateService.normalizeText(form.deviceName);
     if (DeviceArchiveUpdateService.hasFieldUpdated(baseline, 'deviceName', deviceName)) {
-      changeItems.push(DeviceArchiveUpdateService.formatApiChangeItem('name', baseline.deviceName, deviceName));
+      changes['name'] = DeviceArchiveUpdateService.createApiChange(baseline.deviceName, deviceName);
     }
 
     const model = DeviceArchiveUpdateService.normalizeText(form.model);
     if (DeviceArchiveUpdateService.hasFieldUpdated(baseline, 'model', model)) {
-      changeItems.push(DeviceArchiveUpdateService.formatApiChangeItem('model', baseline.model, model));
+      changes['model'] = DeviceArchiveUpdateService.createApiChange(baseline.model, model);
     }
 
     const manufacturer = DeviceArchiveUpdateService.normalizeText(form.manufacturer);
     if (DeviceArchiveUpdateService.hasFieldUpdated(baseline, 'manufacturer', manufacturer)) {
-      changeItems.push(DeviceArchiveUpdateService.formatApiChangeItem('manufacturer', baseline.manufacturer, manufacturer));
+      changes['manufacturer'] = DeviceArchiveUpdateService.createApiChange(baseline.manufacturer, manufacturer);
     }
 
     const locationAddress = DeviceArchiveUpdateService.normalizeText(form.locationAddress);
     if (DeviceArchiveUpdateService.hasFieldUpdated(baseline, 'locationAddress', locationAddress)) {
-      changeItems.push(DeviceArchiveUpdateService.formatApiChangeItem('location.address', baseline.locationAddress, locationAddress));
+      changes['location.address'] = DeviceArchiveUpdateService.createApiChange(baseline.locationAddress, locationAddress);
     }
 
-    return `{${changeItems.join(',')}}`;
+    return changes;
   }
 
   private static buildCreateRequestBody(form: DeviceArchiveUpdateRequestForm): string {
-    const fieldList: string[] = [
-      `"type":"UPDATE"`,
-      `"deviceId":${JSON.stringify(form.deviceId)}`,
-      `"reason":${JSON.stringify(DeviceArchiveUpdateService.normalizeText(form.reason))}`,
-      `"changes":${DeviceArchiveUpdateService.buildApiChangesPayload(form)}`
-    ];
+    const payload: DeviceArchiveUpdateRequestPayload = {
+      type: 'UPDATE',
+      deviceId: form.deviceId === undefined ? '' : form.deviceId,
+      reason: DeviceArchiveUpdateService.normalizeText(form.reason),
+      changes: DeviceArchiveUpdateService.buildApiChangesPayload(form)
+    };
+
     if (form.initiatedAt !== undefined && form.initiatedAt.trim().length > 0) {
-      fieldList.push(`"initiatedAt":${JSON.stringify(DateTimeFormatUtil.toApiIsoString(form.initiatedAt))}`);
+      payload.initiatedAt = DateTimeFormatUtil.toApiIsoString(form.initiatedAt);
     }
 
-    return `{${fieldList.join(',')}}`;
+    return JSON.stringify(payload);
   }
 
-  private static formatApiChangeItem(field: string, oldValue: string, newValue: string): string {
-    return `${JSON.stringify(field)}:{"oldValue":${JSON.stringify(oldValue)},"newValue":${JSON.stringify(newValue)}}`;
+  private static createApiChange(oldValue: string, newValue: string): DeviceArchiveUpdateChangePayload {
+    return {
+      oldValue,
+      newValue
+    };
   }
 
   private static createRecordFromApiResult(

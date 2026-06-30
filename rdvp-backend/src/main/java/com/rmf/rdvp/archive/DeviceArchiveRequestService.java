@@ -128,6 +128,7 @@ public class DeviceArchiveRequestService {
             }
 
             OffsetDateTime reviewedAt = parseReviewedAt(reviewedAtText);
+            OffsetDateTime freezeUntil = reviewedAt.plus(ARCHIVE_REQUEST_FREEZE_DURATION);
             String normalizedComment = reviewComment == null ? "" : reviewComment.trim();
             if (decision == DeviceArchiveReviewDecision.REJECTED && normalizedComment.isBlank()) {
                 throw new BusinessException(
@@ -142,7 +143,8 @@ public class DeviceArchiveRequestService {
                         request.id(),
                         reviewer.id(),
                         normalizedComment,
-                        reviewedAt);
+                        reviewedAt,
+                        freezeUntil);
                 if (!reviewed) {
                     throw new BusinessException(ErrorCode.DEVICE_ARCHIVE_REQUEST_ALREADY_REVIEWED);
                 }
@@ -240,6 +242,10 @@ public class DeviceArchiveRequestService {
             AuthenticatedUser applicant) {
         requirePermission(applicant, PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_CREATE_REQUEST_SUBMIT);
         String normalizedDeviceCode = normalizeDeviceCode(deviceCode);
+        if (archiveRequestRepository.findActiveFreezeUntilByTargetDeviceCode(normalizedDeviceCode, now()).isPresent()) {
+            throw new BusinessException(ErrorCode.DEVICE_ARCHIVE_REQUEST_FROZEN);
+        }
+
         if (archiveRepository.existsByCode(normalizedDeviceCode)
                 || archiveRequestRepository.hasPendingByTargetDeviceCode(normalizedDeviceCode)) {
             throw new BusinessException(ErrorCode.DEVICE_CODE_DUPLICATED);
@@ -356,7 +362,7 @@ public class DeviceArchiveRequestService {
                         reviewer.id(),
                         reviewComment,
                         reviewedAt,
-                        null);
+                        reviewedAt.plus(ARCHIVE_REQUEST_FREEZE_DURATION));
                 if (!reviewed) {
                     throw new BusinessException(ErrorCode.DEVICE_ARCHIVE_REQUEST_ALREADY_REVIEWED);
                 }
@@ -380,7 +386,7 @@ public class DeviceArchiveRequestService {
                         reviewer.id(),
                         reviewComment,
                         reviewedAt,
-                        null);
+                        reviewedAt.plus(ARCHIVE_REQUEST_FREEZE_DURATION));
                 if (!reviewed) {
                     throw new BusinessException(ErrorCode.DEVICE_ARCHIVE_REQUEST_ALREADY_REVIEWED);
                 }

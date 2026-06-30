@@ -335,7 +335,7 @@ INDEX(verifier_id, verified_at)
 | `reviewer_id` | id | 否 | FK users.id, INDEX | 审核人 |
 | `review_comment` | text | 否 |  | 审核意见 |
 | `reviewed_at` | datetime | 否 | INDEX | 审核时间 |
-| `freeze_until` | datetime | 否 | INDEX | 审核通过后的档案冻结截止时间 |
+| `freeze_until` | datetime | 否 | INDEX | 审核结束后的档案冻结截止时间 |
 | `created_at` | datetime | 是 |  | 创建时间 |
 | `created_by` | id | 是 | FK users.id | 创建人 |
 | `updated_at` | datetime | 是 |  | 更新时间 |

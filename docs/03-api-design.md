@@ -701,11 +701,11 @@ POST /api/v1/device-archive-requests/{requestId}/review
   "id": "archive-request-id",
   "status": "APPROVED",
   "reviewedAt": "2026-05-27T07:30:00Z",
-  "freezeUntil": "2026-05-27T19:30:00Z"
+  "freezeUntil": "2026-05-27T13:30:00Z"
 }
 ```
 
-审核通过后，后端按申请类型应用档案修改、添加或删除；修改档案申请通过后设置 12 小时档案申请冻结期。审核驳回时必须保留驳回意见。
+审核通过后，后端按申请类型应用档案修改、添加或删除；审核结束后（通过或驳回）设置 6 小时档案申请冻结期，冻结期从 `reviewedAt` 开始计算。审核驳回时必须保留驳回意见。
 
 ## 10. 故障报告接口
 

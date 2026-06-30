@@ -45,7 +45,7 @@ public class JdbcDeviceArchiveRepository implements DeviceArchiveRepository {
                         LEFT JOIN LATERAL (
                             SELECT freeze_until
                             FROM device_archive_requests
-                            WHERE device_id = d.id
+                            WHERE (device_id = d.id OR target_device_code = d.device_code)
                               AND freeze_until IS NOT NULL
                               AND freeze_until > now()
                             ORDER BY freeze_until DESC
@@ -82,7 +82,7 @@ public class JdbcDeviceArchiveRepository implements DeviceArchiveRepository {
                         LEFT JOIN LATERAL (
                             SELECT freeze_until
                             FROM device_archive_requests
-                            WHERE device_id = d.id
+                            WHERE (device_id = d.id OR target_device_code = d.device_code)
                               AND freeze_until IS NOT NULL
                               AND freeze_until > now()
                             ORDER BY freeze_until DESC

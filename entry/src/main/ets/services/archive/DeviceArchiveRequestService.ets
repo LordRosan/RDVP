@@ -17,6 +17,25 @@ interface DeviceArchiveRequestApiResult {
   createdAt: string;
 }
 
+interface DeviceArchiveCreateChangePayload {
+  newValue: string;
+}
+
+interface DeviceArchiveCreateRequestPayload {
+  type: string;
+  deviceCode: string;
+  reason: string;
+  changes: Record<string, DeviceArchiveCreateChangePayload>;
+  initiatedAt?: string;
+}
+
+interface DeviceArchiveDeleteRequestPayload {
+  type: string;
+  deviceId: string;
+  reason: string;
+  initiatedAt?: string;
+}
+
 export class DeviceArchiveRequestService {
   static validateCreateRequestForm(form: DeviceArchiveCreateRequestForm): DeviceArchiveRequestValidationResult {
     const deviceCodeValidation = DeviceService.validateDeviceCodeQuery({
@@ -311,44 +330,45 @@ export class DeviceArchiveRequestService {
   }
 
   private static buildCreateRequestBody(form: DeviceArchiveCreateRequestForm, normalizedDeviceCode: string): string {
-    const changeItems: string[] = [
-      DeviceArchiveRequestService.formatCreateChangeItem('name',
-        DeviceArchiveRequestService.normalizeText(form.deviceName)),
-      DeviceArchiveRequestService.formatCreateChangeItem('model',
-        DeviceArchiveRequestService.normalizeText(form.model)),
-      DeviceArchiveRequestService.formatCreateChangeItem('manufacturer',
-        DeviceArchiveRequestService.normalizeText(form.manufacturer)),
-      DeviceArchiveRequestService.formatCreateChangeItem('location.address',
-        DeviceArchiveRequestService.normalizeText(form.locationAddress))
-    ];
-    const baseFields: string[] = [
-      `"type":"CREATE"`,
-      `"deviceCode":${JSON.stringify(normalizedDeviceCode)}`,
-      `"reason":${JSON.stringify(DeviceArchiveRequestService.normalizeText(form.reason))}`,
-      `"changes":{${changeItems.join(',')}}`
-    ];
+    const payload: DeviceArchiveCreateRequestPayload = {
+      type: 'CREATE',
+      deviceCode: normalizedDeviceCode,
+      reason: DeviceArchiveRequestService.normalizeText(form.reason),
+      changes: {
+        'name': {
+          newValue: DeviceArchiveRequestService.normalizeText(form.deviceName)
+        },
+        'model': {
+          newValue: DeviceArchiveRequestService.normalizeText(form.model)
+        },
+        'manufacturer': {
+          newValue: DeviceArchiveRequestService.normalizeText(form.manufacturer)
+        },
+        'location.address': {
+          newValue: DeviceArchiveRequestService.normalizeText(form.locationAddress)
+        }
+      }
+    };
+
     if (form.initiatedAt !== undefined && form.initiatedAt.trim().length > 0) {
-      baseFields.push(`"initiatedAt":${JSON.stringify(DateTimeFormatUtil.toApiIsoString(form.initiatedAt))}`);
+      payload.initiatedAt = DateTimeFormatUtil.toApiIsoString(form.initiatedAt);
     }
 
-    return `{${baseFields.join(',')}}`;
+    return JSON.stringify(payload);
   }
 
   private static buildDeleteRequestBody(form: DeviceArchiveDeleteRequestForm): string {
-    const fields: string[] = [
-      `"type":"DELETE"`,
-      `"deviceId":${JSON.stringify(form.device.id)}`,
-      `"reason":${JSON.stringify(DeviceArchiveRequestService.normalizeText(form.reason))}`
-    ];
+    const payload: DeviceArchiveDeleteRequestPayload = {
+      type: 'DELETE',
+      deviceId: form.device.id,
+      reason: DeviceArchiveRequestService.normalizeText(form.reason)
+    };
+
     if (form.initiatedAt !== undefined && form.initiatedAt.trim().length > 0) {
-      fields.push(`"initiatedAt":${JSON.stringify(DateTimeFormatUtil.toApiIsoString(form.initiatedAt))}`);
+      payload.initiatedAt = DateTimeFormatUtil.toApiIsoString(form.initiatedAt);
     }
 
-    return `{${fields.join(',')}}`;
-  }
-
-  private static formatCreateChangeItem(field: string, newValue: string): string {
-    return `${JSON.stringify(field)}:{"newValue":${JSON.stringify(newValue)}}`;
+    return JSON.stringify(payload);
   }
 
   private static normalizeText(value: string): string {

@@ -246,6 +246,93 @@ class DeviceArchiveRequestControllerTests {
     }
 
     @Test
+    void rejectedArchiveRequestFreezesDeviceForSixHoursAfterReview() throws Exception {
+        String applicantToken = login("archivist", "password");
+        String reviewerToken = login("archiveadmin", "password");
+        String requestId = createNameChange(applicantToken, "冷却泵A-02");
+
+        verifyPassword(reviewerToken, "password");
+        mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", requestId)
+                        .header("Authorization", "Bearer " + reviewerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "decision": "REJECTED",
+                                  "reviewedAt": "2026-07-01T08:00:00Z",
+                                  "reviewComment": "信息不足，驳回后进入冷却。"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("REJECTED"))
+                .andExpect(jsonPath("$.data.reviewedAt").value("2026-07-01T08:00:00Z"))
+                .andExpect(jsonPath("$.data.freezeUntil").value("2026-07-01T14:00:00Z"));
+
+        mockMvc.perform(get("/api/v1/devices/device-local-0001")
+                        .header("Authorization", "Bearer " + reviewerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.archiveRequestState.locked").value(true))
+                .andExpect(jsonPath("$.data.archiveRequestState.pendingRequestId").doesNotExist())
+                .andExpect(jsonPath("$.data.archiveRequestState.freezeUntil").value("2026-07-01T14:00:00Z"));
+
+        mockMvc.perform(post("/api/v1/device-archive-requests")
+                        .header("Authorization", "Bearer " + applicantToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "deviceId": "device-local-0001",
+                                  "reason": "冻结期内再次修改。",
+                                  "changes": {
+                                    "name": {
+                                      "oldValue": "冷却泵A-01",
+                                      "newValue": "冷却泵A-03"
+                                    }
+                                  }
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("DEVICE_ARCHIVE_REQUEST_FROZEN"));
+    }
+
+    @Test
+    void rejectedCreateArchiveRequestFreezesTargetDeviceCodeForSixHoursAfterReview() throws Exception {
+        String token = login("archiveadmin", "password");
+        String requestId = createArchiveCreateRequest(token, "RDVP-DEVICE-0099");
+
+        verifyPassword(token, "password");
+        mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", requestId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "decision": "REJECTED",
+                                  "reviewedAt": "2026-07-01T09:00:00Z",
+                                  "reviewComment": "新增资料不足。"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("REJECTED"))
+                .andExpect(jsonPath("$.data.freezeUntil").value("2026-07-01T15:00:00Z"));
+
+        mockMvc.perform(post("/api/v1/device-archive-requests")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "type": "CREATE",
+                                  "deviceCode": "RDVP-DEVICE-0099",
+                                  "reason": "冻结期内重新提交新增申请。",
+                                  "changes": {
+                                    "name": {
+                                      "newValue": "巡检网关G-99"
+                                    }
+                                  }
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("DEVICE_ARCHIVE_REQUEST_FROZEN"));
+    }
+
+    @Test
     void requiresExplicitReviewTime() throws Exception {
         String applicantToken = login("archivist", "password");
         String reviewerToken = login("archiveadmin", "password");
@@ -301,20 +388,41 @@ class DeviceArchiveRequestControllerTests {
                         .content("""
                                 {
                                   "decision": "APPROVED",
-                                  "reviewedAt": "2026-06-01T09:00:00Z",
+                                  "reviewedAt": "2026-07-01T09:00:00Z",
                                   "reviewComment": "新增设备审核通过。"
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("APPROVED"))
-                .andExpect(jsonPath("$.data.reviewedAt").value("2026-06-01T09:00:00Z"));
+                .andExpect(jsonPath("$.data.reviewedAt").value("2026-07-01T09:00:00Z"))
+                .andExpect(jsonPath("$.data.freezeUntil").value("2026-07-01T15:00:00Z"));
 
-        mockMvc.perform(get("/api/v1/devices/by-code/RDVP-DEVICE-0099")
+        String deviceResponse = mockMvc.perform(get("/api/v1/devices/by-code/RDVP-DEVICE-0099")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.deviceCode").value("RDVP-DEVICE-0099"))
                 .andExpect(jsonPath("$.data.name").value("巡检网关G-99"))
-                .andExpect(jsonPath("$.data.status").value("PENDING_VERIFICATION"));
+                .andExpect(jsonPath("$.data.status").value("PENDING_VERIFICATION"))
+                .andExpect(jsonPath("$.data.archiveRequestState.locked").value(true))
+                .andExpect(jsonPath("$.data.archiveRequestState.freezeUntil").value("2026-07-01T15:00:00Z"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        String createdDeviceId = objectMapper.readTree(deviceResponse).path("data").path("id").asText();
+
+        verifyPassword(token, "password");
+        mockMvc.perform(post("/api/v1/device-archive-requests")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "type": "DELETE",
+                                  "deviceId": "%s",
+                                  "reason": "冻结期内删除新增档案。"
+                                }
+                                """.formatted(createdDeviceId)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("DEVICE_ARCHIVE_DELETE_BLOCKED"));
     }
 
     @Test

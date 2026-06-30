@@ -140,15 +140,33 @@ public class JdbcDeviceArchiveRequestRepository implements DeviceArchiveRequestR
     public Optional<OffsetDateTime> findActiveFreezeUntil(String deviceId, OffsetDateTime now) {
         List<OffsetDateTime> results = jdbcTemplate.query(
                 """
+                        SELECT cr.freeze_until
+                        FROM device_archive_requests cr
+                        LEFT JOIN devices d ON d.id = :deviceId
+                        WHERE (cr.device_id = :deviceId OR cr.target_device_code = d.device_code)
+                          AND cr.freeze_until IS NOT NULL
+                          AND cr.freeze_until > :now
+                        ORDER BY freeze_until DESC
+                        LIMIT 1
+                        """,
+                Map.of("deviceId", deviceId, "now", now),
+                (resultSet, rowNumber) -> resultSet.getObject("freeze_until", OffsetDateTime.class));
+        return results.stream().findFirst();
+    }
+
+    @Override
+    public Optional<OffsetDateTime> findActiveFreezeUntilByTargetDeviceCode(String deviceCode, OffsetDateTime now) {
+        List<OffsetDateTime> results = jdbcTemplate.query(
+                """
                         SELECT freeze_until
                         FROM device_archive_requests
-                        WHERE device_id = :deviceId
+                        WHERE target_device_code = :deviceCode
                           AND freeze_until IS NOT NULL
                           AND freeze_until > :now
                         ORDER BY freeze_until DESC
                         LIMIT 1
                         """,
-                Map.of("deviceId", deviceId, "now", now),
+                Map.of("deviceCode", deviceCode, "now", now),
                 (resultSet, rowNumber) -> resultSet.getObject("freeze_until", OffsetDateTime.class));
         return results.stream().findFirst();
     }
@@ -286,7 +304,8 @@ public class JdbcDeviceArchiveRequestRepository implements DeviceArchiveRequestR
             String requestId,
             String reviewerId,
             String reviewComment,
-            OffsetDateTime reviewedAt) {
+            OffsetDateTime reviewedAt,
+            OffsetDateTime freezeUntil) {
         int updated = jdbcTemplate.update(
                 """
                         UPDATE device_archive_requests
@@ -294,6 +313,7 @@ public class JdbcDeviceArchiveRequestRepository implements DeviceArchiveRequestR
                             reviewer_id = :reviewerId,
                             review_comment = :reviewComment,
                             reviewed_at = :reviewedAt,
+                            freeze_until = :freezeUntil,
                             updated_at = :reviewedAt,
                             updated_by = :reviewerId
                         WHERE id = :requestId
@@ -303,7 +323,8 @@ public class JdbcDeviceArchiveRequestRepository implements DeviceArchiveRequestR
                         .addValue("requestId", requestId)
                         .addValue("reviewerId", reviewerId)
                         .addValue("reviewComment", reviewComment)
-                        .addValue("reviewedAt", reviewedAt));
+                        .addValue("reviewedAt", reviewedAt)
+                        .addValue("freezeUntil", freezeUntil));
         return updated > 0;
     }
 
