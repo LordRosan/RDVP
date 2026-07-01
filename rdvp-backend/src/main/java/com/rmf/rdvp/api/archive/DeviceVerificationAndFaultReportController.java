@@ -26,13 +26,13 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1")
-public class DeviceVerificationController {
+public class DeviceVerificationAndFaultReportController {
 
     private final DeviceArchiveService archiveService;
     private final OperationsService operationsService;
     private final AuthenticationService authenticationService;
 
-    public DeviceVerificationController(
+    public DeviceVerificationAndFaultReportController(
             DeviceArchiveService archiveService,
             OperationsService operationsService,
             AuthenticationService authenticationService) {
@@ -61,13 +61,13 @@ public class DeviceVerificationController {
 
     @PostMapping("/devices/{deviceId}/verification-records/fault-report")
     @PreAuthorize("hasAuthority('OPERATIONS_CENTER_DEVICE_VERIFICATION_SUBMIT') and hasAuthority('OPERATIONS_CENTER_DEVICE_FAULT_REPORT_SUBMIT')")
-    public ResponseEntity<ApiResponse<DeviceVerificationFaultReportResponse>> createVerificationWithFaultReport(
+    public ResponseEntity<ApiResponse<DeviceVerificationAndFaultReportResponse>> createVerificationAndFaultReport(
             @PathVariable String deviceId,
-            @Valid @RequestBody CreateDeviceVerificationFaultReportRequest requestBody,
+            @Valid @RequestBody CreateDeviceVerificationAndFaultReportRequest requestBody,
             @AuthenticationPrincipal AuthenticatedUser user,
             HttpServletRequest request) {
         authenticationService.consumeRecentPasswordVerification(user);
-        var result = operationsService.createVerificationWithFaultReport(
+        var result = operationsService.createVerificationAndFaultReport(
                 deviceId,
                 parseEnum(DeviceVerificationResult.class, requestBody.result(), "result"),
                 requestBody.description(),
@@ -81,7 +81,7 @@ public class DeviceVerificationController {
                 requestBody.longitude(),
                 requestBody.latitude(),
                 user);
-        return ResponseEntity.ok(ApiResponse.success(DeviceVerificationFaultReportResponse.from(result), RequestIds.resolve(request)));
+        return ResponseEntity.ok(ApiResponse.success(DeviceVerificationAndFaultReportResponse.from(result), RequestIds.resolve(request)));
     }
 
     private DeviceVerificationResult parseResult(String value) {

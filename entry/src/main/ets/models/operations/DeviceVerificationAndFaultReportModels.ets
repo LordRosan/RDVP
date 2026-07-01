@@ -27,12 +27,12 @@ export interface DeviceVerificationRecord {
   submittedAt: string;
 }
 
-export interface DeviceVerificationFaultReportForm {
+export interface DeviceVerificationAndFaultReportForm {
   verification: DeviceVerificationForm;
   faultReport: FaultReportForm;
 }
 
-export interface DeviceVerificationFaultReportRecord {
+export interface DeviceVerificationAndFaultReportRecord {
   verificationRecord: DeviceVerificationRecord;
   faultReport: FaultReportRecord;
 }

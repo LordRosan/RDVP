@@ -170,7 +170,7 @@ public class OperationsService {
     }
 
     @Transactional
-    public DeviceVerificationFaultReportResult createVerificationWithFaultReport(
+    public DeviceVerificationAndFaultReportResult createVerificationAndFaultReport(
             String deviceId,
             DeviceVerificationResult result,
             String verificationDescription,
@@ -297,7 +297,7 @@ public class OperationsService {
                             faultReport.severity().name(),
                             faultReport.description()),
                     faultReport.createdAt());
-            return new DeviceVerificationFaultReportResult(verificationRecord, faultReport);
+            return new DeviceVerificationAndFaultReportResult(verificationRecord, faultReport);
         } catch (BusinessException exception) {
             recordDeviceVerificationFailure(deviceId, device, operator, exception);
             throw exception;

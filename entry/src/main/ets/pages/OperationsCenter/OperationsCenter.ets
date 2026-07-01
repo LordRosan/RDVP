@@ -240,8 +240,8 @@ struct OperationsCenter {
   openFeature(action: MainPageAction): void {
     this.message = '';
     this.messageTargetId = '';
-    if (action.id === MainPageActionId.DeviceVerification) {
-      this.openPage('pages/OperationsCenter/DeviceVerification', UiFeedbackService.operationUnavailable('核验与报修'));
+    if (action.id === MainPageActionId.DeviceVerificationAndFaultReport) {
+      this.openPage(this.getDeviceVerificationAndFaultReportEntryUrl(), UiFeedbackService.operationUnavailable('核验与报修'));
       return;
     }
 
@@ -267,8 +267,8 @@ struct OperationsCenter {
   }
 
   resolveActionIdByUrl(url: string): string {
-    if (url === 'pages/OperationsCenter/DeviceVerification') {
-      return `${MainPageActionId.DeviceVerification}`;
+    if (url === MainPageService.getDeviceVerificationAndFaultReportRoute()) {
+      return `${MainPageActionId.DeviceVerificationAndFaultReport}`;
     }
 
     if (url === 'pages/OperationsCenter/TaskAcceptance') {
@@ -280,6 +280,10 @@ struct OperationsCenter {
     }
 
     return '';
+  }
+
+  getDeviceVerificationAndFaultReportEntryUrl(): string {
+    return MainPageService.getDeviceVerificationAndFaultReportRoute();
   }
 
   getRepairAndReinspectionEntryUrl(): string {

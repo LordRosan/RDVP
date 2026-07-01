@@ -1,14 +1,14 @@
 package com.rmf.rdvp.api.archive;
 
 import com.rmf.rdvp.api.operations.FaultReportResponse;
-import com.rmf.rdvp.operations.DeviceVerificationFaultReportResult;
+import com.rmf.rdvp.operations.DeviceVerificationAndFaultReportResult;
 
-public record DeviceVerificationFaultReportResponse(
+public record DeviceVerificationAndFaultReportResponse(
         DeviceVerificationRecordResponse verificationRecord,
         FaultReportResponse faultReport) {
 
-    public static DeviceVerificationFaultReportResponse from(DeviceVerificationFaultReportResult result) {
-        return new DeviceVerificationFaultReportResponse(
+    public static DeviceVerificationAndFaultReportResponse from(DeviceVerificationAndFaultReportResult result) {
+        return new DeviceVerificationAndFaultReportResponse(
                 DeviceVerificationRecordResponse.from(result.verificationRecord()),
                 FaultReportResponse.from(result.faultReport()));
     }

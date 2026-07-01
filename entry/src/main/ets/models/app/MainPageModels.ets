@@ -7,7 +7,7 @@ export enum MainPageActionId {
   LogCenter = 'LOG_CENTER',
   DeviceArchiveQuery = 'DEVICE_ARCHIVE_QUERY',
   DeviceArchiveCreateRequest = 'DEVICE_ARCHIVE_CREATE_REQUEST',
-  DeviceVerification = 'DEVICE_VERIFICATION',
+  DeviceVerificationAndFaultReport = 'DEVICE_VERIFICATION_AND_FAULT_REPORT',
   TaskAcceptance = 'TASK_ACCEPTANCE',
   RepairAndReinspection = 'REPAIR_AND_REINSPECTION',
   DeviceArchiveReview = 'DEVICE_ARCHIVE_REVIEW',

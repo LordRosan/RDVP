@@ -2,12 +2,12 @@ import { ApiResponse } from '../../models/common/ApiModels';
 import { FaultStatus } from '../../models/operations/FaultModels';
 import {
   DeviceVerificationForm,
-  DeviceVerificationFaultReportForm,
-  DeviceVerificationFaultReportRecord,
+  DeviceVerificationAndFaultReportForm,
+  DeviceVerificationAndFaultReportRecord,
   DeviceVerificationRecord,
   DeviceVerificationValidationResult,
   VerificationResult
-} from '../../models/operations/VerificationModels';
+} from '../../models/operations/DeviceVerificationAndFaultReportModels';
 import { ApiClient } from '../common/ApiClient';
 import { DeviceService } from '../archive/DeviceService';
 import { FaultReportService } from './FaultReportService';
@@ -32,12 +32,12 @@ interface FaultReportApiResult {
   createdAt: string;
 }
 
-interface DeviceVerificationFaultReportApiResult {
+interface DeviceVerificationAndFaultReportApiResult {
   verificationRecord: DeviceVerificationApiResult;
   faultReport: FaultReportApiResult;
 }
 
-export class DeviceVerificationService {
+export class DeviceVerificationAndFaultReportService {
   static normalizeText(value: string): string {
     return value.trim();
   }
@@ -54,14 +54,14 @@ export class DeviceVerificationService {
       };
     }
 
-    if (!DeviceVerificationService.isKnownResult(form.result)) {
+    if (!DeviceVerificationAndFaultReportService.isKnownResult(form.result)) {
       return {
         valid: false,
         message: UiFeedbackService.requiredSelection('核验结果')
       };
     }
 
-    const verifiedAt = DeviceVerificationService.normalizeText(form.verifiedAt);
+    const verifiedAt = DeviceVerificationAndFaultReportService.normalizeText(form.verifiedAt);
     if (verifiedAt.length === 0) {
       return {
         valid: false,
@@ -76,7 +76,7 @@ export class DeviceVerificationService {
       };
     }
 
-    const description = DeviceVerificationService.normalizeText(form.description);
+    const description = DeviceVerificationAndFaultReportService.normalizeText(form.description);
     if (description.length === 0) {
       return {
         valid: false,
@@ -91,7 +91,7 @@ export class DeviceVerificationService {
       };
     }
 
-    const remark = DeviceVerificationService.normalizeText(form.remark ?? '');
+    const remark = DeviceVerificationAndFaultReportService.normalizeText(form.remark ?? '');
     if (remark.length > MAX_REMARK_LENGTH) {
       return {
         valid: false,
@@ -105,7 +105,7 @@ export class DeviceVerificationService {
     };
   }
 
-  static validateVerificationFaultReportForm(form: DeviceVerificationFaultReportForm): DeviceVerificationValidationResult {
+  static validateVerificationAndFaultReportForm(form: DeviceVerificationAndFaultReportForm): DeviceVerificationValidationResult {
     const deviceCodeValidation = DeviceService.validateDeviceCodeQuery({
       deviceCode: form.verification.deviceCode
     });
@@ -117,7 +117,7 @@ export class DeviceVerificationService {
       };
     }
 
-    if (!DeviceVerificationService.isKnownResult(form.verification.result)) {
+    if (!DeviceVerificationAndFaultReportService.isKnownResult(form.verification.result)) {
       return {
         valid: false,
         message: UiFeedbackService.requiredSelection('核验结果')
@@ -139,7 +139,7 @@ export class DeviceVerificationService {
       };
     }
 
-    const verificationDescription = DeviceVerificationService.resolveVerificationDescription(form);
+    const verificationDescription = DeviceVerificationAndFaultReportService.resolveVerificationDescription(form);
     if (verificationDescription.length > MAX_DESCRIPTION_LENGTH) {
       return {
         valid: false,
@@ -154,7 +154,7 @@ export class DeviceVerificationService {
   }
 
   static async submitVerificationRemoteFirst(form: DeviceVerificationForm): Promise<ApiResponse<DeviceVerificationRecord>> {
-    const validation = DeviceVerificationService.validateVerificationForm(form);
+    const validation = DeviceVerificationAndFaultReportService.validateVerificationForm(form);
     if (!validation.valid) {
       return {
         success: false,
@@ -169,14 +169,14 @@ export class DeviceVerificationService {
       return ApiClient.createServiceUnavailableResponse<DeviceVerificationRecord>();
     }
 
-    const verifiedAt = DeviceVerificationService.normalizeText(form.verifiedAt);
-    return DeviceVerificationService.submitVerificationToBackend(form, verifiedAt);
+    const verifiedAt = DeviceVerificationAndFaultReportService.normalizeText(form.verifiedAt);
+    return DeviceVerificationAndFaultReportService.submitVerificationToBackend(form, verifiedAt);
   }
 
-  static async submitVerificationWithFaultReportRemoteFirst(
-    form: DeviceVerificationFaultReportForm
-  ): Promise<ApiResponse<DeviceVerificationFaultReportRecord>> {
-    const validation = DeviceVerificationService.validateVerificationFaultReportForm(form);
+  static async submitVerificationAndFaultReportRemoteFirst(
+    form: DeviceVerificationAndFaultReportForm
+  ): Promise<ApiResponse<DeviceVerificationAndFaultReportRecord>> {
+    const validation = DeviceVerificationAndFaultReportService.validateVerificationAndFaultReportForm(form);
     if (!validation.valid) {
       return {
         success: false,
@@ -188,11 +188,11 @@ export class DeviceVerificationService {
     }
 
     if (!ApiClient.isConfigured()) {
-      return ApiClient.createServiceUnavailableResponse<DeviceVerificationFaultReportRecord>();
+      return ApiClient.createServiceUnavailableResponse<DeviceVerificationAndFaultReportRecord>();
     }
 
     const verifiedAt = FaultReportService.normalizeText(form.faultReport.occurredAt);
-    return DeviceVerificationService.submitVerificationFaultReportToBackend(form, verifiedAt);
+    return DeviceVerificationAndFaultReportService.submitVerificationAndFaultReportToBackend(form, verifiedAt);
   }
 
   private static async submitVerificationToBackend(
@@ -217,8 +217,8 @@ export class DeviceVerificationService {
       true,
       JSON.stringify({
         result: form.result,
-        description: DeviceVerificationService.normalizeText(form.description),
-        remark: DeviceVerificationService.normalizeText(form.remark ?? ''),
+        description: DeviceVerificationAndFaultReportService.normalizeText(form.description),
+        remark: DeviceVerificationAndFaultReportService.normalizeText(form.remark ?? ''),
         verifiedAt
       })
     );
@@ -259,10 +259,10 @@ export class DeviceVerificationService {
     };
   }
 
-  private static async submitVerificationFaultReportToBackend(
-    form: DeviceVerificationFaultReportForm,
+  private static async submitVerificationAndFaultReportToBackend(
+    form: DeviceVerificationAndFaultReportForm,
     verifiedAt: string
-  ): Promise<ApiResponse<DeviceVerificationFaultReportRecord>> {
+  ): Promise<ApiResponse<DeviceVerificationAndFaultReportRecord>> {
     const deviceResponse = await DeviceService.queryByCodeRemoteFirst({
       deviceCode: form.verification.deviceCode
     });
@@ -275,14 +275,14 @@ export class DeviceVerificationService {
       };
     }
 
-    const response = await ApiClient.request<DeviceVerificationFaultReportApiResult>(
+    const response = await ApiClient.request<DeviceVerificationAndFaultReportApiResult>(
       `/api/v1/devices/${encodeURIComponent(deviceResponse.data.id)}/verification-records/fault-report`,
       'POST',
       true,
       JSON.stringify({
         result: form.verification.result,
-        description: DeviceVerificationService.resolveVerificationDescription(form),
-        remark: DeviceVerificationService.normalizeText(form.verification.remark ?? ''),
+        description: DeviceVerificationAndFaultReportService.resolveVerificationDescription(form),
+        remark: DeviceVerificationAndFaultReportService.normalizeText(form.verification.remark ?? ''),
         verifiedAt,
         faultType: form.faultReport.faultType,
         severity: form.faultReport.severity,
@@ -355,8 +355,8 @@ export class DeviceVerificationService {
       result === VerificationResult.Abnormal;
   }
 
-  private static resolveVerificationDescription(form: DeviceVerificationFaultReportForm): string {
-    const verificationDescription = DeviceVerificationService.normalizeText(form.verification.description);
+  private static resolveVerificationDescription(form: DeviceVerificationAndFaultReportForm): string {
+    const verificationDescription = DeviceVerificationAndFaultReportService.normalizeText(form.verification.description);
     if (verificationDescription.length > 0) {
       return verificationDescription;
     }

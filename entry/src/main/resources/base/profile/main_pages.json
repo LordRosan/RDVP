@@ -14,7 +14,7 @@
     "pages/ArchiveCenter/DeviceArchiveExport",
     "pages/ArchiveCenter/DeviceArchiveUpdate",
     "pages/ArchiveCenter/DeviceArchiveDelete",
-    "pages/OperationsCenter/DeviceVerification",
+    "pages/OperationsCenter/DeviceVerificationAndFaultReport",
     "pages/OperationsCenter/TaskAcceptance",
     "pages/OperationsCenter/RepairAndReinspection",
     "pages/ReviewCenter/ArchiveReview",

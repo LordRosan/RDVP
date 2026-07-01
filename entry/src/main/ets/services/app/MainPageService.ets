@@ -20,6 +20,10 @@ import { SessionStore } from '../../stores/SessionStore';
 import { ApiClient } from '../common/ApiClient';
 
 export class MainPageService {
+  static getDeviceVerificationAndFaultReportRoute(): string {
+    return 'pages/OperationsCenter/DeviceVerificationAndFaultReport';
+  }
+
   static getRepairAndReinspectionRoute(): string {
     return 'pages/OperationsCenter/RepairAndReinspection';
   }
@@ -106,7 +110,7 @@ export class MainPageService {
     const actions: MainPageAction[] = [];
 
     if (SessionStore.hasPermission(PermissionCode.OperationsCenterDeviceVerificationSubmit)) {
-      actions.push(MainPageService.createAction(MainPageActionId.DeviceVerification, '核验与报修', AppTone.Success));
+      actions.push(MainPageService.createAction(MainPageActionId.DeviceVerificationAndFaultReport, '核验与报修', AppTone.Success));
     }
 
     if (MainPageService.canAcceptAnyOperationTask()) {

@@ -4,10 +4,10 @@ import { CenterTitleBar } from '../../components/CenterTitleBar';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { FaultSeverity, FaultType } from '../../models/operations/FaultModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
-import { VerificationResult } from '../../models/operations/VerificationModels';
+import { VerificationResult } from '../../models/operations/DeviceVerificationAndFaultReportModels';
 import { DeviceService } from '../../services/archive/DeviceService';
 import { UiFeedbackService } from '../../services/common/UiFeedbackService';
-import { DeviceVerificationService } from '../../services/operations/DeviceVerificationService';
+import { DeviceVerificationAndFaultReportService } from '../../services/operations/DeviceVerificationAndFaultReportService';
 import { FaultReportService } from '../../services/operations/FaultReportService';
 import { AuthService } from '../../services/identity/AuthService';
 import { SessionStore } from '../../stores/SessionStore';
@@ -17,7 +17,7 @@ import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
 @Entry
 @Component
-struct DeviceVerification {
+struct DeviceVerificationAndFaultReport {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   @State deviceCode: string = '';
   @State verificationResult: string = '';
@@ -207,7 +207,7 @@ struct DeviceVerification {
           .fontSize(17)
           .fontColor([this.verificationResult === `${result}` ? AppColors.OnPrimary : AppColors.TextPrimary])
 
-        Text(DeviceVerificationService.formatVerificationResult(result))
+        Text(DeviceVerificationAndFaultReportService.formatVerificationResult(result))
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
           .fontColor(this.verificationResult === `${result}` ? AppColors.OnPrimary : AppColors.TextPrimary)
@@ -693,7 +693,7 @@ struct DeviceVerification {
       }
 
       if (this.requiresFaultReport()) {
-        await this.submitVerificationWithFaultReport();
+        await this.submitVerificationAndFaultReport();
       } else {
         await this.submitNormalVerification();
       }
@@ -703,7 +703,7 @@ struct DeviceVerification {
   }
 
   async submitNormalVerification(): Promise<void> {
-    const response = await DeviceVerificationService.submitVerificationRemoteFirst({
+    const response = await DeviceVerificationAndFaultReportService.submitVerificationRemoteFirst({
       deviceCode: this.deviceCode,
       result: this.verificationResult as VerificationResult,
       description: this.description,
@@ -722,14 +722,14 @@ struct DeviceVerification {
     this.submitted = true;
   }
 
-  async submitVerificationWithFaultReport(): Promise<void> {
+  async submitVerificationAndFaultReport(): Promise<void> {
     if (!SessionStore.hasPermission(PermissionCode.OperationsCenterDeviceFaultReportSubmit)) {
       this.message = UiFeedbackService.operationUnavailable('提交');
       this.messageTone = UiFeedbackTone.Danger;
       return;
     }
 
-    const response = await DeviceVerificationService.submitVerificationWithFaultReportRemoteFirst({
+    const response = await DeviceVerificationAndFaultReportService.submitVerificationAndFaultReportRemoteFirst({
       verification: {
         deviceCode: this.deviceCode,
         result: this.verificationResult as VerificationResult,
@@ -760,7 +760,7 @@ struct DeviceVerification {
 
   getVerificationResultStatusText(): string {
     return this.verificationResult.length === 0 ? '-' :
-      DeviceVerificationService.formatVerificationResult(this.verificationResult as VerificationResult);
+      DeviceVerificationAndFaultReportService.formatVerificationResult(this.verificationResult as VerificationResult);
   }
 
   getSelectedResultTone(): string {
@@ -826,7 +826,7 @@ struct DeviceVerification {
 
   validateCurrentForm() {
     if (this.requiresFaultReport()) {
-      return DeviceVerificationService.validateVerificationFaultReportForm({
+      return DeviceVerificationAndFaultReportService.validateVerificationAndFaultReportForm({
         verification: {
           deviceCode: this.deviceCode,
           result: this.verificationResult as VerificationResult,
@@ -845,7 +845,7 @@ struct DeviceVerification {
       });
     }
 
-    return DeviceVerificationService.validateVerificationForm({
+    return DeviceVerificationAndFaultReportService.validateVerificationForm({
       deviceCode: this.deviceCode,
       result: this.verificationResult as VerificationResult,
       description: this.description,
