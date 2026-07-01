@@ -386,7 +386,7 @@ struct DeviceArchiveCreate {
         .fontSize(20)
         .fontColor([this.isDeviceCodeAvailable() ? AppColors.Success : AppColors.Danger])
 
-      Text(this.isDeviceCodeAvailable() ? '设备编号可用' : '设备编号不可用')
+      Text(this.getDeviceCodeAvailabilityText())
         .fontSize(15)
         .fontWeight(FontWeight.Medium)
         .fontColor(this.isDeviceCodeAvailable() ? AppColors.Success : AppColors.Danger)
@@ -501,9 +501,6 @@ struct DeviceArchiveCreate {
       }
 
       this.verifyResult = response.data;
-      if (!response.data.available) {
-        this.verifyMessage = UiFeedbackService.incorrect('设备编号');
-      }
     } finally {
       this.verifying = false;
     }
@@ -618,6 +615,18 @@ struct DeviceArchiveCreate {
 
   isDeviceCodeAvailable(): boolean {
     return this.verifyResult !== undefined && this.verifyResult.available;
+  }
+
+  getDeviceCodeAvailabilityText(): string {
+    if (this.verifyResult === undefined) {
+      return '-';
+    }
+
+    if (this.verifyResult.available) {
+      return '设备编号可用';
+    }
+
+    return UiFeedbackService.deviceCodeAvailabilityMessage(this.verifyResult.available, this.verifyResult.reason);
   }
 
   isSubmitted(): boolean {

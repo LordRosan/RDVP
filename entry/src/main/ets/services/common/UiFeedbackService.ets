@@ -146,6 +146,14 @@ export class UiFeedbackService {
     return UiFeedbackService.operationUnavailable(actionName);
   }
 
+  static deviceCodeAvailabilityMessage(available: boolean, reason?: string): string {
+    if (available) {
+      return '';
+    }
+
+    return '设备编号不可用';
+  }
+
   static qrQueryError(error: ApiError | undefined, actionName: string): string {
     const code = error === undefined ? '' : `${error.code}`;
     if (code === 'DEVICE_NOT_FOUND' || code.startsWith('QR_') || UiFeedbackService.isValidationCode(code) ||

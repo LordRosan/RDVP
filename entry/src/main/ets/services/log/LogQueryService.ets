@@ -189,6 +189,24 @@ export class LogQueryService {
     }
   }
 
+  static formatPageTitle(category: LogCategory): string {
+    switch (category) {
+      case LogCategory.ArchiveReview:
+        return '档案审核日志';
+      case LogCategory.OperationsOperation:
+        return '运维操作日志';
+      case LogCategory.OperationsReview:
+        return '运维审核日志';
+      case LogCategory.ArchiveOperation:
+      default:
+        return '档案操作日志';
+    }
+  }
+
+  static formatListTitle(category: LogCategory): string {
+    return `${LogQueryService.formatPageTitle(category)}列表`;
+  }
+
   private static mapApiItem(item: ApiLogItem, category: LogCategory): LogItem {
     return {
       id: `${item.logCategory}-${item.logType}-${item.taskNo}-${item.occurredAt}`,

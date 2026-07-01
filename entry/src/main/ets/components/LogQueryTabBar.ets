@@ -11,9 +11,9 @@ export const LogQueryBottomTabHeight: number = 78;
 @Component
 export struct LogQueryTabBar {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
-  currentTab: LogQueryTab = LogQueryTab.Operation;
-  operationEnabled: boolean = true;
-  reviewEnabled: boolean = true;
+  @Prop currentTab: LogQueryTab = LogQueryTab.Operation;
+  @Prop operationEnabled: boolean = true;
+  @Prop reviewEnabled: boolean = true;
   onOperationClick: () => void = () => {
   };
   onReviewClick: () => void = () => {
@@ -70,7 +70,7 @@ export struct LogQueryTabBar {
     .alignItems(HorizontalAlign.Center)
     .opacity(enabled ? 1 : 0.45)
     .onClick(() => {
-      if (!enabled || this.currentTab === tab) {
+      if (!enabled) {
         return;
       }
 

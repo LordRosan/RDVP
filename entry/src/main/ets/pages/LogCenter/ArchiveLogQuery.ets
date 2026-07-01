@@ -108,7 +108,7 @@ struct ArchiveLogQuery {
   @Builder
   Header() {
     Column({ space: 5 }) {
-      Text('档案日志')
+      Text(this.getPageTitle())
         .fontSize(34)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
@@ -588,8 +588,12 @@ struct ArchiveLogQuery {
     return this.currentTab === LogQueryTab.Review ? ARCHIVE_REVIEW_TYPE_VALUES : ARCHIVE_OPERATION_TYPE_VALUES;
   }
 
+  getPageTitle(): string {
+    return LogQueryService.formatPageTitle(this.getCurrentCategory());
+  }
+
   getListTitle(): string {
-    return this.currentTab === LogQueryTab.Review ? '档案审核日志列表' : '档案操作日志列表';
+    return LogQueryService.formatListTitle(this.getCurrentCategory());
   }
 
   getEmptyText(): string {

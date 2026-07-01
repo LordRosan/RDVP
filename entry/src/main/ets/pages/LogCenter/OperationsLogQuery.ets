@@ -108,7 +108,7 @@ struct OperationsLogQuery {
   @Builder
   Header() {
     Column({ space: 5 }) {
-      Text('运维日志')
+      Text(this.getPageTitle())
         .fontSize(34)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
@@ -590,8 +590,12 @@ struct OperationsLogQuery {
     return this.currentTab === LogQueryTab.Review ? OPERATIONS_REVIEW_TYPE_VALUES : OPERATIONS_OPERATION_TYPE_VALUES;
   }
 
+  getPageTitle(): string {
+    return LogQueryService.formatPageTitle(this.getCurrentCategory());
+  }
+
   getListTitle(): string {
-    return this.currentTab === LogQueryTab.Review ? '运维审核日志列表' : '运维操作日志列表';
+    return LogQueryService.formatListTitle(this.getCurrentCategory());
   }
 
   getEmptyText(): string {

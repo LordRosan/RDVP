@@ -143,6 +143,20 @@ export default function localUnitTest() {
       expect(LogQueryService.formatTypeLabel('CREATE', LogCategory.ArchiveOperation)).assertEqual('档案添加');
     });
 
+    it('formatsLogQueryTitlesByCategory', 0, () => {
+      expect(LogQueryService.formatPageTitle(LogCategory.ArchiveOperation)).assertEqual('档案操作日志');
+      expect(LogQueryService.formatPageTitle(LogCategory.ArchiveReview)).assertEqual('档案审核日志');
+      expect(LogQueryService.formatListTitle(LogCategory.OperationsOperation)).assertEqual('运维操作日志列表');
+      expect(LogQueryService.formatListTitle(LogCategory.OperationsReview)).assertEqual('运维审核日志列表');
+    });
+
+    it('formatsUnavailableDeviceCodeWithoutIncorrectMessage', 0, () => {
+      expect(UiFeedbackService.deviceCodeAvailabilityMessage(false, '设备编号已被现有档案使用'))
+        .assertEqual('设备编号不可用');
+      expect(UiFeedbackService.deviceCodeAvailabilityMessage(true, '设备编号可用于添加档案'))
+        .assertEqual('');
+    });
+
     it('formatsLogStatusesForSeedData', 0, () => {
       expect(LogQueryService.formatStatus('NORMAL')).assertEqual('正常');
       expect(LogQueryService.formatStatus('REPORT_SUBMITTED')).assertEqual('报告已提交');
