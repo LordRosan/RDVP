@@ -69,6 +69,18 @@ public class JdbcDeviceArchiveRequestRepository implements DeviceArchiveRequestR
     }
 
     @Override
+    public long countAll() {
+        Long count = jdbcTemplate.queryForObject(
+                """
+                        SELECT count(*)
+                        FROM device_archive_requests
+                        """,
+                Map.of(),
+                Long.class);
+        return count == null ? 0 : count;
+    }
+
+    @Override
     public long countPendingReview() {
         Long count = jdbcTemplate.queryForObject(
                 """

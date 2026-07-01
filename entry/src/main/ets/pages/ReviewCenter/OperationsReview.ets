@@ -8,8 +8,8 @@ import {
   OperationsReviewDecision,
   OperationsReviewItem,
   OperationsReviewRequestType
-} from '../../models/management/OperationsReviewModels';
-import { OperationsReviewService } from '../../services/management/OperationsReviewService';
+} from '../../models/review/OperationsReviewModels';
+import { OperationsReviewService } from '../../services/review/OperationsReviewService';
 import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { AuthService } from '../../services/identity/AuthService';
 import { SessionStore } from '../../stores/SessionStore';
@@ -48,7 +48,7 @@ struct OperationsReview {
   @State filterResetRevision: number = 0;
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ManagementCenterOperationsReview)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ReviewCenterOperationsReview)) {
       return;
     }
 
@@ -92,7 +92,7 @@ struct OperationsReview {
   }
 
   onBackPress(): boolean {
-    this.backToManagementCenter();
+    this.backToReviewCenter();
     return true;
   }
 
@@ -100,7 +100,7 @@ struct OperationsReview {
   PageTitleBar() {
     CenterTitleBar({
       action: () => {
-        this.backToManagementCenter();
+        this.backToReviewCenter();
       }
     })
   }
@@ -888,7 +888,7 @@ struct OperationsReview {
   }
 
   canReview(): boolean {
-    return SessionStore.hasPermission(PermissionCode.ManagementCenterOperationsReview);
+    return SessionStore.hasPermission(PermissionCode.ReviewCenterOperationsReview);
   }
 
   hasRequest(requestId: string): boolean {
@@ -1019,8 +1019,8 @@ struct OperationsReview {
     return value < 10 ? `0${value}` : `${value}`;
   }
 
-  backToManagementCenter(): void {
-    AppNavigator.backOrReplace(this.getUIContext(), 'pages/ManagementCenter/ManagementCenter', {
+  backToReviewCenter(): void {
+    AppNavigator.backOrReplace(this.getUIContext(), 'pages/ReviewCenter/ReviewCenter', {
       onFailure: () => {
         AppNavigator.showNavigationUnavailableToast(this.getUIContext());
       }

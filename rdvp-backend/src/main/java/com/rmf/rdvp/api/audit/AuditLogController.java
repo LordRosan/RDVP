@@ -24,7 +24,7 @@ public class AuditLogController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('MANAGEMENT_CENTER_REVIEW_RECORD_QUERY')")
+    @PreAuthorize("hasAnyAuthority('LOG_CENTER_ARCHIVE_REVIEW_LOG_QUERY','LOG_CENTER_OPERATIONS_REVIEW_LOG_QUERY')")
     public ResponseEntity<ApiResponse<AuditLogListResponse>> list(
             @RequestParam(required = false) String action,
             @RequestParam(required = false) String keyword,

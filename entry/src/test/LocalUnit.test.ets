@@ -11,8 +11,8 @@ import { DeviceArchiveUpdateService } from '../main/ets/services/archive/DeviceA
 import { ApiClient } from '../main/ets/services/common/ApiClient';
 import { RepairTaskService } from '../main/ets/services/operations/RepairTaskService';
 import { AppNavigator } from '../main/ets/utils/AppNavigator';
-import { RecordCategory } from '../main/ets/models/management/RecordQueryModels';
-import { RecordQueryService } from '../main/ets/services/management/RecordQueryService';
+import { LogCategory } from '../main/ets/models/log/LogQueryModels';
+import { LogQueryService } from '../main/ets/services/log/LogQueryService';
 import { ReinspectionService } from '../main/ets/services/operations/ReinspectionService';
 import { ReinspectionTaskStatus } from '../main/ets/models/operations/ReinspectionModels';
 
@@ -77,10 +77,12 @@ export default function localUnitTest() {
       expect(AppColors.colorForTone(AppTone.Success)).assertEqual(AppColors.Success);
       expect(AppColors.colorForTone(AppTone.Warning)).assertEqual(AppColors.Warning);
       expect(AppColors.colorForTone(AppTone.Danger)).assertEqual(AppColors.Danger);
+      expect(AppColors.colorForTone(AppTone.Log)).assertEqual(AppColors.Log);
       expect(AppColors.surfaceForTone(AppTone.Primary)).assertEqual(AppColors.PrimarySurface);
       expect(AppColors.surfaceForTone(AppTone.Success)).assertEqual(AppColors.SuccessSurface);
       expect(AppColors.surfaceForTone(AppTone.Warning)).assertEqual(AppColors.WarningSurface);
       expect(AppColors.surfaceForTone(AppTone.Danger)).assertEqual(AppColors.DangerSurface);
+      expect(AppColors.surfaceForTone(AppTone.Log)).assertEqual(AppColors.LogSurface);
     });
 
     it('resolvesSemanticTonesAgainstCurrentThemeMode', 0, () => {
@@ -106,9 +108,9 @@ export default function localUnitTest() {
       expect(result.message).assertEqual('查询范围不正确，请重新输入');
     });
 
-    it('buildsRecordQueryPathWithDateRange', 0, () => {
-      const path = RecordQueryService.buildRecordQueryPath({
-        category: RecordCategory.Operations,
+    it('buildsLogQueryPathWithDateRange', 0, () => {
+      const path = LogQueryService.buildLogQueryPath({
+        category: LogCategory.OperationsOperation,
         type: 'REPAIR_REPORT',
         keyword: 'RDVP-DEVICE-0001',
         startDate: '2026-06-01',
@@ -117,12 +119,12 @@ export default function localUnitTest() {
         pageSize: 50
       });
 
-      expect(path).assertEqual('/api/v1/management-records?category=OPERATIONS&page=1&pageSize=50&keyword=RDVP-DEVICE-0001&type=REPAIR_REPORT&startDate=2026-06-01&endDate=2026-06-25');
+      expect(path).assertEqual('/api/v1/log-center/logs?category=OPERATIONS_OPERATION&page=1&pageSize=50&keyword=RDVP-DEVICE-0001&type=REPAIR_REPORT&startDate=2026-06-01&endDate=2026-06-25');
     });
 
-    it('buildsDefaultRecordQueryPathAfterFilterReset', 0, () => {
-      const path = RecordQueryService.buildRecordQueryPath({
-        category: RecordCategory.Archive,
+    it('buildsDefaultLogQueryPathAfterFilterReset', 0, () => {
+      const path = LogQueryService.buildLogQueryPath({
+        category: LogCategory.ArchiveOperation,
         type: '',
         keyword: '',
         startDate: '',
@@ -131,21 +133,21 @@ export default function localUnitTest() {
         pageSize: 50
       });
 
-      expect(path).assertEqual('/api/v1/management-records?category=ARCHIVE&page=1&pageSize=50');
+      expect(path).assertEqual('/api/v1/log-center/logs?category=ARCHIVE_OPERATION&page=1&pageSize=50');
     });
 
-    it('formatsRecordTypesForRecords', 0, () => {
-      expect(RecordQueryService.formatTypeLabel('DEVICE_ARCHIVE_EXPORT', RecordCategory.Archive)).assertEqual('档案导出');
-      expect(RecordQueryService.formatTypeLabel('DEVICE_VERIFICATION', RecordCategory.Operations)).assertEqual('核验报告');
-      expect(RecordQueryService.formatTypeLabel('CREATE', RecordCategory.Review)).assertEqual('添加档案');
-      expect(RecordQueryService.formatTypeLabel('CREATE', RecordCategory.Archive)).assertEqual('档案添加');
+    it('formatsLogTypesForLogs', 0, () => {
+      expect(LogQueryService.formatTypeLabel('DEVICE_ARCHIVE_EXPORT', LogCategory.ArchiveOperation)).assertEqual('档案导出');
+      expect(LogQueryService.formatTypeLabel('DEVICE_VERIFICATION', LogCategory.OperationsOperation)).assertEqual('核验报告');
+      expect(LogQueryService.formatTypeLabel('CREATE', LogCategory.ArchiveReview)).assertEqual('添加档案');
+      expect(LogQueryService.formatTypeLabel('CREATE', LogCategory.ArchiveOperation)).assertEqual('档案添加');
     });
 
-    it('formatsRecordStatusesForSeedData', 0, () => {
-      expect(RecordQueryService.formatStatus('NORMAL')).assertEqual('正常');
-      expect(RecordQueryService.formatStatus('REPORT_SUBMITTED')).assertEqual('报告已提交');
-      expect(RecordQueryService.formatStatus('REPAIRED')).assertEqual('已修复');
-      expect(RecordQueryService.formatStatus('PASSED')).assertEqual('通过');
+    it('formatsLogStatusesForSeedData', 0, () => {
+      expect(LogQueryService.formatStatus('NORMAL')).assertEqual('正常');
+      expect(LogQueryService.formatStatus('REPORT_SUBMITTED')).assertEqual('报告已提交');
+      expect(LogQueryService.formatStatus('REPAIRED')).assertEqual('已修复');
+      expect(LogQueryService.formatStatus('PASSED')).assertEqual('通过');
     });
 
     it('formatsReinspectionTaskStatusLabels', 0, () => {

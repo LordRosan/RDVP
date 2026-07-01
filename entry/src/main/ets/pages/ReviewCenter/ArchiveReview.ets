@@ -11,7 +11,7 @@ import {
 } from '../../models/archive/DeviceArchiveReviewModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
 import { UiFeedbackService } from '../../services/common/UiFeedbackService';
-import { DeviceArchiveReviewService } from '../../services/management/DeviceArchiveReviewService';
+import { DeviceArchiveReviewService } from '../../services/review/DeviceArchiveReviewService';
 import { AuthService } from '../../services/identity/AuthService';
 import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
@@ -44,7 +44,7 @@ struct DeviceArchiveReview {
   @State filterResetRevision: number = 0;
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ManagementCenterDeviceArchiveRequestReview)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ReviewCenterDeviceArchiveRequestReview)) {
       return;
     }
 
@@ -88,7 +88,7 @@ struct DeviceArchiveReview {
   }
 
   onBackPress(): boolean {
-    this.backToManagementCenter();
+    this.backToReviewCenter();
     return true;
   }
 
@@ -96,7 +96,7 @@ struct DeviceArchiveReview {
   PageTitleBar() {
     CenterTitleBar({
       action: () => {
-        this.backToManagementCenter();
+        this.backToReviewCenter();
       }
     })
   }
@@ -924,7 +924,7 @@ struct DeviceArchiveReview {
   }
 
   canReview(): boolean {
-    return SessionStore.hasPermission(PermissionCode.ManagementCenterDeviceArchiveRequestReview);
+    return SessionStore.hasPermission(PermissionCode.ReviewCenterDeviceArchiveRequestReview);
   }
 
   hasRequest(requestId: string): boolean {
@@ -1053,8 +1053,8 @@ struct DeviceArchiveReview {
     return value < 10 ? `0${value}` : `${value}`;
   }
 
-  backToManagementCenter(): void {
-    AppNavigator.backOrReplace(this.getUIContext(), 'pages/ManagementCenter/ManagementCenter', {
+  backToReviewCenter(): void {
+    AppNavigator.backOrReplace(this.getUIContext(), 'pages/ReviewCenter/ReviewCenter', {
       onFailure: () => {
         AppNavigator.showNavigationUnavailableToast(this.getUIContext());
       }

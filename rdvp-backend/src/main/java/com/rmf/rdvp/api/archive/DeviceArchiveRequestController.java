@@ -83,7 +83,7 @@ public class DeviceArchiveRequestController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('MANAGEMENT_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW')")
+    @PreAuthorize("hasAuthority('REVIEW_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW')")
     public ResponseEntity<ApiResponse<DeviceArchiveReviewListResponse>> list(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String deviceCode,
@@ -96,7 +96,7 @@ public class DeviceArchiveRequestController {
     }
 
     @PostMapping("/{requestId}/review")
-    @PreAuthorize("hasAuthority('MANAGEMENT_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW')")
+    @PreAuthorize("hasAuthority('REVIEW_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW')")
     public ResponseEntity<ApiResponse<DeviceArchiveReviewResultResponse>> review(
             @PathVariable String requestId,
             @Valid @RequestBody ReviewDeviceArchiveRequest requestBody,

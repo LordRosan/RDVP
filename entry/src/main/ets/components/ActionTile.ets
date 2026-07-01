@@ -61,7 +61,9 @@ export struct ActionTile {
       return $r('sys.symbol.plus_circle');
     }
     if (this.action.id === MainPageActionId.OperationsCenter ||
-      this.action.id === MainPageActionId.RepairReport) {
+      this.action.id === MainPageActionId.RepairAndReinspection ||
+      this.action.id === MainPageActionId.RepairReport ||
+      this.action.id === MainPageActionId.OperationsLogQuery) {
       return $r('sys.symbol.wrench_and_screwdriver');
     }
     if (this.action.id === MainPageActionId.TaskAcceptance) {
@@ -70,20 +72,16 @@ export struct ActionTile {
     if (this.action.id === MainPageActionId.ReinspectionReport) {
       return $r('sys.symbol.doc_text_badge_checkmark');
     }
-    if (this.action.id === MainPageActionId.ManagementCenter ||
+    if (this.action.id === MainPageActionId.ReviewCenter ||
       this.action.id === MainPageActionId.DeviceArchiveReview ||
-      this.action.id === MainPageActionId.OperationsReview ||
-      this.action.id === MainPageActionId.ReviewRecordQuery) {
+      this.action.id === MainPageActionId.OperationsReview) {
       return $r('sys.symbol.checkmark_shield');
     }
-    if (this.action.id === MainPageActionId.OperationsRecordQuery) {
+    if (this.action.id === MainPageActionId.LogCenter) {
       return $r('sys.symbol.clock');
     }
-    if (this.action.id === MainPageActionId.ArchiveRecordQuery) {
+    if (this.action.id === MainPageActionId.ArchiveLogQuery) {
       return $r('sys.symbol.text_clipboard');
-    }
-    if (this.action.id === MainPageActionId.RecordQuery) {
-      return $r('sys.symbol.clock');
     }
     return $r('sys.symbol.checkmark_shield');
   }

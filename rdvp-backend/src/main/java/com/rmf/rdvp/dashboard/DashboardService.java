@@ -38,7 +38,8 @@ public class DashboardService {
         return new DashboardSnapshot(
                 canViewArchiveStats(user) ? archiveStats() : null,
                 canViewOperationsStats(user) ? operationsStats() : null,
-                managementStats(user));
+                reviewStats(user),
+                logStats(user));
     }
 
     private ArchiveDashboardStats archiveStats() {
@@ -60,18 +61,72 @@ public class DashboardService {
                 operationsRepository.countReinspectionRecords());
     }
 
-    private ManagementDashboardStats managementStats(AuthenticatedUser user) {
-        boolean canViewReviewedTotal = hasPermission(user, PermissionCode.MANAGEMENT_CENTER_REVIEW_RECORD_QUERY);
-        boolean canViewPendingArchiveReviews = hasPermission(user, PermissionCode.MANAGEMENT_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW);
-        boolean canViewPendingOperationsReviews = hasPermission(user, PermissionCode.MANAGEMENT_CENTER_OPERATIONS_REVIEW);
+    private ReviewDashboardStats reviewStats(AuthenticatedUser user) {
+        boolean canViewReviewedTotal = hasAnyPermission(
+                user,
+                PermissionCode.LOG_CENTER_ARCHIVE_REVIEW_LOG_QUERY,
+                PermissionCode.LOG_CENTER_OPERATIONS_REVIEW_LOG_QUERY);
+        boolean canViewPendingArchiveReviews = hasPermission(user, PermissionCode.REVIEW_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW);
+        boolean canViewPendingOperationsReviews = hasPermission(user, PermissionCode.REVIEW_CENTER_OPERATIONS_REVIEW);
         if (!canViewReviewedTotal && !canViewPendingArchiveReviews && !canViewPendingOperationsReviews) {
             return null;
         }
 
-        return new ManagementDashboardStats(
+        return new ReviewDashboardStats(
                 canViewReviewedTotal ? archiveRequestRepository.countReviewed() + operationsRepository.countReviewedOperationsReviews() : null,
                 canViewPendingArchiveReviews ? archiveRequestRepository.countPendingReview() : null,
                 canViewPendingOperationsReviews ? operationsRepository.countPendingOperationsReviews() : null);
+    }
+
+    private LogDashboardStats logStats(AuthenticatedUser user) {
+        Long archiveOperationLogs = hasPermission(user, PermissionCode.LOG_CENTER_ARCHIVE_OPERATION_LOG_QUERY)
+                ? archiveOperationLogCount()
+                : null;
+        Long archiveReviewLogs = hasPermission(user, PermissionCode.LOG_CENTER_ARCHIVE_REVIEW_LOG_QUERY)
+                ? archiveReviewLogCount()
+                : null;
+        Long operationsOperationLogs = hasPermission(user, PermissionCode.LOG_CENTER_OPERATIONS_OPERATION_LOG_QUERY)
+                ? operationsOperationLogCount()
+                : null;
+        Long operationsReviewLogs = hasPermission(user, PermissionCode.LOG_CENTER_OPERATIONS_REVIEW_LOG_QUERY)
+                ? operationsReviewLogCount()
+                : null;
+        if (archiveOperationLogs == null && archiveReviewLogs == null
+                && operationsOperationLogs == null && operationsReviewLogs == null) {
+            return null;
+        }
+
+        return new LogDashboardStats(
+                safeCount(archiveOperationLogs)
+                        + safeCount(archiveReviewLogs)
+                        + safeCount(operationsOperationLogs)
+                        + safeCount(operationsReviewLogs),
+                archiveOperationLogs,
+                archiveReviewLogs,
+                operationsOperationLogs,
+                operationsReviewLogs);
+    }
+
+    private long archiveOperationLogCount() {
+        return archiveRequestRepository.countAll()
+                + auditLogRepository.countSuccessByAction(AuditAction.DEVICE_ARCHIVE_QUERY)
+                + auditLogRepository.countSuccessByAction(AuditAction.DEVICE_ARCHIVE_EXPORT);
+    }
+
+    private long archiveReviewLogCount() {
+        return archiveRequestRepository.countReviewed();
+    }
+
+    private long operationsOperationLogCount() {
+        return verificationRepository.countAll()
+                + operationsRepository.countFaultReports()
+                + operationsRepository.countRepairTasks()
+                + operationsRepository.countRepairReports()
+                + operationsRepository.countReinspectionRecords();
+    }
+
+    private long operationsReviewLogCount() {
+        return operationsRepository.countReviewedOperationsReviews();
     }
 
     private boolean canViewArchiveStats(AuthenticatedUser user) {
@@ -106,5 +161,9 @@ public class DashboardService {
 
     private boolean hasPermission(AuthenticatedUser user, PermissionCode permission) {
         return user != null && user.permissions().contains(permission);
+    }
+
+    private long safeCount(Long value) {
+        return value == null ? 0 : value;
     }
 }

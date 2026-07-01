@@ -163,7 +163,7 @@ public class OperationsController {
     }
 
     @GetMapping("/operations-review-requests")
-    @PreAuthorize("hasAuthority('MANAGEMENT_CENTER_OPERATIONS_REVIEW')")
+    @PreAuthorize("hasAuthority('REVIEW_CENTER_OPERATIONS_REVIEW')")
     public ResponseEntity<ApiResponse<OperationsReviewRequestListResponse>> listOperationsReviewRequests(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String type,
@@ -176,7 +176,7 @@ public class OperationsController {
     }
 
     @PostMapping("/operations-review-requests/{requestId}/review")
-    @PreAuthorize("hasAuthority('MANAGEMENT_CENTER_OPERATIONS_REVIEW')")
+    @PreAuthorize("hasAuthority('REVIEW_CENTER_OPERATIONS_REVIEW')")
     public ResponseEntity<ApiResponse<OperationsReviewResultResponse>> reviewOperationsRequest(
             @PathVariable String requestId,
             @Valid @RequestBody ReviewOperationsRequest requestBody,

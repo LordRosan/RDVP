@@ -28,6 +28,8 @@ public interface OperationsRepository {
 
     long countFaultReports();
 
+    long countRepairTasks();
+
     boolean hasActiveRepairTaskForFault(String faultReportId);
 
     boolean hasActiveReinspectionTaskForFault(String faultReportId);
@@ -80,7 +82,7 @@ public interface OperationsRepository {
     boolean markOperationsReviewRequestReviewed(
             String id,
             OperationsReviewRequestStatus status,
-            String reviewOperatorId,
+            String reviewerId,
             String reviewComment,
             OffsetDateTime reviewedAt);
 

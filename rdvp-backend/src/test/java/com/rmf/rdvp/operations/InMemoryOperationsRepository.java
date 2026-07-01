@@ -111,6 +111,11 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     }
 
     @Override
+    public long countRepairTasks() {
+        return repairTasksById.size();
+    }
+
+    @Override
     public boolean hasActiveRepairTaskForFault(String faultReportId) {
         return repairTasksById.values()
                 .stream()
@@ -392,7 +397,7 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     public boolean markOperationsReviewRequestReviewed(
             String id,
             OperationsReviewRequestStatus status,
-            String reviewOperatorId,
+            String reviewerId,
             String reviewComment,
             OffsetDateTime reviewedAt) {
         OperationsReviewRequest request = operationsReviewsById.get(id);
@@ -414,7 +419,7 @@ public class InMemoryOperationsRepository implements OperationsRepository {
                 request.summary(),
                 status,
                 request.submittedAt(),
-                reviewOperatorId,
+                reviewerId,
                 reviewComment,
                 reviewedAt));
         return true;

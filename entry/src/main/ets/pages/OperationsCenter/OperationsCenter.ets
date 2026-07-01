@@ -250,13 +250,8 @@ struct OperationsCenter {
       return;
     }
 
-    if (action.id === MainPageActionId.RepairReport) {
-      this.openPage('pages/OperationsCenter/RepairReport', UiFeedbackService.operationUnavailable('维修任务'));
-      return;
-    }
-
-    if (action.id === MainPageActionId.ReinspectionReport) {
-      this.openPage('pages/OperationsCenter/ReinspectionReport', UiFeedbackService.operationUnavailable('复检任务'));
+    if (action.id === MainPageActionId.RepairAndReinspection) {
+      this.openPage(this.getRepairAndReinspectionEntryUrl(), UiFeedbackService.operationUnavailable('维修与复检'));
       return;
     }
 
@@ -280,15 +275,19 @@ struct OperationsCenter {
       return `${MainPageActionId.TaskAcceptance}`;
     }
 
-    if (url === 'pages/OperationsCenter/RepairReport') {
-      return `${MainPageActionId.RepairReport}`;
-    }
-
-    if (url === 'pages/OperationsCenter/ReinspectionReport') {
-      return `${MainPageActionId.ReinspectionReport}`;
+    if (url === 'pages/OperationsCenter/RepairReport' || url === 'pages/OperationsCenter/ReinspectionReport') {
+      return `${MainPageActionId.RepairAndReinspection}`;
     }
 
     return '';
+  }
+
+  getRepairAndReinspectionEntryUrl(): string {
+    if (SessionStore.hasPermission(PermissionCode.OperationsCenterRepairReportSubmit)) {
+      return 'pages/OperationsCenter/RepairReport';
+    }
+
+    return 'pages/OperationsCenter/ReinspectionReport';
   }
 
   backToMainPage(): void {

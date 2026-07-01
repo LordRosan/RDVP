@@ -1,19 +1,20 @@
 import { AppTone } from '../../styles/AppTheme';
 import {
   ArchiveDashboardStats,
-  ManagementDashboardStats,
+  LogDashboardStats,
   OperationsDashboardStats,
   MainPageAction,
   MainPageActionId,
-  MainPageDashboard
+  MainPageDashboard,
+  ReviewDashboardStats
 } from '../../models/app/MainPageModels';
 import { ApiResponse } from '../../models/common/ApiModels';
 import {
   ArchiveCenterPermissions,
-  ManagementCenterPermissions,
-  ManagementCenterRecordPermissions,
+  LogCenterPermissions,
   OperationsCenterPermissions,
-  PermissionCode
+  PermissionCode,
+  ReviewCenterPermissions
 } from '../../models/identity/PermissionModels';
 import { SessionStore } from '../../stores/SessionStore';
 import { ApiClient } from '../common/ApiClient';
@@ -56,11 +57,19 @@ export class MainPageService {
       });
     }
 
-    if (MainPageService.canAccessManagementCenter()) {
+    if (MainPageService.canAccessReviewCenter()) {
       actions.push({
-        id: MainPageActionId.ManagementCenter,
-        title: '管理中心',
+        id: MainPageActionId.ReviewCenter,
+        title: '审核中心',
         tone: AppTone.Warning
+      });
+    }
+
+    if (MainPageService.canAccessLogCenter()) {
+      actions.push({
+        id: MainPageActionId.LogCenter,
+        title: '日志中心',
+        tone: AppTone.Log
       });
     }
 
@@ -100,18 +109,14 @@ export class MainPageService {
       actions.push(MainPageService.createAction(MainPageActionId.TaskAcceptance, '任务接取', AppTone.Success));
     }
 
-    if (SessionStore.hasPermission(PermissionCode.OperationsCenterRepairReportSubmit)) {
-      actions.push(MainPageService.createAction(MainPageActionId.RepairReport, '维修任务', AppTone.Success));
-    }
-
-    if (SessionStore.hasPermission(PermissionCode.OperationsCenterReinspectionReportSubmit)) {
-      actions.push(MainPageService.createAction(MainPageActionId.ReinspectionReport, '复检任务', AppTone.Success));
+    if (MainPageService.canSubmitAnyOperationReport()) {
+      actions.push(MainPageService.createAction(MainPageActionId.RepairAndReinspection, '维修与复检', AppTone.Success));
     }
 
     return actions;
   }
 
-  static getManagementCenterActions(): MainPageAction[] {
+  static getReviewCenterActions(): MainPageAction[] {
     const actions: MainPageAction[] = [];
     if (MainPageService.canReviewDeviceArchiveRequest()) {
       actions.push({
@@ -121,7 +126,7 @@ export class MainPageService {
       });
     }
 
-    if (SessionStore.hasPermission(PermissionCode.ManagementCenterOperationsReview)) {
+    if (SessionStore.hasPermission(PermissionCode.ReviewCenterOperationsReview)) {
       actions.push({
         id: MainPageActionId.OperationsReview,
         title: '运维审核',
@@ -129,11 +134,24 @@ export class MainPageService {
       });
     }
 
-    if (SessionStore.hasAnyPermission(ManagementCenterRecordPermissions)) {
+    return actions;
+  }
+
+  static getLogCenterActions(): MainPageAction[] {
+    const actions: MainPageAction[] = [];
+    if (MainPageService.canQueryArchiveLogs()) {
       actions.push({
-        id: MainPageActionId.RecordQuery,
-        title: '记录查询',
-        tone: AppTone.Warning
+        id: MainPageActionId.ArchiveLogQuery,
+        title: '档案日志',
+        tone: AppTone.Log
+      });
+    }
+
+    if (MainPageService.canQueryOperationsLogs()) {
+      actions.push({
+        id: MainPageActionId.OperationsLogQuery,
+        title: '运维日志',
+        tone: AppTone.Log
       });
     }
 
@@ -148,21 +166,45 @@ export class MainPageService {
     return SessionStore.hasAnyPermission(OperationsCenterPermissions);
   }
 
-  static canAccessManagementCenter(): boolean {
-    return SessionStore.hasAnyPermission(ManagementCenterPermissions);
+  static canAccessReviewCenter(): boolean {
+    return SessionStore.hasAnyPermission(ReviewCenterPermissions);
+  }
+
+  static canAccessLogCenter(): boolean {
+    return SessionStore.hasAnyPermission(LogCenterPermissions);
   }
 
   static canReviewDeviceArchiveRequest(): boolean {
-    return SessionStore.hasPermission(PermissionCode.ManagementCenterDeviceArchiveRequestReview);
+    return SessionStore.hasPermission(PermissionCode.ReviewCenterDeviceArchiveRequestReview);
   }
 
-  static canQueryAnyManagementRecord(): boolean {
-    return SessionStore.hasAnyPermission(ManagementCenterRecordPermissions);
+  static canQueryAnyLog(): boolean {
+    return SessionStore.hasAnyPermission(LogCenterPermissions);
+  }
+
+  static canQueryArchiveLogs(): boolean {
+    return SessionStore.hasAnyPermission([
+      PermissionCode.LogCenterArchiveOperationLogQuery,
+      PermissionCode.LogCenterArchiveReviewLogQuery
+    ]);
+  }
+
+  static canQueryOperationsLogs(): boolean {
+    return SessionStore.hasAnyPermission([
+      PermissionCode.LogCenterOperationsOperationLogQuery,
+      PermissionCode.LogCenterOperationsReviewLogQuery
+    ]);
   }
 
   static canAcceptAnyOperationTask(): boolean {
     return SessionStore.hasPermission(PermissionCode.OperationsCenterRepairTaskAccept) ||
       SessionStore.hasPermission(PermissionCode.OperationsCenterReinspectionTaskAccept);
+  }
+
+  static canSubmitAnyOperationReport(): boolean {
+    return SessionStore.hasPermission(PermissionCode.OperationsCenterRepairReportSubmit) ||
+      (SessionStore.hasPermission(PermissionCode.OperationsCenterReinspectionTaskAccept) &&
+        SessionStore.hasPermission(PermissionCode.OperationsCenterReinspectionReportSubmit));
   }
 
   private static createAction(id: MainPageActionId, title: string, tone: AppTone): MainPageAction {
@@ -181,8 +223,11 @@ export class MainPageService {
     if (data.operations !== undefined) {
       dashboard.operations = MainPageService.normalizeOperationsStats(data.operations);
     }
-    if (data.management !== undefined) {
-      dashboard.management = MainPageService.normalizeManagementStats(data.management);
+    if (data.review !== undefined) {
+      dashboard.review = MainPageService.normalizeReviewStats(data.review);
+    }
+    if (data.log !== undefined) {
+      dashboard.log = MainPageService.normalizeLogStats(data.log);
     }
 
     return dashboard;
@@ -209,8 +254,8 @@ export class MainPageService {
     };
   }
 
-  private static normalizeManagementStats(stats: ManagementDashboardStats | undefined): ManagementDashboardStats {
-    const normalized: ManagementDashboardStats = {};
+  private static normalizeReviewStats(stats: ReviewDashboardStats | undefined): ReviewDashboardStats {
+    const normalized: ReviewDashboardStats = {};
     const reviewedTotal = MainPageService.toSafeOptionalCount(stats?.reviewedTotal);
     if (reviewedTotal !== undefined) {
       normalized.reviewedTotal = reviewedTotal;
@@ -224,6 +269,33 @@ export class MainPageService {
     const pendingOperationsReviews = MainPageService.toSafeOptionalCount(stats?.pendingOperationsReviews);
     if (pendingOperationsReviews !== undefined) {
       normalized.pendingOperationsReviews = pendingOperationsReviews;
+    }
+
+    return normalized;
+  }
+
+  private static normalizeLogStats(stats: LogDashboardStats | undefined): LogDashboardStats {
+    const normalized: LogDashboardStats = {
+      logTotal: MainPageService.toSafeCount(stats?.logTotal)
+    };
+    const archiveOperationLogs = MainPageService.toSafeOptionalCount(stats?.archiveOperationLogs);
+    if (archiveOperationLogs !== undefined) {
+      normalized.archiveOperationLogs = archiveOperationLogs;
+    }
+
+    const archiveReviewLogs = MainPageService.toSafeOptionalCount(stats?.archiveReviewLogs);
+    if (archiveReviewLogs !== undefined) {
+      normalized.archiveReviewLogs = archiveReviewLogs;
+    }
+
+    const operationsOperationLogs = MainPageService.toSafeOptionalCount(stats?.operationsOperationLogs);
+    if (operationsOperationLogs !== undefined) {
+      normalized.operationsOperationLogs = operationsOperationLogs;
+    }
+
+    const operationsReviewLogs = MainPageService.toSafeOptionalCount(stats?.operationsReviewLogs);
+    if (operationsReviewLogs !== undefined) {
+      normalized.operationsReviewLogs = operationsReviewLogs;
     }
 
     return normalized;

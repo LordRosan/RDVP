@@ -12,7 +12,7 @@
 
 ## 1. 设计范围
 
-本文档定义 RDVP 后端服务对移动端应用提供的 HTTP API。当前已实现接口覆盖用户认证、设备档案查询、二维码校验、设备核验、设备档案申请、故障报修、维修任务、维修报告、复检报告、档案审核、运维审核、记录查询和审计日志等业务。附件、离线同步和通知接口为后续增强预留，不属于当前可调用 API。
+本文档定义 RDVP 后端服务对移动端应用提供的 HTTP API。当前已实现接口覆盖用户认证、设备档案查询、二维码校验、设备核验、设备档案申请、故障报修、维修任务、维修报告、复检报告、档案审核、运维审核、日志查询和审计日志等业务。附件、离线同步和通知接口为后续增强预留，不属于当前可调用 API。
 
 API 采用版本化路径，第一版统一使用：
 
@@ -262,7 +262,7 @@ GET /api/v1/dashboard
     "repairs": 2,
     "reinspections": 1
   },
-  "management": {
+  "review": {
     "reviewedTotal": 5,
     "pendingArchiveReviews": 1,
     "pendingOperationsReviews": 0
@@ -284,9 +284,9 @@ GET /api/v1/dashboard
 | `operations.faultReports` | 故障报修记录总数 |
 | `operations.repairs` | 已提交维修报告总数 |
 | `operations.reinspections` | 已提交复检报告总数 |
-| `management.reviewedTotal` | 已完成审核的档案申请和运维审核总数 |
-| `management.pendingArchiveReviews` | 档案审核中的待审核申请数 |
-| `management.pendingOperationsReviews` | 运维审核中的待审核数 |
+| `review.reviewedTotal` | 已完成审核的档案申请和运维审核总数 |
+| `review.pendingArchiveReviews` | 档案审核中的待审核申请数 |
+| `review.pendingOperationsReviews` | 运维审核中的待审核数 |
 
 权限裁剪：
 
@@ -294,20 +294,20 @@ GET /api/v1/dashboard
 | --- | --- |
 | `archive` | 具备档案新增、修改、删除或二维码导出等档案业务权限 |
 | `operations` | 具备核验、报修、维修任务、维修报告、复检任务或复检报告等运维业务权限 |
-| `management.reviewedTotal` | 具备审核记录查询权限 |
-| `management.pendingArchiveReviews` | 具备档案申请审核权限 |
-| `management.pendingOperationsReviews` | 具备运维审核权限 |
+| `review.reviewedTotal` | 具备审核日志查询权限 |
+| `review.pendingArchiveReviews` | 具备档案申请审核权限 |
+| `review.pendingOperationsReviews` | 具备运维审核权限 |
 
 典型角色可见范围：
 
 | 角色 | 可见范围 |
 | --- | --- |
 | 超级管理员 | 全部中心和全部字段 |
-| 档案管理员 | 档案中心全部数据、管理中心的档案审核待审核数 |
+| 档案管理员 | 档案中心全部数据、审核中心的档案审核待审核数 |
 | 档案员 | 档案中心全部数据 |
-| 运维管理员 | 运维中心全部数据、管理中心的运维审核待审核数 |
+| 运维管理员 | 运维中心全部数据、审核中心的运维审核待审核数 |
 | 运维员 | 运维中心全部数据 |
-| 普通管理员 | 管理中心全部数据 |
+| 普通管理员 | 审核中心和日志中心全部数据 |
 
 ## 6. 设备接口
 
@@ -403,7 +403,7 @@ GET /api/v1/device-codes/{deviceCode}/availability
 }
 ```
 
-当前后端未开放独立的设备列表分页查询接口；业务列表查询通过记录查询、任务接取和审核列表等专用接口完成。
+当前后端未开放独立的设备列表分页查询接口；业务列表查询通过日志查询、任务接取和审核列表等专用接口完成。
 
 ## 7. 二维码接口
 
@@ -664,7 +664,7 @@ POST /api/v1/device-archive-requests
 GET /api/v1/device-archive-requests
 ```
 
-权限要求：`MANAGEMENT_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW`
+权限要求：`REVIEW_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW`
 
 查询参数：
 
@@ -682,7 +682,7 @@ GET /api/v1/device-archive-requests
 POST /api/v1/device-archive-requests/{requestId}/review
 ```
 
-权限要求：`MANAGEMENT_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW`
+权限要求：`REVIEW_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW`
 
 请求体：
 
@@ -741,7 +741,7 @@ POST /api/v1/fault-reports
 }
 ```
 
-当前后端未开放独立的故障报告列表、详情和驳回接口。待接取故障通过 `GET /api/v1/operation-tasks/available` 查询；历史故障记录通过 `GET /api/v1/management-records?category=OPERATIONS` 查询。
+当前后端未开放独立的故障报告列表、详情和驳回接口。待接取故障通过 `GET /api/v1/operation-tasks/available` 查询；历史故障日志通过 `GET /api/v1/log-center/logs?category=OPERATIONS_OPERATION` 查询。
 
 ## 11. 维修任务接口
 
@@ -960,7 +960,7 @@ POST /api/v1/fault-reports/{faultReportId}/reinspection-records
 GET /api/v1/operations-review-requests
 ```
 
-权限要求：`MANAGEMENT_CENTER_OPERATIONS_REVIEW`
+权限要求：`REVIEW_CENTER_OPERATIONS_REVIEW`
 
 查询参数：
 
@@ -1003,7 +1003,7 @@ GET /api/v1/operations-review-requests
 POST /api/v1/operations-review-requests/{requestId}/review
 ```
 
-权限要求：`MANAGEMENT_CENTER_OPERATIONS_REVIEW`。提交前必须完成当前用户密码校验。
+权限要求：`REVIEW_CENTER_OPERATIONS_REVIEW`。提交前必须完成当前用户密码校验。
 
 请求体：
 
@@ -1027,27 +1027,28 @@ POST /api/v1/operations-review-requests/{requestId}/review
 
 同一运维审核请求只能审核一次。重复审核返回 `OPERATIONS_REVIEW_REQUEST_ALREADY_REVIEWED`。
 
-## 15. 记录查询接口
+## 15. 日志查询接口
 
-### 15.1 查询业务记录
+### 15.1 查询业务日志
 
 ```text
-GET /api/v1/management-records
+GET /api/v1/log-center/logs
 ```
 
-权限要求按记录分类拆分：
+权限要求按日志分类拆分：
 
 | `category` | 权限要求 |
 | --- | --- |
-| `ARCHIVE` | `MANAGEMENT_CENTER_ARCHIVE_RECORD_QUERY` |
-| `OPERATIONS` | `MANAGEMENT_CENTER_OPERATIONS_RECORD_QUERY` |
-| `REVIEW` | `MANAGEMENT_CENTER_REVIEW_RECORD_QUERY` |
+| `ARCHIVE_OPERATION` | `LOG_CENTER_ARCHIVE_OPERATION_LOG_QUERY` |
+| `ARCHIVE_REVIEW` | `LOG_CENTER_ARCHIVE_REVIEW_LOG_QUERY` |
+| `OPERATIONS_OPERATION` | `LOG_CENTER_OPERATIONS_OPERATION_LOG_QUERY` |
+| `OPERATIONS_REVIEW` | `LOG_CENTER_OPERATIONS_REVIEW_LOG_QUERY` |
 
 查询参数：
 
 | 参数 | 说明 |
 | --- | --- |
-| `category` | 记录分类：`ARCHIVE`、`OPERATIONS`、`REVIEW` |
+| `category` | 日志分类：`ARCHIVE_OPERATION`、`ARCHIVE_REVIEW`、`OPERATIONS_OPERATION`、`OPERATIONS_REVIEW` |
 | `type` | 业务类型，可为空 |
 | `keyword` | 设备编号、任务编号、操作人或描述关键词 |
 | `page` | 页码，默认 `1` |
@@ -1059,8 +1060,8 @@ GET /api/v1/management-records
 {
   "items": [
     {
-      "recordCategory": "REVIEW",
-      "recordType": "REPAIR_REPORT",
+      "logCategory": "OPERATIONS_REVIEW",
+      "logType": "REPAIR_REPORT",
       "deviceCode": "RDVP-DEVICE-0001",
       "taskNo": "RDR-202606240001",
       "operatorName": "运维管理员",
@@ -1073,7 +1074,7 @@ GET /api/v1/management-records
 }
 ```
 
-当 `category` 为空或不属于允许值时返回 `BAD_REQUEST`；当前用户缺少对应分类权限时返回 `FORBIDDEN`。
+当 `category` 为空或不属于允许值时返回 `BAD_REQUEST`；当前用户缺少对应分类权限时返回 `FORBIDDEN`。旧 `/api/v1/management-records` 和 `/api/v1/record-center/records` 路由不再保留。
 
 ## 16. 后续预留接口
 

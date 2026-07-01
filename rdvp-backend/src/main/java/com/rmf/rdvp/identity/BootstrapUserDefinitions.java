@@ -26,8 +26,9 @@ final class BootstrapUserDefinitions {
                         PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_UPDATE_REQUEST_SUBMIT,
                         PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_DELETE_REQUEST_SUBMIT,
                         PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_EXPORT,
-                        PermissionCode.MANAGEMENT_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW,
-                        PermissionCode.MANAGEMENT_CENTER_ARCHIVE_RECORD_QUERY),
+                        PermissionCode.REVIEW_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW,
+                        PermissionCode.LOG_CENTER_ARCHIVE_OPERATION_LOG_QUERY,
+                        PermissionCode.LOG_CENTER_ARCHIVE_REVIEW_LOG_QUERY),
                 create(
                         passwordEncoder,
                         defaultPassword,
@@ -53,8 +54,9 @@ final class BootstrapUserDefinitions {
                         PermissionCode.OPERATIONS_CENTER_REPAIR_REPORT_SUBMIT,
                         PermissionCode.OPERATIONS_CENTER_REINSPECTION_TASK_ACCEPT,
                         PermissionCode.OPERATIONS_CENTER_REINSPECTION_REPORT_SUBMIT,
-                        PermissionCode.MANAGEMENT_CENTER_OPERATIONS_REVIEW,
-                        PermissionCode.MANAGEMENT_CENTER_OPERATIONS_RECORD_QUERY),
+                        PermissionCode.REVIEW_CENTER_OPERATIONS_REVIEW,
+                        PermissionCode.LOG_CENTER_OPERATIONS_OPERATION_LOG_QUERY,
+                        PermissionCode.LOG_CENTER_OPERATIONS_REVIEW_LOG_QUERY),
                 create(
                         passwordEncoder,
                         defaultPassword,
@@ -76,11 +78,12 @@ final class BootstrapUserDefinitions {
                         "manager",
                         "普通管理员",
                         RoleCode.GENERAL_ADMIN,
-                        PermissionCode.MANAGEMENT_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW,
-                        PermissionCode.MANAGEMENT_CENTER_OPERATIONS_REVIEW,
-                        PermissionCode.MANAGEMENT_CENTER_ARCHIVE_RECORD_QUERY,
-                        PermissionCode.MANAGEMENT_CENTER_OPERATIONS_RECORD_QUERY,
-                        PermissionCode.MANAGEMENT_CENTER_REVIEW_RECORD_QUERY));
+                        PermissionCode.REVIEW_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW,
+                        PermissionCode.REVIEW_CENTER_OPERATIONS_REVIEW,
+                        PermissionCode.LOG_CENTER_ARCHIVE_OPERATION_LOG_QUERY,
+                        PermissionCode.LOG_CENTER_ARCHIVE_REVIEW_LOG_QUERY,
+                        PermissionCode.LOG_CENTER_OPERATIONS_OPERATION_LOG_QUERY,
+                        PermissionCode.LOG_CENTER_OPERATIONS_REVIEW_LOG_QUERY));
     }
 
     private static BootstrapUser create(

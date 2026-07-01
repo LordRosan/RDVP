@@ -8,7 +8,7 @@ import {
   OperationsReviewRequestStatus,
   OperationsReviewRequestType,
   OperationsReviewResult
-} from '../../models/management/OperationsReviewModels';
+} from '../../models/review/OperationsReviewModels';
 import { DateTimeFormatUtil } from '../../utils/DateTimeFormatUtil';
 import { ApiClient } from '../common/ApiClient';
 import { UiFeedbackService } from '../common/UiFeedbackService';
@@ -32,7 +32,7 @@ interface OperationsReviewApiItem {
   summary?: string;
   status: OperationsReviewRequestStatus;
   submittedAt: string;
-  reviewOperatorId?: string;
+  reviewerId?: string;
   reviewComment?: string;
   reviewedAt?: string;
 }
@@ -217,7 +217,7 @@ export class OperationsReviewService {
       summary: item.summary === undefined ? '' : item.summary,
       status: item.status,
       submittedAt: item.submittedAt,
-      reviewOperatorId: item.reviewOperatorId,
+      reviewerId: item.reviewerId,
       reviewComment: item.reviewComment,
       reviewedAt: item.reviewedAt
     };

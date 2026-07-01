@@ -1,27 +1,27 @@
-import { AppColors, AppSpacing } from '../../styles/AppTheme';
 import { ActionTile } from '../../components/ActionTile';
 import { AppSectionTitle } from '../../components/AppSectionTitle';
 import { CenterTitleBar } from '../../components/CenterTitleBar';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
-import { ManagementCenterPermissions, PermissionCode } from '../../models/identity/PermissionModels';
 import { MainPageAction, MainPageActionId } from '../../models/app/MainPageModels';
+import { LogCenterPermissions, PermissionCode } from '../../models/identity/PermissionModels';
+import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 import { MainPageService } from '../../services/app/MainPageService';
 import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { SessionStore } from '../../stores/SessionStore';
-import { AuthGuard } from '../../utils/AuthGuard';
+import { AppColors, AppSpacing } from '../../styles/AppTheme';
 import { AppNavigator } from '../../utils/AppNavigator';
-import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
+import { AuthGuard } from '../../utils/AuthGuard';
 
 @Entry
 @Component
-struct ManagementCenter {
+struct LogCenter {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
-  @State actions: MainPageAction[] = MainPageService.getManagementCenterActions();
+  @State actions: MainPageAction[] = MainPageService.getLogCenterActions();
   @State message: string = '';
   @State messageTargetId: string = '';
 
   aboutToAppear(): void {
-    if (!AuthGuard.requireAnyPermission(this.getUIContext(), ManagementCenterPermissions)) {
+    if (!AuthGuard.requireAnyPermission(this.getUIContext(), LogCenterPermissions)) {
       return;
     }
 
@@ -29,7 +29,7 @@ struct ManagementCenter {
   }
 
   onPageShow(): void {
-    if (AuthGuard.requireAnyPermission(this.getUIContext(), ManagementCenterPermissions)) {
+    if (AuthGuard.requireAnyPermission(this.getUIContext(), LogCenterPermissions)) {
       this.refreshCenterState();
     }
   }
@@ -81,13 +81,13 @@ struct ManagementCenter {
   @Builder
   Header() {
     Column({ space: 5 }) {
-      Text('管理中心')
+      Text('日志中心')
         .fontSize(34)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
-      Text('Management Center')
+      Text('Log Center')
         .fontSize(13)
         .fontWeight(FontWeight.Medium)
         .fontColor(AppColors.TextTertiary)
@@ -115,23 +115,19 @@ struct ManagementCenter {
       Column({ space: 16 }) {
         Grid() {
           GridItem() {
-            this.PermissionCell('档案审核', this.canReviewDeviceArchiveRequest())
+            this.PermissionCell('档案操作日志', this.canQueryArchiveOperationLog())
           }
 
           GridItem() {
-            this.PermissionCell('运维审核', this.canReviewOperations())
+            this.PermissionCell('档案审核日志', this.canQueryArchiveReviewLog())
           }
 
           GridItem() {
-            this.PermissionCell('档案记录', this.canQueryArchiveRecord())
+            this.PermissionCell('运维操作日志', this.canQueryOperationsOperationLog())
           }
 
           GridItem() {
-            this.PermissionCell('运维记录', this.canQueryOperationsRecord())
-          }
-
-          GridItem() {
-            this.PermissionCell('审核记录', this.canQueryReviewRecord())
+            this.PermissionCell('运维审核日志', this.canQueryOperationsReviewLog())
           }
         }
         .columnsTemplate('1fr 1fr')
@@ -148,8 +144,8 @@ struct ManagementCenter {
         color: AppColors.Divider
       })
     }
-    .width('100%')
     .alignItems(HorizontalAlign.Start)
+    .width('100%')
   }
 
   @Builder
@@ -213,44 +209,35 @@ struct ManagementCenter {
   }
 
   refreshCenterState(): void {
-    this.actions = MainPageService.getManagementCenterActions();
+    this.actions = MainPageService.getLogCenterActions();
   }
 
-  canReviewDeviceArchiveRequest(): boolean {
-    return SessionStore.hasPermission(PermissionCode.ManagementCenterDeviceArchiveRequestReview);
+  canQueryArchiveOperationLog(): boolean {
+    return SessionStore.hasPermission(PermissionCode.LogCenterArchiveOperationLogQuery);
   }
 
-  canReviewOperations(): boolean {
-    return SessionStore.hasPermission(PermissionCode.ManagementCenterOperationsReview);
+  canQueryArchiveReviewLog(): boolean {
+    return SessionStore.hasPermission(PermissionCode.LogCenterArchiveReviewLogQuery);
   }
 
-  canQueryArchiveRecord(): boolean {
-    return SessionStore.hasPermission(PermissionCode.ManagementCenterArchiveRecordQuery);
+  canQueryOperationsOperationLog(): boolean {
+    return SessionStore.hasPermission(PermissionCode.LogCenterOperationsOperationLogQuery);
   }
 
-  canQueryOperationsRecord(): boolean {
-    return SessionStore.hasPermission(PermissionCode.ManagementCenterOperationsRecordQuery);
-  }
-
-  canQueryReviewRecord(): boolean {
-    return SessionStore.hasPermission(PermissionCode.ManagementCenterReviewRecordQuery);
+  canQueryOperationsReviewLog(): boolean {
+    return SessionStore.hasPermission(PermissionCode.LogCenterOperationsReviewLogQuery);
   }
 
   openFeature(action: MainPageAction): void {
     this.message = '';
     this.messageTargetId = '';
-    if (action.id === MainPageActionId.DeviceArchiveReview) {
-      this.openPage('pages/ManagementCenter/ArchiveReview', UiFeedbackService.operationUnavailable('档案审核'));
+    if (action.id === MainPageActionId.ArchiveLogQuery) {
+      this.openPage('pages/LogCenter/ArchiveLogQuery', UiFeedbackService.operationUnavailable('档案日志'));
       return;
     }
 
-    if (action.id === MainPageActionId.OperationsReview) {
-      this.openPage('pages/ManagementCenter/OperationsReview', UiFeedbackService.operationUnavailable('运维审核'));
-      return;
-    }
-
-    if (action.id === MainPageActionId.RecordQuery) {
-      this.openPage('pages/ManagementCenter/RecordQuery', UiFeedbackService.operationUnavailable('记录查询'));
+    if (action.id === MainPageActionId.OperationsLogQuery) {
+      this.openPage('pages/LogCenter/OperationsLogQuery', UiFeedbackService.operationUnavailable('运维日志'));
       return;
     }
 
@@ -266,16 +253,12 @@ struct ManagementCenter {
   }
 
   resolveActionIdByUrl(url: string): string {
-    if (url === 'pages/ManagementCenter/ArchiveReview') {
-      return `${MainPageActionId.DeviceArchiveReview}`;
+    if (url === 'pages/LogCenter/ArchiveLogQuery') {
+      return `${MainPageActionId.ArchiveLogQuery}`;
     }
 
-    if (url === 'pages/ManagementCenter/OperationsReview') {
-      return `${MainPageActionId.OperationsReview}`;
-    }
-
-    if (url === 'pages/ManagementCenter/RecordQuery') {
-      return `${MainPageActionId.RecordQuery}`;
+    if (url === 'pages/LogCenter/OperationsLogQuery') {
+      return `${MainPageActionId.OperationsLogQuery}`;
     }
 
     return '';
@@ -287,5 +270,3 @@ struct ManagementCenter {
     });
   }
 }
-
-

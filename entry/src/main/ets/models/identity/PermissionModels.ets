@@ -10,11 +10,12 @@ export enum PermissionCode {
   OperationsCenterRepairReportSubmit = 'OPERATIONS_CENTER_REPAIR_REPORT_SUBMIT',
   OperationsCenterReinspectionTaskAccept = 'OPERATIONS_CENTER_REINSPECTION_TASK_ACCEPT',
   OperationsCenterReinspectionReportSubmit = 'OPERATIONS_CENTER_REINSPECTION_REPORT_SUBMIT',
-  ManagementCenterDeviceArchiveRequestReview = 'MANAGEMENT_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW',
-  ManagementCenterOperationsReview = 'MANAGEMENT_CENTER_OPERATIONS_REVIEW',
-  ManagementCenterArchiveRecordQuery = 'MANAGEMENT_CENTER_ARCHIVE_RECORD_QUERY',
-  ManagementCenterOperationsRecordQuery = 'MANAGEMENT_CENTER_OPERATIONS_RECORD_QUERY',
-  ManagementCenterReviewRecordQuery = 'MANAGEMENT_CENTER_REVIEW_RECORD_QUERY'
+  ReviewCenterDeviceArchiveRequestReview = 'REVIEW_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW',
+  ReviewCenterOperationsReview = 'REVIEW_CENTER_OPERATIONS_REVIEW',
+  LogCenterArchiveOperationLogQuery = 'LOG_CENTER_ARCHIVE_OPERATION_LOG_QUERY',
+  LogCenterArchiveReviewLogQuery = 'LOG_CENTER_ARCHIVE_REVIEW_LOG_QUERY',
+  LogCenterOperationsOperationLogQuery = 'LOG_CENTER_OPERATIONS_OPERATION_LOG_QUERY',
+  LogCenterOperationsReviewLogQuery = 'LOG_CENTER_OPERATIONS_REVIEW_LOG_QUERY'
 }
 
 export const ArchiveCenterPermissions: string[] = [
@@ -34,18 +35,16 @@ export const OperationsCenterPermissions: string[] = [
   PermissionCode.OperationsCenterReinspectionReportSubmit
 ];
 
-export const ManagementCenterPermissions: string[] = [
-  PermissionCode.ManagementCenterDeviceArchiveRequestReview,
-  PermissionCode.ManagementCenterOperationsReview,
-  PermissionCode.ManagementCenterArchiveRecordQuery,
-  PermissionCode.ManagementCenterOperationsRecordQuery,
-  PermissionCode.ManagementCenterReviewRecordQuery
+export const ReviewCenterPermissions: string[] = [
+  PermissionCode.ReviewCenterDeviceArchiveRequestReview,
+  PermissionCode.ReviewCenterOperationsReview
 ];
 
-export const ManagementCenterRecordPermissions: string[] = [
-  PermissionCode.ManagementCenterArchiveRecordQuery,
-  PermissionCode.ManagementCenterOperationsRecordQuery,
-  PermissionCode.ManagementCenterReviewRecordQuery
+export const LogCenterPermissions: string[] = [
+  PermissionCode.LogCenterArchiveOperationLogQuery,
+  PermissionCode.LogCenterArchiveReviewLogQuery,
+  PermissionCode.LogCenterOperationsOperationLogQuery,
+  PermissionCode.LogCenterOperationsReviewLogQuery
 ];
 
 export const AllPermissionCodes: string[] = [
@@ -60,11 +59,12 @@ export const AllPermissionCodes: string[] = [
   PermissionCode.OperationsCenterRepairReportSubmit,
   PermissionCode.OperationsCenterReinspectionTaskAccept,
   PermissionCode.OperationsCenterReinspectionReportSubmit,
-  PermissionCode.ManagementCenterDeviceArchiveRequestReview,
-  PermissionCode.ManagementCenterOperationsReview,
-  PermissionCode.ManagementCenterArchiveRecordQuery,
-  PermissionCode.ManagementCenterOperationsRecordQuery,
-  PermissionCode.ManagementCenterReviewRecordQuery
+  PermissionCode.ReviewCenterDeviceArchiveRequestReview,
+  PermissionCode.ReviewCenterOperationsReview,
+  PermissionCode.LogCenterArchiveOperationLogQuery,
+  PermissionCode.LogCenterArchiveReviewLogQuery,
+  PermissionCode.LogCenterOperationsOperationLogQuery,
+  PermissionCode.LogCenterOperationsReviewLogQuery
 ];
 
 

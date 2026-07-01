@@ -3,20 +3,23 @@ package com.rmf.rdvp.api.dashboard;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.rmf.rdvp.dashboard.ArchiveDashboardStats;
 import com.rmf.rdvp.dashboard.DashboardSnapshot;
-import com.rmf.rdvp.dashboard.ManagementDashboardStats;
+import com.rmf.rdvp.dashboard.LogDashboardStats;
 import com.rmf.rdvp.dashboard.OperationsDashboardStats;
+import com.rmf.rdvp.dashboard.ReviewDashboardStats;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record DashboardResponse(
         ArchiveStatsResponse archive,
         OperationsStatsResponse operations,
-        ManagementStatsResponse management) {
+        ReviewStatsResponse review,
+        LogStatsResponse log) {
 
     public static DashboardResponse from(DashboardSnapshot snapshot) {
         return new DashboardResponse(
                 ArchiveStatsResponse.from(snapshot.archive()),
                 OperationsStatsResponse.from(snapshot.operations()),
-                ManagementStatsResponse.from(snapshot.management()));
+                ReviewStatsResponse.from(snapshot.review()),
+                LogStatsResponse.from(snapshot.log()));
     }
 
     public record ArchiveStatsResponse(
@@ -64,20 +67,42 @@ public record DashboardResponse(
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record ManagementStatsResponse(
+    public record ReviewStatsResponse(
             Long reviewedTotal,
             Long pendingArchiveReviews,
             Long pendingOperationsReviews) {
 
-        public static ManagementStatsResponse from(ManagementDashboardStats stats) {
+        public static ReviewStatsResponse from(ReviewDashboardStats stats) {
             if (stats == null) {
                 return null;
             }
 
-            return new ManagementStatsResponse(
+            return new ReviewStatsResponse(
                     stats.reviewedTotal(),
                     stats.pendingArchiveReviews(),
                     stats.pendingOperationsReviews());
+        }
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record LogStatsResponse(
+            long logTotal,
+            Long archiveOperationLogs,
+            Long archiveReviewLogs,
+            Long operationsOperationLogs,
+            Long operationsReviewLogs) {
+
+        public static LogStatsResponse from(LogDashboardStats stats) {
+            if (stats == null) {
+                return null;
+            }
+
+            return new LogStatsResponse(
+                    stats.logTotal(),
+                    stats.archiveOperationLogs(),
+                    stats.archiveReviewLogs(),
+                    stats.operationsOperationLogs(),
+                    stats.operationsReviewLogs());
         }
     }
 }

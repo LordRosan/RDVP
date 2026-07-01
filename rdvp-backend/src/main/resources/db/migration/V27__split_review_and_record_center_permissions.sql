@@ -1,0 +1,30 @@
+UPDATE user_permissions
+SET permission_code = CASE permission_code
+    WHEN 'MANAGEMENT_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW' THEN 'REVIEW_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW'
+    WHEN 'MANAGEMENT_CENTER_OPERATIONS_REVIEW' THEN 'REVIEW_CENTER_OPERATIONS_REVIEW'
+    WHEN 'MANAGEMENT_CENTER_ARCHIVE_RECORD_QUERY' THEN 'LOG_CENTER_ARCHIVE_LOG_QUERY'
+    WHEN 'MANAGEMENT_CENTER_OPERATIONS_RECORD_QUERY' THEN 'LOG_CENTER_OPERATIONS_LOG_QUERY'
+    WHEN 'MANAGEMENT_CENTER_REVIEW_RECORD_QUERY' THEN 'LOG_CENTER_REVIEW_LOG_QUERY'
+    ELSE permission_code
+END
+WHERE permission_code IN (
+    'MANAGEMENT_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW',
+    'MANAGEMENT_CENTER_OPERATIONS_REVIEW',
+    'MANAGEMENT_CENTER_ARCHIVE_RECORD_QUERY',
+    'MANAGEMENT_CENTER_OPERATIONS_RECORD_QUERY',
+    'MANAGEMENT_CENTER_REVIEW_RECORD_QUERY'
+);
+
+DELETE FROM user_permissions stale
+USING user_permissions kept
+WHERE stale.ctid < kept.ctid
+  AND stale.user_id = kept.user_id
+  AND stale.permission_code = kept.permission_code;
+
+ALTER TABLE operations_review_requests
+    RENAME COLUMN review_operator_id TO reviewer_id;
+
+DROP INDEX IF EXISTS idx_operations_review_requests_review_operator;
+
+CREATE INDEX IF NOT EXISTS idx_operations_review_requests_reviewer
+    ON operations_review_requests(reviewer_id, reviewed_at DESC);

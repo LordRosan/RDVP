@@ -6,7 +6,8 @@
     "pages/PersonalCenter/ApplicationSettings",
     "pages/ArchiveCenter/ArchiveCenter",
     "pages/OperationsCenter/OperationsCenter",
-    "pages/ManagementCenter/ManagementCenter",
+    "pages/ReviewCenter/ReviewCenter",
+    "pages/LogCenter/LogCenter",
     "pages/ArchiveCenter/DeviceArchiveQuery",
     "pages/ArchiveCenter/DeviceArchiveCreate",
     "pages/ArchiveCenter/DeviceArchiveDetail",
@@ -17,11 +18,9 @@
     "pages/OperationsCenter/TaskAcceptance",
     "pages/OperationsCenter/RepairReport",
     "pages/OperationsCenter/ReinspectionReport",
-    "pages/ManagementCenter/ArchiveReview",
-    "pages/ManagementCenter/OperationsReview",
-    "pages/ManagementCenter/RecordQuery",
-    "pages/ManagementCenter/ArchiveRecordQuery",
-    "pages/ManagementCenter/OperationsRecordQuery",
-    "pages/ManagementCenter/ReviewRecordQuery"
+    "pages/ReviewCenter/ArchiveReview",
+    "pages/ReviewCenter/OperationsReview",
+    "pages/LogCenter/ArchiveLogQuery",
+    "pages/LogCenter/OperationsLogQuery"
   ]
 }

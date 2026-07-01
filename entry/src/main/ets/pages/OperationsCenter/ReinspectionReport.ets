@@ -2,6 +2,11 @@ import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
 import { AppSectionTitle } from '../../components/AppSectionTitle';
 import { CenterTitleBar } from '../../components/CenterTitleBar';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
+import {
+  OperationReportBottomContentPadding,
+  OperationReportTab,
+  OperationReportTabBar
+} from '../../components/OperationReportTabBar';
 import { FaultSeverity } from '../../models/operations/FaultModels';
 import {
   ReinspectionRecordForm,
@@ -14,6 +19,7 @@ import { ApiClient } from '../../services/common/ApiClient';
 import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { AuthService } from '../../services/identity/AuthService';
 import { ReinspectionService } from '../../services/operations/ReinspectionService';
+import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { AppNavigator } from '../../utils/AppNavigator';
 import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
@@ -50,29 +56,44 @@ struct ReinspectionReport {
   }
 
   build() {
-    Scroll() {
-      Column() {
-        this.PageTitleBar()
+    Stack({ alignContent: Alignment.Bottom }) {
+      Scroll() {
+        Column() {
+          this.PageTitleBar()
 
-        Column({ space: 18 }) {
-          this.ModeHeader()
-          this.TaskListPanel()
-          this.RecordForm()
+          Column({ space: 18 }) {
+            this.ModeHeader()
+            this.TaskListPanel()
+            this.RecordForm()
+          }
+          .alignItems(HorizontalAlign.Start)
+          .justifyContent(FlexAlign.Start)
+          .padding({
+            left: AppSpacing.PageX,
+            right: AppSpacing.PageX,
+            top: 0,
+            bottom: OperationReportBottomContentPadding
+          })
+          .width('100%')
         }
+        .width('100%')
+        .constraintSize({ minHeight: '100%' })
         .alignItems(HorizontalAlign.Start)
         .justifyContent(FlexAlign.Start)
-        .padding({
-          left: AppSpacing.PageX,
-          right: AppSpacing.PageX,
-          top: 0,
-          bottom: AppSpacing.PageBottom
-        })
-        .width('100%')
       }
+      .height('100%')
       .width('100%')
-      .constraintSize({ minHeight: '100%' })
-      .alignItems(HorizontalAlign.Start)
-      .justifyContent(FlexAlign.Start)
+
+      OperationReportTabBar({
+        currentTab: OperationReportTab.Reinspection,
+        repairEnabled: this.canOpenRepairReport(),
+        reinspectionEnabled: this.canOpenReinspectionReport(),
+        onRepairClick: () => {
+          this.openRepairReport();
+        },
+        onReinspectionClick: () => {
+        }
+      })
     }
     .height('100%')
     .width('100%')
@@ -810,6 +831,28 @@ struct ReinspectionReport {
       onFailure: () => {
         AppNavigator.showNavigationUnavailableToast(this.getUIContext());
       }
+    });
+  }
+
+  canOpenRepairReport(): boolean {
+    return SessionStore.hasPermission(PermissionCode.OperationsCenterRepairReportSubmit);
+  }
+
+  canOpenReinspectionReport(): boolean {
+    return SessionStore.hasAllPermissions([
+      PermissionCode.OperationsCenterReinspectionTaskAccept,
+      PermissionCode.OperationsCenterReinspectionReportSubmit
+    ]);
+  }
+
+  openRepairReport(): void {
+    if (!this.canOpenRepairReport()) {
+      AppNavigator.showNavigationUnavailableToast(this.getUIContext());
+      return;
+    }
+
+    AppNavigator.replace(this.getUIContext(), 'pages/OperationsCenter/RepairReport', () => {
+      AppNavigator.showNavigationUnavailableToast(this.getUIContext());
     });
   }
 

@@ -64,14 +64,15 @@ RDVP/
 
 - `archive` 表示档案领域，用于设备档案、二维码、档案申请和档案审核相关模型与服务。
 - `operations` 表示运维领域，是领域集合名，不按普通复数理解；设备核验、故障报修、维修任务和复检任务均归入该领域。
-- `management` 表示管理领域，用于档案审核、记录查询和后续管理能力。
+- `review` 表示审核领域，用于档案审核、运维审核相关模型与服务。
+- `log` 表示日志领域，用于档案、运维和审核日志查询相关模型与服务。
 - `identity` 表示身份领域，用于认证、会话、角色和权限。
 - `app` 表示应用级能力，用于主页、主题、应用设置等跨业务中心能力。
 - `common` 表示通用基础能力，用于 API 响应、通用工具和跨领域基础模型。
 
-实体、页面、函数和变量命名应使用单数业务对象表达一个具体概念，例如 `RepairTask`、`RepairReport`、`ReinspectionReport`、`DeviceArchiveRequest`。涉及运维领域时使用 `operations`，例如 `operations` 目录、`OperationsCenter` 页面、`OperationsRecordQuery`。
+实体、页面、函数和变量命名应使用单数业务对象表达一个具体概念，例如 `RepairTask`、`RepairReport`、`ReinspectionReport`、`DeviceArchiveRequest`。涉及运维领域时使用 `operations`，例如 `operations` 目录、`OperationsCenter` 页面、`OperationsLogQuery`。
 
-记录查询作为管理中心下的功能，统一使用 `RecordQuery` 命名，不再使用 `RecordCenter`。运维记录统一使用 `OperationsRecordQuery`，权限码统一使用 `MANAGEMENT_CENTER_OPERATIONS_RECORD_QUERY`。
+审核入口统一使用 `ReviewCenter`、`REVIEW_CENTER_*`；日志入口统一使用 `LogCenter`、`LOG_CENTER_*_LOG_QUERY`。活动代码、API 和前端路由不得再使用 `ManagementCenter`、`RecordCenter`、`RecordQuery`、`management-records` 或 `RECORD_CENTER_*` 作为中心级命名。
 
 ## 4. Git 规则
 

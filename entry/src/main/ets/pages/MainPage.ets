@@ -260,14 +260,24 @@ struct MainPage {
           AppTone.Success)
       }
 
-      if (this.shouldShowManagementDashboard()) {
+      if (this.shouldShowReviewDashboard()) {
         this.DashboardCenterCard(
-          '管理中心',
-          this.getManagementPrimaryLabel(),
-          this.getManagementPrimaryValue(),
-          this.getManagementDashboardMetrics(),
+          '审核中心',
+          this.getReviewPrimaryLabel(),
+          this.getReviewPrimaryValue(),
+          this.getReviewDashboardMetrics(),
           $r('sys.symbol.checkmark_shield'),
           AppTone.Warning)
+      }
+
+      if (this.shouldShowLogDashboard()) {
+        this.DashboardCenterCard(
+          '日志中心',
+          '日志数',
+          this.getLogPrimaryValue(),
+          this.getLogDashboardMetrics(),
+          $r('sys.symbol.clock'),
+          AppTone.Log)
       }
     }
     .width('100%')
@@ -283,28 +293,28 @@ struct MainPage {
     icon: Resource,
     tone: AppTone
   ) {
-    Column({ space: 16 }) {
-      Row({ space: 12 }) {
+    Column({ space: 12 }) {
+      Row({ space: 10 }) {
         Stack() {
           SymbolGlyph(icon)
-            .fontSize(24)
+            .fontSize(22)
             .fontColor([AppColors.colorForTone(tone)])
         }
-        .width(46)
-        .height(46)
-        .borderRadius(16)
+        .width(42)
+        .height(42)
+        .borderRadius(14)
         .backgroundColor(this.getDashboardToneSurface(tone))
 
-        Column({ space: 4 }) {
+        Column({ space: 3 }) {
           Text(title)
-            .fontSize(19)
+            .fontSize(18)
             .fontWeight(FontWeight.Bold)
             .fontColor(AppColors.TextPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
           Text(primaryLabel)
-            .fontSize(13)
+            .fontSize(12)
             .fontColor(AppColors.TextSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -314,7 +324,7 @@ struct MainPage {
 
         Column({ space: 2 }) {
           Text(this.formatDashboardValue(primaryValue))
-            .fontSize(34)
+            .fontSize(30)
             .fontWeight(FontWeight.Bold)
             .fontColor(AppColors.colorForTone(tone))
             .maxLines(1)
@@ -338,15 +348,15 @@ struct MainPage {
           }, (metric: DashboardMetric) => `${metric.label}-${metric.value}`)
         }
         .columnsTemplate('1fr 1fr')
-        .columnsGap(14)
-        .rowsGap(14)
+        .columnsGap(12)
+        .rowsGap(10)
         .width('100%')
       }
     }
     .width('100%')
-    .padding(18)
+    .padding(14)
     .backgroundColor(AppColors.SurfaceRaised)
-    .borderRadius(24)
+    .borderRadius(20)
     .border({
       width: 1,
       color: AppColors.Divider
@@ -355,15 +365,15 @@ struct MainPage {
 
   @Builder
   DashboardMetricCell(metric: DashboardMetric) {
-    Column({ space: 4 }) {
+    Column({ space: 3 }) {
       Text(this.formatDashboardValue(metric.value))
-        .fontSize(22)
+        .fontSize(20)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
 
       Text(metric.label)
-        .fontSize(12)
+        .fontSize(11)
         .fontColor(AppColors.TextSecondary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -626,9 +636,17 @@ struct MainPage {
       return;
     }
 
-    if (action.id === MainPageActionId.ManagementCenter) {
-      AppNavigator.push(this.getUIContext(), 'pages/ManagementCenter/ManagementCenter', () => {
-        this.actionMessage = UiFeedbackService.operationUnavailable('管理中心');
+    if (action.id === MainPageActionId.ReviewCenter) {
+      AppNavigator.push(this.getUIContext(), 'pages/ReviewCenter/ReviewCenter', () => {
+        this.actionMessage = UiFeedbackService.operationUnavailable('审核中心');
+        this.actionMessageTargetId = `${action.id}`;
+      });
+      return;
+    }
+
+    if (action.id === MainPageActionId.LogCenter) {
+      AppNavigator.push(this.getUIContext(), 'pages/LogCenter/LogCenter', () => {
+        this.actionMessage = UiFeedbackService.operationUnavailable('日志中心');
         this.actionMessageTargetId = `${action.id}`;
       });
       return;
@@ -760,28 +778,62 @@ struct MainPage {
     ];
   }
 
-  getManagementDashboardMetrics(): DashboardMetric[] {
-    const management = this.dashboard.management;
-    if (management === undefined) {
+  getReviewDashboardMetrics(): DashboardMetric[] {
+    const review = this.dashboard.review;
+    if (review === undefined) {
       return [];
     }
 
-    const primaryKey = this.getManagementPrimaryKey();
+    const primaryKey = this.getReviewPrimaryKey();
     const metrics: DashboardMetric[] = [];
-    if (management.pendingArchiveReviews !== undefined && primaryKey !== 'pendingArchiveReviews') {
-      metrics.push({ label: '待审核档案操作', value: management.pendingArchiveReviews });
+    if (review.pendingArchiveReviews !== undefined && primaryKey !== 'pendingArchiveReviews') {
+      metrics.push({ label: '待审核档案操作', value: review.pendingArchiveReviews });
     }
-    if (management.pendingOperationsReviews !== undefined && primaryKey !== 'pendingOperationsReviews') {
-      metrics.push({ label: '待审核运维操作', value: management.pendingOperationsReviews });
+    if (review.pendingOperationsReviews !== undefined && primaryKey !== 'pendingOperationsReviews') {
+      metrics.push({ label: '待审核运维操作', value: review.pendingOperationsReviews });
     }
 
     return metrics;
   }
 
+  getLogDashboardMetrics(): DashboardMetric[] {
+    const log = this.dashboard.log;
+    if (log === undefined) {
+      return [];
+    }
+
+    const metrics: DashboardMetric[] = [];
+    const archiveLogCount = this.sumOptionalCounts(log.archiveOperationLogs, log.archiveReviewLogs);
+    if (archiveLogCount !== undefined) {
+      metrics.push({ label: '档案日志', value: archiveLogCount });
+    }
+
+    const operationsLogCount = this.sumOptionalCounts(log.operationsOperationLogs, log.operationsReviewLogs);
+    if (operationsLogCount !== undefined) {
+      metrics.push({ label: '运维日志', value: operationsLogCount });
+    }
+
+    const reviewLogCount = this.sumOptionalCounts(log.archiveReviewLogs, log.operationsReviewLogs);
+    if (reviewLogCount !== undefined) {
+      metrics.push({ label: '审核日志', value: reviewLogCount });
+    }
+
+    return metrics;
+  }
+
+  sumOptionalCounts(first: number | undefined, second: number | undefined): number | undefined {
+    if (first === undefined && second === undefined) {
+      return undefined;
+    }
+
+    return (first === undefined ? 0 : first) + (second === undefined ? 0 : second);
+  }
+
   hasDashboardContent(): boolean {
     return this.shouldShowArchiveDashboard() ||
       this.shouldShowOperationsDashboard() ||
-      this.shouldShowManagementDashboard();
+      this.shouldShowReviewDashboard() ||
+      this.shouldShowLogDashboard();
   }
 
   shouldShowArchiveDashboard(): boolean {
@@ -792,12 +844,16 @@ struct MainPage {
     return this.dashboard.operations !== undefined;
   }
 
-  shouldShowManagementDashboard(): boolean {
-    const management = this.dashboard.management;
-    return management !== undefined &&
-      (management.reviewedTotal !== undefined ||
-        management.pendingArchiveReviews !== undefined ||
-        management.pendingOperationsReviews !== undefined);
+  shouldShowReviewDashboard(): boolean {
+    const review = this.dashboard.review;
+    return review !== undefined &&
+      (review.reviewedTotal !== undefined ||
+        review.pendingArchiveReviews !== undefined ||
+        review.pendingOperationsReviews !== undefined);
+  }
+
+  shouldShowLogDashboard(): boolean {
+    return this.dashboard.log !== undefined;
   }
 
   getArchivePrimaryValue(): number {
@@ -808,27 +864,27 @@ struct MainPage {
     return this.dashboard.operations === undefined ? 0 : this.dashboard.operations.taskPoolTotal;
   }
 
-  getManagementPrimaryKey(): string {
-    const management = this.dashboard.management;
-    if (management === undefined) {
+  getReviewPrimaryKey(): string {
+    const review = this.dashboard.review;
+    if (review === undefined) {
       return '';
     }
 
-    if (management.reviewedTotal !== undefined) {
+    if (review.reviewedTotal !== undefined) {
       return 'reviewedTotal';
     }
-    if (management.pendingArchiveReviews !== undefined) {
+    if (review.pendingArchiveReviews !== undefined) {
       return 'pendingArchiveReviews';
     }
-    if (management.pendingOperationsReviews !== undefined) {
+    if (review.pendingOperationsReviews !== undefined) {
       return 'pendingOperationsReviews';
     }
 
     return '';
   }
 
-  getManagementPrimaryLabel(): string {
-    const primaryKey = this.getManagementPrimaryKey();
+  getReviewPrimaryLabel(): string {
+    const primaryKey = this.getReviewPrimaryKey();
     if (primaryKey === 'pendingArchiveReviews') {
       return '待审核档案操作';
     }
@@ -839,21 +895,26 @@ struct MainPage {
     return '审核数';
   }
 
-  getManagementPrimaryValue(): number {
-    const management = this.dashboard.management;
-    if (management === undefined) {
+  getReviewPrimaryValue(): number {
+    const review = this.dashboard.review;
+    if (review === undefined) {
       return 0;
     }
 
-    const primaryKey = this.getManagementPrimaryKey();
+    const primaryKey = this.getReviewPrimaryKey();
     if (primaryKey === 'pendingArchiveReviews') {
-      return management.pendingArchiveReviews === undefined ? 0 : management.pendingArchiveReviews;
+      return review.pendingArchiveReviews === undefined ? 0 : review.pendingArchiveReviews;
     }
     if (primaryKey === 'pendingOperationsReviews') {
-      return management.pendingOperationsReviews === undefined ? 0 : management.pendingOperationsReviews;
+      return review.pendingOperationsReviews === undefined ? 0 : review.pendingOperationsReviews;
     }
 
-    return management.reviewedTotal === undefined ? 0 : management.reviewedTotal;
+    return review.reviewedTotal === undefined ? 0 : review.reviewedTotal;
+  }
+
+  getLogPrimaryValue(): number {
+    const log = this.dashboard.log;
+    return log === undefined ? 0 : log.logTotal;
   }
 
   formatDashboardValue(value: number): string {

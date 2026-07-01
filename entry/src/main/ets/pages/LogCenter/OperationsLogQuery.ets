@@ -3,24 +3,34 @@ import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
 import { AppSectionTitle } from '../../components/AppSectionTitle';
 import { CenterTitleBar } from '../../components/CenterTitleBar';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
+import {
+  LogQueryBottomContentPadding,
+  LogQueryTab,
+  LogQueryTabBar
+} from '../../components/LogQueryTabBar';
 import { PermissionCode } from '../../models/identity/PermissionModels';
-import { RecordCategory, RecordItem, RecordQueryFilter } from '../../models/management/RecordQueryModels';
+import { LogCategory, LogItem, LogQueryFilter } from '../../models/log/LogQueryModels';
 import { UiFeedbackService } from '../../services/common/UiFeedbackService';
-import { RecordQueryService } from '../../services/management/RecordQueryService';
+import { LogQueryService } from '../../services/log/LogQueryService';
+import { SessionStore } from '../../stores/SessionStore';
 import { AuthGuard } from '../../utils/AuthGuard';
 import { AppNavigator } from '../../utils/AppNavigator';
 import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
-const REVIEW_TYPE_OPTIONS: string[] = ['全部', '添加档案', '删除档案', '修改档案', '核验报告', '报修报告', '维修报告', '复检报告'];
-const REVIEW_TYPE_VALUES: string[] = ['', 'CREATE', 'DELETE', 'UPDATE', 'DEVICE_VERIFICATION_REPORT', 'FAULT_REPORT',
+const OPERATIONS_OPERATION_TYPE_OPTIONS: string[] = ['全部', '核验报告', '报修报告', '任务接取', '维修报告', '复检报告'];
+const OPERATIONS_OPERATION_TYPE_VALUES: string[] = ['', 'DEVICE_VERIFICATION', 'FAULT_REPORT',
+  'REPAIR_TASK_ACCEPT', 'REPAIR_REPORT', 'REINSPECTION_REPORT'];
+const OPERATIONS_REVIEW_TYPE_OPTIONS: string[] = ['全部', '核验报告', '报修报告', '维修报告', '复检报告'];
+const OPERATIONS_REVIEW_TYPE_VALUES: string[] = ['', 'DEVICE_VERIFICATION_REPORT', 'FAULT_REPORT',
   'REPAIR_REPORT', 'REINSPECTION_REPORT'];
 const RECORD_FILTER_CONTROL_HEIGHT = 56;
 
 @Entry
 @Component
-struct ReviewRecordQuery {
+struct OperationsLogQuery {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
-  @State records: RecordItem[] = [];
+  @State logs: LogItem[] = [];
+  @State currentTab: LogQueryTab = LogQueryTab.Operation;
   @State selectedTypeIndex: number = 0;
   @State keyword: string = '';
   @State startDate: string = '';
@@ -31,45 +41,59 @@ struct ReviewRecordQuery {
   @State filterResetRevision: number = 0;
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ManagementCenterReviewRecordQuery)) {
+    if (!AuthGuard.requireAnyPermission(this.getUIContext(), [
+      PermissionCode.LogCenterOperationsOperationLogQuery,
+      PermissionCode.LogCenterOperationsReviewLogQuery
+    ])) {
       return;
     }
 
-    this.refreshRecords();
+    this.ensureAvailableTab();
+    this.refreshLogs();
   }
 
   build() {
-    Scroll() {
-      Column() {
-        this.PageTitleBar()
-
-        Column({ space: AppSpacing.Section }) {
-          this.Header()
-          this.RecordListPanel()
+    Stack({ alignContent: Alignment.Bottom }) {
+      Scroll() {
+        Column() {
+          this.PageTitleBar()
+          Column({ space: AppSpacing.Section }) {
+            this.Header()
+            this.LogListPanel()
+          }
+          .alignItems(HorizontalAlign.Start)
+          .justifyContent(FlexAlign.Start)
+          .padding({
+            left: AppSpacing.PageX,
+            right: AppSpacing.PageX,
+            top: 0,
+            bottom: LogQueryBottomContentPadding
+          })
+          .width('100%')
         }
+        .width('100%')
+        .constraintSize({ minHeight: '100%' })
         .alignItems(HorizontalAlign.Start)
         .justifyContent(FlexAlign.Start)
-        .padding({
-          left: AppSpacing.PageX,
-          right: AppSpacing.PageX,
-          top: 0,
-          bottom: AppSpacing.PageBottom
-        })
-        .width('100%')
       }
+      .height('100%')
       .width('100%')
-      .constraintSize({ minHeight: '100%' })
-      .alignItems(HorizontalAlign.Start)
-      .justifyContent(FlexAlign.Start)
+
+      LogQueryTabBar({
+        currentTab: this.currentTab,
+        operationEnabled: this.canQueryOperationsOperationLog(),
+        reviewEnabled: this.canQueryOperationsReviewLog(),
+        onOperationClick: () => {
+          this.switchTab(LogQueryTab.Operation);
+        },
+        onReviewClick: () => {
+          this.switchTab(LogQueryTab.Review);
+        }
+      })
     }
     .height('100%')
     .width('100%')
     .backgroundColor(AppColors.PageBackground)
-  }
-
-  onBackPress(): boolean {
-    this.backToParent();
-    return true;
   }
 
   @Builder
@@ -84,14 +108,14 @@ struct ReviewRecordQuery {
   @Builder
   Header() {
     Column({ space: 5 }) {
-      Text('审核记录')
+      Text('运维日志')
         .fontSize(34)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      Text('Review Records')
+      Text('Operations Logs')
         .fontSize(13)
         .fontWeight(FontWeight.Medium)
         .fontColor(AppColors.TextTertiary)
@@ -112,9 +136,7 @@ struct ReviewRecordQuery {
       .borderRadius(18)
       .padding({ left: 16, right: 16 })
       .border({ width: 1, color: AppColors.Border })
-      .onChange((value: string) => {
-        this.keyword = value;
-      })
+      .onChange((value: string) => { this.keyword = value; })
       .width('100%')
   }
 
@@ -218,9 +240,7 @@ struct ReviewRecordQuery {
     .layoutWeight(1)
     .backgroundColor(this.refreshing ? AppColors.Disabled : AppColors.Primary)
     .enabled(!this.refreshing)
-    .onClick(() => {
-      this.refreshRecords();
-    })
+    .onClick(() => { this.refreshLogs(); })
   }
 
   @Builder
@@ -261,7 +281,7 @@ struct ReviewRecordQuery {
 
   @Builder
   ResultCountText() {
-    Text(`共查询到${this.resultTotal}条记录`)
+    Text(`共查询到${this.resultTotal}条日志`)
       .fontSize(14)
       .fontWeight(FontWeight.Medium)
       .fontColor(AppColors.TextSecondary)
@@ -270,23 +290,23 @@ struct ReviewRecordQuery {
   }
 
   @Builder
-  RecordListPanel() {
+  LogListPanel() {
     Column({ space: 12 }) {
       AppSectionTitle({
-        title: '审核记录列表',
+        title: this.getListTitle(),
         subtitle: ''
       })
 
       Column({ space: 14 }) {
         this.SearchPanel()
 
-        this.RecordTypeFilterControl()
+        this.LogTypeFilterControl()
 
         this.DateRangePanel()
         this.MessageText()
         this.ActionButtons()
         this.ResultCountText()
-        this.RecordFilterResultList()
+        this.LogFilterResultList()
       }
       .width('100%')
       .padding({
@@ -308,21 +328,21 @@ struct ReviewRecordQuery {
   }
 
   @Builder
-  RecordTypeFilterControl() {
+  LogTypeFilterControl() {
     if (this.filterResetRevision % 2 === 0) {
-      this.RecordTypeFilterInstance()
+      this.LogTypeFilterInstance()
     } else {
-      this.RecordTypeFilterInstance()
+      this.LogTypeFilterInstance()
     }
   }
 
   @Builder
-  RecordTypeFilterInstance() {
+  LogTypeFilterInstance() {
     Column() {
       Filter({
-        multiFilters: this.getRecordFilterParams(),
+        multiFilters: this.getLogFilterParams(),
         onFilterChanged: (filterResults: FilterResult[]) => {
-          this.applyRecordFilterResults(filterResults);
+          this.applyLogFilterResults(filterResults);
         },
         filterType: FilterType.LIST_FILTER
       }) {
@@ -337,33 +357,32 @@ struct ReviewRecordQuery {
   }
 
   @Builder
-  RecordFilterResultList() {
+  LogFilterResultList() {
     Column({ space: 12 }) {
-      if (this.records.length === 0) {
+      if (this.logs.length === 0) {
         this.EmptyState()
       } else {
-        ForEach(this.records, (item: RecordItem) => {
-          this.ReviewRecordQueryCard(item)
-        }, (item: RecordItem) => item.id)
+        ForEach(this.logs, (item: LogItem) => {
+          this.OperationsLogQueryCard(item)
+        }, (item: LogItem) => item.id)
       }
     }
     .width('100%')
   }
 
   @Builder
-  ReviewRecordQueryCard(item: RecordItem) {
+  OperationsLogQueryCard(item: LogItem) {
     Column({ space: 10 }) {
       Row({ space: 12 }) {
         Stack() {
-          SymbolGlyph($r('sys.symbol.checkmark_shield'))
+          SymbolGlyph(this.getCurrentLogIcon())
             .fontSize(23)
             .fontColor([AppColors.OnPrimary])
         }
         .width(44)
         .height(44)
         .borderRadius(22)
-        .backgroundColor(RecordQueryService.getStatusTone(item.status))
-
+        .backgroundColor(AppColors.Primary)
         Column({ space: 4 }) {
           Text(item.typeLabel)
             .fontSize(17)
@@ -376,16 +395,18 @@ struct ReviewRecordQuery {
 
         Text(item.statusLabel)
           .fontSize(13)
-          .fontColor(RecordQueryService.getStatusTone(item.status))
+          .fontColor(LogQueryService.getStatusTone(item.status))
           .fontWeight(FontWeight.Medium)
           .maxLines(1)
       }
       .width('100%')
 
-      this.RecordFieldRow('设备编号', item.deviceCode)
-      this.RecordFieldRow('审核编号', item.taskNo)
-      this.RecordFieldRow('操作人', item.operatorName)
-      this.RecordFieldRow('时间', item.occurredAt)
+      this.LogFieldRow('设备编号', item.deviceCode)
+      if (item.taskNo.length > 0 && item.taskNo !== '-') {
+        this.LogFieldRow('任务编号', item.taskNo)
+      }
+      this.LogFieldRow('操作人', item.operatorName)
+      this.LogFieldRow('时间', item.occurredAt)
     }
     .padding(16)
     .width('100%')
@@ -395,7 +416,7 @@ struct ReviewRecordQuery {
   }
 
   @Builder
-  RecordFieldRow(label: string, value: string, tone: string = AppColors.TextSecondary) {
+  LogFieldRow(label: string, value: string, tone: string = AppColors.TextSecondary) {
     Row() {
       Text(label)
         .fontSize(13)
@@ -407,7 +428,6 @@ struct ReviewRecordQuery {
         .fontSize(13)
         .fontColor(tone)
         .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .width('100%')
   }
@@ -416,7 +436,7 @@ struct ReviewRecordQuery {
   EmptyState() {
     Column({ space: 10 }) {
       Stack() {
-        SymbolGlyph($r('sys.symbol.checkmark_shield'))
+        SymbolGlyph(this.getCurrentLogIcon())
           .fontSize(36)
           .fontColor([AppColors.Warning])
       }
@@ -424,7 +444,7 @@ struct ReviewRecordQuery {
       .height(64)
       .borderRadius(32)
       .backgroundColor(AppColors.WarningSurface)
-      Text('暂无审核记录')
+      Text(this.getEmptyText())
         .fontSize(18)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
@@ -447,33 +467,29 @@ struct ReviewRecordQuery {
     }
   }
 
-  async refreshRecords(): Promise<void> {
-    if (this.refreshing) {
-      return;
-    }
-
+  async refreshLogs(): Promise<void> {
+    if (this.refreshing) { return; }
     if (!this.validateDateRange()) {
       return;
     }
-
     this.refreshing = true;
-    const filter: RecordQueryFilter = {
-      category: RecordCategory.Review,
-      type: REVIEW_TYPE_VALUES[this.selectedTypeIndex],
+    const typeValues = this.getCurrentTypeValues();
+    const filter: LogQueryFilter = {
+      category: this.getCurrentCategory(),
+      type: typeValues[this.normalizeFilterIndex(this.selectedTypeIndex, typeValues.length)],
       keyword: this.keyword,
       startDate: this.startDate,
       endDate: this.endDate,
       page: 1,
       pageSize: 50
     };
-    const response = await RecordQueryService.queryRecords(filter);
+    const response = await LogQueryService.queryLogs(filter);
     this.refreshing = false;
     if (!response.success) {
       this.message = UiFeedbackService.operationError(response.error, '查询');
       return;
     }
-
-    this.records = response.data ? response.data.items : [];
+    this.logs = response.data ? response.data.items : [];
     this.resultTotal = response.data ? response.data.total : 0;
     this.message = '';
   }
@@ -485,21 +501,21 @@ struct ReviewRecordQuery {
     this.endDate = '';
     this.message = '';
     this.filterResetRevision += 1;
-    this.refreshRecords();
+    this.refreshLogs();
   }
 
-  applyRecordFilterResults(filterResults: FilterResult[]): void {
+  applyLogFilterResults(filterResults: FilterResult[]): void {
     const result = filterResults.find((item: FilterResult) => {
-      return item.name === '记录类型';
+      return item.name === '日志类型';
     });
     this.selectedTypeIndex = result === undefined ? 0 :
-      this.normalizeFilterIndex(result.index, REVIEW_TYPE_VALUES.length);
-    this.refreshRecords();
+      this.normalizeFilterIndex(result.index, this.getCurrentTypeValues().length);
+    this.refreshLogs();
   }
 
-  getRecordFilterParams(): FilterParams[] {
+  getLogFilterParams(): FilterParams[] {
     return [
-      this.createFilterParams('记录类型', REVIEW_TYPE_OPTIONS)
+      this.createFilterParams('日志类型', this.getCurrentTypeOptions())
     ];
   }
 
@@ -521,6 +537,70 @@ struct ReviewRecordQuery {
     }
 
     return Math.floor(index);
+  }
+
+  switchTab(tab: LogQueryTab): void {
+    if (this.currentTab === tab) {
+      return;
+    }
+
+    if (tab === LogQueryTab.Operation && !this.canQueryOperationsOperationLog()) {
+      return;
+    }
+
+    if (tab === LogQueryTab.Review && !this.canQueryOperationsReviewLog()) {
+      return;
+    }
+
+    this.currentTab = tab;
+    this.logs = [];
+    this.resultTotal = 0;
+    this.resetFilters();
+  }
+
+  ensureAvailableTab(): void {
+    if (this.currentTab === LogQueryTab.Operation && this.canQueryOperationsOperationLog()) {
+      return;
+    }
+
+    if (this.currentTab === LogQueryTab.Review && this.canQueryOperationsReviewLog()) {
+      return;
+    }
+
+    this.currentTab = this.canQueryOperationsOperationLog() ? LogQueryTab.Operation : LogQueryTab.Review;
+  }
+
+  canQueryOperationsOperationLog(): boolean {
+    return SessionStore.hasPermission(PermissionCode.LogCenterOperationsOperationLogQuery);
+  }
+
+  canQueryOperationsReviewLog(): boolean {
+    return SessionStore.hasPermission(PermissionCode.LogCenterOperationsReviewLogQuery);
+  }
+
+  getCurrentCategory(): LogCategory {
+    return this.currentTab === LogQueryTab.Review ? LogCategory.OperationsReview : LogCategory.OperationsOperation;
+  }
+
+  getCurrentTypeOptions(): string[] {
+    return this.currentTab === LogQueryTab.Review ? OPERATIONS_REVIEW_TYPE_OPTIONS : OPERATIONS_OPERATION_TYPE_OPTIONS;
+  }
+
+  getCurrentTypeValues(): string[] {
+    return this.currentTab === LogQueryTab.Review ? OPERATIONS_REVIEW_TYPE_VALUES : OPERATIONS_OPERATION_TYPE_VALUES;
+  }
+
+  getListTitle(): string {
+    return this.currentTab === LogQueryTab.Review ? '运维审核日志列表' : '运维操作日志列表';
+  }
+
+  getEmptyText(): string {
+    return this.currentTab === LogQueryTab.Review ? '暂无运维审核日志' : '暂无运维操作日志';
+  }
+
+  getCurrentLogIcon(): Resource {
+    return this.currentTab === LogQueryTab.Review ? $r('sys.symbol.checkmark_shield') :
+      $r('sys.symbol.wrench_and_screwdriver');
   }
 
   showStartDatePicker(): void {
@@ -595,7 +675,7 @@ struct ReviewRecordQuery {
   }
 
   backToParent(): void {
-    AppNavigator.backOrReplace(this.getUIContext(), 'pages/ManagementCenter/RecordQuery', {
+    AppNavigator.backOrReplace(this.getUIContext(), 'pages/LogCenter/LogCenter', {
       onFailure: () => {
         AppNavigator.showNavigationUnavailableToast(this.getUIContext());
       }

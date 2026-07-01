@@ -53,9 +53,14 @@ class DashboardControllerTests {
                 .andExpect(jsonPath("$.data.operations.faultReports").value(0))
                 .andExpect(jsonPath("$.data.operations.repairs").value(0))
                 .andExpect(jsonPath("$.data.operations.reinspections").value(0))
-                .andExpect(jsonPath("$.data.management.reviewedTotal").value(0))
-                .andExpect(jsonPath("$.data.management.pendingArchiveReviews").value(1))
-                .andExpect(jsonPath("$.data.management.pendingOperationsReviews").value(0));
+                .andExpect(jsonPath("$.data.review.reviewedTotal").value(0))
+                .andExpect(jsonPath("$.data.review.pendingArchiveReviews").value(1))
+                .andExpect(jsonPath("$.data.review.pendingOperationsReviews").value(0))
+                .andExpect(jsonPath("$.data.log.logTotal").value(1))
+                .andExpect(jsonPath("$.data.log.archiveOperationLogs").value(1))
+                .andExpect(jsonPath("$.data.log.archiveReviewLogs").value(0))
+                .andExpect(jsonPath("$.data.log.operationsOperationLogs").value(0))
+                .andExpect(jsonPath("$.data.log.operationsReviewLogs").value(0));
     }
 
     @Test
@@ -70,7 +75,8 @@ class DashboardControllerTests {
                 .andExpect(jsonPath("$.data.operations.faultReports").value(0))
                 .andExpect(jsonPath("$.data.operations.repairs").value(0))
                 .andExpect(jsonPath("$.data.operations.reinspections").value(0))
-                .andExpect(jsonPath("$.data.management").doesNotExist());
+                .andExpect(jsonPath("$.data.log").doesNotExist())
+                .andExpect(jsonPath("$.data.review").doesNotExist());
 
         String operationsAdminToken = login("operationsadmin", "password");
         mockMvc.perform(get("/api/v1/dashboard")
@@ -78,9 +84,14 @@ class DashboardControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.archive").doesNotExist())
                 .andExpect(jsonPath("$.data.operations.taskPoolTotal").value(0))
-                .andExpect(jsonPath("$.data.management.reviewedTotal").doesNotExist())
-                .andExpect(jsonPath("$.data.management.pendingArchiveReviews").doesNotExist())
-                .andExpect(jsonPath("$.data.management.pendingOperationsReviews").value(0));
+                .andExpect(jsonPath("$.data.log.archiveOperationLogs").doesNotExist())
+                .andExpect(jsonPath("$.data.log.archiveReviewLogs").doesNotExist())
+                .andExpect(jsonPath("$.data.log.operationsOperationLogs").value(0))
+                .andExpect(jsonPath("$.data.log.operationsReviewLogs").value(0))
+                .andExpect(jsonPath("$.data.log.logTotal").value(0))
+                .andExpect(jsonPath("$.data.review.reviewedTotal").value(0))
+                .andExpect(jsonPath("$.data.review.pendingArchiveReviews").doesNotExist())
+                .andExpect(jsonPath("$.data.review.pendingOperationsReviews").value(0));
 
         String managerToken = login("manager", "password");
         mockMvc.perform(get("/api/v1/dashboard")
@@ -88,9 +99,14 @@ class DashboardControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.archive").doesNotExist())
                 .andExpect(jsonPath("$.data.operations").doesNotExist())
-                .andExpect(jsonPath("$.data.management.reviewedTotal").value(0))
-                .andExpect(jsonPath("$.data.management.pendingArchiveReviews").value(1))
-                .andExpect(jsonPath("$.data.management.pendingOperationsReviews").value(0));
+                .andExpect(jsonPath("$.data.review.reviewedTotal").value(0))
+                .andExpect(jsonPath("$.data.review.pendingArchiveReviews").value(1))
+                .andExpect(jsonPath("$.data.review.pendingOperationsReviews").value(0))
+                .andExpect(jsonPath("$.data.log.archiveOperationLogs").value(1))
+                .andExpect(jsonPath("$.data.log.archiveReviewLogs").value(0))
+                .andExpect(jsonPath("$.data.log.operationsOperationLogs").value(0))
+                .andExpect(jsonPath("$.data.log.operationsReviewLogs").value(0))
+                .andExpect(jsonPath("$.data.log.logTotal").value(1));
 
         String archiveAdminToken = login("archiveadmin", "password");
         mockMvc.perform(get("/api/v1/dashboard")
@@ -98,9 +114,14 @@ class DashboardControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.archive.deviceTotal").value(3))
                 .andExpect(jsonPath("$.data.operations").doesNotExist())
-                .andExpect(jsonPath("$.data.management.reviewedTotal").doesNotExist())
-                .andExpect(jsonPath("$.data.management.pendingArchiveReviews").value(1))
-                .andExpect(jsonPath("$.data.management.pendingOperationsReviews").doesNotExist());
+                .andExpect(jsonPath("$.data.review.reviewedTotal").value(0))
+                .andExpect(jsonPath("$.data.review.pendingArchiveReviews").value(1))
+                .andExpect(jsonPath("$.data.review.pendingOperationsReviews").doesNotExist())
+                .andExpect(jsonPath("$.data.log.archiveOperationLogs").value(1))
+                .andExpect(jsonPath("$.data.log.archiveReviewLogs").value(0))
+                .andExpect(jsonPath("$.data.log.operationsOperationLogs").doesNotExist())
+                .andExpect(jsonPath("$.data.log.operationsReviewLogs").doesNotExist())
+                .andExpect(jsonPath("$.data.log.logTotal").value(1));
 
         String archiveStaffToken = login("archivist", "password");
         mockMvc.perform(get("/api/v1/dashboard")
@@ -108,7 +129,8 @@ class DashboardControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.archive.deviceTotal").value(3))
                 .andExpect(jsonPath("$.data.operations").doesNotExist())
-                .andExpect(jsonPath("$.data.management").doesNotExist());
+                .andExpect(jsonPath("$.data.log").doesNotExist())
+                .andExpect(jsonPath("$.data.review").doesNotExist());
     }
 
     @Test
@@ -227,7 +249,12 @@ class DashboardControllerTests {
                 .andExpect(jsonPath("$.data.operations.faultReports").value(1))
                 .andExpect(jsonPath("$.data.operations.repairs").value(1))
                 .andExpect(jsonPath("$.data.operations.reinspections").value(1))
-                .andExpect(jsonPath("$.data.management.reviewedTotal").value(1));
+                .andExpect(jsonPath("$.data.review.reviewedTotal").value(1))
+                .andExpect(jsonPath("$.data.log.archiveOperationLogs").value(3))
+                .andExpect(jsonPath("$.data.log.archiveReviewLogs").value(1))
+                .andExpect(jsonPath("$.data.log.operationsOperationLogs").value(6))
+                .andExpect(jsonPath("$.data.log.operationsReviewLogs").value(0))
+                .andExpect(jsonPath("$.data.log.logTotal").value(10));
     }
 
     @Test
@@ -254,8 +281,8 @@ class DashboardControllerTests {
         mockMvc.perform(get("/api/v1/dashboard")
                         .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.management.reviewedTotal").value(0))
-                .andExpect(jsonPath("$.data.management.pendingOperationsReviews").value(2));
+                .andExpect(jsonPath("$.data.review.reviewedTotal").value(0))
+                .andExpect(jsonPath("$.data.review.pendingOperationsReviews").value(2));
 
         String pendingResponse = mockMvc.perform(get("/api/v1/operations-review-requests?status=PENDING_REVIEW")
                         .header("Authorization", "Bearer " + managerToken))
@@ -281,8 +308,8 @@ class DashboardControllerTests {
         mockMvc.perform(get("/api/v1/dashboard")
                         .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.management.reviewedTotal").value(1))
-                .andExpect(jsonPath("$.data.management.pendingOperationsReviews").value(1));
+                .andExpect(jsonPath("$.data.review.reviewedTotal").value(1))
+                .andExpect(jsonPath("$.data.review.pendingOperationsReviews").value(1));
     }
 
     @Test
@@ -317,7 +344,7 @@ class DashboardControllerTests {
                 .andExpect(jsonPath("$.data.archive.archiveCreates").value(0))
                 .andExpect(jsonPath("$.data.archive.archiveUpdates").value(0))
                 .andExpect(jsonPath("$.data.archive.archiveDeletes").value(0))
-                .andExpect(jsonPath("$.data.management.reviewedTotal").value(0));
+                .andExpect(jsonPath("$.data.review.reviewedTotal").value(0));
 
         verifyPassword(adminToken, "password");
         mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", createRequestId)
@@ -338,7 +365,7 @@ class DashboardControllerTests {
                 .andExpect(jsonPath("$.data.archive.archiveCreates").value(1))
                 .andExpect(jsonPath("$.data.archive.archiveUpdates").value(0))
                 .andExpect(jsonPath("$.data.archive.archiveDeletes").value(0))
-                .andExpect(jsonPath("$.data.management.reviewedTotal").value(1));
+                .andExpect(jsonPath("$.data.review.reviewedTotal").value(1));
 
         String updateResponse = mockMvc.perform(post("/api/v1/device-archive-requests")
                         .header("Authorization", "Bearer " + archiveAdminToken)
@@ -393,7 +420,7 @@ class DashboardControllerTests {
                 .andExpect(jsonPath("$.data.archive.archiveCreates").value(1))
                 .andExpect(jsonPath("$.data.archive.archiveUpdates").value(0))
                 .andExpect(jsonPath("$.data.archive.archiveDeletes").value(0))
-                .andExpect(jsonPath("$.data.management.reviewedTotal").value(1));
+                .andExpect(jsonPath("$.data.review.reviewedTotal").value(1));
 
         verifyPassword(adminToken, "password");
         mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", updateRequestId)
@@ -415,7 +442,7 @@ class DashboardControllerTests {
                 .andExpect(jsonPath("$.data.archive.archiveCreates").value(1))
                 .andExpect(jsonPath("$.data.archive.archiveUpdates").value(1))
                 .andExpect(jsonPath("$.data.archive.archiveDeletes").value(0))
-                .andExpect(jsonPath("$.data.management.reviewedTotal").value(2));
+                .andExpect(jsonPath("$.data.review.reviewedTotal").value(2));
 
         verifyPassword(adminToken, "password");
         mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", deleteRequestId)
@@ -437,7 +464,7 @@ class DashboardControllerTests {
                 .andExpect(jsonPath("$.data.archive.archiveCreates").value(1))
                 .andExpect(jsonPath("$.data.archive.archiveUpdates").value(1))
                 .andExpect(jsonPath("$.data.archive.archiveDeletes").value(1))
-                .andExpect(jsonPath("$.data.management.reviewedTotal").value(3));
+                .andExpect(jsonPath("$.data.review.reviewedTotal").value(3));
     }
 
     @Test

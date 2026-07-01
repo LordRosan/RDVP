@@ -783,6 +783,12 @@ class OperationsControllerTests {
                 .andExpect(jsonPath("$.data.status").value("APPROVED"))
                 .andExpect(jsonPath("$.data.reviewedAt").value("2026-06-01T08:00:00Z"));
 
+        mockMvc.perform(get("/api/v1/operations-review-requests?status=APPROVED")
+                        .header("Authorization", "Bearer " + reviewerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].reviewerId").value("usr-operations-admin"))
+                .andExpect(jsonPath("$.data.items[0].reviewOperatorId").doesNotExist());
+
         mockMvc.perform(get("/api/v1/operations-review-requests?status=PENDING_REVIEW")
                         .header("Authorization", "Bearer " + reviewerToken))
                 .andExpect(status().isOk())

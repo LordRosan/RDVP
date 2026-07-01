@@ -16,7 +16,7 @@ public record OperationsReviewRequest(
         String summary,
         OperationsReviewRequestStatus status,
         OffsetDateTime submittedAt,
-        String reviewOperatorId,
+        String reviewerId,
         String reviewComment,
         OffsetDateTime reviewedAt) {
 }

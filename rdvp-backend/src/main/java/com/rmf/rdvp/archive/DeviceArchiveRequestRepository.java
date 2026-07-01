@@ -9,6 +9,8 @@ public interface DeviceArchiveRequestRepository {
 
     DeviceArchiveRequestPage list(DeviceArchiveRequestQuery query);
 
+    long countAll();
+
     long countPendingReview();
 
     long countApprovedByType(DeviceArchiveRequestType type);

@@ -3,19 +3,19 @@ import { AppTone } from '../../styles/AppTheme';
 export enum MainPageActionId {
   ArchiveCenter = 'ARCHIVE_CENTER',
   OperationsCenter = 'OPERATIONS_CENTER',
-  ManagementCenter = 'MANAGEMENT_CENTER',
+  ReviewCenter = 'REVIEW_CENTER',
+  LogCenter = 'LOG_CENTER',
   DeviceArchiveQuery = 'DEVICE_ARCHIVE_QUERY',
   DeviceArchiveCreateRequest = 'DEVICE_ARCHIVE_CREATE_REQUEST',
   DeviceVerification = 'DEVICE_VERIFICATION',
   TaskAcceptance = 'TASK_ACCEPTANCE',
+  RepairAndReinspection = 'REPAIR_AND_REINSPECTION',
   RepairReport = 'REPAIR_REPORT',
   ReinspectionReport = 'REINSPECTION_REPORT',
   DeviceArchiveReview = 'DEVICE_ARCHIVE_REVIEW',
   OperationsReview = 'OPERATIONS_REVIEW',
-  ArchiveRecordQuery = 'ARCHIVE_RECORD_QUERY',
-  OperationsRecordQuery = 'OPERATIONS_RECORD_QUERY',
-  ReviewRecordQuery = 'REVIEW_RECORD_QUERY',
-  RecordQuery = 'RECORD_QUERY'
+  ArchiveLogQuery = 'ARCHIVE_LOG_QUERY',
+  OperationsLogQuery = 'OPERATIONS_LOG_QUERY'
 }
 
 export interface MainPageAction {
@@ -41,16 +41,25 @@ export interface OperationsDashboardStats {
   reinspections: number;
 }
 
-export interface ManagementDashboardStats {
+export interface ReviewDashboardStats {
   reviewedTotal?: number;
   pendingArchiveReviews?: number;
   pendingOperationsReviews?: number;
 }
 
+export interface LogDashboardStats {
+  logTotal: number;
+  archiveOperationLogs?: number;
+  archiveReviewLogs?: number;
+  operationsOperationLogs?: number;
+  operationsReviewLogs?: number;
+}
+
 export interface MainPageDashboard {
   archive?: ArchiveDashboardStats;
   operations?: OperationsDashboardStats;
-  management?: ManagementDashboardStats;
+  review?: ReviewDashboardStats;
+  log?: LogDashboardStats;
 }
 
 export interface DashboardMetric {

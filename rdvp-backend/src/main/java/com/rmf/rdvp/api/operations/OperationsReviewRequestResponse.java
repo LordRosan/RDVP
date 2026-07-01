@@ -18,7 +18,7 @@ public record OperationsReviewRequestResponse(
         String summary,
         String status,
         String submittedAt,
-        String reviewOperatorId,
+        String reviewerId,
         String reviewComment,
         String reviewedAt) {
 
@@ -37,7 +37,7 @@ public record OperationsReviewRequestResponse(
                 request.summary(),
                 request.status().name(),
                 toIsoString(request.submittedAt()),
-                request.reviewOperatorId(),
+                request.reviewerId(),
                 request.reviewComment(),
                 toIsoString(request.reviewedAt()));
     }

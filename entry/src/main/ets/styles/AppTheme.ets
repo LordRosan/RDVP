@@ -4,7 +4,8 @@ export enum AppTone {
   Primary = 'PRIMARY',
   Success = 'SUCCESS',
   Warning = 'WARNING',
-  Danger = 'DANGER'
+  Danger = 'DANGER',
+  Log = 'LOG'
 }
 
 export class AppColors {
@@ -42,6 +43,14 @@ export class AppColors {
 
   static get DangerSurface(): string {
     return AppThemeService.isDarkTheme() ? '#421F18' : '#FDEDEA';
+  }
+
+  static get Log(): string {
+    return AppThemeService.isDarkTheme() ? '#AAB4C3' : '#5B6472';
+  }
+
+  static get LogSurface(): string {
+    return AppThemeService.isDarkTheme() ? '#26303D' : '#F2F4F7';
   }
 
   static get TextPrimary(): string {
@@ -125,6 +134,10 @@ export class AppColors {
       return AppColors.Danger;
     }
 
+    if (tone === AppTone.Log) {
+      return AppColors.Log;
+    }
+
     return AppColors.Primary;
   }
 
@@ -139,6 +152,10 @@ export class AppColors {
 
     if (tone === AppTone.Danger) {
       return AppColors.DangerSurface;
+    }
+
+    if (tone === AppTone.Log) {
+      return AppColors.LogSurface;
     }
 
     return AppColors.PrimarySurface;

@@ -1,18 +1,18 @@
 import { AppColors } from '../../styles/AppTheme';
 import { ApiResponse } from '../../models/common/ApiModels';
 import {
-  RecordCategory,
-  RecordItem,
-  RecordListResult,
-  RecordQueryFilter
-} from '../../models/management/RecordQueryModels';
+  LogCategory,
+  LogItem,
+  LogListResult,
+  LogQueryFilter
+} from '../../models/log/LogQueryModels';
 import { ApiClient } from '../common/ApiClient';
 
-const DEFAULT_RECORD_PAGE_SIZE = 50;
+const DEFAULT_LOG_PAGE_SIZE = 50;
 
-interface ApiManagementRecordItem {
-  recordCategory: string;
-  recordType: string;
+interface ApiLogItem {
+  logCategory: string;
+  logType: string;
   deviceCode?: string;
   taskNo?: string;
   operatorName?: string;
@@ -22,20 +22,20 @@ interface ApiManagementRecordItem {
 }
 
 interface ApiListResult {
-  items: ApiManagementRecordItem[];
+  items: ApiLogItem[];
   total: number;
 }
 
-export class RecordQueryService {
-  static async queryRecords(
-    filter: RecordQueryFilter
-  ): Promise<ApiResponse<RecordListResult>> {
+export class LogQueryService {
+  static async queryLogs(
+    filter: LogQueryFilter
+  ): Promise<ApiResponse<LogListResult>> {
     if (!ApiClient.isConfigured()) {
-      return ApiClient.createServiceUnavailableResponse<RecordListResult>();
+      return ApiClient.createServiceUnavailableResponse<LogListResult>();
     }
 
     const response = await ApiClient.request<ApiListResult>(
-      RecordQueryService.buildRecordQueryPath(filter),
+      LogQueryService.buildLogQueryPath(filter),
       'GET',
       true
     );
@@ -50,8 +50,8 @@ export class RecordQueryService {
     }
 
     const items = response.data === undefined ? [] :
-      response.data.items.map((item: ApiManagementRecordItem): RecordItem => {
-        return RecordQueryService.mapApiItem(item, filter.category);
+      response.data.items.map((item: ApiLogItem): LogItem => {
+        return LogQueryService.mapApiItem(item, filter.category);
       });
 
     return {
@@ -65,7 +65,7 @@ export class RecordQueryService {
     };
   }
 
-  static buildRecordQueryPath(filter: RecordQueryFilter): string {
+  static buildLogQueryPath(filter: LogQueryFilter): string {
     const params: string[] = [];
     params.push(`category=${encodeURIComponent(filter.category)}`);
     params.push(`page=${filter.page}`);
@@ -91,7 +91,7 @@ export class RecordQueryService {
       params.push(`endDate=${encodeURIComponent(trimmedEndDate)}`);
     }
 
-    return `/api/v1/management-records?${params.join('&')}`;
+    return `/api/v1/log-center/logs?${params.join('&')}`;
   }
 
   static formatStatus(status: string): string {
@@ -155,7 +155,7 @@ export class RecordQueryService {
     }
   }
 
-  static formatTypeLabel(action: string, category?: RecordCategory): string {
+  static formatTypeLabel(action: string, category?: LogCategory): string {
     switch (action) {
       case 'DEVICE_ARCHIVE_REQUEST':
         return '档案申请';
@@ -166,11 +166,11 @@ export class RecordQueryService {
       case 'DEVICE_ARCHIVE_EXPORT':
         return '档案导出';
       case 'CREATE':
-        return category === RecordCategory.Archive ? '档案添加' : '添加档案';
+        return category === LogCategory.ArchiveOperation ? '档案添加' : '添加档案';
       case 'UPDATE':
-        return category === RecordCategory.Archive ? '档案修改' : '修改档案';
+        return category === LogCategory.ArchiveOperation ? '档案修改' : '修改档案';
       case 'DELETE':
-        return category === RecordCategory.Archive ? '档案删除' : '删除档案';
+        return category === LogCategory.ArchiveOperation ? '档案删除' : '删除档案';
       case 'DEVICE_VERIFICATION':
       case 'DEVICE_VERIFICATION_REPORT':
         return '核验报告';
@@ -189,18 +189,18 @@ export class RecordQueryService {
     }
   }
 
-  private static mapApiItem(item: ApiManagementRecordItem, category: RecordCategory): RecordItem {
+  private static mapApiItem(item: ApiLogItem, category: LogCategory): LogItem {
     return {
-      id: `${item.recordCategory}-${item.recordType}-${item.taskNo}-${item.occurredAt}`,
+      id: `${item.logCategory}-${item.logType}-${item.taskNo}-${item.occurredAt}`,
       category,
-      type: item.recordType,
-      typeLabel: RecordQueryService.formatTypeLabel(item.recordType, category),
+      type: item.logType,
+      typeLabel: LogQueryService.formatTypeLabel(item.logType, category),
       deviceCode: item.deviceCode ?? '-',
       taskNo: item.taskNo ?? '-',
       operatorName: item.operatorName ?? '-',
-      occurredAt: RecordQueryService.formatTimestampForDisplay(item.occurredAt),
+      occurredAt: LogQueryService.formatTimestampForDisplay(item.occurredAt),
       status: item.businessStatus,
-      statusLabel: RecordQueryService.formatStatus(item.businessStatus),
+      statusLabel: LogQueryService.formatStatus(item.businessStatus),
       description: item.description
     };
   }
@@ -216,8 +216,8 @@ export class RecordQueryService {
       return normalized.replace('T', ' ').replace('Z', '').split('.')[0];
     }
 
-    return `${date.getFullYear()}-${RecordQueryService.pad2(date.getMonth() + 1)}-${RecordQueryService.pad2(date.getDate())} ` +
-      `${RecordQueryService.pad2(date.getHours())}:${RecordQueryService.pad2(date.getMinutes())}:${RecordQueryService.pad2(date.getSeconds())}`;
+    return `${date.getFullYear()}-${LogQueryService.pad2(date.getMonth() + 1)}-${LogQueryService.pad2(date.getDate())} ` +
+      `${LogQueryService.pad2(date.getHours())}:${LogQueryService.pad2(date.getMinutes())}:${LogQueryService.pad2(date.getSeconds())}`;
   }
 
   private static pad2(value: number): string {

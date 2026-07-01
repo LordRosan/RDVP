@@ -71,6 +71,11 @@ public class InMemoryDeviceArchiveRequestRepository implements DeviceArchiveRequ
     }
 
     @Override
+    public long countAll() {
+        return requestsById.size();
+    }
+
+    @Override
     public long countPendingReview() {
         return requestsById.values()
                 .stream()

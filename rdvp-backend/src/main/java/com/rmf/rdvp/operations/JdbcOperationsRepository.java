@@ -306,6 +306,18 @@ public class JdbcOperationsRepository implements OperationsRepository {
     }
 
     @Override
+    public long countRepairTasks() {
+        Long count = jdbcTemplate.queryForObject(
+                """
+                        SELECT count(*)
+                        FROM repair_tasks
+                        """,
+                Map.of(),
+                Long.class);
+        return count == null ? 0 : count;
+    }
+
+    @Override
     public boolean hasActiveRepairTaskForFault(String faultReportId) {
         Integer count = jdbcTemplate.queryForObject(
                 """
@@ -803,14 +815,14 @@ public class JdbcOperationsRepository implements OperationsRepository {
     public boolean markOperationsReviewRequestReviewed(
             String id,
             OperationsReviewRequestStatus status,
-            String reviewOperatorId,
+            String reviewerId,
             String reviewComment,
             OffsetDateTime reviewedAt) {
         int updated = jdbcTemplate.update(
                 """
                         UPDATE operations_review_requests
                         SET status = :status,
-                            review_operator_id = :reviewOperatorId,
+                            reviewer_id = :reviewerId,
                             review_comment = :reviewComment,
                             reviewed_at = :reviewedAt,
                             updated_at = :reviewedAt
@@ -820,7 +832,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                 new MapSqlParameterSource()
                         .addValue("id", id)
                         .addValue("status", status.name())
-                        .addValue("reviewOperatorId", reviewOperatorId)
+                        .addValue("reviewerId", reviewerId)
                         .addValue("reviewComment", reviewComment)
                         .addValue("reviewedAt", reviewedAt));
         return updated > 0;
@@ -868,7 +880,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                     rr.summary,
                     rr.status,
                     rr.submitted_at,
-                    rr.review_operator_id,
+                    rr.reviewer_id,
                     rr.review_comment,
                     rr.reviewed_at
                 FROM operations_review_requests rr
@@ -892,7 +904,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                 resultSet.getString("summary"),
                 OperationsReviewRequestStatus.valueOf(resultSet.getString("status")),
                 resultSet.getObject("submitted_at", OffsetDateTime.class),
-                resultSet.getString("review_operator_id"),
+                resultSet.getString("reviewer_id"),
                 resultSet.getString("review_comment"),
                 resultSet.getObject("reviewed_at", OffsetDateTime.class));
     }

@@ -30,7 +30,7 @@ export interface OperationsReviewItem {
   summary: string;
   status: OperationsReviewRequestStatus;
   submittedAt: string;
-  reviewOperatorId?: string;
+  reviewerId?: string;
   reviewComment?: string;
   reviewedAt?: string;
 }
