@@ -62,15 +62,11 @@ export struct ActionTile {
     }
     if (this.action.id === MainPageActionId.OperationsCenter ||
       this.action.id === MainPageActionId.RepairAndReinspection ||
-      this.action.id === MainPageActionId.RepairReport ||
       this.action.id === MainPageActionId.OperationsLogQuery) {
       return $r('sys.symbol.wrench_and_screwdriver');
     }
     if (this.action.id === MainPageActionId.TaskAcceptance) {
       return $r('sys.symbol.location_up');
-    }
-    if (this.action.id === MainPageActionId.ReinspectionReport) {
-      return $r('sys.symbol.doc_text_badge_checkmark');
     }
     if (this.action.id === MainPageActionId.ReviewCenter ||
       this.action.id === MainPageActionId.DeviceArchiveReview ||

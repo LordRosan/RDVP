@@ -275,7 +275,7 @@ struct OperationsCenter {
       return `${MainPageActionId.TaskAcceptance}`;
     }
 
-    if (url === 'pages/OperationsCenter/RepairReport' || url === 'pages/OperationsCenter/ReinspectionReport') {
+    if (url === MainPageService.getRepairAndReinspectionRoute()) {
       return `${MainPageActionId.RepairAndReinspection}`;
     }
 
@@ -283,11 +283,7 @@ struct OperationsCenter {
   }
 
   getRepairAndReinspectionEntryUrl(): string {
-    if (SessionStore.hasPermission(PermissionCode.OperationsCenterRepairReportSubmit)) {
-      return 'pages/OperationsCenter/RepairReport';
-    }
-
-    return 'pages/OperationsCenter/ReinspectionReport';
+    return MainPageService.getRepairAndReinspectionRoute();
   }
 
   backToMainPage(): void {

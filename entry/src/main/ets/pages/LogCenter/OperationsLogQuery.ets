@@ -3,13 +3,8 @@ import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
 import { AppSectionTitle } from '../../components/AppSectionTitle';
 import { CenterTitleBar } from '../../components/CenterTitleBar';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
-import {
-  LogQueryBottomContentPadding,
-  LogQueryTab,
-  LogQueryTabBar
-} from '../../components/LogQueryTabBar';
 import { PermissionCode } from '../../models/identity/PermissionModels';
-import { LogCategory, LogItem, LogQueryFilter } from '../../models/log/LogQueryModels';
+import { LogCategory, LogItem, LogQueryFilter, LogQueryTab } from '../../models/log/LogQueryModels';
 import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { LogQueryService } from '../../services/log/LogQueryService';
 import { SessionStore } from '../../stores/SessionStore';
@@ -31,6 +26,7 @@ struct OperationsLogQuery {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   @State logs: LogItem[] = [];
   @State currentTab: LogQueryTab = LogQueryTab.Operation;
+  @State currentTabIndex: number = 0;
   @State selectedTypeIndex: number = 0;
   @State keyword: string = '';
   @State startDate: string = '';
@@ -53,47 +49,60 @@ struct OperationsLogQuery {
   }
 
   build() {
-    Stack({ alignContent: Alignment.Bottom }) {
-      Scroll() {
-        Column() {
-          this.PageTitleBar()
-          Column({ space: AppSpacing.Section }) {
-            this.Header()
-            this.LogListPanel()
-          }
-          .alignItems(HorizontalAlign.Start)
-          .justifyContent(FlexAlign.Start)
-          .padding({
-            left: AppSpacing.PageX,
-            right: AppSpacing.PageX,
-            top: 0,
-            bottom: LogQueryBottomContentPadding
-          })
-          .width('100%')
-        }
-        .width('100%')
-        .constraintSize({ minHeight: '100%' })
-        .alignItems(HorizontalAlign.Start)
-        .justifyContent(FlexAlign.Start)
+    Tabs({
+      barPosition: BarPosition.End,
+      index: this.currentTabIndex
+    }) {
+      TabContent() {
+        this.LogQueryTabContent(LogQueryTab.Operation)
       }
-      .height('100%')
-      .width('100%')
+      .tabBar(this.TabBarItem('操作日志', $r('sys.symbol.wrench_and_screwdriver'), LogQueryTab.Operation,
+        this.canQueryOperationsOperationLog()))
 
-      LogQueryTabBar({
-        currentTab: this.currentTab,
-        operationEnabled: this.canQueryOperationsOperationLog(),
-        reviewEnabled: this.canQueryOperationsReviewLog(),
-        onOperationClick: () => {
-          this.switchTab(LogQueryTab.Operation);
-        },
-        onReviewClick: () => {
-          this.switchTab(LogQueryTab.Review);
-        }
-      })
+      TabContent() {
+        this.LogQueryTabContent(LogQueryTab.Review)
+      }
+      .tabBar(this.TabBarItem('审核日志', $r('sys.symbol.checkmark_shield'), LogQueryTab.Review,
+        this.canQueryOperationsReviewLog()))
     }
+    .barMode(BarMode.Fixed)
+    .barHeight(78)
+    .scrollable(false)
+    .onChange((index: number) => {
+      this.switchTab(this.getTabFromIndex(index));
+    })
     .height('100%')
     .width('100%')
     .backgroundColor(AppColors.PageBackground)
+  }
+
+  @Builder
+  LogQueryTabContent(tab: LogQueryTab) {
+    Scroll() {
+      Column() {
+        this.PageTitleBar()
+
+        Column({ space: AppSpacing.Section }) {
+          this.Header(tab)
+          this.LogListPanel(tab)
+        }
+        .alignItems(HorizontalAlign.Start)
+        .justifyContent(FlexAlign.Start)
+        .padding({
+          left: AppSpacing.PageX,
+          right: AppSpacing.PageX,
+          top: 0,
+          bottom: AppSpacing.PageBottom
+        })
+        .width('100%')
+      }
+      .width('100%')
+      .constraintSize({ minHeight: '100%' })
+      .alignItems(HorizontalAlign.Start)
+      .justifyContent(FlexAlign.Start)
+    }
+    .height('100%')
+    .width('100%')
   }
 
   @Builder
@@ -106,9 +115,9 @@ struct OperationsLogQuery {
   }
 
   @Builder
-  Header() {
+  Header(tab: LogQueryTab) {
     Column({ space: 5 }) {
-      Text(this.getPageTitle())
+      Text(this.getPageTitle(tab))
         .fontSize(34)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
@@ -125,6 +134,27 @@ struct OperationsLogQuery {
     .width('100%')
     .alignItems(HorizontalAlign.Start)
     .padding({ top: 12, bottom: 6 })
+  }
+
+  @Builder
+  TabBarItem(label: string, icon: Resource, tab: LogQueryTab, enabled: boolean) {
+    Column({ space: 4 }) {
+      SymbolGlyph(icon)
+        .fontSize(25)
+        .fontColor([this.getTabIconColor(tab, enabled)])
+
+      Text(label)
+        .fontSize(12)
+        .fontWeight(this.currentTab === tab ? FontWeight.Bold : FontWeight.Regular)
+        .fontColor(this.getTabLabelColor(tab, enabled))
+        .maxLines(1)
+    }
+    .layoutWeight(1)
+    .height(62)
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+    .opacity(enabled ? 1 : 0.45)
+    .enabled(enabled)
   }
 
   @Builder
@@ -290,10 +320,10 @@ struct OperationsLogQuery {
   }
 
   @Builder
-  LogListPanel() {
+  LogListPanel(tab: LogQueryTab) {
     Column({ space: 12 }) {
       AppSectionTitle({
-        title: this.getListTitle(),
+        title: this.getListTitle(tab),
         subtitle: ''
       })
 
@@ -541,18 +571,22 @@ struct OperationsLogQuery {
 
   switchTab(tab: LogQueryTab): void {
     if (this.currentTab === tab) {
+      this.currentTabIndex = this.getTabIndex(tab);
       return;
     }
 
     if (tab === LogQueryTab.Operation && !this.canQueryOperationsOperationLog()) {
+      this.currentTabIndex = this.getTabIndex(this.currentTab);
       return;
     }
 
     if (tab === LogQueryTab.Review && !this.canQueryOperationsReviewLog()) {
+      this.currentTabIndex = this.getTabIndex(this.currentTab);
       return;
     }
 
     this.currentTab = tab;
+    this.currentTabIndex = this.getTabIndex(tab);
     this.logs = [];
     this.resultTotal = 0;
     this.resetFilters();
@@ -560,14 +594,17 @@ struct OperationsLogQuery {
 
   ensureAvailableTab(): void {
     if (this.currentTab === LogQueryTab.Operation && this.canQueryOperationsOperationLog()) {
+      this.currentTabIndex = this.getTabIndex(this.currentTab);
       return;
     }
 
     if (this.currentTab === LogQueryTab.Review && this.canQueryOperationsReviewLog()) {
+      this.currentTabIndex = this.getTabIndex(this.currentTab);
       return;
     }
 
     this.currentTab = this.canQueryOperationsOperationLog() ? LogQueryTab.Operation : LogQueryTab.Review;
+    this.currentTabIndex = this.getTabIndex(this.currentTab);
   }
 
   canQueryOperationsOperationLog(): boolean {
@@ -590,12 +627,12 @@ struct OperationsLogQuery {
     return this.currentTab === LogQueryTab.Review ? OPERATIONS_REVIEW_TYPE_VALUES : OPERATIONS_OPERATION_TYPE_VALUES;
   }
 
-  getPageTitle(): string {
-    return LogQueryService.formatPageTitle(this.getCurrentCategory());
+  getPageTitle(tab: LogQueryTab): string {
+    return LogQueryService.formatPageTitle(this.getCategoryForTab(tab));
   }
 
-  getListTitle(): string {
-    return LogQueryService.formatListTitle(this.getCurrentCategory());
+  getListTitle(tab: LogQueryTab): string {
+    return LogQueryService.formatListTitle(this.getCategoryForTab(tab));
   }
 
   getEmptyText(): string {
@@ -605,6 +642,34 @@ struct OperationsLogQuery {
   getCurrentLogIcon(): Resource {
     return this.currentTab === LogQueryTab.Review ? $r('sys.symbol.checkmark_shield') :
       $r('sys.symbol.wrench_and_screwdriver');
+  }
+
+  getCategoryForTab(tab: LogQueryTab): LogCategory {
+    return tab === LogQueryTab.Review ? LogCategory.OperationsReview : LogCategory.OperationsOperation;
+  }
+
+  getTabIndex(tab: LogQueryTab): number {
+    return tab === LogQueryTab.Review ? 1 : 0;
+  }
+
+  getTabFromIndex(index: number): LogQueryTab {
+    return index === 1 ? LogQueryTab.Review : LogQueryTab.Operation;
+  }
+
+  getTabIconColor(tab: LogQueryTab, enabled: boolean): string {
+    if (!enabled) {
+      return AppColors.Disabled;
+    }
+
+    return this.currentTab === tab ? AppColors.Log : AppColors.TextTertiary;
+  }
+
+  getTabLabelColor(tab: LogQueryTab, enabled: boolean): string {
+    if (!enabled) {
+      return AppColors.Disabled;
+    }
+
+    return this.currentTab === tab ? AppColors.Log : AppColors.TextSecondary;
   }
 
   showStartDatePicker(): void {

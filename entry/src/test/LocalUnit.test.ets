@@ -4,6 +4,7 @@ import { UiFeedbackTone } from '../main/ets/models/common/UiFeedbackModels';
 import { AppColors, AppTone } from '../main/ets/styles/AppTheme';
 import { AppThemeMode } from '../main/ets/models/app/ThemeModels';
 import { AppThemeService } from '../main/ets/services/app/AppThemeService';
+import { MainPageService } from '../main/ets/services/app/MainPageService';
 import { UiFeedbackService } from '../main/ets/services/common/UiFeedbackService';
 import { AuthService } from '../main/ets/services/identity/AuthService';
 import { DeviceArchiveRequestService } from '../main/ets/services/archive/DeviceArchiveRequestService';
@@ -183,6 +184,11 @@ export default function localUnitTest() {
   });
 
   describe('appNavigation', () => {
+    it('usesSingleNativeTabsRouteForRepairAndReinspection', 0, () => {
+      expect(MainPageService.getRepairAndReinspectionRoute())
+        .assertEqual('pages/OperationsCenter/RepairAndReinspection');
+    });
+
     it('reportsRejectedNavigationPromises', 0, async (): Promise<void> => {
       let failed = false;
 

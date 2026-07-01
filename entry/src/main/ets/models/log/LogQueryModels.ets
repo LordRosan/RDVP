@@ -5,6 +5,11 @@ export enum LogCategory {
   OperationsReview = 'OPERATIONS_REVIEW'
 }
 
+export enum LogQueryTab {
+  Operation = 'OPERATION',
+  Review = 'REVIEW'
+}
+
 export interface LogItem {
   id: string;
   category: LogCategory;

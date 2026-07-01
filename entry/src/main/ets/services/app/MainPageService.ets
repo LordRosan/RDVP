@@ -20,6 +20,10 @@ import { SessionStore } from '../../stores/SessionStore';
 import { ApiClient } from '../common/ApiClient';
 
 export class MainPageService {
+  static getRepairAndReinspectionRoute(): string {
+    return 'pages/OperationsCenter/RepairAndReinspection';
+  }
+
   static getEmptyDashboard(): MainPageDashboard {
     return {};
   }

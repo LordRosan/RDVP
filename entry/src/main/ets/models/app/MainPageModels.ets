@@ -10,8 +10,6 @@ export enum MainPageActionId {
   DeviceVerification = 'DEVICE_VERIFICATION',
   TaskAcceptance = 'TASK_ACCEPTANCE',
   RepairAndReinspection = 'REPAIR_AND_REINSPECTION',
-  RepairReport = 'REPAIR_REPORT',
-  ReinspectionReport = 'REINSPECTION_REPORT',
   DeviceArchiveReview = 'DEVICE_ARCHIVE_REVIEW',
   OperationsReview = 'OPERATIONS_REVIEW',
   ArchiveLogQuery = 'ARCHIVE_LOG_QUERY',

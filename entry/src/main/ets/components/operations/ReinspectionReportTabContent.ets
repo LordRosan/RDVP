@@ -1,47 +1,45 @@
-import { AppColors, AppRadii, AppSpacing } from '../../styles/AppTheme';
+import { AppColors, AppRadii } from '../../styles/AppTheme';
 import { AppSectionTitle } from '../../components/AppSectionTitle';
-import { CenterTitleBar } from '../../components/CenterTitleBar';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
-import {
-  OperationReportBottomContentPadding,
-  OperationReportTab,
-  OperationReportTabBar
-} from '../../components/OperationReportTabBar';
 import { FaultSeverity } from '../../models/operations/FaultModels';
+import {
+  ReinspectionRecordForm,
+  ReinspectionResult,
+  ReinspectionTaskStatus,
+  ReinspectionTaskSummary
+} from '../../models/operations/ReinspectionModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
-import { RepairReportForm, RepairTaskItem, RepairReportResult, RepairTaskStatus } from '../../models/operations/RepairTaskModels';
 import { ApiClient } from '../../services/common/ApiClient';
 import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { AuthService } from '../../services/identity/AuthService';
-import { FaultReportService } from '../../services/operations/FaultReportService';
-import { RepairTaskService } from '../../services/operations/RepairTaskService';
-import { SessionStore } from '../../stores/SessionStore';
+import { ReinspectionService } from '../../services/operations/ReinspectionService';
 import { AuthGuard } from '../../utils/AuthGuard';
-import { AppNavigator } from '../../utils/AppNavigator';
 import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
-@Entry
 @Component
-struct RepairReport {
+export struct ReinspectionReportTabContent {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
-  @State allTaskItems: RepairTaskItem[] = [];
-  @State taskItems: RepairTaskItem[] = [];
+  @State allTaskItems: ReinspectionTaskSummary[] = [];
+  @State taskItems: ReinspectionTaskSummary[] = [];
   @State taskId: string = '';
-  @State reportResult: string = '';
-  @State repairedAt: string = '';
-  @State processDescription: string = '';
+  @State result: string = '';
+  @State reinspectedAt: string = '';
+  @State description: string = '';
   @State password: string = '';
   @State taskMessage: string = '';
   @State taskMessageTone: string = UiFeedbackTone.Danger;
-  @State reportMessage: string = '';
-  @State reportMessageTone: string = UiFeedbackTone.Danger;
+  @State recordMessage: string = '';
+  @State recordMessageTone: string = UiFeedbackTone.Danger;
   @State normalizedTaskId: string = '-';
-  @State submittedRepairTaskId: string = '';
+  @State submittedReinspectionTaskId: string = '';
   @State refreshing: boolean = false;
   @State submitting: boolean = false;
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.OperationsCenterRepairReportSubmit)) {
+    if (!AuthGuard.requireAllPermissions(this.getUIContext(), [
+      PermissionCode.OperationsCenterReinspectionTaskAccept,
+      PermissionCode.OperationsCenterReinspectionReportSubmit
+    ])) {
       return;
     }
 
@@ -49,75 +47,27 @@ struct RepairReport {
   }
 
   build() {
-    Stack({ alignContent: Alignment.Bottom }) {
-      Scroll() {
-        Column() {
-          this.PageTitleBar()
-
-          Column({ space: 18 }) {
-            this.ModeHeader()
-            this.TaskListPanel()
-            this.ReportForm()
-          }
-          .alignItems(HorizontalAlign.Start)
-          .justifyContent(FlexAlign.Start)
-          .padding({
-            left: AppSpacing.PageX,
-            right: AppSpacing.PageX,
-            top: 0,
-            bottom: OperationReportBottomContentPadding
-          })
-          .width('100%')
-        }
-        .width('100%')
-        .constraintSize({ minHeight: '100%' })
-        .alignItems(HorizontalAlign.Start)
-        .justifyContent(FlexAlign.Start)
-      }
-      .height('100%')
-      .width('100%')
-
-      OperationReportTabBar({
-        currentTab: OperationReportTab.Repair,
-        repairEnabled: this.canOpenRepairReport(),
-        reinspectionEnabled: this.canOpenReinspectionReport(),
-        onRepairClick: () => {
-        },
-        onReinspectionClick: () => {
-          this.openReinspectionReport();
-        }
-      })
+    Column({ space: 18 }) {
+      this.ModeHeader()
+      this.TaskListPanel()
+      this.RecordForm()
     }
-    .height('100%')
+    .alignItems(HorizontalAlign.Start)
+    .justifyContent(FlexAlign.Start)
     .width('100%')
-    .backgroundColor(AppColors.PageBackground)
-  }
-
-  onBackPress(): boolean {
-    this.backToOperationsCenter();
-    return true;
-  }
-
-  @Builder
-  PageTitleBar() {
-    CenterTitleBar({
-      action: () => {
-        this.backToOperationsCenter();
-      }
-    })
   }
 
   @Builder
   ModeHeader() {
     Column({ space: 5 }) {
-      Text('维修任务')
+      Text('复检任务')
         .fontSize(34)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      Text('Repair Task Report')
+      Text('Reinspection Task Report')
         .fontSize(13)
         .fontWeight(FontWeight.Medium)
         .fontColor(AppColors.TextTertiary)
@@ -133,7 +83,7 @@ struct RepairReport {
   TaskListPanel() {
     Column({ space: 10 }) {
       AppSectionTitle({
-        title: '维修任务列表',
+        title: '复检任务列表',
         subtitle: ''
       })
 
@@ -156,9 +106,9 @@ struct RepairReport {
         this.EmptyTaskState()
       } else {
         Column({ space: 12 }) {
-          ForEach(this.taskItems, (item: RepairTaskItem) => {
+          ForEach(this.taskItems, (item: ReinspectionTaskSummary) => {
             this.TaskItem(item)
-          }, (item: RepairTaskItem) => item.id)
+          }, (item: ReinspectionTaskSummary) => item.id)
         }
         .width('100%')
       }
@@ -183,7 +133,7 @@ struct RepairReport {
   EmptyTaskState() {
     Column({ space: 10 }) {
       Stack() {
-        SymbolGlyph($r('sys.symbol.wrench_and_screwdriver'))
+        SymbolGlyph($r('sys.symbol.doc_text_badge_checkmark'))
           .fontSize(36)
           .fontColor([AppColors.Success])
       }
@@ -192,7 +142,7 @@ struct RepairReport {
       .borderRadius(32)
       .backgroundColor(AppColors.SuccessSurface)
 
-      Text('暂无维修任务')
+      Text('暂无复检任务')
         .fontSize(18)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
@@ -212,18 +162,18 @@ struct RepairReport {
   }
 
   @Builder
-  TaskItem(item: RepairTaskItem) {
+  TaskItem(item: ReinspectionTaskSummary) {
     Column({ space: 12 }) {
       Row({ space: 12 }) {
         Stack() {
-          SymbolGlyph($r('sys.symbol.wrench_and_screwdriver'))
+          SymbolGlyph($r('sys.symbol.doc_text_badge_checkmark'))
             .fontSize(23)
             .fontColor([AppColors.OnPrimary])
         }
         .width(44)
         .height(44)
         .borderRadius(22)
-        .backgroundColor(this.getSeverityTone(item.severity))
+        .backgroundColor(ReinspectionService.getSeverityTone(item.severity))
 
         Column({ space: 4 }) {
           Text(item.deviceName)
@@ -236,7 +186,7 @@ struct RepairReport {
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
 
-        Text(RepairTaskService.formatTaskStatus(item.status))
+        Text(ReinspectionService.formatTaskStatus(item.status))
           .fontSize(13)
           .fontColor(this.getTaskStatusTone(item.status))
           .fontWeight(FontWeight.Medium)
@@ -246,7 +196,8 @@ struct RepairReport {
       .alignItems(VerticalAlign.Center)
 
       this.TaskFieldRow('任务编号', item.taskNo)
-      this.TaskFieldRow('故障类型', FaultReportService.formatFaultType(item.faultType))
+      this.TaskFieldRow('位置', item.location)
+      this.TaskFieldRow('严重程度', ReinspectionService.formatSeverity(item.severity))
 
       Button({ type: ButtonType.Capsule, stateEffect: true }) {
         Row({ space: 8 }) {
@@ -254,7 +205,7 @@ struct RepairReport {
             .fontSize(18)
             .fontColor([AppColors.OnPrimary])
 
-          Text(this.isTaskSelected(item) ? '已选择' : '填写维修报告')
+          Text(this.isTaskSelected(item) ? '已选择' : '填写复检报告')
             .fontSize(15)
             .fontWeight(FontWeight.Medium)
             .fontColor(AppColors.OnPrimary)
@@ -303,18 +254,18 @@ struct RepairReport {
   }
 
   @Builder
-  ReportForm() {
+  RecordForm() {
     Column({ space: 12 }) {
       AppSectionTitle({
-        title: '维修报告',
+        title: '复检报告',
         subtitle: ''
       })
 
       Column({ space: 16 }) {
         this.TaskIdField()
         this.ResultSelector()
-        this.RepairedAtField()
-        this.ProcessDescriptionField()
+        this.ReinspectedAtField()
+        this.DescriptionField()
       }
       .padding({
         left: 18,
@@ -329,10 +280,10 @@ struct RepairReport {
       .alignItems(HorizontalAlign.Start)
 
       this.PasswordSection()
-      this.ReportMessageText()
-      this.ActionButton(this.getSubmitButtonLabel(), this.getSubmitIcon(), this.canSubmitRepairReport(),
+      this.RecordMessageText()
+      this.ActionButton(this.getSubmitButtonLabel(), this.getSubmitIcon(), this.canSubmitRecord(),
         () => {
-          this.submitRepairReport();
+          this.submitRecord();
         })
     }
     .width('100%')
@@ -342,14 +293,14 @@ struct RepairReport {
   @Builder
   TaskIdField() {
     Column({ space: 10 }) {
-      this.FieldTitle('维修任务编号')
+      this.FieldTitle('复检任务编号')
 
       Row({ space: 10 }) {
         SymbolGlyph($r('sys.symbol.text_clipboard'))
           .fontSize(20)
           .fontColor([this.taskId.length > 0 ? AppColors.TextPrimary : AppColors.TextSecondary])
 
-        Text(this.taskId.length > 0 ? this.taskId : '请选择维修任务')
+        Text(this.taskId.length > 0 ? this.taskId : '请选择复检任务')
           .fontSize(16)
           .fontColor(this.taskId.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
           .layoutWeight(1)
@@ -376,12 +327,11 @@ struct RepairReport {
   @Builder
   ResultSelector() {
     Column({ space: 10 }) {
-      this.FieldTitle('维修结果')
+      this.FieldTitle('复检结果')
 
       Row({ space: 10 }) {
-        this.ResultOption(RepairReportResult.Repaired, $r('sys.symbol.checkmark_circle'))
-        this.ResultOption(RepairReportResult.TemporaryRestored, $r('sys.symbol.wrench_and_screwdriver'))
-        this.ResultOption(RepairReportResult.Unresolved, $r('sys.symbol.exclamationmark_circle'))
+        this.ResultOption(ReinspectionResult.Passed, $r('sys.symbol.checkmark_circle'))
+        this.ResultOption(ReinspectionResult.Failed, $r('sys.symbol.xmark_circle'))
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
@@ -391,17 +341,17 @@ struct RepairReport {
   }
 
   @Builder
-  ResultOption(result: RepairReportResult, icon: Resource) {
+  ResultOption(result: ReinspectionResult, icon: Resource) {
     Button({ type: ButtonType.Capsule, stateEffect: true }) {
-      Row({ space: 5 }) {
+      Row({ space: 6 }) {
         SymbolGlyph(icon)
           .fontSize(17)
-          .fontColor([this.reportResult === `${result}` ? AppColors.OnPrimary : AppColors.TextPrimary])
+          .fontColor([this.result === `${result}` ? AppColors.OnPrimary : AppColors.TextPrimary])
 
-        Text(RepairTaskService.formatRepairReportResult(result))
-          .fontSize(13)
+        Text(ReinspectionService.formatResult(result))
+          .fontSize(14)
           .fontWeight(FontWeight.Medium)
-          .fontColor(this.reportResult === `${result}` ? AppColors.OnPrimary : AppColors.TextPrimary)
+          .fontColor(this.result === `${result}` ? AppColors.OnPrimary : AppColors.TextPrimary)
           .maxLines(1)
       }
       .width('100%')
@@ -410,32 +360,33 @@ struct RepairReport {
     }
     .height(42)
     .layoutWeight(1)
-    .backgroundColor(this.reportResult === `${result}` ? this.getRepairResultTone(result) : AppColors.FieldBackground)
+    .backgroundColor(
+      this.result === `${result}` ? ReinspectionService.getResultTone(result) : AppColors.FieldBackground)
     .border({
       width: 1,
-      color: this.reportResult === `${result}` ? this.getRepairResultTone(result) : AppColors.Border
+      color: this.result === `${result}` ? ReinspectionService.getResultTone(result) : AppColors.Border
     })
-    .enabled(this.canSubmitRepairReport())
+    .enabled(this.canSubmitRecord())
     .onClick(() => {
-      this.reportResult = `${result}`;
-      this.reportMessage = '';
-      this.reportMessageTone = UiFeedbackTone.Danger;
+      this.result = `${result}`;
+      this.recordMessage = '';
+      this.recordMessageTone = UiFeedbackTone.Danger;
     })
   }
 
   @Builder
-  RepairedAtField() {
+  ReinspectedAtField() {
     Column({ space: 10 }) {
-      this.FieldTitle('维修时间')
+      this.FieldTitle('复检时间')
 
       Row({ space: 10 }) {
         SymbolGlyph($r('sys.symbol.calendar'))
           .fontSize(20)
           .fontColor([AppColors.TextPrimary])
 
-        Text(this.repairedAt.length > 0 ? this.repairedAt : '请选择维修时间')
+        Text(this.reinspectedAt.length > 0 ? this.reinspectedAt : '请选择复检时间')
           .fontSize(16)
-          .fontColor(this.repairedAt.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
+          .fontColor(this.reinspectedAt.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
           .layoutWeight(1)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -457,13 +408,13 @@ struct RepairReport {
         color: AppColors.Border
       })
       .onClick(() => {
-        if (!this.canSubmitRepairReport()) {
+        if (!this.canSubmitRecord()) {
           return;
         }
 
-        this.showRepairedAtPicker();
-        this.reportMessage = '';
-        this.reportMessageTone = UiFeedbackTone.Danger;
+        this.showReinspectedAtPicker();
+        this.recordMessage = '';
+        this.recordMessageTone = UiFeedbackTone.Danger;
       })
     }
     .width('100%')
@@ -471,19 +422,19 @@ struct RepairReport {
   }
 
   @Builder
-  ProcessDescriptionField() {
+  DescriptionField() {
     Column({ space: 10 }) {
-      this.FieldTitle('维修说明')
+      this.FieldTitle('复检说明')
 
       TextArea({
-        placeholder: '请输入维修说明',
-        text: this.processDescription
+        placeholder: '请输入复检说明',
+        text: this.description
       })
         .height(132)
         .width('100%')
         .fontSize(15)
         .lineHeight(22)
-        .maxLength(1000)
+        .maxLength(800)
         .backgroundColor(AppColors.FieldBackground)
         .borderRadius(18)
         .padding({
@@ -496,11 +447,11 @@ struct RepairReport {
           width: 1,
           color: AppColors.Border
         })
-        .enabled(this.canSubmitRepairReport())
+        .enabled(this.canSubmitRecord())
         .onChange((value: string) => {
-          this.processDescription = value;
-          this.reportMessage = '';
-          this.reportMessageTone = UiFeedbackTone.Danger;
+          this.description = value;
+          this.recordMessage = '';
+          this.recordMessageTone = UiFeedbackTone.Danger;
         })
     }
     .width('100%')
@@ -535,15 +486,15 @@ struct RepairReport {
         .borderRadius(18)
         .padding({ left: 16, right: 16 })
         .border({ width: 1, color: AppColors.Border })
-        .enabled(this.canSubmitRepairReport())
+        .enabled(this.canSubmitRecord())
         .onChange((value: string) => {
-          if (!this.canSubmitRepairReport()) {
+          if (!this.canSubmitRecord()) {
             return;
           }
 
           this.password = value;
-          this.reportMessage = '';
-          this.reportMessageTone = UiFeedbackTone.Danger;
+          this.recordMessage = '';
+          this.recordMessageTone = UiFeedbackTone.Danger;
         })
     }
     .width('100%')
@@ -561,11 +512,11 @@ struct RepairReport {
   }
 
   @Builder
-  ReportMessageText() {
-    if (this.reportMessage.length > 0) {
+  RecordMessageText() {
+    if (this.recordMessage.length > 0) {
       InlineMessageSurface({
-        message: this.reportMessage,
-        tone: this.reportMessageTone
+        message: this.recordMessage,
+        tone: this.recordMessageTone
       })
     }
   }
@@ -603,7 +554,7 @@ struct RepairReport {
     }
 
     this.refreshing = true;
-    const response = await RepairTaskService.queryRepairTasksRemoteFirst();
+    const response = await ReinspectionService.queryPendingTasksRemoteFirst();
     this.refreshing = false;
 
     if (!response.success) {
@@ -621,22 +572,22 @@ struct RepairReport {
     this.taskMessageTone = UiFeedbackTone.Success;
   }
 
-  async submitRepairReport(): Promise<void> {
-    if (this.submitting || this.isSelectedRepairTaskSubmitted()) {
+  async submitRecord(): Promise<void> {
+    if (this.submitting || this.isSelectedReinspectionTaskSubmitted()) {
       return;
     }
 
-    const form = this.createRepairReportForm();
-    const validation = RepairTaskService.validateRepairReportForm(form);
+    const form = this.createReinspectionRecordForm();
+    const validation = ReinspectionService.validateRecordForm(form);
     if (!validation.valid) {
-      this.reportMessage = validation.message;
-      this.reportMessageTone = UiFeedbackTone.Danger;
+      this.recordMessage = validation.message;
+      this.recordMessageTone = UiFeedbackTone.Danger;
       return;
     }
 
     if (this.password.length === 0) {
-      this.reportMessage = UiFeedbackService.requiredInput('密码');
-      this.reportMessageTone = UiFeedbackTone.Danger;
+      this.recordMessage = UiFeedbackService.requiredInput('密码');
+      this.recordMessageTone = UiFeedbackTone.Danger;
       return;
     }
 
@@ -647,18 +598,18 @@ struct RepairReport {
         return;
       }
 
-      const response = await RepairTaskService.submitRepairReportRemoteFirst(form);
+      const response = await ReinspectionService.submitRecordRemoteFirst(form);
       if (!response.success) {
         const error = response.error;
-        this.reportMessage = UiFeedbackService.operationError(error, '提交');
-        this.reportMessageTone = UiFeedbackTone.Danger;
+        this.recordMessage = UiFeedbackService.operationError(error, '提交');
+        this.recordMessageTone = UiFeedbackTone.Danger;
         return;
       }
 
-      this.reportMessage = UiFeedbackService.operationSuccess('提交');
-      this.reportMessageTone = UiFeedbackTone.Success;
-      this.submittedRepairTaskId = this.normalizedTaskId;
-      this.allTaskItems = this.allTaskItems.filter((item: RepairTaskItem) => {
+      this.recordMessage = UiFeedbackService.operationSuccess('提交');
+      this.recordMessageTone = UiFeedbackTone.Success;
+      this.submittedReinspectionTaskId = this.normalizedTaskId;
+      this.allTaskItems = this.allTaskItems.filter((item: ReinspectionTaskSummary) => {
         return item.taskNo !== this.normalizedTaskId && item.id !== this.normalizedTaskId;
       });
       this.taskItems = [...this.allTaskItems];
@@ -669,13 +620,12 @@ struct RepairReport {
     }
   }
 
-  createRepairReportForm(): RepairReportForm {
+  createReinspectionRecordForm(): ReinspectionRecordForm {
     return {
       taskId: this.taskId,
-      result: this.reportResult as RepairReportResult,
-      repairedAt: this.repairedAt,
-      processDescription: this.processDescription,
-      partsUsed: ''
+      result: this.result as ReinspectionResult,
+      reinspectedAt: this.reinspectedAt,
+      description: this.description
     };
   }
 
@@ -685,8 +635,8 @@ struct RepairReport {
       return true;
     }
 
-    this.reportMessage = UiFeedbackService.passwordVerificationError(response.error, '提交');
-    this.reportMessageTone = UiFeedbackTone.Danger;
+    this.recordMessage = UiFeedbackService.passwordVerificationError(response.error, '提交');
+    this.recordMessageTone = UiFeedbackTone.Danger;
     return false;
   }
 
@@ -695,7 +645,7 @@ struct RepairReport {
       return '提交中';
     }
 
-    if (this.isSelectedRepairTaskSubmitted()) {
+    if (this.isSelectedReinspectionTaskSubmitted()) {
       return '已提交';
     }
 
@@ -706,15 +656,15 @@ struct RepairReport {
     return $r('sys.symbol.checkmark_circle');
   }
 
-  canSubmitRepairReport(): boolean {
-    return !this.submitting && this.taskId.length > 0 && !this.isSelectedRepairTaskSubmitted();
+  canSubmitRecord(): boolean {
+    return !this.submitting && this.taskId.length > 0 && !this.isSelectedReinspectionTaskSubmitted();
   }
 
-  isSelectedRepairTaskSubmitted(): boolean {
-    return this.submittedRepairTaskId.length > 0 && this.normalizedTaskId === this.submittedRepairTaskId;
+  isSelectedReinspectionTaskSubmitted(): boolean {
+    return this.submittedReinspectionTaskId.length > 0 && this.normalizedTaskId === this.submittedReinspectionTaskId;
   }
 
-  isTaskSelected(item: RepairTaskItem): boolean {
+  isTaskSelected(item: ReinspectionTaskSummary): boolean {
     const selectedTaskId = this.normalizedTaskId.trim();
     if (selectedTaskId.length === 0 || selectedTaskId === '-') {
       return false;
@@ -723,29 +673,29 @@ struct RepairReport {
     return item.taskNo === selectedTaskId || item.id === selectedTaskId;
   }
 
-  selectTask(item: RepairTaskItem): void {
+  selectTask(item: ReinspectionTaskSummary): void {
     if (this.isTaskSelected(item)) {
       this.clearSelectedTask();
-      this.reportMessage = '';
-      this.reportMessageTone = UiFeedbackTone.Danger;
+      this.recordMessage = '';
+      this.recordMessageTone = UiFeedbackTone.Danger;
       return;
     }
 
     this.taskId = item.id;
     this.normalizedTaskId = item.id;
-    if (this.normalizedTaskId !== this.submittedRepairTaskId) {
-      this.submittedRepairTaskId = '';
+    if (this.normalizedTaskId !== this.submittedReinspectionTaskId) {
+      this.submittedReinspectionTaskId = '';
     }
-    this.reportMessage = '';
-    this.reportMessageTone = UiFeedbackTone.Danger;
+    this.recordMessage = '';
+    this.recordMessageTone = UiFeedbackTone.Danger;
   }
 
   clearSelectedTask(): void {
     this.taskId = '';
     this.normalizedTaskId = '-';
-    this.reportResult = '';
-    this.repairedAt = '';
-    this.processDescription = '';
+    this.result = '';
+    this.reinspectedAt = '';
+    this.description = '';
     this.password = '';
   }
 
@@ -754,7 +704,7 @@ struct RepairReport {
       return;
     }
 
-    const exists = this.taskItems.some((item: RepairTaskItem) => {
+    const exists = this.taskItems.some((item: ReinspectionTaskSummary) => {
       return item.id === this.taskId || item.taskNo === this.taskId;
     });
     if (!exists) {
@@ -762,49 +712,21 @@ struct RepairReport {
     }
   }
 
-  getRepairResultTone(result: RepairReportResult): string {
-    switch (result) {
-      case RepairReportResult.Repaired:
-        return AppColors.Success;
-      case RepairReportResult.TemporaryRestored:
-        return AppColors.Warning;
-      case RepairReportResult.Unresolved:
-        return AppColors.Danger;
-      default:
-        return AppColors.TextSecondary;
-    }
-  }
-
-  getSeverityTone(severity: FaultSeverity): string {
-    switch (severity) {
-      case FaultSeverity.Emergency:
-        return AppColors.Danger;
-      case FaultSeverity.Severe:
-        return AppColors.Warning;
-      case FaultSeverity.General:
-        return AppColors.Primary;
-      case FaultSeverity.Minor:
-        return AppColors.Success;
-      default:
-        return AppColors.TextSecondary;
-    }
-  }
-
-  showRepairedAtPicker(): void {
-    if (!this.canSubmitRepairReport()) {
+  showReinspectedAtPicker(): void {
+    if (!this.canSubmitRecord()) {
       return;
     }
 
     this.getUIContext().showDatePickerDialog({
       start: new Date(2000, 0, 1, 0, 0),
       end: new Date(2100, 11, 31, 23, 59),
-      selected: this.resolveSelectedDate(this.repairedAt),
+      selected: this.resolveSelectedDate(this.reinspectedAt),
       showTime: true,
       useMilitaryTime: true,
       onDateAccept: (value: Date) => {
-        this.repairedAt = this.formatDateTime(value);
-        this.reportMessage = '';
-        this.reportMessageTone = UiFeedbackTone.Danger;
+        this.reinspectedAt = this.formatDateTime(value);
+        this.recordMessage = '';
+        this.recordMessageTone = UiFeedbackTone.Danger;
       }
     });
   }
@@ -847,42 +769,11 @@ struct RepairReport {
     return value < 10 ? `0${value}` : `${value}`;
   }
 
-  backToOperationsCenter(): void {
-    AppNavigator.backOrReplace(this.getUIContext(), 'pages/OperationsCenter/OperationsCenter', {
-      onFailure: () => {
-        AppNavigator.showNavigationUnavailableToast(this.getUIContext());
-      }
-    });
-  }
-
-  canOpenRepairReport(): boolean {
-    return SessionStore.hasPermission(PermissionCode.OperationsCenterRepairReportSubmit);
-  }
-
-  canOpenReinspectionReport(): boolean {
-    return SessionStore.hasAllPermissions([
-      PermissionCode.OperationsCenterReinspectionTaskAccept,
-      PermissionCode.OperationsCenterReinspectionReportSubmit
-    ]);
-  }
-
-  openReinspectionReport(): void {
-    if (!this.canOpenReinspectionReport()) {
-      AppNavigator.showNavigationUnavailableToast(this.getUIContext());
-      return;
-    }
-
-    AppNavigator.replace(this.getUIContext(), 'pages/OperationsCenter/ReinspectionReport', () => {
-      AppNavigator.showNavigationUnavailableToast(this.getUIContext());
-    });
-  }
-
-  getTaskStatusTone(status: RepairTaskStatus): string {
+  getTaskStatusTone(status: ReinspectionTaskStatus): string {
     switch (status) {
-      case RepairTaskStatus.Accepted:
-      case RepairTaskStatus.Processing:
-        return AppColors.Primary;
-      case RepairTaskStatus.ReportSubmitted:
+      case ReinspectionTaskStatus.Pending:
+        return AppColors.Warning;
+      case ReinspectionTaskStatus.Completed:
         return AppColors.Success;
       default:
         return AppColors.TextSecondary;
