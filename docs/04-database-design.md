@@ -67,13 +67,13 @@ erDiagram
   users ||--o{ maintainer_profiles : has
 
   devices ||--o{ device_qrcodes : has
-  devices ||--o{ device_verification_records : has
+  devices ||--o{ device_verification_reports : has
   devices ||--o{ device_archive_requests : has
   devices ||--o{ fault_reports : has
 
   fault_reports ||--o{ repair_tasks : has
   repair_tasks ||--o{ repair_reports : has
-  fault_reports ||--o{ reinspection_records : has
+  fault_reports ||--o{ reinspection_reports : has
 
   fault_reports ||--o{ operations_review_requests : has
   users ||--o{ password_verification_attempts : verifies
@@ -286,13 +286,13 @@ REVOKED
 
 ## 8. 设备核验
 
-### 8.1 device_verification_records
+### 8.1 device_verification_reports
 
-设备状态核验记录表。
+设备状态核验报告表。
 
 | 字段 | 类型 | 必填 | 约束 | 说明 |
 | --- | --- | --- | --- | --- |
-| `id` | id | 是 | PK | 核验记录 ID |
+| `id` | id | 是 | PK | 核验报告 ID |
 | `device_id` | id | 是 | FK devices.id, INDEX | 设备 ID |
 | `verifier_id` | id | 是 | FK users.id, INDEX | 核验人员 |
 | `result` | string(32) | 是 | INDEX | 核验结果 |
@@ -462,9 +462,9 @@ UNRESOLVED
 
 ## 11. 复检
 
-### 11.1 reinspection_records
+### 11.1 reinspection_reports
 
-复检报告表。当前物理表沿用 `reinspection_records` 命名。
+复检报告表。当前物理表统一使用 `reinspection_reports` 命名。
 
 | 字段 | 类型 | 必填 | 约束 | 说明 |
 | --- | --- | --- | --- | --- |
@@ -527,7 +527,7 @@ DEVICE_VERIFICATION_RECORD
 DEVICE_ARCHIVE_REQUEST
 FAULT_REPORT
 REPAIR_REPORT
-REINSPECTION_RECORD
+REINSPECTION_REPORT
 ```
 
 约束：

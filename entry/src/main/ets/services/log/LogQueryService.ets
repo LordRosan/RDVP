@@ -4,11 +4,23 @@ import {
   LogCategory,
   LogItem,
   LogListResult,
-  LogQueryFilter
+  LogQueryFilter,
+  LogQueryTab
 } from '../../models/log/LogQueryModels';
 import { ApiClient } from '../common/ApiClient';
 
 const DEFAULT_LOG_PAGE_SIZE = 50;
+const ARCHIVE_OPERATION_TYPE_OPTIONS: string[] = ['全部', '档案添加', '档案删除', '档案修改', '档案查询', '档案导出'];
+const ARCHIVE_OPERATION_TYPE_VALUES: string[] = ['', 'CREATE', 'DELETE', 'UPDATE', 'DEVICE_ARCHIVE_QUERY',
+  'DEVICE_ARCHIVE_EXPORT'];
+const ARCHIVE_REVIEW_TYPE_OPTIONS: string[] = ['全部', '添加档案', '删除档案', '修改档案'];
+const ARCHIVE_REVIEW_TYPE_VALUES: string[] = ['', 'CREATE', 'DELETE', 'UPDATE'];
+const OPERATIONS_OPERATION_TYPE_OPTIONS: string[] = ['全部', '核验报告', '报修报告', '任务接取', '维修报告', '复检报告'];
+const OPERATIONS_OPERATION_TYPE_VALUES: string[] = ['', 'DEVICE_VERIFICATION', 'FAULT_REPORT',
+  'REPAIR_TASK_ACCEPT', 'REPAIR_REPORT', 'REINSPECTION_REPORT'];
+const OPERATIONS_REVIEW_TYPE_OPTIONS: string[] = ['全部', '核验报告', '报修报告', '维修报告', '复检报告'];
+const OPERATIONS_REVIEW_TYPE_VALUES: string[] = ['', 'DEVICE_VERIFICATION_REPORT', 'FAULT_REPORT',
+  'REPAIR_REPORT', 'REINSPECTION_REPORT'];
 
 interface ApiLogItem {
   logCategory: string;
@@ -92,6 +104,30 @@ export class LogQueryService {
     }
 
     return `/api/v1/log-center/logs?${params.join('&')}`;
+  }
+
+  static resolveArchiveCategory(tab: LogQueryTab): LogCategory {
+    return tab === LogQueryTab.Review ? LogCategory.ArchiveReview : LogCategory.ArchiveOperation;
+  }
+
+  static resolveOperationsCategory(tab: LogQueryTab): LogCategory {
+    return tab === LogQueryTab.Review ? LogCategory.OperationsReview : LogCategory.OperationsOperation;
+  }
+
+  static getArchiveLogTypeOptions(tab: LogQueryTab): string[] {
+    return tab === LogQueryTab.Review ? [...ARCHIVE_REVIEW_TYPE_OPTIONS] : [...ARCHIVE_OPERATION_TYPE_OPTIONS];
+  }
+
+  static getArchiveLogTypeValues(tab: LogQueryTab): string[] {
+    return tab === LogQueryTab.Review ? [...ARCHIVE_REVIEW_TYPE_VALUES] : [...ARCHIVE_OPERATION_TYPE_VALUES];
+  }
+
+  static getOperationsLogTypeOptions(tab: LogQueryTab): string[] {
+    return tab === LogQueryTab.Review ? [...OPERATIONS_REVIEW_TYPE_OPTIONS] : [...OPERATIONS_OPERATION_TYPE_OPTIONS];
+  }
+
+  static getOperationsLogTypeValues(tab: LogQueryTab): string[] {
+    return tab === LogQueryTab.Review ? [...OPERATIONS_REVIEW_TYPE_VALUES] : [...OPERATIONS_OPERATION_TYPE_VALUES];
   }
 
   static formatStatus(status: string): string {
@@ -181,8 +217,6 @@ export class LogQueryService {
       case 'REPAIR_REPORT':
         return '维修报告';
       case 'REINSPECTION_REPORT':
-        return '复检报告';
-      case 'REINSPECTION_RECORD':
         return '复检报告';
       default:
         return action;

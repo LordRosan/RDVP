@@ -300,7 +300,7 @@ class OperationsControllerTests {
         String operatorWorkerToken = login("operator", "password");
 
         verifyPassword(operatorToken, "password");
-        String response = mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records/fault-report", "device-local-0001")
+        String response = mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-reports/fault-report", "device-local-0001")
                         .header("Authorization", "Bearer " + operatorToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -318,8 +318,8 @@ class OperationsControllerTests {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.verificationRecord.deviceId").value("device-local-0001"))
-                .andExpect(jsonPath("$.data.verificationRecord.result").value("ABNORMAL"))
+                .andExpect(jsonPath("$.data.verificationReport.deviceId").value("device-local-0001"))
+                .andExpect(jsonPath("$.data.verificationReport.result").value("ABNORMAL"))
                 .andExpect(jsonPath("$.data.faultReport.status").value("PENDING_ACCEPTANCE"))
                 .andExpect(jsonPath("$.data.faultReport.faultReportNo").isString())
                 .andReturn()
@@ -345,7 +345,7 @@ class OperationsControllerTests {
         String operatorToken = login("operator", "password");
 
         verifyPassword(operatorToken, "password");
-        mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records/fault-report", "device-local-0001")
+        mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-reports/fault-report", "device-local-0001")
                         .header("Authorization", "Bearer " + operatorToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -371,7 +371,7 @@ class OperationsControllerTests {
         String operatorToken = login("operator", "password");
 
         verifyPassword(operatorToken, "password");
-        mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records/fault-report", "device-local-0001")
+        mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-reports/fault-report", "device-local-0001")
                         .header("Authorization", "Bearer " + operatorToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -405,7 +405,7 @@ class OperationsControllerTests {
                 "Power supply fluctuates under load.");
 
         verifyPassword(operatorToken, "password");
-        mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records/fault-report", "device-local-0001")
+        mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-reports/fault-report", "device-local-0001")
                         .header("Authorization", "Bearer " + operatorToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -540,7 +540,7 @@ class OperationsControllerTests {
                 .andExpect(jsonPath("$.data.items[0].taskType").value("REINSPECTION"));
 
         verifyPassword(operatorReinspectToken, "password");
-        mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-records", faultId)
+        mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-reports", faultId)
                         .header("Authorization", "Bearer " + operatorReinspectToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -551,6 +551,7 @@ class OperationsControllerTests {
                                 }
                                 """))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.reinspectionReportNo").isString())
                 .andExpect(jsonPath("$.data.result").value("PASSED"))
                 .andExpect(jsonPath("$.data.nextFaultStatus").value("CLOSED"))
                 .andExpect(jsonPath("$.data.nextDeviceStatus").value("NORMAL"));
@@ -677,7 +678,7 @@ class OperationsControllerTests {
         String repairTaskId = acceptFaultReport(operatorWorkerToken, faultId);
         submitRepairReport(operatorWorkerToken, repairTaskId);
 
-        mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-records", faultId)
+        mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-reports", faultId)
                         .header("Authorization", "Bearer " + operatorWorkerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -698,7 +699,7 @@ class OperationsControllerTests {
         String reviewerToken = login("operationsadmin", "password");
 
         verifyPassword(operatorToken, "password");
-        String verificationResponse = mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records/fault-report", "device-local-0001")
+        String verificationResponse = mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-reports/fault-report", "device-local-0001")
                         .header("Authorization", "Bearer " + operatorToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -722,7 +723,7 @@ class OperationsControllerTests {
         String repairTaskId = acceptFaultReport(operatorWorkerToken, faultId);
         submitRepairReport(operatorWorkerToken, repairTaskId);
         verifyPassword(operatorWorkerToken, "password");
-        mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-records", faultId)
+        mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-reports", faultId)
                         .header("Authorization", "Bearer " + operatorWorkerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -841,7 +842,7 @@ class OperationsControllerTests {
     }
 
     @Test
-    void rejectsRepeatedReinspectionRecordSubmission() throws Exception {
+    void rejectsRepeatedReinspectionReportSubmission() throws Exception {
         String operatorToken = login("operator", "password");
         String operatorWorkerToken = login("operator", "password");
         String operatorReinspectToken = login("operator", "password");
@@ -856,7 +857,7 @@ class OperationsControllerTests {
         submitRepairReport(operatorWorkerToken, repairTaskId);
 
         verifyPassword(operatorReinspectToken, "password");
-        mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-records", faultId)
+        mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-reports", faultId)
                         .header("Authorization", "Bearer " + operatorReinspectToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -869,7 +870,7 @@ class OperationsControllerTests {
                 .andExpect(status().isOk());
 
         verifyPassword(operatorReinspectToken, "password");
-        mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-records", faultId)
+        mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-reports", faultId)
                         .header("Authorization", "Bearer " + operatorReinspectToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""

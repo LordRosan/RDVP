@@ -280,7 +280,7 @@ GET /api/v1/dashboard
 | `archive.archiveUpdates` | 已审核通过的修改档案申请数 |
 | `archive.archiveQueries` | 成功查询设备档案的审计记录数 |
 | `operations.taskPoolTotal` | 当前任务池中的维修任务与复检任务总数 |
-| `operations.verifications` | 设备核验记录总数 |
+| `operations.verifications` | 设备核验报告总数 |
 | `operations.faultReports` | 故障报修记录总数 |
 | `operations.repairs` | 已提交维修报告总数 |
 | `operations.reinspections` | 已提交复检报告总数 |
@@ -380,7 +380,7 @@ GET /api/v1/devices/{deviceId}
   },
   "recentFaultReports": [],
   "recentRepairReports": [],
-  "recentVerificationRecords": []
+  "recentVerificationReports": []
 }
 ```
 
@@ -488,10 +488,10 @@ POST /api/v1/devices/{deviceId}/archive-export-verification
 
 ## 8. 设备核验接口
 
-### 8.1 提交设备核验记录
+### 8.1 提交设备核验报告
 
 ```text
-POST /api/v1/devices/{deviceId}/verification-records
+POST /api/v1/devices/{deviceId}/verification-reports
 ```
 
 请求体：
@@ -520,12 +520,12 @@ POST /api/v1/devices/{deviceId}/verification-records
 }
 ```
 
-提交设备核验记录前必须完成当前用户密码校验。
+提交设备核验报告前必须完成当前用户密码校验。
 
 ### 8.2 提交设备核验并联动报修
 
 ```text
-POST /api/v1/devices/{deviceId}/verification-records/fault-report
+POST /api/v1/devices/{deviceId}/verification-reports/fault-report
 ```
 
 权限要求：`OPERATIONS_CENTER_DEVICE_VERIFICATION_SUBMIT` 和 `OPERATIONS_CENTER_DEVICE_FAULT_REPORT_SUBMIT`。提交前必须完成当前用户密码校验。
@@ -552,7 +552,7 @@ POST /api/v1/devices/{deviceId}/verification-records/fault-report
 
 ```json
 {
-  "verificationRecord": {
+  "verificationReport": {
     "id": "verification-record-id",
     "deviceId": "device-id",
     "operatorId": "user-id",
@@ -925,7 +925,7 @@ POST /api/v1/reinspections/{faultReportId}/accept
 ### 13.3 提交复检报告
 
 ```text
-POST /api/v1/fault-reports/{faultReportId}/reinspection-records
+POST /api/v1/fault-reports/{faultReportId}/reinspection-reports
 ```
 
 请求体：
@@ -942,8 +942,8 @@ POST /api/v1/fault-reports/{faultReportId}/reinspection-records
 
 ```json
 {
-  "id": "reinspection-record-id",
-  "reinspectionRecordNo": "RDI-202605270001",
+  "id": "reinspection-report-id",
+  "reinspectionReportNo": "RDI-202605270001",
   "faultReportId": "fault-report-id",
   "result": "PASSED",
   "nextFaultStatus": "CLOSED",
@@ -1223,7 +1223,7 @@ VERIFICATION_RECORD
 DEVICE_ARCHIVE_REQUEST
 FAULT_REPORT
 REPAIR_REPORT
-REINSPECTION_RECORD
+REINSPECTION_REPORT
 ```
 
 ## 19. 业务错误码
@@ -1248,7 +1248,7 @@ REINSPECTION_RECORD
 | `REPAIR_TASK_RADIUS_INVALID` | 维修任务查询范围无效 |
 | `REPAIR_TASK_RADIUS_EXCEEDS_WORKLOAD` | 查询范围超过当前负载允许范围 |
 | `REPAIRER_BUSY` | 维修人员当前忙碌，不能接取更多任务 |
-| `REINSPECTION_RECORD_INVALID` | 复检报告内容无效 |
+| `REINSPECTION_REPORT_INVALID` | 复检报告内容无效 |
 | `REINSPECTION_REQUIRED` | 当前故障不处于待复检状态 |
 | `OPERATIONS_REVIEW_REQUEST_NOT_FOUND` | 运维审核请求不存在 |
 | `OPERATIONS_REVIEW_REQUEST_ALREADY_REVIEWED` | 运维审核请求已审核 |
@@ -1262,6 +1262,4 @@ REINSPECTION_RECORD
 - 离线批量同步是否需要全局幂等键。
 - 维修人员位置来源和更新频率。
 - 是否为 Web 管理后台复用同一套 API。
-
-
 

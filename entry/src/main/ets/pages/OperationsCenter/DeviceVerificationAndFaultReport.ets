@@ -703,7 +703,7 @@ struct DeviceVerificationAndFaultReport {
   }
 
   async submitNormalVerification(): Promise<void> {
-    const response = await DeviceVerificationAndFaultReportService.submitVerificationRemoteFirst({
+    const response = await DeviceVerificationAndFaultReportService.submitVerificationReportRemoteFirst({
       deviceCode: this.deviceCode,
       result: this.verificationResult as VerificationResult,
       description: this.description,

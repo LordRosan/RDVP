@@ -3,7 +3,7 @@ import { AppSectionTitle } from '../../components/AppSectionTitle';
 import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { FaultSeverity } from '../../models/operations/FaultModels';
 import {
-  ReinspectionRecordForm,
+  ReinspectionReportForm,
   ReinspectionResult,
   ReinspectionTaskStatus,
   ReinspectionTaskSummary
@@ -28,8 +28,8 @@ export struct ReinspectionReportTabContent {
   @State password: string = '';
   @State taskMessage: string = '';
   @State taskMessageTone: string = UiFeedbackTone.Danger;
-  @State recordMessage: string = '';
-  @State recordMessageTone: string = UiFeedbackTone.Danger;
+  @State reportMessage: string = '';
+  @State reportMessageTone: string = UiFeedbackTone.Danger;
   @State normalizedTaskId: string = '-';
   @State submittedReinspectionTaskId: string = '';
   @State refreshing: boolean = false;
@@ -50,7 +50,7 @@ export struct ReinspectionReportTabContent {
     Column({ space: 18 }) {
       this.ModeHeader()
       this.TaskListPanel()
-      this.RecordForm()
+      this.ReportForm()
     }
     .alignItems(HorizontalAlign.Start)
     .justifyContent(FlexAlign.Start)
@@ -254,7 +254,7 @@ export struct ReinspectionReportTabContent {
   }
 
   @Builder
-  RecordForm() {
+  ReportForm() {
     Column({ space: 12 }) {
       AppSectionTitle({
         title: '复检报告',
@@ -280,10 +280,10 @@ export struct ReinspectionReportTabContent {
       .alignItems(HorizontalAlign.Start)
 
       this.PasswordSection()
-      this.RecordMessageText()
-      this.ActionButton(this.getSubmitButtonLabel(), this.getSubmitIcon(), this.canSubmitRecord(),
+      this.ReportMessageText()
+      this.ActionButton(this.getSubmitButtonLabel(), this.getSubmitIcon(), this.canSubmitReport(),
         () => {
-          this.submitRecord();
+          this.submitReport();
         })
     }
     .width('100%')
@@ -298,18 +298,18 @@ export struct ReinspectionReportTabContent {
       Row({ space: 10 }) {
         SymbolGlyph($r('sys.symbol.text_clipboard'))
           .fontSize(20)
-          .fontColor([this.taskId.length > 0 ? AppColors.TextPrimary : AppColors.TextSecondary])
+          .fontColor([this.getTaskIdFieldIconColor()])
 
         Text(this.taskId.length > 0 ? this.taskId : '请选择复检任务')
           .fontSize(16)
-          .fontColor(this.taskId.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
+          .fontColor(this.getTaskIdFieldTextColor())
           .layoutWeight(1)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
       .height(56)
       .width('100%')
-      .backgroundColor(AppColors.FieldBackground)
+      .backgroundColor(this.getTaskIdFieldBackground())
       .borderRadius(18)
       .padding({
         left: 16,
@@ -317,7 +317,7 @@ export struct ReinspectionReportTabContent {
       })
       .border({
         width: 1,
-        color: AppColors.Border
+        color: this.getTaskIdFieldBorderColor()
       })
     }
     .width('100%')
@@ -366,11 +366,11 @@ export struct ReinspectionReportTabContent {
       width: 1,
       color: this.result === `${result}` ? ReinspectionService.getResultTone(result) : AppColors.Border
     })
-    .enabled(this.canSubmitRecord())
+    .enabled(this.canSubmitReport())
     .onClick(() => {
       this.result = `${result}`;
-      this.recordMessage = '';
-      this.recordMessageTone = UiFeedbackTone.Danger;
+      this.reportMessage = '';
+      this.reportMessageTone = UiFeedbackTone.Danger;
     })
   }
 
@@ -408,13 +408,13 @@ export struct ReinspectionReportTabContent {
         color: AppColors.Border
       })
       .onClick(() => {
-        if (!this.canSubmitRecord()) {
+        if (!this.canSubmitReport()) {
           return;
         }
 
         this.showReinspectedAtPicker();
-        this.recordMessage = '';
-        this.recordMessageTone = UiFeedbackTone.Danger;
+        this.reportMessage = '';
+        this.reportMessageTone = UiFeedbackTone.Danger;
       })
     }
     .width('100%')
@@ -447,11 +447,11 @@ export struct ReinspectionReportTabContent {
           width: 1,
           color: AppColors.Border
         })
-        .enabled(this.canSubmitRecord())
+        .enabled(this.canSubmitReport())
         .onChange((value: string) => {
           this.description = value;
-          this.recordMessage = '';
-          this.recordMessageTone = UiFeedbackTone.Danger;
+          this.reportMessage = '';
+          this.reportMessageTone = UiFeedbackTone.Danger;
         })
     }
     .width('100%')
@@ -486,15 +486,15 @@ export struct ReinspectionReportTabContent {
         .borderRadius(18)
         .padding({ left: 16, right: 16 })
         .border({ width: 1, color: AppColors.Border })
-        .enabled(this.canSubmitRecord())
+        .enabled(this.canSubmitReport())
         .onChange((value: string) => {
-          if (!this.canSubmitRecord()) {
+          if (!this.canSubmitReport()) {
             return;
           }
 
           this.password = value;
-          this.recordMessage = '';
-          this.recordMessageTone = UiFeedbackTone.Danger;
+          this.reportMessage = '';
+          this.reportMessageTone = UiFeedbackTone.Danger;
         })
     }
     .width('100%')
@@ -512,11 +512,11 @@ export struct ReinspectionReportTabContent {
   }
 
   @Builder
-  RecordMessageText() {
-    if (this.recordMessage.length > 0) {
+  ReportMessageText() {
+    if (this.reportMessage.length > 0) {
       InlineMessageSurface({
-        message: this.recordMessage,
-        tone: this.recordMessageTone
+        message: this.reportMessage,
+        tone: this.reportMessageTone
       })
     }
   }
@@ -572,22 +572,22 @@ export struct ReinspectionReportTabContent {
     this.taskMessageTone = UiFeedbackTone.Success;
   }
 
-  async submitRecord(): Promise<void> {
+  async submitReport(): Promise<void> {
     if (this.submitting || this.isSelectedReinspectionTaskSubmitted()) {
       return;
     }
 
-    const form = this.createReinspectionRecordForm();
-    const validation = ReinspectionService.validateRecordForm(form);
+    const form = this.createReinspectionReportForm();
+    const validation = ReinspectionService.validateReportForm(form);
     if (!validation.valid) {
-      this.recordMessage = validation.message;
-      this.recordMessageTone = UiFeedbackTone.Danger;
+      this.reportMessage = validation.message;
+      this.reportMessageTone = UiFeedbackTone.Danger;
       return;
     }
 
     if (this.password.length === 0) {
-      this.recordMessage = UiFeedbackService.requiredInput('密码');
-      this.recordMessageTone = UiFeedbackTone.Danger;
+      this.reportMessage = UiFeedbackService.requiredInput('密码');
+      this.reportMessageTone = UiFeedbackTone.Danger;
       return;
     }
 
@@ -598,16 +598,16 @@ export struct ReinspectionReportTabContent {
         return;
       }
 
-      const response = await ReinspectionService.submitRecordRemoteFirst(form);
+      const response = await ReinspectionService.submitReportRemoteFirst(form);
       if (!response.success) {
         const error = response.error;
-        this.recordMessage = UiFeedbackService.operationError(error, '提交');
-        this.recordMessageTone = UiFeedbackTone.Danger;
+        this.reportMessage = UiFeedbackService.operationError(error, '提交');
+        this.reportMessageTone = UiFeedbackTone.Danger;
         return;
       }
 
-      this.recordMessage = UiFeedbackService.operationSuccess('提交');
-      this.recordMessageTone = UiFeedbackTone.Success;
+      this.reportMessage = UiFeedbackService.operationSuccess('提交');
+      this.reportMessageTone = UiFeedbackTone.Success;
       this.submittedReinspectionTaskId = this.normalizedTaskId;
       this.allTaskItems = this.allTaskItems.filter((item: ReinspectionTaskSummary) => {
         return item.taskNo !== this.normalizedTaskId && item.id !== this.normalizedTaskId;
@@ -620,7 +620,7 @@ export struct ReinspectionReportTabContent {
     }
   }
 
-  createReinspectionRecordForm(): ReinspectionRecordForm {
+  createReinspectionReportForm(): ReinspectionReportForm {
     return {
       taskId: this.taskId,
       result: this.result as ReinspectionResult,
@@ -635,8 +635,8 @@ export struct ReinspectionReportTabContent {
       return true;
     }
 
-    this.recordMessage = UiFeedbackService.passwordVerificationError(response.error, '提交');
-    this.recordMessageTone = UiFeedbackTone.Danger;
+    this.reportMessage = UiFeedbackService.passwordVerificationError(response.error, '提交');
+    this.reportMessageTone = UiFeedbackTone.Danger;
     return false;
   }
 
@@ -656,8 +656,28 @@ export struct ReinspectionReportTabContent {
     return $r('sys.symbol.checkmark_circle');
   }
 
-  canSubmitRecord(): boolean {
+  canSubmitReport(): boolean {
     return !this.submitting && this.taskId.length > 0 && !this.isSelectedReinspectionTaskSubmitted();
+  }
+
+  isTaskIdFieldLocked(): boolean {
+    return this.taskId.length > 0;
+  }
+
+  getTaskIdFieldBackground(): string {
+    return this.isTaskIdFieldLocked() ? AppColors.SurfaceMuted : AppColors.FieldBackground;
+  }
+
+  getTaskIdFieldBorderColor(): string {
+    return this.isTaskIdFieldLocked() ? AppColors.Divider : AppColors.Border;
+  }
+
+  getTaskIdFieldIconColor(): string {
+    return this.isTaskIdFieldLocked() ? AppColors.Disabled : AppColors.TextSecondary;
+  }
+
+  getTaskIdFieldTextColor(): string {
+    return this.isTaskIdFieldLocked() ? AppColors.TextSecondary : AppColors.TextTertiary;
   }
 
   isSelectedReinspectionTaskSubmitted(): boolean {
@@ -676,8 +696,8 @@ export struct ReinspectionReportTabContent {
   selectTask(item: ReinspectionTaskSummary): void {
     if (this.isTaskSelected(item)) {
       this.clearSelectedTask();
-      this.recordMessage = '';
-      this.recordMessageTone = UiFeedbackTone.Danger;
+      this.reportMessage = '';
+      this.reportMessageTone = UiFeedbackTone.Danger;
       return;
     }
 
@@ -686,8 +706,8 @@ export struct ReinspectionReportTabContent {
     if (this.normalizedTaskId !== this.submittedReinspectionTaskId) {
       this.submittedReinspectionTaskId = '';
     }
-    this.recordMessage = '';
-    this.recordMessageTone = UiFeedbackTone.Danger;
+    this.reportMessage = '';
+    this.reportMessageTone = UiFeedbackTone.Danger;
   }
 
   clearSelectedTask(): void {
@@ -713,7 +733,7 @@ export struct ReinspectionReportTabContent {
   }
 
   showReinspectedAtPicker(): void {
-    if (!this.canSubmitRecord()) {
+    if (!this.canSubmitReport()) {
       return;
     }
 
@@ -725,8 +745,8 @@ export struct ReinspectionReportTabContent {
       useMilitaryTime: true,
       onDateAccept: (value: Date) => {
         this.reinspectedAt = this.formatDateTime(value);
-        this.recordMessage = '';
-        this.recordMessageTone = UiFeedbackTone.Danger;
+        this.reportMessage = '';
+        this.reportMessageTone = UiFeedbackTone.Danger;
       }
     });
   }

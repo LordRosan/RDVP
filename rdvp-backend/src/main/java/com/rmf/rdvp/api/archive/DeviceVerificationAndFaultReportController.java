@@ -41,25 +41,25 @@ public class DeviceVerificationAndFaultReportController {
         this.authenticationService = authenticationService;
     }
 
-    @PostMapping("/devices/{deviceId}/verification-records")
+    @PostMapping("/devices/{deviceId}/verification-reports")
     @PreAuthorize("hasAuthority('OPERATIONS_CENTER_DEVICE_VERIFICATION_SUBMIT')")
-    public ResponseEntity<ApiResponse<DeviceVerificationRecordResponse>> createVerificationRecord(
+    public ResponseEntity<ApiResponse<DeviceVerificationReportResponse>> createVerificationReport(
             @PathVariable String deviceId,
-            @Valid @RequestBody CreateDeviceVerificationRecordRequest requestBody,
+            @Valid @RequestBody CreateDeviceVerificationReportRequest requestBody,
             @AuthenticationPrincipal AuthenticatedUser user,
             HttpServletRequest request) {
         authenticationService.consumeRecentPasswordVerification(user);
-        var record = archiveService.createVerificationRecord(
+        var report = archiveService.createVerificationReport(
                 deviceId,
                 parseResult(requestBody.result()),
                 requestBody.description(),
                 requestBody.remark(),
                 requestBody.verifiedAt(),
                 user);
-        return ResponseEntity.ok(ApiResponse.success(DeviceVerificationRecordResponse.from(record), RequestIds.resolve(request)));
+        return ResponseEntity.ok(ApiResponse.success(DeviceVerificationReportResponse.from(report), RequestIds.resolve(request)));
     }
 
-    @PostMapping("/devices/{deviceId}/verification-records/fault-report")
+    @PostMapping("/devices/{deviceId}/verification-reports/fault-report")
     @PreAuthorize("hasAuthority('OPERATIONS_CENTER_DEVICE_VERIFICATION_SUBMIT') and hasAuthority('OPERATIONS_CENTER_DEVICE_FAULT_REPORT_SUBMIT')")
     public ResponseEntity<ApiResponse<DeviceVerificationAndFaultReportResponse>> createVerificationAndFaultReport(
             @PathVariable String deviceId,
@@ -96,5 +96,3 @@ public class DeviceVerificationAndFaultReportController {
         }
     }
 }
-
-

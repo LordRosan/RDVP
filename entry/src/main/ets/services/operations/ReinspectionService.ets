@@ -2,8 +2,8 @@ import { AppColors } from '../../styles/AppTheme';
 import { ApiResponse } from '../../models/common/ApiModels';
 import { FaultSeverity, FaultStatus } from '../../models/operations/FaultModels';
 import {
-  ReinspectionRecord,
-  ReinspectionRecordForm,
+  ReinspectionReport,
+  ReinspectionReportForm,
   ReinspectionResult,
   ReinspectionTaskStatus,
   ReinspectionTaskListResult,
@@ -31,9 +31,9 @@ interface ReinspectionTaskApiSummary {
   status: FaultStatus;
 }
 
-interface ReinspectionRecordApiResult {
+interface ReinspectionReportApiResult {
   id: string;
-  reinspectionRecordNo?: string;
+  reinspectionReportNo?: string;
   faultReportId: string;
   result: ReinspectionResult;
   createdAt: string;
@@ -78,7 +78,7 @@ export class ReinspectionService {
     };
   }
 
-  static validateRecordForm(form: ReinspectionRecordForm): ReinspectionValidationResult {
+  static validateReportForm(form: ReinspectionReportForm): ReinspectionValidationResult {
     if (form.taskId.trim().length === 0) {
       return {
         valid: false,
@@ -121,40 +121,40 @@ export class ReinspectionService {
     };
   }
 
-  static submitRecord(form: ReinspectionRecordForm): ApiResponse<ReinspectionRecord> {
-    const validation = ReinspectionService.validateRecordForm(form);
+  static submitReport(form: ReinspectionReportForm): ApiResponse<ReinspectionReport> {
+    const validation = ReinspectionService.validateReportForm(form);
     if (!validation.valid) {
       return {
         success: false,
         error: {
-          code: 'REINSPECTION_RECORD_INVALID',
+          code: 'REINSPECTION_REPORT_INVALID',
           message: validation.message
         }
       };
     }
 
-    return ApiClient.createServiceUnavailableResponse<ReinspectionRecord>();
+    return ApiClient.createServiceUnavailableResponse<ReinspectionReport>();
   }
 
-  static async submitRecordRemoteFirst(form: ReinspectionRecordForm): Promise<ApiResponse<ReinspectionRecord>> {
-    const validation = ReinspectionService.validateRecordForm(form);
+  static async submitReportRemoteFirst(form: ReinspectionReportForm): Promise<ApiResponse<ReinspectionReport>> {
+    const validation = ReinspectionService.validateReportForm(form);
     if (!validation.valid) {
       return {
         success: false,
         error: {
-          code: 'REINSPECTION_RECORD_INVALID',
+          code: 'REINSPECTION_REPORT_INVALID',
           message: validation.message
         }
       };
     }
 
     if (!ApiClient.isConfigured()) {
-      return ApiClient.createServiceUnavailableResponse<ReinspectionRecord>();
+      return ApiClient.createServiceUnavailableResponse<ReinspectionReport>();
     }
 
     const taskId = encodeURIComponent(form.taskId.trim());
-    const response = await ApiClient.request<ReinspectionRecordApiResult>(
-      `/api/v1/fault-reports/${taskId}/reinspection-records`,
+    const response = await ApiClient.request<ReinspectionReportApiResult>(
+      `/api/v1/fault-reports/${taskId}/reinspection-reports`,
       'POST',
       true,
       JSON.stringify({
@@ -177,7 +177,7 @@ export class ReinspectionService {
       return {
         success: false,
         error: {
-          code: 'REINSPECTION_RECORD_RESPONSE_INVALID',
+          code: 'REINSPECTION_REPORT_RESPONSE_INVALID',
           message: UiFeedbackService.operationUnavailable('提交')
         },
         requestId: response.requestId,
@@ -189,7 +189,7 @@ export class ReinspectionService {
       success: true,
       data: {
         id: response.data.id,
-        recordNo: response.data.reinspectionRecordNo === undefined ? response.data.id : response.data.reinspectionRecordNo,
+        reportNo: response.data.reinspectionReportNo === undefined ? response.data.id : response.data.reinspectionReportNo,
         taskId: response.data.faultReportId,
         result: response.data.result,
         submittedAt: response.data.createdAt

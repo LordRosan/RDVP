@@ -6,7 +6,7 @@ import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { DeviceArchiveRequestStatus } from '../../models/archive/DeviceArchiveRequestModels';
 import { DeviceStatus, DeviceSummary } from '../../models/archive/DeviceModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
-import { DeviceArchiveDeleteGuardService } from '../../services/archive/DeviceArchiveDeleteGuardService';
+import { DeviceArchiveSensitiveActionGuardService } from '../../services/archive/DeviceArchiveSensitiveActionGuardService';
 import { DeviceArchiveRequestService } from '../../services/archive/DeviceArchiveRequestService';
 import { DeviceService } from '../../services/archive/DeviceService';
 import { UiFeedbackService } from '../../services/common/UiFeedbackService';
@@ -347,8 +347,8 @@ struct DeviceArchiveDelete {
 
     this.device = device;
     this.hasDevice = true;
-    if (DeviceArchiveDeleteGuardService.isDeleteLocked(device.deviceCode)) {
-      this.message = DeviceArchiveDeleteGuardService.getDeleteLockMessage(device.deviceCode);
+    if (DeviceArchiveSensitiveActionGuardService.isDeleteLocked(device.deviceCode)) {
+      this.message = DeviceArchiveSensitiveActionGuardService.getDeleteLockMessage(device.deviceCode);
       this.messageTone = UiFeedbackTone.Danger;
     }
   }
@@ -370,7 +370,7 @@ struct DeviceArchiveDelete {
     }
 
     if (this.isDeleteLocked()) {
-      this.message = DeviceArchiveDeleteGuardService.getDeleteLockMessage(this.device.deviceCode);
+      this.message = DeviceArchiveSensitiveActionGuardService.getDeleteLockMessage(this.device.deviceCode);
       this.messageTone = UiFeedbackTone.Danger;
       return;
     }
@@ -419,12 +419,12 @@ struct DeviceArchiveDelete {
   async verifyPasswordForSubmit(password: string): Promise<boolean> {
     const response = await AuthService.verifyCurrentUserPasswordRemoteFirst(password);
     if (response.success && response.data === true) {
-      DeviceArchiveDeleteGuardService.clearDeleteLock(this.device.deviceCode);
+      DeviceArchiveSensitiveActionGuardService.clearDeleteLock(this.device.deviceCode);
       return true;
     }
 
-    if (DeviceArchiveDeleteGuardService.isPasswordIncorrectResponse(response)) {
-      const result = DeviceArchiveDeleteGuardService.registerDeletePasswordFailure(this.device.deviceCode);
+    if (DeviceArchiveSensitiveActionGuardService.isPasswordIncorrectResponse(response)) {
+      const result = DeviceArchiveSensitiveActionGuardService.registerDeletePasswordFailure(this.device.deviceCode);
       this.message = result.lockedUntil === undefined ? UiFeedbackService.incorrect('密码') : UiFeedbackService.sanitize(result.message);
       this.messageTone = UiFeedbackTone.Danger;
       return false;
@@ -444,7 +444,7 @@ struct DeviceArchiveDelete {
   }
 
   isDeleteLocked(): boolean {
-    return this.hasDevice && DeviceArchiveDeleteGuardService.isDeleteLocked(this.device.deviceCode);
+    return this.hasDevice && DeviceArchiveSensitiveActionGuardService.isDeleteLocked(this.device.deviceCode);
   }
 
   getSubmitButtonLabel(): string {

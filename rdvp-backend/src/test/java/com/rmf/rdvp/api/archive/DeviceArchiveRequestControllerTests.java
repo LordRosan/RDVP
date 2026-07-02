@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -250,6 +251,8 @@ class DeviceArchiveRequestControllerTests {
         String applicantToken = login("archivist", "password");
         String reviewerToken = login("archiveadmin", "password");
         String requestId = createNameChange(applicantToken, "冷却泵A-02");
+        OffsetDateTime reviewedAt = activeReviewTimestamp();
+        OffsetDateTime freezeUntil = reviewedAt.plusHours(6);
 
         verifyPassword(reviewerToken, "password");
         mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", requestId)
@@ -258,21 +261,21 @@ class DeviceArchiveRequestControllerTests {
                         .content("""
                                 {
                                   "decision": "REJECTED",
-                                  "reviewedAt": "2026-07-01T08:00:00Z",
+                                  "reviewedAt": "%s",
                                   "reviewComment": "信息不足，驳回后进入冷却。"
                                 }
-                                """))
+                                """.formatted(reviewedAt)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("REJECTED"))
-                .andExpect(jsonPath("$.data.reviewedAt").value("2026-07-01T08:00:00Z"))
-                .andExpect(jsonPath("$.data.freezeUntil").value("2026-07-01T14:00:00Z"));
+                .andExpect(jsonPath("$.data.reviewedAt").value(reviewedAt.toString()))
+                .andExpect(jsonPath("$.data.freezeUntil").value(freezeUntil.toString()));
 
         mockMvc.perform(get("/api/v1/devices/device-local-0001")
                         .header("Authorization", "Bearer " + reviewerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.archiveRequestState.locked").value(true))
                 .andExpect(jsonPath("$.data.archiveRequestState.pendingRequestId").doesNotExist())
-                .andExpect(jsonPath("$.data.archiveRequestState.freezeUntil").value("2026-07-01T14:00:00Z"));
+                .andExpect(jsonPath("$.data.archiveRequestState.freezeUntil").value(freezeUntil.toString()));
 
         mockMvc.perform(post("/api/v1/device-archive-requests")
                         .header("Authorization", "Bearer " + applicantToken)
@@ -297,6 +300,8 @@ class DeviceArchiveRequestControllerTests {
     void rejectedCreateArchiveRequestFreezesTargetDeviceCodeForSixHoursAfterReview() throws Exception {
         String token = login("archiveadmin", "password");
         String requestId = createArchiveCreateRequest(token, "RDVP-DEVICE-0099");
+        OffsetDateTime reviewedAt = activeReviewTimestamp();
+        OffsetDateTime freezeUntil = reviewedAt.plusHours(6);
 
         verifyPassword(token, "password");
         mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", requestId)
@@ -305,13 +310,13 @@ class DeviceArchiveRequestControllerTests {
                         .content("""
                                 {
                                   "decision": "REJECTED",
-                                  "reviewedAt": "2026-07-01T09:00:00Z",
+                                  "reviewedAt": "%s",
                                   "reviewComment": "新增资料不足。"
                                 }
-                                """))
+                                """.formatted(reviewedAt)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("REJECTED"))
-                .andExpect(jsonPath("$.data.freezeUntil").value("2026-07-01T15:00:00Z"));
+                .andExpect(jsonPath("$.data.freezeUntil").value(freezeUntil.toString()));
 
         mockMvc.perform(post("/api/v1/device-archive-requests")
                         .header("Authorization", "Bearer " + token)
@@ -375,6 +380,8 @@ class DeviceArchiveRequestControllerTests {
     void createsDeviceArchiveOnlyAfterCreateRequestApproval() throws Exception {
         String token = login("archiveadmin", "password");
         String requestId = createArchiveCreateRequest(token, "RDVP-DEVICE-0099");
+        OffsetDateTime reviewedAt = activeReviewTimestamp();
+        OffsetDateTime freezeUntil = reviewedAt.plusHours(6);
 
         mockMvc.perform(get("/api/v1/devices/by-code/RDVP-DEVICE-0099")
                         .header("Authorization", "Bearer " + token))
@@ -388,14 +395,14 @@ class DeviceArchiveRequestControllerTests {
                         .content("""
                                 {
                                   "decision": "APPROVED",
-                                  "reviewedAt": "2026-07-01T09:00:00Z",
+                                  "reviewedAt": "%s",
                                   "reviewComment": "新增设备审核通过。"
                                 }
-                                """))
+                                """.formatted(reviewedAt)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("APPROVED"))
-                .andExpect(jsonPath("$.data.reviewedAt").value("2026-07-01T09:00:00Z"))
-                .andExpect(jsonPath("$.data.freezeUntil").value("2026-07-01T15:00:00Z"));
+                .andExpect(jsonPath("$.data.reviewedAt").value(reviewedAt.toString()))
+                .andExpect(jsonPath("$.data.freezeUntil").value(freezeUntil.toString()));
 
         String deviceResponse = mockMvc.perform(get("/api/v1/devices/by-code/RDVP-DEVICE-0099")
                         .header("Authorization", "Bearer " + token))
@@ -404,7 +411,7 @@ class DeviceArchiveRequestControllerTests {
                 .andExpect(jsonPath("$.data.name").value("巡检网关G-99"))
                 .andExpect(jsonPath("$.data.status").value("PENDING_VERIFICATION"))
                 .andExpect(jsonPath("$.data.archiveRequestState.locked").value(true))
-                .andExpect(jsonPath("$.data.archiveRequestState.freezeUntil").value("2026-07-01T15:00:00Z"))
+                .andExpect(jsonPath("$.data.archiveRequestState.freezeUntil").value(freezeUntil.toString()))
                 .andReturn()
                 .getResponse()
                 .getContentAsString(StandardCharsets.UTF_8);
@@ -590,6 +597,10 @@ class DeviceArchiveRequestControllerTests {
         String requestId = root.path("data").path("id").asText();
         assertThat(requestId).startsWith("DCR-");
         return requestId;
+    }
+
+    private static OffsetDateTime activeReviewTimestamp() {
+        return OffsetDateTime.now(ZoneOffset.UTC).withNano(0);
     }
 
     private String createArchiveCreateRequest(String token, String deviceCode) throws Exception {

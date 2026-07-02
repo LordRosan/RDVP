@@ -18,7 +18,7 @@ export interface DeviceVerificationValidationResult {
   message: string;
 }
 
-export interface DeviceVerificationRecord {
+export interface DeviceVerificationReport {
   id: string;
   deviceCode: string;
   result: VerificationResult;
@@ -32,7 +32,7 @@ export interface DeviceVerificationAndFaultReportForm {
   faultReport: FaultReportForm;
 }
 
-export interface DeviceVerificationAndFaultReportRecord {
-  verificationRecord: DeviceVerificationRecord;
+export interface DeviceVerificationAndFaultReportResult {
+  verificationReport: DeviceVerificationReport;
   faultReport: FaultReportRecord;
 }

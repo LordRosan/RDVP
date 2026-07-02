@@ -18,7 +18,7 @@ public record DeviceArchiveResponse(
         ArchiveRequestStateResponse archiveRequestState,
         List<Object> recentFaultReports,
         List<Object> recentRepairReports,
-        List<Object> recentVerificationRecords) {
+        List<Object> recentVerificationReports) {
 
     public static DeviceArchiveResponse from(DeviceArchive archive) {
         return new DeviceArchiveResponse(

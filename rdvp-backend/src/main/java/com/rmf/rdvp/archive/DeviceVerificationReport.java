@@ -2,7 +2,7 @@ package com.rmf.rdvp.archive;
 
 import java.time.OffsetDateTime;
 
-public record DeviceVerificationRecord(
+public record DeviceVerificationReport(
         String id,
         String deviceId,
         String operatorId,

@@ -369,11 +369,11 @@ class DeviceArchiveControllerTests {
     }
 
     @Test
-    void createsDeviceVerificationRecordAndUpdatesArchiveTimestamp() throws Exception {
+    void createsDeviceVerificationReportAndUpdatesArchiveTimestamp() throws Exception {
         String token = login("operator", "password");
 
         verifyPassword(token, "password");
-        mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records", "device-local-0001")
+        mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-reports", "device-local-0001")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -398,10 +398,10 @@ class DeviceArchiveControllerTests {
     }
 
     @Test
-    void protectsDeviceVerificationRecordCreationByPermission() throws Exception {
+    void protectsDeviceVerificationReportCreationByPermission() throws Exception {
         String archivistToken = login("archivist", "password");
 
-        mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records", "device-local-0001")
+        mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-reports", "device-local-0001")
                         .header("Authorization", "Bearer " + archivistToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""

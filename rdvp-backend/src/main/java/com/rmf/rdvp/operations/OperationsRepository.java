@@ -64,9 +64,9 @@ public interface OperationsRepository {
             FaultStatus status,
             OffsetDateTime updatedAt);
 
-    void createReinspectionRecord(ReinspectionRecordCreate create);
+    void createReinspectionReport(ReinspectionReportCreate create);
 
-    long countReinspectionRecords();
+    long countReinspectionReports();
 
     void createOperationsReviewRequest(OperationsReviewRequestCreate create);
 

@@ -48,14 +48,14 @@ public class DeviceArchiveService {
 
     private final DeviceArchiveRepository archiveRepository;
     private final DeviceQrCodeRepository qrCodeRepository;
-    private final DeviceVerificationRepository verificationRepository;
+    private final DeviceVerificationReportRepository verificationRepository;
     private final RdvpRuntimeProperties runtimeProperties;
     private final AuditLogService auditLogService;
 
     public DeviceArchiveService(
             DeviceArchiveRepository archiveRepository,
             DeviceQrCodeRepository qrCodeRepository,
-            DeviceVerificationRepository verificationRepository,
+            DeviceVerificationReportRepository verificationRepository,
             RdvpRuntimeProperties runtimeProperties,
             AuditLogService auditLogService) {
         this.archiveRepository = archiveRepository;
@@ -144,7 +144,7 @@ public class DeviceArchiveService {
     }
 
     @Transactional
-    public DeviceVerificationRecord createVerificationRecord(
+    public DeviceVerificationReport createVerificationReport(
             String deviceId,
             DeviceVerificationResult result,
             String description,
@@ -156,7 +156,7 @@ public class DeviceArchiveService {
             device = findById(deviceId);
             OffsetDateTime normalizedVerifiedAt = parseDateTime(verifiedAt, "verifiedAt");
             OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-            DeviceVerificationRecordCreate create = new DeviceVerificationRecordCreate(
+            DeviceVerificationReportCreate create = new DeviceVerificationReportCreate(
                     "verification-" + UUID.randomUUID(),
                     device.id(),
                     operator.id(),
@@ -175,15 +175,15 @@ public class DeviceArchiveService {
 
             verificationRepository.create(create);
             archiveRepository.updateLastVerificationTime(device.id(), normalizedVerifiedAt, operator.id());
-            DeviceVerificationRecord record = verificationRepository.findById(create.id())
+            DeviceVerificationReport report = verificationRepository.findById(create.id())
                     .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR));
             auditLogService.recordSuccess(
                     AuditAction.DEVICE_VERIFICATION,
-                    record.id(),
+                    report.id(),
                     device.deviceCode(),
                     operator,
-                    "Submitted device verification record.");
-            return record;
+                    "Submitted device verification report.");
+            return report;
         } catch (BusinessException exception) {
             recordDeviceVerificationFailure(deviceId, device, operator, exception);
             throw exception;

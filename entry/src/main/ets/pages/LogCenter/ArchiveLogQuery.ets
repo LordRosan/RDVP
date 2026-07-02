@@ -12,11 +12,6 @@ import { AuthGuard } from '../../utils/AuthGuard';
 import { AppNavigator } from '../../utils/AppNavigator';
 import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
-const ARCHIVE_OPERATION_TYPE_OPTIONS: string[] = ['全部', '档案添加', '档案删除', '档案修改', '档案查询', '档案导出'];
-const ARCHIVE_OPERATION_TYPE_VALUES: string[] = ['', 'CREATE', 'DELETE', 'UPDATE', 'DEVICE_ARCHIVE_QUERY',
-  'DEVICE_ARCHIVE_EXPORT'];
-const ARCHIVE_REVIEW_TYPE_OPTIONS: string[] = ['全部', '添加档案', '删除档案', '修改档案'];
-const ARCHIVE_REVIEW_TYPE_VALUES: string[] = ['', 'CREATE', 'DELETE', 'UPDATE'];
 const RECORD_FILTER_CONTROL_HEIGHT = 56;
 
 @Entry
@@ -44,7 +39,7 @@ struct ArchiveLogQuery {
     }
 
     this.ensureAvailableTab();
-    this.refreshLogs();
+    this.refreshLogs(this.currentTab);
   }
 
   build() {
@@ -250,7 +245,7 @@ struct ArchiveLogQuery {
   }
 
   @Builder
-  QueryButton() {
+  QueryButton(tab: LogQueryTab) {
     Button({ type: ButtonType.Capsule, stateEffect: !this.refreshing }) {
       Row({ space: 6 }) {
         SymbolGlyph($r('sys.symbol.magnifyingglass'))
@@ -269,11 +264,11 @@ struct ArchiveLogQuery {
     .layoutWeight(1)
     .backgroundColor(this.refreshing ? AppColors.Disabled : AppColors.Primary)
     .enabled(!this.refreshing)
-    .onClick(() => { this.refreshLogs(); })
+    .onClick(() => { this.refreshLogs(tab); })
   }
 
   @Builder
-  ResetButton() {
+  ResetButton(tab: LogQueryTab) {
     Button({ type: ButtonType.Capsule, stateEffect: !this.refreshing }) {
       Row({ space: 6 }) {
         SymbolGlyph($r('sys.symbol.xmark_circle'))
@@ -294,15 +289,15 @@ struct ArchiveLogQuery {
     .border({ width: 1, color: AppColors.Border })
     .enabled(!this.refreshing)
     .onClick(() => {
-      this.resetFilters();
+      this.resetFilters(tab);
     })
   }
 
   @Builder
-  ActionButtons() {
+  ActionButtons(tab: LogQueryTab) {
     Row({ space: 10 }) {
-      this.ResetButton()
-      this.QueryButton()
+      this.ResetButton(tab)
+      this.QueryButton(tab)
     }
     .width('100%')
     .alignItems(VerticalAlign.Center)
@@ -329,13 +324,13 @@ struct ArchiveLogQuery {
       Column({ space: 14 }) {
         this.SearchPanel()
 
-        this.LogTypeFilterControl()
+        this.LogTypeFilterControl(tab)
 
         this.DateRangePanel()
         this.MessageText()
-        this.ActionButtons()
+        this.ActionButtons(tab)
         this.ResultCountText()
-        this.LogFilterResultList()
+        this.LogFilterResultList(tab)
       }
       .width('100%')
       .padding({
@@ -357,21 +352,21 @@ struct ArchiveLogQuery {
   }
 
   @Builder
-  LogTypeFilterControl() {
+  LogTypeFilterControl(tab: LogQueryTab) {
     if (this.filterResetRevision % 2 === 0) {
-      this.LogTypeFilterInstance()
+      this.LogTypeFilterInstance(tab)
     } else {
-      this.LogTypeFilterInstance()
+      this.LogTypeFilterInstance(tab)
     }
   }
 
   @Builder
-  LogTypeFilterInstance() {
+  LogTypeFilterInstance(tab: LogQueryTab) {
     Column() {
       Filter({
-        multiFilters: this.getLogFilterParams(),
+        multiFilters: this.getLogFilterParams(tab),
         onFilterChanged: (filterResults: FilterResult[]) => {
-          this.applyLogFilterResults(filterResults);
+          this.applyLogFilterResults(tab, filterResults);
         },
         filterType: FilterType.LIST_FILTER
       }) {
@@ -386,13 +381,13 @@ struct ArchiveLogQuery {
   }
 
   @Builder
-  LogFilterResultList() {
+  LogFilterResultList(tab: LogQueryTab) {
     Column({ space: 12 }) {
       if (this.logs.length === 0) {
-        this.EmptyState()
+        this.EmptyState(tab)
       } else {
         ForEach(this.logs, (item: LogItem) => {
-          this.ArchiveLogQueryCard(item)
+          this.ArchiveLogQueryCard(item, tab)
         }, (item: LogItem) => item.id)
       }
     }
@@ -400,11 +395,11 @@ struct ArchiveLogQuery {
   }
 
   @Builder
-  ArchiveLogQueryCard(item: LogItem) {
+  ArchiveLogQueryCard(item: LogItem, tab: LogQueryTab) {
     Column({ space: 10 }) {
       Row({ space: 12 }) {
         Stack() {
-          SymbolGlyph(this.getCurrentLogIcon())
+          SymbolGlyph(this.getLogIconForTab(tab))
             .fontSize(23)
             .fontColor([AppColors.OnPrimary])
         }
@@ -460,10 +455,10 @@ struct ArchiveLogQuery {
   }
 
   @Builder
-  EmptyState() {
+  EmptyState(tab: LogQueryTab) {
     Column({ space: 10 }) {
       Stack() {
-        SymbolGlyph(this.getCurrentLogIcon())
+        SymbolGlyph(this.getLogIconForTab(tab))
           .fontSize(36)
           .fontColor([AppColors.Warning])
       }
@@ -471,7 +466,7 @@ struct ArchiveLogQuery {
       .height(64)
       .borderRadius(32)
       .backgroundColor(AppColors.WarningSurface)
-      Text(this.getEmptyText())
+      Text(this.getEmptyTextForTab(tab))
         .fontSize(18)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
@@ -494,15 +489,15 @@ struct ArchiveLogQuery {
     }
   }
 
-  async refreshLogs(): Promise<void> {
+  async refreshLogs(tab: LogQueryTab = this.currentTab): Promise<void> {
     if (this.refreshing) { return; }
     if (!this.validateDateRange()) {
       return;
     }
     this.refreshing = true;
-    const typeValues = this.getCurrentTypeValues();
+    const typeValues = this.getTypeValuesForTab(tab);
     const filter: LogQueryFilter = {
-      category: this.getCurrentCategory(),
+      category: this.getCategoryForTab(tab),
       type: typeValues[this.normalizeFilterIndex(this.selectedTypeIndex, typeValues.length)],
       keyword: this.keyword,
       startDate: this.startDate,
@@ -512,6 +507,11 @@ struct ArchiveLogQuery {
     };
     const response = await LogQueryService.queryLogs(filter);
     this.refreshing = false;
+    if (this.currentTab !== tab) {
+      this.refreshLogs(this.currentTab);
+      return;
+    }
+
     if (!response.success) {
       this.message = UiFeedbackService.operationError(response.error, '查询');
       return;
@@ -521,28 +521,32 @@ struct ArchiveLogQuery {
     this.message = '';
   }
 
-  resetFilters(): void {
+  resetFilters(tab: LogQueryTab = this.currentTab): void {
     this.selectedTypeIndex = 0;
     this.keyword = '';
     this.startDate = '';
     this.endDate = '';
     this.message = '';
     this.filterResetRevision += 1;
-    this.refreshLogs();
+    this.refreshLogs(tab);
   }
 
-  applyLogFilterResults(filterResults: FilterResult[]): void {
+  applyLogFilterResults(tab: LogQueryTab, filterResults: FilterResult[]): void {
+    if (this.currentTab !== tab) {
+      return;
+    }
+
     const result = filterResults.find((item: FilterResult) => {
       return item.name === '日志类型';
     });
     this.selectedTypeIndex = result === undefined ? 0 :
-      this.normalizeFilterIndex(result.index, this.getCurrentTypeValues().length);
-    this.refreshLogs();
+      this.normalizeFilterIndex(result.index, this.getTypeValuesForTab(tab).length);
+    this.refreshLogs(tab);
   }
 
-  getLogFilterParams(): FilterParams[] {
+  getLogFilterParams(tab: LogQueryTab): FilterParams[] {
     return [
-      this.createFilterParams('日志类型', this.getCurrentTypeOptions())
+      this.createFilterParams('日志类型', this.getTypeOptionsForTab(tab))
     ];
   }
 
@@ -586,7 +590,7 @@ struct ArchiveLogQuery {
     this.currentTabIndex = this.getTabIndex(tab);
     this.logs = [];
     this.resultTotal = 0;
-    this.resetFilters();
+    this.resetFilters(tab);
   }
 
   ensureAvailableTab(): void {
@@ -612,18 +616,6 @@ struct ArchiveLogQuery {
     return SessionStore.hasPermission(PermissionCode.LogCenterArchiveReviewLogQuery);
   }
 
-  getCurrentCategory(): LogCategory {
-    return this.currentTab === LogQueryTab.Review ? LogCategory.ArchiveReview : LogCategory.ArchiveOperation;
-  }
-
-  getCurrentTypeOptions(): string[] {
-    return this.currentTab === LogQueryTab.Review ? ARCHIVE_REVIEW_TYPE_OPTIONS : ARCHIVE_OPERATION_TYPE_OPTIONS;
-  }
-
-  getCurrentTypeValues(): string[] {
-    return this.currentTab === LogQueryTab.Review ? ARCHIVE_REVIEW_TYPE_VALUES : ARCHIVE_OPERATION_TYPE_VALUES;
-  }
-
   getPageTitle(tab: LogQueryTab): string {
     return LogQueryService.formatPageTitle(this.getCategoryForTab(tab));
   }
@@ -632,16 +624,24 @@ struct ArchiveLogQuery {
     return LogQueryService.formatListTitle(this.getCategoryForTab(tab));
   }
 
-  getEmptyText(): string {
-    return this.currentTab === LogQueryTab.Review ? '暂无档案审核日志' : '暂无档案操作日志';
+  getEmptyTextForTab(tab: LogQueryTab): string {
+    return tab === LogQueryTab.Review ? '暂无档案审核日志' : '暂无档案操作日志';
   }
 
-  getCurrentLogIcon(): Resource {
-    return this.currentTab === LogQueryTab.Review ? $r('sys.symbol.checkmark_shield') : $r('sys.symbol.text_clipboard');
+  getLogIconForTab(tab: LogQueryTab): Resource {
+    return tab === LogQueryTab.Review ? $r('sys.symbol.checkmark_shield') : $r('sys.symbol.text_clipboard');
+  }
+
+  getTypeOptionsForTab(tab: LogQueryTab): string[] {
+    return LogQueryService.getArchiveLogTypeOptions(tab);
+  }
+
+  getTypeValuesForTab(tab: LogQueryTab): string[] {
+    return LogQueryService.getArchiveLogTypeValues(tab);
   }
 
   getCategoryForTab(tab: LogQueryTab): LogCategory {
-    return tab === LogQueryTab.Review ? LogCategory.ArchiveReview : LogCategory.ArchiveOperation;
+    return LogQueryService.resolveArchiveCategory(tab);
   }
 
   getTabIndex(tab: LogQueryTab): number {

@@ -9,13 +9,13 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 @Profile("test")
-public class InMemoryDeviceVerificationRepository implements DeviceVerificationRepository {
+public class InMemoryDeviceVerificationReportRepository implements DeviceVerificationReportRepository {
 
-    private final Map<String, DeviceVerificationRecord> recordsById = new ConcurrentHashMap<>();
+    private final Map<String, DeviceVerificationReport> reportsById = new ConcurrentHashMap<>();
 
     @Override
-    public void create(DeviceVerificationRecordCreate create) {
-        recordsById.put(create.id(), new DeviceVerificationRecord(
+    public void create(DeviceVerificationReportCreate create) {
+        reportsById.put(create.id(), new DeviceVerificationReport(
                 create.id(),
                 create.deviceId(),
                 create.operatorId(),
@@ -27,12 +27,12 @@ public class InMemoryDeviceVerificationRepository implements DeviceVerificationR
     }
 
     @Override
-    public Optional<DeviceVerificationRecord> findById(String id) {
-        return Optional.ofNullable(recordsById.get(id));
+    public Optional<DeviceVerificationReport> findById(String id) {
+        return Optional.ofNullable(reportsById.get(id));
     }
 
     @Override
     public long countAll() {
-        return recordsById.size();
+        return reportsById.size();
     }
 }

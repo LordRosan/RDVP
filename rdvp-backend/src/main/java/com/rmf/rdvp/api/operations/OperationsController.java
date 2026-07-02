@@ -145,21 +145,21 @@ public class OperationsController {
         return ResponseEntity.ok(ApiResponse.success(RepairTaskAcceptResponse.from(result), RequestIds.resolve(request)));
     }
 
-    @PostMapping("/fault-reports/{faultReportId}/reinspection-records")
+    @PostMapping("/fault-reports/{faultReportId}/reinspection-reports")
     @PreAuthorize("hasAuthority('OPERATIONS_CENTER_REINSPECTION_REPORT_SUBMIT')")
-    public ResponseEntity<ApiResponse<ReinspectionRecordResponse>> submitReinspectionRecord(
+    public ResponseEntity<ApiResponse<ReinspectionReportResponse>> submitReinspectionReport(
             @PathVariable String faultReportId,
-            @Valid @RequestBody ReinspectionRecordRequest requestBody,
+            @Valid @RequestBody ReinspectionReportRequest requestBody,
             @AuthenticationPrincipal AuthenticatedUser user,
             HttpServletRequest request) {
         authenticationService.consumeRecentPasswordVerification(user);
-        var result = operationsService.submitReinspectionRecord(
+        var result = operationsService.submitReinspectionReport(
                 faultReportId,
                 parseEnum(ReinspectionResult.class, requestBody.result(), "result"),
                 requestBody.reinspectedAt(),
                 requestBody.description(),
                 user);
-        return ResponseEntity.ok(ApiResponse.success(ReinspectionRecordResponse.from(result), RequestIds.resolve(request)));
+        return ResponseEntity.ok(ApiResponse.success(ReinspectionReportResponse.from(result), RequestIds.resolve(request)));
     }
 
     @GetMapping("/operations-review-requests")
@@ -201,4 +201,3 @@ public class OperationsController {
         }
     }
 }
-

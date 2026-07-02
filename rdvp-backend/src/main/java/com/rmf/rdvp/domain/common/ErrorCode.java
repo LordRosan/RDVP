@@ -69,10 +69,10 @@ public enum ErrorCode {
             HttpStatus.UNPROCESSABLE_CONTENT,
             "Repair task radius exceeds current workload policy."),
     REPAIRER_BUSY("REPAIRER_BUSY", HttpStatus.CONFLICT, "Repairer is too busy to accept more tasks."),
-    REINSPECTION_RECORD_INVALID(
-            "REINSPECTION_RECORD_INVALID",
+    REINSPECTION_REPORT_INVALID(
+            "REINSPECTION_REPORT_INVALID",
             HttpStatus.UNPROCESSABLE_CONTENT,
-            "Reinspection record is invalid."),
+            "Reinspection report is invalid."),
     REINSPECTION_REQUIRED(
             "REINSPECTION_REQUIRED",
             HttpStatus.UNPROCESSABLE_CONTENT,

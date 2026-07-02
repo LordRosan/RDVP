@@ -5,7 +5,7 @@ import { InlineMessageSurface } from '../../components/InlineMessageSurface';
 import { StatusInfoRow } from '../../components/StatusInfoRow';
 import { DeviceStatus, DeviceSummary } from '../../models/archive/DeviceModels';
 import { PermissionCode } from '../../models/identity/PermissionModels';
-import { DeviceArchiveDeleteGuardService } from '../../services/archive/DeviceArchiveDeleteGuardService';
+import { DeviceArchiveSensitiveActionGuardService } from '../../services/archive/DeviceArchiveSensitiveActionGuardService';
 import { DeviceService } from '../../services/archive/DeviceService';
 import { UiFeedbackService } from '../../services/common/UiFeedbackService';
 import { DeviceArchiveFlowStore } from '../../stores/DeviceArchiveFlowStore';
@@ -86,7 +86,7 @@ struct DeviceArchiveDetail {
       !DeviceService.isArchiveRequestLocked(device);
     this.canDeleteArchive = SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveDeleteRequestSubmit) &&
       !DeviceService.isArchiveRequestLocked(device) &&
-      !DeviceArchiveDeleteGuardService.isDeleteLocked(device.deviceCode);
+      !DeviceArchiveSensitiveActionGuardService.isDeleteLocked(device.deviceCode);
     this.canExportArchive = SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveExport);
     this.detailMessage = '';
     this.detailMessageTone = UiFeedbackTone.Danger;
@@ -94,8 +94,8 @@ struct DeviceArchiveDetail {
     this.changeActionMessageTone = UiFeedbackTone.Danger;
     this.exportActionMessage = '';
     this.exportActionMessageTone = UiFeedbackTone.Danger;
-    if (DeviceArchiveDeleteGuardService.isDeleteLocked(device.deviceCode)) {
-      this.deleteActionMessage = DeviceArchiveDeleteGuardService.getDeleteLockMessage(device.deviceCode);
+    if (DeviceArchiveSensitiveActionGuardService.isDeleteLocked(device.deviceCode)) {
+      this.deleteActionMessage = DeviceArchiveSensitiveActionGuardService.getDeleteLockMessage(device.deviceCode);
       this.deleteActionMessageTone = UiFeedbackTone.Danger;
       return;
     }
@@ -470,8 +470,8 @@ struct DeviceArchiveDetail {
       return;
     }
 
-    if (DeviceArchiveDeleteGuardService.isDeleteLocked(this.device.deviceCode)) {
-      this.deleteActionMessage = DeviceArchiveDeleteGuardService.getDeleteLockMessage(this.device.deviceCode);
+    if (DeviceArchiveSensitiveActionGuardService.isDeleteLocked(this.device.deviceCode)) {
+      this.deleteActionMessage = DeviceArchiveSensitiveActionGuardService.getDeleteLockMessage(this.device.deviceCode);
       this.deleteActionMessageTone = UiFeedbackTone.Danger;
       return;
     }
@@ -536,5 +536,3 @@ struct DeviceArchiveDetail {
     }
   }
 }
-
-

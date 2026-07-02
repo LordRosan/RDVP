@@ -12,12 +12,6 @@ import { AuthGuard } from '../../utils/AuthGuard';
 import { AppNavigator } from '../../utils/AppNavigator';
 import { UiFeedbackTone } from '../../models/common/UiFeedbackModels';
 
-const OPERATIONS_OPERATION_TYPE_OPTIONS: string[] = ['全部', '核验报告', '报修报告', '任务接取', '维修报告', '复检报告'];
-const OPERATIONS_OPERATION_TYPE_VALUES: string[] = ['', 'DEVICE_VERIFICATION', 'FAULT_REPORT',
-  'REPAIR_TASK_ACCEPT', 'REPAIR_REPORT', 'REINSPECTION_REPORT'];
-const OPERATIONS_REVIEW_TYPE_OPTIONS: string[] = ['全部', '核验报告', '报修报告', '维修报告', '复检报告'];
-const OPERATIONS_REVIEW_TYPE_VALUES: string[] = ['', 'DEVICE_VERIFICATION_REPORT', 'FAULT_REPORT',
-  'REPAIR_REPORT', 'REINSPECTION_REPORT'];
 const RECORD_FILTER_CONTROL_HEIGHT = 56;
 
 @Entry
@@ -45,7 +39,7 @@ struct OperationsLogQuery {
     }
 
     this.ensureAvailableTab();
-    this.refreshLogs();
+    this.refreshLogs(this.currentTab);
   }
 
   build() {
@@ -251,7 +245,7 @@ struct OperationsLogQuery {
   }
 
   @Builder
-  QueryButton() {
+  QueryButton(tab: LogQueryTab) {
     Button({ type: ButtonType.Capsule, stateEffect: !this.refreshing }) {
       Row({ space: 6 }) {
         SymbolGlyph($r('sys.symbol.magnifyingglass'))
@@ -270,11 +264,11 @@ struct OperationsLogQuery {
     .layoutWeight(1)
     .backgroundColor(this.refreshing ? AppColors.Disabled : AppColors.Primary)
     .enabled(!this.refreshing)
-    .onClick(() => { this.refreshLogs(); })
+    .onClick(() => { this.refreshLogs(tab); })
   }
 
   @Builder
-  ResetButton() {
+  ResetButton(tab: LogQueryTab) {
     Button({ type: ButtonType.Capsule, stateEffect: !this.refreshing }) {
       Row({ space: 6 }) {
         SymbolGlyph($r('sys.symbol.xmark_circle'))
@@ -295,15 +289,15 @@ struct OperationsLogQuery {
     .border({ width: 1, color: AppColors.Border })
     .enabled(!this.refreshing)
     .onClick(() => {
-      this.resetFilters();
+      this.resetFilters(tab);
     })
   }
 
   @Builder
-  ActionButtons() {
+  ActionButtons(tab: LogQueryTab) {
     Row({ space: 10 }) {
-      this.ResetButton()
-      this.QueryButton()
+      this.ResetButton(tab)
+      this.QueryButton(tab)
     }
     .width('100%')
     .alignItems(VerticalAlign.Center)
@@ -330,13 +324,13 @@ struct OperationsLogQuery {
       Column({ space: 14 }) {
         this.SearchPanel()
 
-        this.LogTypeFilterControl()
+        this.LogTypeFilterControl(tab)
 
         this.DateRangePanel()
         this.MessageText()
-        this.ActionButtons()
+        this.ActionButtons(tab)
         this.ResultCountText()
-        this.LogFilterResultList()
+        this.LogFilterResultList(tab)
       }
       .width('100%')
       .padding({
@@ -358,21 +352,21 @@ struct OperationsLogQuery {
   }
 
   @Builder
-  LogTypeFilterControl() {
+  LogTypeFilterControl(tab: LogQueryTab) {
     if (this.filterResetRevision % 2 === 0) {
-      this.LogTypeFilterInstance()
+      this.LogTypeFilterInstance(tab)
     } else {
-      this.LogTypeFilterInstance()
+      this.LogTypeFilterInstance(tab)
     }
   }
 
   @Builder
-  LogTypeFilterInstance() {
+  LogTypeFilterInstance(tab: LogQueryTab) {
     Column() {
       Filter({
-        multiFilters: this.getLogFilterParams(),
+        multiFilters: this.getLogFilterParams(tab),
         onFilterChanged: (filterResults: FilterResult[]) => {
-          this.applyLogFilterResults(filterResults);
+          this.applyLogFilterResults(tab, filterResults);
         },
         filterType: FilterType.LIST_FILTER
       }) {
@@ -387,13 +381,13 @@ struct OperationsLogQuery {
   }
 
   @Builder
-  LogFilterResultList() {
+  LogFilterResultList(tab: LogQueryTab) {
     Column({ space: 12 }) {
       if (this.logs.length === 0) {
-        this.EmptyState()
+        this.EmptyState(tab)
       } else {
         ForEach(this.logs, (item: LogItem) => {
-          this.OperationsLogQueryCard(item)
+          this.OperationsLogQueryCard(item, tab)
         }, (item: LogItem) => item.id)
       }
     }
@@ -401,11 +395,11 @@ struct OperationsLogQuery {
   }
 
   @Builder
-  OperationsLogQueryCard(item: LogItem) {
+  OperationsLogQueryCard(item: LogItem, tab: LogQueryTab) {
     Column({ space: 10 }) {
       Row({ space: 12 }) {
         Stack() {
-          SymbolGlyph(this.getCurrentLogIcon())
+          SymbolGlyph(this.getLogIconForTab(tab))
             .fontSize(23)
             .fontColor([AppColors.OnPrimary])
         }
@@ -463,10 +457,10 @@ struct OperationsLogQuery {
   }
 
   @Builder
-  EmptyState() {
+  EmptyState(tab: LogQueryTab) {
     Column({ space: 10 }) {
       Stack() {
-        SymbolGlyph(this.getCurrentLogIcon())
+        SymbolGlyph(this.getLogIconForTab(tab))
           .fontSize(36)
           .fontColor([AppColors.Warning])
       }
@@ -474,7 +468,7 @@ struct OperationsLogQuery {
       .height(64)
       .borderRadius(32)
       .backgroundColor(AppColors.WarningSurface)
-      Text(this.getEmptyText())
+      Text(this.getEmptyTextForTab(tab))
         .fontSize(18)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
@@ -497,15 +491,15 @@ struct OperationsLogQuery {
     }
   }
 
-  async refreshLogs(): Promise<void> {
+  async refreshLogs(tab: LogQueryTab = this.currentTab): Promise<void> {
     if (this.refreshing) { return; }
     if (!this.validateDateRange()) {
       return;
     }
     this.refreshing = true;
-    const typeValues = this.getCurrentTypeValues();
+    const typeValues = this.getTypeValuesForTab(tab);
     const filter: LogQueryFilter = {
-      category: this.getCurrentCategory(),
+      category: this.getCategoryForTab(tab),
       type: typeValues[this.normalizeFilterIndex(this.selectedTypeIndex, typeValues.length)],
       keyword: this.keyword,
       startDate: this.startDate,
@@ -515,6 +509,11 @@ struct OperationsLogQuery {
     };
     const response = await LogQueryService.queryLogs(filter);
     this.refreshing = false;
+    if (this.currentTab !== tab) {
+      this.refreshLogs(this.currentTab);
+      return;
+    }
+
     if (!response.success) {
       this.message = UiFeedbackService.operationError(response.error, '查询');
       return;
@@ -524,28 +523,32 @@ struct OperationsLogQuery {
     this.message = '';
   }
 
-  resetFilters(): void {
+  resetFilters(tab: LogQueryTab = this.currentTab): void {
     this.selectedTypeIndex = 0;
     this.keyword = '';
     this.startDate = '';
     this.endDate = '';
     this.message = '';
     this.filterResetRevision += 1;
-    this.refreshLogs();
+    this.refreshLogs(tab);
   }
 
-  applyLogFilterResults(filterResults: FilterResult[]): void {
+  applyLogFilterResults(tab: LogQueryTab, filterResults: FilterResult[]): void {
+    if (this.currentTab !== tab) {
+      return;
+    }
+
     const result = filterResults.find((item: FilterResult) => {
       return item.name === '日志类型';
     });
     this.selectedTypeIndex = result === undefined ? 0 :
-      this.normalizeFilterIndex(result.index, this.getCurrentTypeValues().length);
-    this.refreshLogs();
+      this.normalizeFilterIndex(result.index, this.getTypeValuesForTab(tab).length);
+    this.refreshLogs(tab);
   }
 
-  getLogFilterParams(): FilterParams[] {
+  getLogFilterParams(tab: LogQueryTab): FilterParams[] {
     return [
-      this.createFilterParams('日志类型', this.getCurrentTypeOptions())
+      this.createFilterParams('日志类型', this.getTypeOptionsForTab(tab))
     ];
   }
 
@@ -589,7 +592,7 @@ struct OperationsLogQuery {
     this.currentTabIndex = this.getTabIndex(tab);
     this.logs = [];
     this.resultTotal = 0;
-    this.resetFilters();
+    this.resetFilters(tab);
   }
 
   ensureAvailableTab(): void {
@@ -615,18 +618,6 @@ struct OperationsLogQuery {
     return SessionStore.hasPermission(PermissionCode.LogCenterOperationsReviewLogQuery);
   }
 
-  getCurrentCategory(): LogCategory {
-    return this.currentTab === LogQueryTab.Review ? LogCategory.OperationsReview : LogCategory.OperationsOperation;
-  }
-
-  getCurrentTypeOptions(): string[] {
-    return this.currentTab === LogQueryTab.Review ? OPERATIONS_REVIEW_TYPE_OPTIONS : OPERATIONS_OPERATION_TYPE_OPTIONS;
-  }
-
-  getCurrentTypeValues(): string[] {
-    return this.currentTab === LogQueryTab.Review ? OPERATIONS_REVIEW_TYPE_VALUES : OPERATIONS_OPERATION_TYPE_VALUES;
-  }
-
   getPageTitle(tab: LogQueryTab): string {
     return LogQueryService.formatPageTitle(this.getCategoryForTab(tab));
   }
@@ -635,17 +626,25 @@ struct OperationsLogQuery {
     return LogQueryService.formatListTitle(this.getCategoryForTab(tab));
   }
 
-  getEmptyText(): string {
-    return this.currentTab === LogQueryTab.Review ? '暂无运维审核日志' : '暂无运维操作日志';
+  getEmptyTextForTab(tab: LogQueryTab): string {
+    return tab === LogQueryTab.Review ? '暂无运维审核日志' : '暂无运维操作日志';
   }
 
-  getCurrentLogIcon(): Resource {
-    return this.currentTab === LogQueryTab.Review ? $r('sys.symbol.checkmark_shield') :
+  getLogIconForTab(tab: LogQueryTab): Resource {
+    return tab === LogQueryTab.Review ? $r('sys.symbol.checkmark_shield') :
       $r('sys.symbol.wrench_and_screwdriver');
   }
 
+  getTypeOptionsForTab(tab: LogQueryTab): string[] {
+    return LogQueryService.getOperationsLogTypeOptions(tab);
+  }
+
+  getTypeValuesForTab(tab: LogQueryTab): string[] {
+    return LogQueryService.getOperationsLogTypeValues(tab);
+  }
+
   getCategoryForTab(tab: LogQueryTab): LogCategory {
-    return tab === LogQueryTab.Review ? LogCategory.OperationsReview : LogCategory.OperationsOperation;
+    return LogQueryService.resolveOperationsCategory(tab);
   }
 
   getTabIndex(tab: LogQueryTab): number {

@@ -12,7 +12,7 @@ import { DeviceArchiveUpdateService } from '../main/ets/services/archive/DeviceA
 import { ApiClient } from '../main/ets/services/common/ApiClient';
 import { RepairTaskService } from '../main/ets/services/operations/RepairTaskService';
 import { AppNavigator } from '../main/ets/utils/AppNavigator';
-import { LogCategory } from '../main/ets/models/log/LogQueryModels';
+import { LogCategory, LogQueryTab } from '../main/ets/models/log/LogQueryModels';
 import { LogQueryService } from '../main/ets/services/log/LogQueryService';
 import { ReinspectionService } from '../main/ets/services/operations/ReinspectionService';
 import { ReinspectionTaskStatus } from '../main/ets/models/operations/ReinspectionModels';
@@ -149,6 +149,20 @@ export default function localUnitTest() {
       expect(LogQueryService.formatPageTitle(LogCategory.ArchiveReview)).assertEqual('档案审核日志');
       expect(LogQueryService.formatListTitle(LogCategory.OperationsOperation)).assertEqual('运维操作日志列表');
       expect(LogQueryService.formatListTitle(LogCategory.OperationsReview)).assertEqual('运维审核日志列表');
+    });
+
+    it('resolvesLogQueryTabContextWithoutCurrentTabState', 0, () => {
+      expect(LogQueryService.resolveArchiveCategory(LogQueryTab.Operation)).assertEqual(LogCategory.ArchiveOperation);
+      expect(LogQueryService.resolveArchiveCategory(LogQueryTab.Review)).assertEqual(LogCategory.ArchiveReview);
+      expect(LogQueryService.resolveOperationsCategory(LogQueryTab.Operation))
+        .assertEqual(LogCategory.OperationsOperation);
+      expect(LogQueryService.resolveOperationsCategory(LogQueryTab.Review)).assertEqual(LogCategory.OperationsReview);
+      expect(LogQueryService.getArchiveLogTypeValues(LogQueryTab.Review).join('|'))
+        .assertEqual('|CREATE|DELETE|UPDATE');
+      expect(LogQueryService.getOperationsLogTypeValues(LogQueryTab.Operation).join('|'))
+        .assertEqual('|DEVICE_VERIFICATION|FAULT_REPORT|REPAIR_TASK_ACCEPT|REPAIR_REPORT|REINSPECTION_REPORT');
+      expect(LogQueryService.getOperationsLogTypeOptions(LogQueryTab.Review).join('|'))
+        .assertEqual('全部|核验报告|报修报告|维修报告|复检报告');
     });
 
     it('formatsUnavailableDeviceCodeWithoutIncorrectMessage', 0, () => {

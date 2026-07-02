@@ -17,9 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.rmf.rdvp.archive.DeviceArchive;
 import com.rmf.rdvp.archive.DeviceArchiveRepository;
-import com.rmf.rdvp.archive.DeviceVerificationRecord;
-import com.rmf.rdvp.archive.DeviceVerificationRecordCreate;
-import com.rmf.rdvp.archive.DeviceVerificationRepository;
+import com.rmf.rdvp.archive.DeviceVerificationReport;
+import com.rmf.rdvp.archive.DeviceVerificationReportCreate;
+import com.rmf.rdvp.archive.DeviceVerificationReportRepository;
 import com.rmf.rdvp.archive.DeviceVerificationResult;
 import com.rmf.rdvp.audit.AuditAction;
 import com.rmf.rdvp.audit.AuditLogService;
@@ -48,13 +48,13 @@ public class OperationsService {
     private static final DateTimeFormatter BUSINESS_NO_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     private final DeviceArchiveRepository archiveRepository;
-    private final DeviceVerificationRepository verificationRepository;
+    private final DeviceVerificationReportRepository verificationRepository;
     private final OperationsRepository operationsRepository;
     private final AuditLogService auditLogService;
 
     public OperationsService(
             DeviceArchiveRepository archiveRepository,
-            DeviceVerificationRepository verificationRepository,
+            DeviceVerificationReportRepository verificationRepository,
             OperationsRepository operationsRepository,
             AuditLogService auditLogService) {
         this.archiveRepository = archiveRepository;
@@ -218,7 +218,7 @@ public class OperationsService {
 
             OffsetDateTime normalizedVerifiedAt = parseDateTime(verifiedAt, "verifiedAt");
             OffsetDateTime now = now();
-            DeviceVerificationRecordCreate verificationCreate = new DeviceVerificationRecordCreate(
+            DeviceVerificationReportCreate verificationCreate = new DeviceVerificationReportCreate(
                     "verification-" + UUID.randomUUID(),
                     device.id(),
                     operator.id(),
@@ -258,16 +258,16 @@ public class OperationsService {
             }
 
             archiveRepository.updateStatus(device.id(), "FAULTED", operator.id());
-            DeviceVerificationRecord verificationRecord = verificationRepository.findById(verificationCreate.id())
+            DeviceVerificationReport verificationReport = verificationRepository.findById(verificationCreate.id())
                     .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR));
             FaultReportRecord faultReport = operationsRepository.findFaultReportByIdOrNo(faultCreate.id())
                     .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR));
             auditLogService.recordSuccess(
                     AuditAction.DEVICE_VERIFICATION,
-                    verificationRecord.id(),
+                    verificationReport.id(),
                     device.deviceCode(),
                     operator,
-                    "Submitted abnormal device verification record.");
+                    "Submitted abnormal device verification report.");
             auditLogService.recordSuccess(
                     AuditAction.FAULT_REPORT,
                     faultReport.id(),
@@ -276,15 +276,15 @@ public class OperationsService {
                     "Submitted fault report from device verification.");
             createOperationsReviewRequest(
                     OperationsReviewRequestType.DEVICE_VERIFICATION_REPORT,
-                    verificationRecord.id(),
-                    verificationRecord.id(),
+                    verificationReport.id(),
+                    verificationReport.id(),
                     faultReport.id(),
                     device.id(),
                     operator.id(),
                     "核验结果：%s；核验说明：%s".formatted(
-                            verificationRecord.result().name(),
-                            verificationRecord.description()),
-                    verificationRecord.createdAt());
+                            verificationReport.result().name(),
+                            verificationReport.description()),
+                    verificationReport.createdAt());
             createOperationsReviewRequest(
                     OperationsReviewRequestType.FAULT_REPORT,
                     faultReport.id(),
@@ -297,7 +297,7 @@ public class OperationsService {
                             faultReport.severity().name(),
                             faultReport.description()),
                     faultReport.createdAt());
-            return new DeviceVerificationAndFaultReportResult(verificationRecord, faultReport);
+            return new DeviceVerificationAndFaultReportResult(verificationReport, faultReport);
         } catch (BusinessException exception) {
             recordDeviceVerificationFailure(deviceId, device, operator, exception);
             throw exception;
@@ -584,21 +584,21 @@ public class OperationsService {
     }
 
     @Transactional
-    public ReinspectionRecord submitReinspectionRecord(
+    public ReinspectionReport submitReinspectionReport(
             String faultReportId,
             ReinspectionResult result,
             String reinspectedAt,
             String description,
             AuthenticatedUser reinspector) {
         try {
-            return submitReinspectionRecordChecked(faultReportId, result, reinspectedAt, description, reinspector);
+            return submitReinspectionReportChecked(faultReportId, result, reinspectedAt, description, reinspector);
         } catch (BusinessException exception) {
-            recordReinspectionRecordFailure(faultReportId, reinspector, exception);
+            recordReinspectionReportFailure(faultReportId, reinspector, exception);
             throw exception;
         }
     }
 
-    private ReinspectionRecord submitReinspectionRecordChecked(
+    private ReinspectionReport submitReinspectionReportChecked(
             String faultReportId,
             ReinspectionResult result,
             String reinspectedAt,
@@ -614,7 +614,7 @@ public class OperationsService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.REPAIR_REPORT_NOT_FOUND));
         ReinspectionResult normalizedResult = requireEnum(result, "result");
         OffsetDateTime now = now();
-        ReinspectionRecordCreate create = new ReinspectionRecordCreate(
+        ReinspectionReportCreate create = new ReinspectionReportCreate(
                 "reinspection-" + UUID.randomUUID(),
                 newBusinessNo("RDI", now),
                 faultReport.id(),
@@ -622,7 +622,7 @@ public class OperationsService {
                 reinspector.id(),
                 normalizedResult,
                 parseDateTime(reinspectedAt, "reinspectedAt"),
-                normalizeRequiredText(description, "description", 800, ErrorCode.REINSPECTION_RECORD_INVALID),
+                normalizeRequiredText(description, "description", 800, ErrorCode.REINSPECTION_REPORT_INVALID),
                 now);
         FaultStatus nextFaultStatus = normalizedResult == ReinspectionResult.PASSED
                 ? FaultStatus.CLOSED
@@ -630,7 +630,7 @@ public class OperationsService {
         String nextDeviceStatus = normalizedResult == ReinspectionResult.PASSED ? "NORMAL" : "FAULTED";
 
         try {
-            operationsRepository.createReinspectionRecord(create);
+            operationsRepository.createReinspectionReport(create);
         } catch (DataIntegrityViolationException exception) {
             throw new BusinessException(ErrorCode.REINSPECTION_REQUIRED);
         }
@@ -644,9 +644,9 @@ public class OperationsService {
         }
 
         archiveRepository.updateStatus(faultReport.deviceId(), nextDeviceStatus, reinspector.id());
-        ReinspectionRecord record = new ReinspectionRecord(
+        ReinspectionReport report = new ReinspectionReport(
                 create.id(),
-                create.reinspectionRecordNo(),
+                create.reinspectionReportNo(),
                 create.faultReportId(),
                 create.repairReportId(),
                 create.reinspectorId(),
@@ -658,22 +658,22 @@ public class OperationsService {
                 create.createdAt());
         createOperationsReviewRequest(
                 OperationsReviewRequestType.REINSPECTION_REPORT,
-                record.id(),
-                record.reinspectionRecordNo(),
-                record.faultReportId(),
+                report.id(),
+                report.reinspectionReportNo(),
+                report.faultReportId(),
                 faultReport.deviceId(),
                 reinspector.id(),
                 "复检结果：%s；复检说明：%s".formatted(
-                        record.result().name(),
-                        record.description()),
-                record.createdAt());
+                        report.result().name(),
+                        report.description()),
+                report.createdAt());
         auditLogService.recordSuccess(
-                AuditAction.REINSPECTION_RECORD,
-                record.id(),
-                record.reinspectionRecordNo(),
+                AuditAction.REINSPECTION_REPORT,
+                report.id(),
+                report.reinspectionReportNo(),
                 reinspector,
-                "Submitted reinspection record.");
-        return record;
+                "Submitted reinspection report.");
+        return report;
     }
 
     public OperationsReviewRequestPage listOperationsReviewRequests(
@@ -834,13 +834,13 @@ public class OperationsService {
                 "维修报告提交失败：%s。".formatted(exception.getErrorCode().code()));
     }
 
-    private void recordReinspectionRecordFailure(
+    private void recordReinspectionReportFailure(
             String faultReportId,
             AuthenticatedUser reinspector,
             BusinessException exception) {
         String normalizedFaultReportId = normalizeAuditTarget(faultReportId);
         auditLogService.recordFailure(
-                AuditAction.REINSPECTION_RECORD,
+                AuditAction.REINSPECTION_REPORT,
                 normalizedFaultReportId,
                 resolveFaultReportTargetNo(normalizedFaultReportId),
                 reinspector,

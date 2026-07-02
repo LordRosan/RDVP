@@ -160,7 +160,7 @@ POST http://localhost:8080/api/v1/fault-reports/{faultReportId}/accept
 GET http://localhost:8080/api/v1/repair-tasks/accepted
 POST http://localhost:8080/api/v1/repair-tasks/{repairTaskId}/repair-reports
 GET http://localhost:8080/api/v1/reinspections/pending
-POST http://localhost:8080/api/v1/fault-reports/{faultReportId}/reinspection-records
+POST http://localhost:8080/api/v1/fault-reports/{faultReportId}/reinspection-reports
 ```
 
 操作审计记录：

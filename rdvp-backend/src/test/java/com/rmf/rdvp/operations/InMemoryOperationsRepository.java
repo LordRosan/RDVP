@@ -22,7 +22,7 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     private final Map<String, FaultReportRecord> faultReportsById = new ConcurrentHashMap<>();
     private final Map<String, RepairTaskRecord> repairTasksById = new ConcurrentHashMap<>();
     private final Map<String, RepairReportRecord> repairReportsById = new ConcurrentHashMap<>();
-    private final Map<String, ReinspectionRecordCreate> reinspectionRecordsById = new ConcurrentHashMap<>();
+    private final Map<String, ReinspectionReportCreate> reinspectionReportsById = new ConcurrentHashMap<>();
     private final Map<String, OperationsReviewRequest> operationsReviewsById = new ConcurrentHashMap<>();
     private final DeviceArchiveRepository archiveRepository;
 
@@ -332,13 +332,13 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     }
 
     @Override
-    public void createReinspectionRecord(ReinspectionRecordCreate create) {
-        reinspectionRecordsById.put(create.id(), create);
+    public void createReinspectionReport(ReinspectionReportCreate create) {
+        reinspectionReportsById.put(create.id(), create);
     }
 
     @Override
-    public long countReinspectionRecords() {
-        return reinspectionRecordsById.size();
+    public long countReinspectionReports() {
+        return reinspectionReportsById.size();
     }
 
     @Override

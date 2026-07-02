@@ -14,19 +14,19 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 @Profile("!test")
-public class JdbcDeviceVerificationRepository implements DeviceVerificationRepository {
+public class JdbcDeviceVerificationReportRepository implements DeviceVerificationReportRepository {
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
 
-    public JdbcDeviceVerificationRepository(NamedParameterJdbcTemplate jdbcTemplate) {
+    public JdbcDeviceVerificationReportRepository(NamedParameterJdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
-    public void create(DeviceVerificationRecordCreate create) {
+    public void create(DeviceVerificationReportCreate create) {
         jdbcTemplate.update(
                 """
-                        INSERT INTO device_verification_records (
+                        INSERT INTO device_verification_reports (
                             id,
                             device_id,
                             operator_id,
@@ -58,8 +58,8 @@ public class JdbcDeviceVerificationRepository implements DeviceVerificationRepos
     }
 
     @Override
-    public Optional<DeviceVerificationRecord> findById(String id) {
-        List<DeviceVerificationRecord> results = jdbcTemplate.query(
+    public Optional<DeviceVerificationReport> findById(String id) {
+        List<DeviceVerificationReport> results = jdbcTemplate.query(
                 """
                         SELECT
                             id,
@@ -70,11 +70,11 @@ public class JdbcDeviceVerificationRepository implements DeviceVerificationRepos
                             remark,
                             verified_at,
                             created_at
-                        FROM device_verification_records
+                        FROM device_verification_reports
                         WHERE id = :id
                         """,
                 Map.of("id", id),
-                this::mapRecord);
+                this::mapReport);
         return results.stream().findFirst();
     }
 
@@ -83,15 +83,15 @@ public class JdbcDeviceVerificationRepository implements DeviceVerificationRepos
         Long count = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM device_verification_records
+                        FROM device_verification_reports
                         """,
                 Map.of(),
                 Long.class);
         return count == null ? 0 : count;
     }
 
-    private DeviceVerificationRecord mapRecord(ResultSet resultSet, int rowNumber) throws SQLException {
-        return new DeviceVerificationRecord(
+    private DeviceVerificationReport mapReport(ResultSet resultSet, int rowNumber) throws SQLException {
+        return new DeviceVerificationReport(
                 resultSet.getString("id"),
                 resultSet.getString("device_id"),
                 resultSet.getString("operator_id"),

@@ -3,8 +3,8 @@ import { FaultStatus } from '../../models/operations/FaultModels';
 import {
   DeviceVerificationForm,
   DeviceVerificationAndFaultReportForm,
-  DeviceVerificationAndFaultReportRecord,
-  DeviceVerificationRecord,
+  DeviceVerificationAndFaultReportResult,
+  DeviceVerificationReport,
   DeviceVerificationValidationResult,
   VerificationResult
 } from '../../models/operations/DeviceVerificationAndFaultReportModels';
@@ -16,7 +16,7 @@ import { UiFeedbackService } from '../common/UiFeedbackService';
 const MAX_DESCRIPTION_LENGTH = 500;
 const MAX_REMARK_LENGTH = 300;
 
-interface DeviceVerificationApiResult {
+interface DeviceVerificationReportApiResult {
   id: string;
   result: string;
   description: string;
@@ -33,7 +33,7 @@ interface FaultReportApiResult {
 }
 
 interface DeviceVerificationAndFaultReportApiResult {
-  verificationRecord: DeviceVerificationApiResult;
+  verificationReport: DeviceVerificationReportApiResult;
   faultReport: FaultReportApiResult;
 }
 
@@ -153,7 +153,7 @@ export class DeviceVerificationAndFaultReportService {
     };
   }
 
-  static async submitVerificationRemoteFirst(form: DeviceVerificationForm): Promise<ApiResponse<DeviceVerificationRecord>> {
+  static async submitVerificationReportRemoteFirst(form: DeviceVerificationForm): Promise<ApiResponse<DeviceVerificationReport>> {
     const validation = DeviceVerificationAndFaultReportService.validateVerificationForm(form);
     if (!validation.valid) {
       return {
@@ -166,16 +166,16 @@ export class DeviceVerificationAndFaultReportService {
     }
 
     if (!ApiClient.isConfigured()) {
-      return ApiClient.createServiceUnavailableResponse<DeviceVerificationRecord>();
+      return ApiClient.createServiceUnavailableResponse<DeviceVerificationReport>();
     }
 
     const verifiedAt = DeviceVerificationAndFaultReportService.normalizeText(form.verifiedAt);
-    return DeviceVerificationAndFaultReportService.submitVerificationToBackend(form, verifiedAt);
+    return DeviceVerificationAndFaultReportService.submitVerificationReportToBackend(form, verifiedAt);
   }
 
   static async submitVerificationAndFaultReportRemoteFirst(
     form: DeviceVerificationAndFaultReportForm
-  ): Promise<ApiResponse<DeviceVerificationAndFaultReportRecord>> {
+  ): Promise<ApiResponse<DeviceVerificationAndFaultReportResult>> {
     const validation = DeviceVerificationAndFaultReportService.validateVerificationAndFaultReportForm(form);
     if (!validation.valid) {
       return {
@@ -188,17 +188,17 @@ export class DeviceVerificationAndFaultReportService {
     }
 
     if (!ApiClient.isConfigured()) {
-      return ApiClient.createServiceUnavailableResponse<DeviceVerificationAndFaultReportRecord>();
+      return ApiClient.createServiceUnavailableResponse<DeviceVerificationAndFaultReportResult>();
     }
 
     const verifiedAt = FaultReportService.normalizeText(form.faultReport.occurredAt);
     return DeviceVerificationAndFaultReportService.submitVerificationAndFaultReportToBackend(form, verifiedAt);
   }
 
-  private static async submitVerificationToBackend(
+  private static async submitVerificationReportToBackend(
     form: DeviceVerificationForm,
     verifiedAt: string
-  ): Promise<ApiResponse<DeviceVerificationRecord>> {
+  ): Promise<ApiResponse<DeviceVerificationReport>> {
     const deviceResponse = await DeviceService.queryByCodeRemoteFirst({
       deviceCode: form.deviceCode
     });
@@ -211,8 +211,8 @@ export class DeviceVerificationAndFaultReportService {
       };
     }
 
-    const response = await ApiClient.request<DeviceVerificationApiResult>(
-      `/api/v1/devices/${encodeURIComponent(deviceResponse.data.id)}/verification-records`,
+    const response = await ApiClient.request<DeviceVerificationReportApiResult>(
+      `/api/v1/devices/${encodeURIComponent(deviceResponse.data.id)}/verification-reports`,
       'POST',
       true,
       JSON.stringify({
@@ -262,7 +262,7 @@ export class DeviceVerificationAndFaultReportService {
   private static async submitVerificationAndFaultReportToBackend(
     form: DeviceVerificationAndFaultReportForm,
     verifiedAt: string
-  ): Promise<ApiResponse<DeviceVerificationAndFaultReportRecord>> {
+  ): Promise<ApiResponse<DeviceVerificationAndFaultReportResult>> {
     const deviceResponse = await DeviceService.queryByCodeRemoteFirst({
       deviceCode: form.verification.deviceCode
     });
@@ -276,7 +276,7 @@ export class DeviceVerificationAndFaultReportService {
     }
 
     const response = await ApiClient.request<DeviceVerificationAndFaultReportApiResult>(
-      `/api/v1/devices/${encodeURIComponent(deviceResponse.data.id)}/verification-records/fault-report`,
+      `/api/v1/devices/${encodeURIComponent(deviceResponse.data.id)}/verification-reports/fault-report`,
       'POST',
       true,
       JSON.stringify({
@@ -316,13 +316,13 @@ export class DeviceVerificationAndFaultReportService {
     return {
       success: true,
       data: {
-        verificationRecord: {
-          id: response.data.verificationRecord.id,
+        verificationReport: {
+          id: response.data.verificationReport.id,
           deviceCode: DeviceService.normalizeDeviceCode(form.verification.deviceCode),
-          result: response.data.verificationRecord.result as VerificationResult,
-          description: response.data.verificationRecord.description,
-          remark: response.data.verificationRecord.remark,
-          submittedAt: response.data.verificationRecord.createdAt
+          result: response.data.verificationReport.result as VerificationResult,
+          description: response.data.verificationReport.description,
+          remark: response.data.verificationReport.remark,
+          submittedAt: response.data.verificationReport.createdAt
         },
         faultReport: {
           id: response.data.faultReport.id,

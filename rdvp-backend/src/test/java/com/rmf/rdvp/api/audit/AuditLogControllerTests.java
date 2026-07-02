@@ -154,7 +154,7 @@ class AuditLogControllerTests {
         String operatorToken = login("operator", "password");
 
         verifyPassword(operatorToken, "password");
-        mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records", "device-local-0001")
+        mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-reports", "device-local-0001")
                         .header("Authorization", "Bearer " + operatorToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -284,7 +284,7 @@ class AuditLogControllerTests {
                 .andExpect(jsonPath("$.error.code").value("DEVICE_ACTIVE_FAULT_EXISTS"));
 
         verifyPassword(operatorToken, "password");
-        mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records/fault-report", "device-local-0001")
+        mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-reports/fault-report", "device-local-0001")
                         .header("Authorization", "Bearer " + operatorToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -355,9 +355,9 @@ class AuditLogControllerTests {
                 "Primary bearing assembly is unstable.");
         String severeRepairTaskId = acceptFaultReport(operatorWorkerToken, severeFaultId);
         submitRepairReport(operatorWorkerToken, severeRepairTaskId);
-        submitReinspectionRecord(operatorReinspectToken, severeFaultId);
+        submitReinspectionReport(operatorReinspectToken, severeFaultId);
         verifyPassword(operatorReinspectToken, "password");
-        mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-records", severeFaultId)
+        mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-reports", severeFaultId)
                         .header("Authorization", "Bearer " + operatorReinspectToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -379,7 +379,7 @@ class AuditLogControllerTests {
                 .andExpect(jsonPath("$.data.items[?(@.status == 'FAILED')].description")
                         .value(hasItem("维修报告提交失败：REPAIR_TASK_STATUS_INVALID。")));
 
-        mockMvc.perform(get("/api/v1/audit-logs?action=REINSPECTION_RECORD")
+        mockMvc.perform(get("/api/v1/audit-logs?action=REINSPECTION_REPORT")
                         .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(2))
@@ -474,9 +474,9 @@ class AuditLogControllerTests {
                 .andExpect(status().isOk());
     }
 
-    private void submitReinspectionRecord(String token, String faultId) throws Exception {
+    private void submitReinspectionReport(String token, String faultId) throws Exception {
         verifyPassword(token, "password");
-        mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-records", faultId)
+        mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-reports", faultId)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""

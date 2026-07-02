@@ -663,12 +663,12 @@ public class JdbcOperationsRepository implements OperationsRepository {
     }
 
     @Override
-    public void createReinspectionRecord(ReinspectionRecordCreate create) {
+    public void createReinspectionReport(ReinspectionReportCreate create) {
         jdbcTemplate.update(
                 """
-                        INSERT INTO reinspection_records (
+                        INSERT INTO reinspection_reports (
                             id,
-                            reinspection_record_no,
+                            reinspection_report_no,
                             fault_report_id,
                             repair_report_id,
                             reinspector_id,
@@ -678,7 +678,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                             created_at
                         ) VALUES (
                             :id,
-                            :reinspectionRecordNo,
+                            :reinspectionReportNo,
                             :faultReportId,
                             :repairReportId,
                             :reinspectorId,
@@ -690,7 +690,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                         """,
                 new MapSqlParameterSource()
                         .addValue("id", create.id())
-                        .addValue("reinspectionRecordNo", create.reinspectionRecordNo())
+                        .addValue("reinspectionReportNo", create.reinspectionReportNo())
                         .addValue("faultReportId", create.faultReportId())
                         .addValue("repairReportId", create.repairReportId())
                         .addValue("reinspectorId", create.reinspectorId())
@@ -701,11 +701,11 @@ public class JdbcOperationsRepository implements OperationsRepository {
     }
 
     @Override
-    public long countReinspectionRecords() {
+    public long countReinspectionReports() {
         Long count = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM reinspection_records
+                        FROM reinspection_reports
                         """,
                 Map.of(),
                 Long.class);

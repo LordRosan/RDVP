@@ -27,7 +27,7 @@ export interface ReinspectionTaskListResult {
   total: number;
 }
 
-export interface ReinspectionRecordForm {
+export interface ReinspectionReportForm {
   taskId: string;
   result: ReinspectionResult;
   reinspectedAt: string;
@@ -39,9 +39,9 @@ export interface ReinspectionValidationResult {
   message: string;
 }
 
-export interface ReinspectionRecord {
+export interface ReinspectionReport {
   id: string;
-  recordNo: string;
+  reportNo: string;
   taskId: string;
   result: ReinspectionResult;
   submittedAt: string;

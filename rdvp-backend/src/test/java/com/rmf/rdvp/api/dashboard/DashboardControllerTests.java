@@ -211,7 +211,7 @@ class DashboardControllerTests {
                                 """))
                 .andExpect(status().isOk());
         verifyPassword(operatorToken, "password");
-        mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-records", faultId)
+        mockMvc.perform(post("/api/v1/fault-reports/{faultReportId}/reinspection-reports", faultId)
                         .header("Authorization", "Bearer " + operatorToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -224,7 +224,7 @@ class DashboardControllerTests {
                 .andExpect(status().isOk());
 
         verifyPassword(operatorToken, "password");
-        mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-records", "device-local-0002")
+        mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-reports", "device-local-0002")
                         .header("Authorization", "Bearer " + operatorToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""

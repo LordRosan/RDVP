@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service;
 import com.rmf.rdvp.archive.DeviceArchiveRepository;
 import com.rmf.rdvp.archive.DeviceArchiveRequestRepository;
 import com.rmf.rdvp.archive.DeviceArchiveRequestType;
-import com.rmf.rdvp.archive.DeviceVerificationRepository;
+import com.rmf.rdvp.archive.DeviceVerificationReportRepository;
 import com.rmf.rdvp.audit.AuditAction;
 import com.rmf.rdvp.audit.AuditLogRepository;
 import com.rmf.rdvp.identity.AuthenticatedUser;
@@ -17,14 +17,14 @@ public class DashboardService {
 
     private final DeviceArchiveRepository archiveRepository;
     private final DeviceArchiveRequestRepository archiveRequestRepository;
-    private final DeviceVerificationRepository verificationRepository;
+    private final DeviceVerificationReportRepository verificationRepository;
     private final OperationsRepository operationsRepository;
     private final AuditLogRepository auditLogRepository;
 
     public DashboardService(
             DeviceArchiveRepository archiveRepository,
             DeviceArchiveRequestRepository archiveRequestRepository,
-            DeviceVerificationRepository verificationRepository,
+            DeviceVerificationReportRepository verificationRepository,
             OperationsRepository operationsRepository,
             AuditLogRepository auditLogRepository) {
         this.archiveRepository = archiveRepository;
@@ -58,7 +58,7 @@ public class DashboardService {
                 verificationRepository.countAll(),
                 operationsRepository.countFaultReports(),
                 operationsRepository.countRepairReports(),
-                operationsRepository.countReinspectionRecords());
+                operationsRepository.countReinspectionReports());
     }
 
     private ReviewDashboardStats reviewStats(AuthenticatedUser user) {
@@ -122,7 +122,7 @@ public class DashboardService {
                 + operationsRepository.countFaultReports()
                 + operationsRepository.countRepairTasks()
                 + operationsRepository.countRepairReports()
-                + operationsRepository.countReinspectionRecords();
+                + operationsRepository.countReinspectionReports();
     }
 
     private long operationsReviewLogCount() {
