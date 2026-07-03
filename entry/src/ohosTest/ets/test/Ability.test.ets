@@ -1,21 +1,21 @@
 import { describe, it, expect } from '@ohos/hypium';
-import { AuthService } from '../../../main/ets/services/identity/AuthService';
-import { DeviceService } from '../../../main/ets/services/archive/DeviceService';
-import { FaultSeverity, FaultType } from '../../../main/ets/models/operations/FaultModels';
-import { RepairReportResult } from '../../../main/ets/models/operations/RepairTaskModels';
-import { VerificationResult } from '../../../main/ets/models/operations/DeviceVerificationAndFaultReportModels';
-import { FaultReportService } from '../../../main/ets/services/operations/FaultReportService';
-import { DeviceVerificationAndFaultReportService } from '../../../main/ets/services/operations/DeviceVerificationAndFaultReportService';
-import { RepairTaskService } from '../../../main/ets/services/operations/RepairTaskService';
-import { MainPageService } from '../../../main/ets/services/app/MainPageService';
-import { DeviceArchiveRequestService } from '../../../main/ets/services/archive/DeviceArchiveRequestService';
-import { DeviceArchiveUpdateService } from '../../../main/ets/services/archive/DeviceArchiveUpdateService';
-import { DeviceStatus } from '../../../main/ets/models/archive/DeviceModels';
+import { AuthService } from '../../../main/ets/user/services/AuthService';
+import { DeviceService } from '../../../main/ets/archive/services/DeviceService';
+import { FaultSeverity, FaultType } from '../../../main/ets/operations/models/FaultModels';
+import { RepairReportResult } from '../../../main/ets/operations/models/RepairTaskModels';
+import { VerificationResult } from '../../../main/ets/operations/models/DeviceVerificationAndFaultReportModels';
+import { FaultReportService } from '../../../main/ets/operations/services/FaultReportService';
+import { DeviceVerificationAndFaultReportService } from '../../../main/ets/operations/services/DeviceVerificationAndFaultReportService';
+import { RepairTaskService } from '../../../main/ets/operations/services/RepairTaskService';
+import { HomeService } from '../../../main/ets/home/services/HomeService';
+import { DeviceArchiveRequestService } from '../../../main/ets/archive/services/DeviceArchiveRequestService';
+import { DeviceArchiveUpdateService } from '../../../main/ets/archive/services/DeviceArchiveUpdateService';
+import { DeviceStatus } from '../../../main/ets/archive/models/DeviceModels';
 
 export default function abilityTest() {
   describe('rdvpAbilityConfiguration', () => {
-    it('loadsMainPageConfiguration', 0, () => {
-      const actions = MainPageService.getActions();
+    it('loadsHomePageConfiguration', 0, () => {
+      const actions = HomeService.getActions();
 
       expect(actions.length).assertEqual(7);
     });

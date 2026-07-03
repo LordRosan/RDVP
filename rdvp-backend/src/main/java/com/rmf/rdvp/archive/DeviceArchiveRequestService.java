@@ -13,13 +13,13 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.rmf.rdvp.audit.AuditAction;
-import com.rmf.rdvp.audit.AuditLogService;
-import com.rmf.rdvp.domain.common.BusinessException;
-import com.rmf.rdvp.domain.common.ErrorCode;
-import com.rmf.rdvp.identity.AuthenticatedUser;
-import com.rmf.rdvp.identity.PermissionCode;
-import com.rmf.rdvp.identity.UserAccountRepository;
+import com.rmf.rdvp.log.LogAction;
+import com.rmf.rdvp.log.LogEntryService;
+import com.rmf.rdvp.shared.error.BusinessException;
+import com.rmf.rdvp.shared.error.ErrorCode;
+import com.rmf.rdvp.user.AuthenticatedUser;
+import com.rmf.rdvp.user.PermissionCode;
+import com.rmf.rdvp.user.UserAccountRepository;
 
 @Service
 public class DeviceArchiveRequestService {
@@ -35,17 +35,17 @@ public class DeviceArchiveRequestService {
     private final DeviceArchiveRepository archiveRepository;
     private final DeviceArchiveRequestRepository archiveRequestRepository;
     private final UserAccountRepository userStore;
-    private final AuditLogService auditLogService;
+    private final LogEntryService logEntryService;
 
     public DeviceArchiveRequestService(
             DeviceArchiveRepository archiveRepository,
             DeviceArchiveRequestRepository archiveRequestRepository,
             UserAccountRepository userStore,
-            AuditLogService auditLogService) {
+            LogEntryService logEntryService) {
         this.archiveRepository = archiveRepository;
         this.archiveRequestRepository = archiveRequestRepository;
         this.userStore = userStore;
-        this.auditLogService = auditLogService;
+        this.logEntryService = logEntryService;
     }
 
     @Transactional
@@ -152,8 +152,8 @@ public class DeviceArchiveRequestService {
 
             DeviceArchiveRequest reviewed = enrichApplicantName(archiveRequestRepository.findById(request.id())
                     .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR)));
-            auditLogService.recordSuccess(
-                    AuditAction.DEVICE_ARCHIVE_REVIEW,
+            logEntryService.recordSuccess(
+                    LogAction.DEVICE_ARCHIVE_REVIEW,
                     reviewed.id(),
                     reviewed.deviceCode(),
                     reviewer,
@@ -173,9 +173,9 @@ public class DeviceArchiveRequestService {
             String deviceCode,
             AuthenticatedUser applicant,
             BusinessException exception) {
-        auditLogService.recordFailure(
-                AuditAction.DEVICE_ARCHIVE_REQUEST,
-                requestType == DeviceArchiveRequestType.CREATE ? null : normalizeAuditTarget(deviceId),
+        logEntryService.recordFailure(
+                LogAction.DEVICE_ARCHIVE_REQUEST,
+                requestType == DeviceArchiveRequestType.CREATE ? null : normalizeLogTarget(deviceId),
                 resolveArchiveRequestTargetNo(deviceId, deviceCode),
                 applicant,
                 "设备档案%s申请提交失败：%s。".formatted(formatRequestType(requestType), exception.getErrorCode().code()));
@@ -186,8 +186,8 @@ public class DeviceArchiveRequestService {
             DeviceArchiveRequest request,
             AuthenticatedUser reviewer,
             BusinessException exception) {
-        auditLogService.recordFailure(
-                AuditAction.DEVICE_ARCHIVE_REVIEW,
+        logEntryService.recordFailure(
+                LogAction.DEVICE_ARCHIVE_REVIEW,
                 request == null ? requestId : request.id(),
                 request == null ? requestId : request.deviceCode(),
                 reviewer,
@@ -225,8 +225,8 @@ public class DeviceArchiveRequestService {
                 normalizedChanges,
                 normalizeInitiatedAt(initiatedAt, now),
                 now));
-        auditLogService.recordSuccess(
-                AuditAction.DEVICE_ARCHIVE_REQUEST,
+        logEntryService.recordSuccess(
+                LogAction.DEVICE_ARCHIVE_REQUEST,
                 created.id(),
                 created.deviceCode(),
                 applicant,
@@ -264,8 +264,8 @@ public class DeviceArchiveRequestService {
                 normalizedChanges,
                 normalizeInitiatedAt(initiatedAt, submittedAt),
                 submittedAt));
-        auditLogService.recordSuccess(
-                AuditAction.DEVICE_ARCHIVE_REQUEST,
+        logEntryService.recordSuccess(
+                LogAction.DEVICE_ARCHIVE_REQUEST,
                 created.id(),
                 created.deviceCode(),
                 applicant,
@@ -303,8 +303,8 @@ public class DeviceArchiveRequestService {
                 buildDeleteSnapshot(device),
                 normalizeInitiatedAt(initiatedAt, now),
                 now));
-        auditLogService.recordSuccess(
-                AuditAction.DEVICE_ARCHIVE_REQUEST,
+        logEntryService.recordSuccess(
+                LogAction.DEVICE_ARCHIVE_REQUEST,
                 created.id(),
                 created.deviceCode(),
                 applicant,
@@ -619,18 +619,18 @@ public class DeviceArchiveRequestService {
         return initiatedAt == null ? submittedAt : initiatedAt.withOffsetSameInstant(ZoneOffset.UTC);
     }
 
-    private String normalizeAuditTarget(String value) {
+    private String normalizeLogTarget(String value) {
         String normalized = normalizeText(value);
         return normalized.isBlank() ? null : normalized;
     }
 
     private String resolveArchiveRequestTargetNo(String deviceId, String deviceCode) {
-        String normalizedDeviceCode = normalizeAuditTarget(deviceCode);
+        String normalizedDeviceCode = normalizeLogTarget(deviceCode);
         if (normalizedDeviceCode != null) {
             return normalizedDeviceCode.toUpperCase();
         }
 
-        String normalizedDeviceId = normalizeAuditTarget(deviceId);
+        String normalizedDeviceId = normalizeLogTarget(deviceId);
         if (normalizedDeviceId == null) {
             return null;
         }

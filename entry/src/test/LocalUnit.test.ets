@@ -1,21 +1,22 @@
 import { describe, expect, it } from '@ohos/hypium';
-import { DeviceStatus } from '../main/ets/models/archive/DeviceModels';
-import { UiFeedbackTone } from '../main/ets/models/common/UiFeedbackModels';
-import { AppColors, AppTone } from '../main/ets/styles/AppTheme';
-import { AppThemeMode } from '../main/ets/models/app/ThemeModels';
-import { AppThemeService } from '../main/ets/services/app/AppThemeService';
-import { MainPageService } from '../main/ets/services/app/MainPageService';
-import { UiFeedbackService } from '../main/ets/services/common/UiFeedbackService';
-import { AuthService } from '../main/ets/services/identity/AuthService';
-import { DeviceArchiveRequestService } from '../main/ets/services/archive/DeviceArchiveRequestService';
-import { DeviceArchiveUpdateService } from '../main/ets/services/archive/DeviceArchiveUpdateService';
-import { ApiClient } from '../main/ets/services/common/ApiClient';
-import { RepairTaskService } from '../main/ets/services/operations/RepairTaskService';
-import { AppNavigator } from '../main/ets/utils/AppNavigator';
-import { LogCategory, LogQueryTab } from '../main/ets/models/log/LogQueryModels';
-import { LogQueryService } from '../main/ets/services/log/LogQueryService';
-import { ReinspectionService } from '../main/ets/services/operations/ReinspectionService';
-import { ReinspectionTaskStatus } from '../main/ets/models/operations/ReinspectionModels';
+import { DeviceStatus } from '../main/ets/archive/models/DeviceModels';
+import { UiFeedbackTone } from '../main/ets/shared/models/UiFeedbackModels';
+import { AppColors, AppTone } from '../main/ets/shared/theme/AppTheme';
+import { AppThemeMode } from '../main/ets/shared/theme/ThemeModels';
+import { AppThemeService } from '../main/ets/shared/theme/AppThemeService';
+import { HomeService } from '../main/ets/home/services/HomeService';
+import { UiFeedbackService } from '../main/ets/shared/services/UiFeedbackService';
+import { AuthService } from '../main/ets/user/services/AuthService';
+import { DeviceArchiveRequestService } from '../main/ets/archive/services/DeviceArchiveRequestService';
+import { DeviceArchiveUpdateService } from '../main/ets/archive/services/DeviceArchiveUpdateService';
+import { ApiClient } from '../main/ets/shared/services/ApiClient';
+import { RepairTaskService } from '../main/ets/operations/services/RepairTaskService';
+import { AppNavigator } from '../main/ets/shared/navigation/AppNavigator';
+import { AppRoutes } from '../main/ets/shared/navigation/AppRoutes';
+import { LogCategory, LogQueryTab } from '../main/ets/log/models/LogQueryModels';
+import { LogQueryService } from '../main/ets/log/services/LogQueryService';
+import { ReinspectionService } from '../main/ets/operations/services/ReinspectionService';
+import { ReinspectionTaskStatus } from '../main/ets/operations/models/ReinspectionModels';
 
 export default function localUnitTest() {
   describe('uiFeedbackMessages', () => {
@@ -98,6 +99,22 @@ export default function localUnitTest() {
       expect(AppColors.surfaceForTone(AppTone.Warning)).assertEqual('#402D12');
 
       AppThemeService.setThemeMode(AppThemeMode.Light);
+    });
+
+    it('usesDomainFirstRoutesForEntryPages', 0, () => {
+      expect(AppRoutes.LoginPage).assertEqual('user/pages/LoginPage');
+      expect(AppRoutes.HomePage).assertEqual('home/pages/HomePage');
+      expect(AppRoutes.UserCenterPage).assertEqual('user/pages/UserCenterPage');
+      expect(AppRoutes.UserSettingsPage).assertEqual('user/pages/UserSettingsPage');
+      expect(AppRoutes.ArchiveCenterPage).assertEqual('archive/pages/ArchiveCenterPage');
+      expect(AppRoutes.OperationsCenterPage).assertEqual('operations/pages/OperationsCenterPage');
+      expect(AppRoutes.ReviewCenterPage).assertEqual('review/pages/ReviewCenterPage');
+      expect(AppRoutes.LogCenterPage).assertEqual('log/pages/LogCenterPage');
+      expect(AppRoutes.DeviceVerificationAndFaultReportPage)
+        .assertEqual('operations/pages/DeviceVerificationAndFaultReportPage');
+      expect(AppRoutes.RepairAndReinspectionPage).assertEqual('operations/pages/RepairAndReinspectionPage');
+      expect(AppRoutes.ArchiveLogQueryPage).assertEqual('log/pages/ArchiveLogQueryPage');
+      expect(AppRoutes.OperationsLogQueryPage).assertEqual('log/pages/OperationsLogQueryPage');
     });
 
     it('validatesTaskAcceptanceQueryAgainstProvidedWorkload', 0, () => {
@@ -185,7 +202,7 @@ export default function localUnitTest() {
     });
   });
 
-  describe('identityValidationFeedback', () => {
+  describe('userLoginValidationFeedback', () => {
     it('validatesLoginFormByVisualOrder', 0, () => {
       const result = AuthService.validateLoginForm({
         username: '',
@@ -199,8 +216,8 @@ export default function localUnitTest() {
 
   describe('appNavigation', () => {
     it('usesSingleNativeTabsRouteForRepairAndReinspection', 0, () => {
-      expect(MainPageService.getRepairAndReinspectionRoute())
-        .assertEqual('pages/OperationsCenter/RepairAndReinspection');
+      expect(HomeService.getRepairAndReinspectionRoute())
+        .assertEqual('operations/pages/RepairAndReinspectionPage');
     });
 
     it('reportsRejectedNavigationPromises', 0, async (): Promise<void> => {

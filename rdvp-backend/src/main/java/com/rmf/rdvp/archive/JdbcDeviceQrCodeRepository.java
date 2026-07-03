@@ -26,7 +26,7 @@ public class JdbcDeviceQrCodeRepository implements DeviceQrCodeRepository {
         List<DeviceQrCode> results = jdbcTemplate.query(
                 """
                         SELECT id, device_id, version, nonce, signature_hash, status, expires_at
-                        FROM device_qrcodes
+                        FROM archive_device_qr_codes
                         WHERE device_id = :deviceId
                           AND version = :version
                           AND nonce = :nonce
@@ -41,7 +41,7 @@ public class JdbcDeviceQrCodeRepository implements DeviceQrCodeRepository {
         List<DeviceQrCode> results = jdbcTemplate.query(
                 """
                         SELECT id, device_id, version, nonce, signature_hash, status, expires_at
-                        FROM device_qrcodes
+                        FROM archive_device_qr_codes
                         WHERE device_id = :deviceId
                           AND status = 'ACTIVE'
                           AND (expires_at IS NULL OR expires_at > NOW())

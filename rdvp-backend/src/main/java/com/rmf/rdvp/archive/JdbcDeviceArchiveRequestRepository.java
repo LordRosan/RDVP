@@ -16,8 +16,8 @@ import org.springframework.stereotype.Repository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rmf.rdvp.domain.common.BusinessException;
-import com.rmf.rdvp.domain.common.ErrorCode;
+import com.rmf.rdvp.shared.error.BusinessException;
+import com.rmf.rdvp.shared.error.ErrorCode;
 
 @Repository
 @Profile("!test")
@@ -59,8 +59,8 @@ public class JdbcDeviceArchiveRequestRepository implements DeviceArchiveRequestR
         Long total = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM device_archive_requests cr
-                        LEFT JOIN devices d ON d.id = cr.device_id
+                        FROM review_archive_requests cr
+                        LEFT JOIN archive_devices d ON d.id = cr.device_id
                         """
                         + where,
                 parameters,
@@ -73,7 +73,7 @@ public class JdbcDeviceArchiveRequestRepository implements DeviceArchiveRequestR
         Long count = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM device_archive_requests
+                        FROM review_archive_requests
                         """,
                 Map.of(),
                 Long.class);
@@ -85,7 +85,7 @@ public class JdbcDeviceArchiveRequestRepository implements DeviceArchiveRequestR
         Long count = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM device_archive_requests
+                        FROM review_archive_requests
                         WHERE status = 'PENDING_REVIEW'
                         """,
                 Map.of(),
@@ -98,7 +98,7 @@ public class JdbcDeviceArchiveRequestRepository implements DeviceArchiveRequestR
         Long count = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM device_archive_requests
+                        FROM review_archive_requests
                         WHERE status = 'APPROVED'
                           AND request_type = :requestType
                         """,
@@ -112,7 +112,7 @@ public class JdbcDeviceArchiveRequestRepository implements DeviceArchiveRequestR
         Long count = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM device_archive_requests
+                        FROM review_archive_requests
                         WHERE status IN ('APPROVED', 'REJECTED')
                         """,
                 Map.of(),
@@ -125,7 +125,7 @@ public class JdbcDeviceArchiveRequestRepository implements DeviceArchiveRequestR
         Integer count = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM device_archive_requests
+                        FROM review_archive_requests
                         WHERE device_id = :deviceId
                           AND status = 'PENDING_REVIEW'
                         """,
@@ -139,7 +139,7 @@ public class JdbcDeviceArchiveRequestRepository implements DeviceArchiveRequestR
         Integer count = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM device_archive_requests
+                        FROM review_archive_requests
                         WHERE target_device_code = :deviceCode
                           AND status = 'PENDING_REVIEW'
                         """,
@@ -153,8 +153,8 @@ public class JdbcDeviceArchiveRequestRepository implements DeviceArchiveRequestR
         List<OffsetDateTime> results = jdbcTemplate.query(
                 """
                         SELECT cr.freeze_until
-                        FROM device_archive_requests cr
-                        LEFT JOIN devices d ON d.id = :deviceId
+                        FROM review_archive_requests cr
+                        LEFT JOIN archive_devices d ON d.id = :deviceId
                         WHERE (cr.device_id = :deviceId OR cr.target_device_code = d.device_code)
                           AND cr.freeze_until IS NOT NULL
                           AND cr.freeze_until > :now
@@ -171,7 +171,7 @@ public class JdbcDeviceArchiveRequestRepository implements DeviceArchiveRequestR
         List<OffsetDateTime> results = jdbcTemplate.query(
                 """
                         SELECT freeze_until
-                        FROM device_archive_requests
+                        FROM review_archive_requests
                         WHERE target_device_code = :deviceCode
                           AND freeze_until IS NOT NULL
                           AND freeze_until > :now
@@ -187,7 +187,7 @@ public class JdbcDeviceArchiveRequestRepository implements DeviceArchiveRequestR
     public void create(DeviceArchiveRequestCreate request) {
         jdbcTemplate.update(
                 """
-                        INSERT INTO device_archive_requests (
+                        INSERT INTO review_archive_requests (
                             id,
                             request_type,
                             device_id,
@@ -242,7 +242,7 @@ public class JdbcDeviceArchiveRequestRepository implements DeviceArchiveRequestR
             DeviceArchiveUpdate archiveUpdate) {
         jdbcTemplate.update(
                 """
-                        UPDATE devices
+                        UPDATE archive_devices
                         SET name = :name,
                             model = :model,
                             manufacturer = :manufacturer,
@@ -262,7 +262,7 @@ public class JdbcDeviceArchiveRequestRepository implements DeviceArchiveRequestR
                         .addValue("updatedBy", archiveUpdate.updatedBy()));
         int updatedRequest = jdbcTemplate.update(
                 """
-                        UPDATE device_archive_requests
+                        UPDATE review_archive_requests
                         SET status = 'APPROVED',
                             reviewer_id = :reviewerId,
                             review_comment = :reviewComment,
@@ -291,7 +291,7 @@ public class JdbcDeviceArchiveRequestRepository implements DeviceArchiveRequestR
             OffsetDateTime freezeUntil) {
         int updated = jdbcTemplate.update(
                 """
-                        UPDATE device_archive_requests
+                        UPDATE review_archive_requests
                         SET status = 'APPROVED',
                             reviewer_id = :reviewerId,
                             review_comment = :reviewComment,
@@ -320,7 +320,7 @@ public class JdbcDeviceArchiveRequestRepository implements DeviceArchiveRequestR
             OffsetDateTime freezeUntil) {
         int updated = jdbcTemplate.update(
                 """
-                        UPDATE device_archive_requests
+                        UPDATE review_archive_requests
                         SET status = 'REJECTED',
                             reviewer_id = :reviewerId,
                             review_comment = :reviewComment,
@@ -358,8 +358,8 @@ public class JdbcDeviceArchiveRequestRepository implements DeviceArchiveRequestR
                     cr.review_comment,
                     cr.reviewed_at,
                     cr.freeze_until
-                FROM device_archive_requests cr
-                LEFT JOIN devices d ON d.id = cr.device_id
+                FROM review_archive_requests cr
+                LEFT JOIN archive_devices d ON d.id = cr.device_id
                 """;
     }
 

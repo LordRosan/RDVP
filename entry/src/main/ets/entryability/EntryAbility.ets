@@ -1,7 +1,8 @@
 import { AbilityConstant, Configuration, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
-import { AppThemeService } from '../services/app/AppThemeService';
+import { AppThemeService } from '../shared/theme/AppThemeService';
+import { AppRoutes } from '../shared/navigation/AppRoutes';
 
 const DOMAIN = 0x0000;
 const LOG_TAG = 'RDVP';
@@ -23,7 +24,7 @@ export default class EntryAbility extends UIAbility {
   onWindowStageCreate(windowStage: window.WindowStage): void {
     hilog.info(DOMAIN, LOG_TAG, '%{public}s', 'Ability onWindowStageCreate');
 
-    windowStage.loadContent('pages/Login', (err) => {
+    windowStage.loadContent(AppRoutes.LoginPage, (err) => {
       if (err.code) {
         hilog.error(DOMAIN, LOG_TAG, 'Failed to load the content. Cause: %{public}s', JSON.stringify(err));
         return;

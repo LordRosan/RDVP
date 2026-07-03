@@ -66,13 +66,17 @@ RDVP/
 - `operations` 表示运维领域，是领域集合名，不按普通复数理解；设备核验、故障报修、维修任务和复检任务均归入该领域。
 - `review` 表示审核领域，用于档案审核、运维审核相关模型与服务。
 - `log` 表示日志领域，用于档案、运维和审核日志查询相关模型与服务。
-- `identity` 表示身份领域，用于认证、会话、角色和权限。
-- `app` 表示应用级能力，用于主页、主题、应用设置等跨业务中心能力。
-- `common` 表示通用基础能力，用于 API 响应、通用工具和跨领域基础模型。
+- `user` 表示用户领域，用于登录、会话、角色、权限、用户中心和后续账号管理。
+- `home` 表示首页领域，用于首页入口、首页状态和首页数据看板。
+- `shared` 表示跨域公共能力，用于 API 响应、通用工具、主题、导航、安全过滤器和跨域基础模型。
 
-实体、页面、函数和变量命名应使用单数业务对象表达一个具体概念，例如 `RepairTask`、`RepairReport`、`ReinspectionReport`、`DeviceArchiveRequest`。涉及运维领域时使用 `operations`，例如 `operations` 目录、`OperationsCenter` 页面、`OperationsLogQuery`。
+实体、页面、函数和变量命名应使用单数业务对象表达一个具体概念，例如 `RepairTask`、`RepairReport`、`ReinspectionReport`、`DeviceArchiveRequest`。涉及运维领域时使用 `operations`，例如 `operations` 目录、`OperationsCenterPage` 页面、`OperationsLogQueryPage`。
+
+页面文件统一使用 `*Page` 后缀。登录界面统一为 `LoginPage`，首页统一为 `HomePage`，用户相关入口统一使用“用户中心”和 `UserCenterPage` 语义。
 
 审核入口统一使用 `ReviewCenter`、`REVIEW_CENTER_*`；日志入口统一使用 `LogCenter`、`LOG_CENTER_*_LOG_QUERY`。活动代码、API 和前端路由不得再使用 `ManagementCenter`、`RecordCenter`、`RecordQuery`、`management-records` 或 `RECORD_CENTER_*` 作为中心级命名。
+
+前端和后端均采用域优先目录结构。不得恢复旧的顶层 `pages`、`components`、`models`、`services`、`stores`、`utils`、`styles` 或后端顶层 `api`、`identity`、`security`、`config`、`dashboard`、`audit`、`domain` 技术层目录。
 
 ## 4. Git 规则
 

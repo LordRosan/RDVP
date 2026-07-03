@@ -28,7 +28,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
     public void createFaultReport(FaultReportCreate create) {
         jdbcTemplate.update(
                 """
-                        INSERT INTO fault_reports (
+                        INSERT INTO operations_fault_reports (
                             id,
                             fault_report_no,
                             device_id,
@@ -95,7 +95,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                             accepted_task_id,
                             created_at,
                             updated_at
-                        FROM fault_reports
+                        FROM operations_fault_reports
                         WHERE id = :idOrNo
                            OR fault_report_no = :idOrNo
                         """,
@@ -109,7 +109,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
         Integer count = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM fault_reports
+                        FROM operations_fault_reports
                         WHERE device_id = :deviceId
                           AND status <> 'CLOSED'
                         """,
@@ -169,8 +169,8 @@ public class JdbcOperationsRepository implements OperationsRepository {
                     d.latitude,
                     f.created_at,
                     'REPAIR' AS task_type
-                FROM fault_reports f
-                JOIN devices d ON d.id = f.device_id
+                FROM operations_fault_reports f
+                JOIN archive_devices d ON d.id = f.device_id
                 """.formatted(repairDistanceExpr);
 
         List<String> geoConditions = new ArrayList<>();
@@ -195,7 +195,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
         reinspectionConditions.add("d2.deleted_at IS NULL");
         reinspectionConditions.add("""
                 NOT EXISTS (
-                    SELECT 1 FROM repair_tasks rt2
+                    SELECT 1 FROM operations_repair_tasks rt2
                     WHERE rt2.fault_report_id = f2.id
                       AND rt2.task_type = 'REINSPECTION'
                       AND rt2.status IN ('ACCEPTED', 'PROCESSING')
@@ -224,8 +224,8 @@ public class JdbcOperationsRepository implements OperationsRepository {
                     d2.latitude,
                     f2.created_at,
                     'REINSPECTION' AS task_type
-                FROM fault_reports f2
-                JOIN devices d2 ON d2.id = f2.device_id
+                FROM operations_fault_reports f2
+                JOIN archive_devices d2 ON d2.id = f2.device_id
                 """.formatted(reinspectionDistanceExpr);
 
         String reinspectionWhere = " WHERE " + String.join(" AND ", reinspectionConditions);
@@ -253,8 +253,8 @@ public class JdbcOperationsRepository implements OperationsRepository {
         Long count = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM fault_reports f
-                        JOIN devices d ON d.id = f.device_id
+                        FROM operations_fault_reports f
+                        JOIN archive_devices d ON d.id = f.device_id
                         WHERE f.status = 'PENDING_ACCEPTANCE'
                           AND d.deleted_at IS NULL
                         """,
@@ -270,18 +270,18 @@ public class JdbcOperationsRepository implements OperationsRepository {
                         SELECT count(*)
                         FROM (
                             SELECT f.id
-                            FROM fault_reports f
-                            JOIN devices d ON d.id = f.device_id
+                            FROM operations_fault_reports f
+                            JOIN archive_devices d ON d.id = f.device_id
                             WHERE f.status = 'PENDING_ACCEPTANCE'
                               AND d.deleted_at IS NULL
                             UNION ALL
                             SELECT f2.id
-                            FROM fault_reports f2
-                            JOIN devices d2 ON d2.id = f2.device_id
+                            FROM operations_fault_reports f2
+                            JOIN archive_devices d2 ON d2.id = f2.device_id
                             WHERE f2.status = 'PENDING_REINSPECTION'
                               AND d2.deleted_at IS NULL
                               AND NOT EXISTS (
-                                  SELECT 1 FROM repair_tasks rt2
+                                  SELECT 1 FROM operations_repair_tasks rt2
                                   WHERE rt2.fault_report_id = f2.id
                                     AND rt2.task_type = 'REINSPECTION'
                                     AND rt2.status IN ('ACCEPTED', 'PROCESSING')
@@ -298,7 +298,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
         Long count = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM fault_reports
+                        FROM operations_fault_reports
                         """,
                 Map.of(),
                 Long.class);
@@ -310,7 +310,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
         Long count = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM repair_tasks
+                        FROM operations_repair_tasks
                         """,
                 Map.of(),
                 Long.class);
@@ -322,7 +322,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
         Integer count = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM repair_tasks
+                        FROM operations_repair_tasks
                         WHERE fault_report_id = :faultReportId
                           AND status <> 'REPORT_SUBMITTED'
                         """,
@@ -336,7 +336,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
         Integer count = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM repair_tasks
+                        FROM operations_repair_tasks
                         WHERE fault_report_id = :faultReportId
                           AND task_type = 'REINSPECTION'
                           AND status IN ('ACCEPTED', 'PROCESSING')
@@ -351,7 +351,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
         Integer count = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM repair_tasks
+                        FROM operations_repair_tasks
                         WHERE maintainer_id = :maintainerId
                           AND status IN ('ACCEPTED', 'PROCESSING')
                         """,
@@ -364,7 +364,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
     public void createRepairTask(RepairTaskCreate create) {
         jdbcTemplate.update(
                 """
-                        INSERT INTO repair_tasks (
+                        INSERT INTO operations_repair_tasks (
                             id,
                             repair_task_no,
                             fault_report_id,
@@ -405,7 +405,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
     public boolean markFaultAccepted(String faultReportId, String repairTaskId, OffsetDateTime updatedAt) {
         int updated = jdbcTemplate.update(
                 """
-                        UPDATE fault_reports
+                        UPDATE operations_fault_reports
                         SET status = 'ACCEPTED',
                             accepted_task_id = :repairTaskId,
                             updated_at = :updatedAt
@@ -434,9 +434,9 @@ public class JdbcOperationsRepository implements OperationsRepository {
                             f.severity,
                             rt.accepted_at,
                             rt.status
-                        FROM repair_tasks rt
-                        JOIN fault_reports f ON f.id = rt.fault_report_id
-                        JOIN devices d ON d.id = f.device_id
+                        FROM operations_repair_tasks rt
+                        JOIN operations_fault_reports f ON f.id = rt.fault_report_id
+                        JOIN archive_devices d ON d.id = f.device_id
                         WHERE rt.maintainer_id = :maintainerId
                           AND rt.status <> 'REPORT_SUBMITTED'
                           AND d.deleted_at IS NULL
@@ -463,8 +463,8 @@ public class JdbcOperationsRepository implements OperationsRepository {
                             rt.accepted_latitude,
                             rt.accepted_at,
                             rt.completed_at
-                        FROM repair_tasks rt
-                        JOIN fault_reports f ON f.id = rt.fault_report_id
+                        FROM operations_repair_tasks rt
+                        JOIN operations_fault_reports f ON f.id = rt.fault_report_id
                         WHERE rt.id = :idOrNo
                            OR rt.repair_task_no = :idOrNo
                         """,
@@ -488,11 +488,11 @@ public class JdbcOperationsRepository implements OperationsRepository {
                             d.latitude,
                             latest_report.repaired_at,
                             f.status
-                        FROM fault_reports f
-                        JOIN devices d ON d.id = f.device_id
+                        FROM operations_fault_reports f
+                        JOIN archive_devices d ON d.id = f.device_id
                         LEFT JOIN LATERAL (
                             SELECT rr.repaired_at
-                            FROM repair_reports rr
+                            FROM operations_repair_reports rr
                             WHERE rr.fault_report_id = f.id
                             ORDER BY rr.created_at DESC
                             LIMIT 1
@@ -511,8 +511,8 @@ public class JdbcOperationsRepository implements OperationsRepository {
         Long count = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM fault_reports f
-                        JOIN devices d ON d.id = f.device_id
+                        FROM operations_fault_reports f
+                        JOIN archive_devices d ON d.id = f.device_id
                         WHERE f.status = 'PENDING_REINSPECTION'
                           AND d.deleted_at IS NULL
                         """,
@@ -525,7 +525,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
     public void createRepairReport(RepairReportCreate create) {
         jdbcTemplate.update(
                 """
-                        INSERT INTO repair_reports (
+                        INSERT INTO operations_repair_reports (
                             id,
                             repair_report_no,
                             repair_task_id,
@@ -570,7 +570,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
         Long count = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM repair_reports
+                        FROM operations_repair_reports
                         """,
                 Map.of(),
                 Long.class);
@@ -593,7 +593,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                             parts_used,
                             requires_reinspection,
                             created_at
-                        FROM repair_reports
+                        FROM operations_repair_reports
                         WHERE fault_report_id = :faultReportId
                         ORDER BY created_at DESC
                         LIMIT 1
@@ -607,7 +607,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
     public boolean markRepairTaskReported(String repairTaskId, OffsetDateTime completedAt) {
         int updated = jdbcTemplate.update(
                 """
-                        UPDATE repair_tasks
+                        UPDATE operations_repair_tasks
                         SET status = 'REPORT_SUBMITTED',
                             completed_at = :completedAt,
                             updated_at = :completedAt
@@ -624,7 +624,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
     public boolean markReinspectionTaskReported(String faultReportId, OffsetDateTime completedAt) {
         int updated = jdbcTemplate.update(
                 """
-                        UPDATE repair_tasks
+                        UPDATE operations_repair_tasks
                         SET status = 'REPORT_SUBMITTED',
                             completed_at = :completedAt,
                             updated_at = :completedAt
@@ -646,7 +646,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
             OffsetDateTime updatedAt) {
         int updated = jdbcTemplate.update(
                 """
-                        UPDATE fault_reports
+                        UPDATE operations_fault_reports
                         SET status = :status,
                             closed_at = CASE WHEN :status = 'CLOSED' THEN :updatedAt ELSE closed_at END,
                             accepted_task_id = CASE WHEN :status = 'PENDING_ACCEPTANCE' THEN NULL ELSE accepted_task_id END,
@@ -666,7 +666,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
     public void createReinspectionReport(ReinspectionReportCreate create) {
         jdbcTemplate.update(
                 """
-                        INSERT INTO reinspection_reports (
+                        INSERT INTO operations_reinspection_reports (
                             id,
                             reinspection_report_no,
                             fault_report_id,
@@ -705,7 +705,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
         Long count = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM reinspection_reports
+                        FROM operations_reinspection_reports
                         """,
                 Map.of(),
                 Long.class);
@@ -716,7 +716,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
     public void createOperationsReviewRequest(OperationsReviewRequestCreate create) {
         jdbcTemplate.update(
                 """
-                        INSERT INTO operations_review_requests (
+                        INSERT INTO review_operations_requests (
                             id,
                             request_type,
                             target_id,
@@ -801,9 +801,9 @@ public class JdbcOperationsRepository implements OperationsRepository {
         Long total = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM operations_review_requests rr
-                        JOIN devices d ON d.id = rr.device_id
-                        LEFT JOIN users op ON op.id = rr.operator_id
+                        FROM review_operations_requests rr
+                        JOIN archive_devices d ON d.id = rr.device_id
+                        LEFT JOIN user_accounts op ON op.id = rr.operator_id
                         """
                         + where,
                 parameters,
@@ -820,7 +820,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
             OffsetDateTime reviewedAt) {
         int updated = jdbcTemplate.update(
                 """
-                        UPDATE operations_review_requests
+                        UPDATE review_operations_requests
                         SET status = :status,
                             reviewer_id = :reviewerId,
                             review_comment = :reviewComment,
@@ -843,7 +843,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
         Long count = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM operations_review_requests
+                        FROM review_operations_requests
                         WHERE status = 'PENDING_REVIEW'
                         """,
                 Map.of(),
@@ -856,7 +856,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
         Long count = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM operations_review_requests
+                        FROM review_operations_requests
                         WHERE status IN ('APPROVED', 'REJECTED')
                         """,
                 Map.of(),
@@ -883,9 +883,9 @@ public class JdbcOperationsRepository implements OperationsRepository {
                     rr.reviewer_id,
                     rr.review_comment,
                     rr.reviewed_at
-                FROM operations_review_requests rr
-                JOIN devices d ON d.id = rr.device_id
-                LEFT JOIN users op ON op.id = rr.operator_id
+                FROM review_operations_requests rr
+                JOIN archive_devices d ON d.id = rr.device_id
+                LEFT JOIN user_accounts op ON op.id = rr.operator_id
                 """;
     }
 

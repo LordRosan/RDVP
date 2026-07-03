@@ -17,16 +17,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.rmf.rdvp.archive.DeviceArchive;
 import com.rmf.rdvp.archive.DeviceArchiveRepository;
-import com.rmf.rdvp.archive.DeviceVerificationReport;
-import com.rmf.rdvp.archive.DeviceVerificationReportCreate;
-import com.rmf.rdvp.archive.DeviceVerificationReportRepository;
-import com.rmf.rdvp.archive.DeviceVerificationResult;
-import com.rmf.rdvp.audit.AuditAction;
-import com.rmf.rdvp.audit.AuditLogService;
-import com.rmf.rdvp.domain.common.BusinessException;
-import com.rmf.rdvp.domain.common.ErrorCode;
-import com.rmf.rdvp.identity.AuthenticatedUser;
-import com.rmf.rdvp.identity.PermissionCode;
+import com.rmf.rdvp.log.LogAction;
+import com.rmf.rdvp.log.LogEntryService;
+import com.rmf.rdvp.shared.error.BusinessException;
+import com.rmf.rdvp.shared.error.ErrorCode;
+import com.rmf.rdvp.user.AuthenticatedUser;
+import com.rmf.rdvp.user.PermissionCode;
 
 @Service
 public class OperationsService {
@@ -50,17 +46,17 @@ public class OperationsService {
     private final DeviceArchiveRepository archiveRepository;
     private final DeviceVerificationReportRepository verificationRepository;
     private final OperationsRepository operationsRepository;
-    private final AuditLogService auditLogService;
+    private final LogEntryService logEntryService;
 
     public OperationsService(
             DeviceArchiveRepository archiveRepository,
             DeviceVerificationReportRepository verificationRepository,
             OperationsRepository operationsRepository,
-            AuditLogService auditLogService) {
+            LogEntryService logEntryService) {
         this.archiveRepository = archiveRepository;
         this.verificationRepository = verificationRepository;
         this.operationsRepository = operationsRepository;
-        this.auditLogService = auditLogService;
+        this.logEntryService = logEntryService;
     }
 
     @Transactional
@@ -148,8 +144,8 @@ public class OperationsService {
         archiveRepository.updateStatus(device.id(), "FAULTED", reporter.id());
         FaultReportRecord record = operationsRepository.findFaultReportByIdOrNo(create.id())
                 .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR));
-        auditLogService.recordSuccess(
-                AuditAction.FAULT_REPORT,
+        logEntryService.recordSuccess(
+                LogAction.FAULT_REPORT,
                 record.id(),
                 record.faultReportNo(),
                 reporter,
@@ -167,6 +163,55 @@ public class OperationsService {
                         record.description()),
                 record.createdAt());
         return record;
+    }
+
+    @Transactional
+    public DeviceVerificationReport createVerificationReport(
+            String deviceId,
+            DeviceVerificationResult result,
+            String description,
+            String remark,
+            String verifiedAt,
+            AuthenticatedUser operator) {
+        DeviceArchive device = null;
+        try {
+            DeviceVerificationResult normalizedResult = requireEnum(result, "result");
+            device = archiveRepository.findById(normalizeId(deviceId, "deviceId"))
+                    .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
+            OffsetDateTime normalizedVerifiedAt = parseDateTime(verifiedAt, "verifiedAt");
+            OffsetDateTime now = now();
+            DeviceVerificationReportCreate create = new DeviceVerificationReportCreate(
+                    "verification-" + UUID.randomUUID(),
+                    device.id(),
+                    operator.id(),
+                    normalizedResult,
+                    normalizeRequiredText(
+                            description,
+                            "description",
+                            MAX_VERIFICATION_DESCRIPTION_LENGTH,
+                            ErrorCode.DEVICE_VERIFICATION_INVALID),
+                    normalizeOptionalText(
+                            remark,
+                            MAX_VERIFICATION_REMARK_LENGTH,
+                            ErrorCode.DEVICE_VERIFICATION_INVALID),
+                    normalizedVerifiedAt,
+                    now);
+
+            verificationRepository.create(create);
+            archiveRepository.updateLastVerificationTime(device.id(), normalizedVerifiedAt, operator.id());
+            DeviceVerificationReport report = verificationRepository.findById(create.id())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR));
+            logEntryService.recordSuccess(
+                    LogAction.DEVICE_VERIFICATION,
+                    report.id(),
+                    device.deviceCode(),
+                    operator,
+                    "Submitted device verification report.");
+            return report;
+        } catch (BusinessException exception) {
+            recordDeviceVerificationFailure(deviceId, device, operator, "设备核验提交失败", exception);
+            throw exception;
+        }
     }
 
     @Transactional
@@ -262,14 +307,14 @@ public class OperationsService {
                     .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR));
             FaultReportRecord faultReport = operationsRepository.findFaultReportByIdOrNo(faultCreate.id())
                     .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR));
-            auditLogService.recordSuccess(
-                    AuditAction.DEVICE_VERIFICATION,
+            logEntryService.recordSuccess(
+                    LogAction.DEVICE_VERIFICATION,
                     verificationReport.id(),
                     device.deviceCode(),
                     operator,
                     "Submitted abnormal device verification report.");
-            auditLogService.recordSuccess(
-                    AuditAction.FAULT_REPORT,
+            logEntryService.recordSuccess(
+                    LogAction.FAULT_REPORT,
                     faultReport.id(),
                     faultReport.faultReportNo(),
                     operator,
@@ -299,7 +344,7 @@ public class OperationsService {
                     faultReport.createdAt());
             return new DeviceVerificationAndFaultReportResult(verificationReport, faultReport);
         } catch (BusinessException exception) {
-            recordDeviceVerificationFailure(deviceId, device, operator, exception);
+            recordDeviceVerificationFailure(deviceId, device, operator, "设备核验联动报修失败", exception);
             throw exception;
         }
     }
@@ -405,8 +450,8 @@ public class OperationsService {
         }
 
         archiveRepository.updateStatus(faultReport.deviceId(), "UNDER_REPAIR", maintainer.id());
-        auditLogService.recordSuccess(
-                AuditAction.REPAIR_TASK_ACCEPT,
+        logEntryService.recordSuccess(
+                LogAction.REPAIR_TASK_ACCEPT,
                 create.id(),
                 create.repairTaskNo(),
                 maintainer,
@@ -499,8 +544,8 @@ public class OperationsService {
                         record.result().name(),
                         record.processDescription()),
                 record.createdAt());
-        auditLogService.recordSuccess(
-                AuditAction.REPAIR_REPORT,
+        logEntryService.recordSuccess(
+                LogAction.REPAIR_REPORT,
                 record.id(),
                 record.repairReportNo(),
                 maintainer,
@@ -574,8 +619,8 @@ public class OperationsService {
             throw new BusinessException(ErrorCode.REINSPECTION_REQUIRED, "Failed to create reinspection task.");
         }
 
-        auditLogService.recordSuccess(
-                AuditAction.REPAIR_TASK_ACCEPT,
+        logEntryService.recordSuccess(
+                LogAction.REPAIR_TASK_ACCEPT,
                 create.id(),
                 create.repairTaskNo(),
                 reinspector,
@@ -667,8 +712,8 @@ public class OperationsService {
                         report.result().name(),
                         report.description()),
                 report.createdAt());
-        auditLogService.recordSuccess(
-                AuditAction.REINSPECTION_REPORT,
+        logEntryService.recordSuccess(
+                LogAction.REINSPECTION_REPORT,
                 report.id(),
                 report.reinspectionReportNo(),
                 reinspector,
@@ -733,8 +778,8 @@ public class OperationsService {
 
         OperationsReviewRequest updated = operationsRepository.findOperationsReviewRequestById(request.id())
                 .orElseThrow(() -> new BusinessException(ErrorCode.OPERATIONS_REVIEW_REQUEST_NOT_FOUND));
-        auditLogService.recordSuccess(
-                AuditAction.OPERATIONS_REVIEW,
+        logEntryService.recordSuccess(
+                LogAction.OPERATIONS_REVIEW,
                 updated.id(),
                 updated.targetNo(),
                 reviewOperator,
@@ -785,9 +830,9 @@ public class OperationsService {
             String faultReportId,
             AuthenticatedUser maintainer,
             BusinessException exception) {
-        String normalizedFaultReportId = normalizeAuditTarget(faultReportId);
-        auditLogService.recordFailure(
-                AuditAction.REPAIR_TASK_ACCEPT,
+        String normalizedFaultReportId = normalizeLogTarget(faultReportId);
+        logEntryService.recordFailure(
+                LogAction.REPAIR_TASK_ACCEPT,
                 normalizedFaultReportId,
                 resolveFaultReportTargetNo(normalizedFaultReportId),
                 maintainer,
@@ -798,9 +843,9 @@ public class OperationsService {
             String deviceCode,
             AuthenticatedUser reporter,
             BusinessException exception) {
-        String normalizedDeviceCode = normalizeAuditDeviceCode(deviceCode);
-        auditLogService.recordFailure(
-                AuditAction.FAULT_REPORT,
+        String normalizedDeviceCode = normalizeLogDeviceCode(deviceCode);
+        logEntryService.recordFailure(
+                LogAction.FAULT_REPORT,
                 resolveDeviceIdByCode(normalizedDeviceCode),
                 normalizedDeviceCode,
                 reporter,
@@ -811,23 +856,24 @@ public class OperationsService {
             String deviceId,
             DeviceArchive device,
             AuthenticatedUser operator,
+            String messagePrefix,
             BusinessException exception) {
-        String normalizedDeviceId = normalizeAuditTarget(deviceId);
-        auditLogService.recordFailure(
-                AuditAction.DEVICE_VERIFICATION,
+        String normalizedDeviceId = normalizeLogTarget(deviceId);
+        logEntryService.recordFailure(
+                LogAction.DEVICE_VERIFICATION,
                 device == null ? normalizedDeviceId : device.id(),
                 device == null ? resolveDeviceCodeById(normalizedDeviceId) : device.deviceCode(),
                 operator,
-                "设备核验联动报修失败：%s。".formatted(exception.getErrorCode().code()));
+                "%s：%s。".formatted(messagePrefix, exception.getErrorCode().code()));
     }
 
     private void recordRepairReportFailure(
             String repairTaskId,
             AuthenticatedUser maintainer,
             BusinessException exception) {
-        String normalizedRepairTaskId = normalizeAuditTarget(repairTaskId);
-        auditLogService.recordFailure(
-                AuditAction.REPAIR_REPORT,
+        String normalizedRepairTaskId = normalizeLogTarget(repairTaskId);
+        logEntryService.recordFailure(
+                LogAction.REPAIR_REPORT,
                 normalizedRepairTaskId,
                 resolveRepairTaskTargetNo(normalizedRepairTaskId),
                 maintainer,
@@ -838,9 +884,9 @@ public class OperationsService {
             String faultReportId,
             AuthenticatedUser reinspector,
             BusinessException exception) {
-        String normalizedFaultReportId = normalizeAuditTarget(faultReportId);
-        auditLogService.recordFailure(
-                AuditAction.REINSPECTION_REPORT,
+        String normalizedFaultReportId = normalizeLogTarget(faultReportId);
+        logEntryService.recordFailure(
+                LogAction.REINSPECTION_REPORT,
                 normalizedFaultReportId,
                 resolveFaultReportTargetNo(normalizedFaultReportId),
                 reinspector,
@@ -851,9 +897,9 @@ public class OperationsService {
             String faultReportId,
             AuthenticatedUser reinspector,
             BusinessException exception) {
-        String normalizedFaultReportId = normalizeAuditTarget(faultReportId);
-        auditLogService.recordFailure(
-                AuditAction.REPAIR_TASK_ACCEPT,
+        String normalizedFaultReportId = normalizeLogTarget(faultReportId);
+        logEntryService.recordFailure(
+                LogAction.REPAIR_TASK_ACCEPT,
                 normalizedFaultReportId,
                 resolveFaultReportTargetNo(normalizedFaultReportId),
                 reinspector,
@@ -1042,13 +1088,13 @@ public class OperationsService {
         return normalized;
     }
 
-    private String normalizeAuditTarget(String value) {
+    private String normalizeLogTarget(String value) {
         String normalized = value == null ? "" : value.trim();
         return normalized.isBlank() ? null : normalized;
     }
 
-    private String normalizeAuditDeviceCode(String value) {
-        String normalized = normalizeAuditTarget(value);
+    private String normalizeLogDeviceCode(String value) {
+        String normalized = normalizeLogTarget(value);
         return normalized == null ? null : normalized.toUpperCase(Locale.ROOT);
     }
 

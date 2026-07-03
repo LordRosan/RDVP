@@ -12,7 +12,7 @@
 
 ## 1. 设计范围
 
-本文档定义 RDVP 后端服务对移动端应用提供的 HTTP API。当前已实现接口覆盖用户认证、设备档案查询、二维码校验、设备核验、设备档案申请、故障报修、维修任务、维修报告、复检报告、档案审核、运维审核、日志查询和审计日志等业务。附件、离线同步和通知接口为后续增强预留，不属于当前可调用 API。
+本文档定义 RDVP 后端服务对移动端应用提供的 HTTP API。当前已实现接口覆盖用户认证、设备档案查询、二维码校验、设备核验、设备档案申请、故障报修、维修任务、维修报告、复检报告、档案审核、运维审核、日志查询和底层日志条目等业务。附件、离线同步和通知接口为后续增强预留，不属于当前可调用 API。
 
 API 采用版本化路径，第一版统一使用：
 
@@ -237,7 +237,7 @@ POST /api/v1/auth/logout
 ### 5.5 主页数据看板
 
 ```text
-GET /api/v1/dashboard
+GET /api/v1/home/dashboard
 ```
 
 权限要求：登录用户。服务端会按当前用户权限裁剪响应字段。
@@ -253,7 +253,8 @@ GET /api/v1/dashboard
     "archiveCreates": 1,
     "archiveDeletes": 0,
     "archiveUpdates": 2,
-    "archiveQueries": 8
+    "archiveQueries": 8,
+    "archiveExports": 1
   },
   "operations": {
     "taskPoolTotal": 4,
@@ -266,6 +267,13 @@ GET /api/v1/dashboard
     "reviewedTotal": 5,
     "pendingArchiveReviews": 1,
     "pendingOperationsReviews": 0
+  },
+  "log": {
+    "logTotal": 18,
+    "archiveOperationLogs": 6,
+    "archiveReviewLogs": 4,
+    "operationsOperationLogs": 5,
+    "operationsReviewLogs": 3
   }
 }
 ```
@@ -278,7 +286,8 @@ GET /api/v1/dashboard
 | `archive.archiveCreates` | 已审核通过的新增档案申请数 |
 | `archive.archiveDeletes` | 已审核通过的删除档案申请数 |
 | `archive.archiveUpdates` | 已审核通过的修改档案申请数 |
-| `archive.archiveQueries` | 成功查询设备档案的审计记录数 |
+| `archive.archiveQueries` | 成功查询设备档案的日志数 |
+| `archive.archiveExports` | 成功导出设备二维码的日志数 |
 | `operations.taskPoolTotal` | 当前任务池中的维修任务与复检任务总数 |
 | `operations.verifications` | 设备核验报告总数 |
 | `operations.faultReports` | 故障报修记录总数 |
@@ -287,6 +296,11 @@ GET /api/v1/dashboard
 | `review.reviewedTotal` | 已完成审核的档案申请和运维审核总数 |
 | `review.pendingArchiveReviews` | 档案审核中的待审核申请数 |
 | `review.pendingOperationsReviews` | 运维审核中的待审核数 |
+| `log.logTotal` | 当前用户可见日志分类数量之和 |
+| `log.archiveOperationLogs` | 档案操作日志数量 |
+| `log.archiveReviewLogs` | 档案审核日志数量 |
+| `log.operationsOperationLogs` | 运维操作日志数量 |
+| `log.operationsReviewLogs` | 运维审核日志数量 |
 
 权限裁剪：
 
@@ -297,6 +311,10 @@ GET /api/v1/dashboard
 | `review.reviewedTotal` | 具备审核日志查询权限 |
 | `review.pendingArchiveReviews` | 具备档案申请审核权限 |
 | `review.pendingOperationsReviews` | 具备运维审核权限 |
+| `log.archiveOperationLogs` | 具备档案操作日志查询权限 |
+| `log.archiveReviewLogs` | 具备档案审核日志查询权限 |
+| `log.operationsOperationLogs` | 具备运维操作日志查询权限 |
+| `log.operationsReviewLogs` | 具备运维审核日志查询权限 |
 
 典型角色可见范围：
 
@@ -1080,24 +1098,20 @@ GET /api/v1/log-center/logs
 
 附件上传、离线批量同步和通知查询属于后续增强能力。当前后端未开放 `/api/v1/attachments`、`/api/v1/sync/offline-records` 和 `/api/v1/notifications/*` 路由；客户端不得按这些预留设计发起当前版本联调。
 
-## 17. 审计日志接口
+## 17. 底层日志条目接口
 
-### 17.1 查询操作日志
+### 17.1 查询底层日志条目
 
 ```text
-GET /api/v1/audit-logs
+GET /api/v1/log-entries
 ```
 
 查询参数：
 
 | 参数 | 说明 |
 | --- | --- |
-| `actorId` | 操作人 ID |
 | `action` | 操作类型 |
-| `targetType` | 操作对象类型 |
-| `targetId` | 操作对象 ID |
-| `from` | 开始时间 |
-| `to` | 结束时间 |
+| `keyword` | 目标编号、目标 ID、操作人或描述关键词 |
 | `page` | 页码 |
 | `pageSize` | 每页数量 |
 
@@ -1107,9 +1121,8 @@ GET /api/v1/audit-logs
 {
   "items": [
     {
-      "id": "audit-log-id",
+      "id": "log-entry-id",
       "action": "FAULT_REPORT",
-      "targetType": "FAULT_REPORT",
       "targetId": "fault-report-id",
       "targetNo": "FR-20260527-0001",
       "actorId": "user-id",
@@ -1207,7 +1220,7 @@ PASSED
 FAILED
 ```
 
-### 18.9 操作记录状态
+### 18.9 日志状态
 
 ```text
 SUCCESS

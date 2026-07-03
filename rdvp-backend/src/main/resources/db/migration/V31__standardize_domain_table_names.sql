@@ -1,0 +1,74 @@
+ALTER TABLE IF EXISTS devices RENAME TO archive_devices;
+ALTER TABLE IF EXISTS device_qrcodes RENAME TO archive_device_qr_codes;
+ALTER TABLE IF EXISTS device_archive_requests RENAME TO review_archive_requests;
+ALTER TABLE IF EXISTS device_verification_reports RENAME TO operations_device_verification_reports;
+ALTER TABLE IF EXISTS fault_reports RENAME TO operations_fault_reports;
+ALTER TABLE IF EXISTS repair_tasks RENAME TO operations_repair_tasks;
+ALTER TABLE IF EXISTS repair_reports RENAME TO operations_repair_reports;
+ALTER TABLE IF EXISTS reinspection_reports RENAME TO operations_reinspection_reports;
+ALTER TABLE IF EXISTS operations_review_requests RENAME TO review_operations_requests;
+ALTER TABLE IF EXISTS audit_logs RENAME TO log_entries;
+ALTER TABLE IF EXISTS users RENAME TO user_accounts;
+ALTER TABLE IF EXISTS user_roles RENAME TO user_account_roles;
+ALTER TABLE IF EXISTS user_permissions RENAME TO user_account_permissions;
+ALTER TABLE IF EXISTS token_sessions RENAME TO user_token_sessions;
+ALTER TABLE IF EXISTS password_verification_attempts RENAME TO user_password_verification_attempts;
+ALTER TABLE IF EXISTS login_attempts RENAME TO user_login_attempts;
+
+ALTER INDEX IF EXISTS idx_devices_status RENAME TO idx_archive_devices_status;
+ALTER INDEX IF EXISTS idx_devices_name RENAME TO idx_archive_devices_name;
+ALTER INDEX IF EXISTS idx_devices_model RENAME TO idx_archive_devices_model;
+ALTER INDEX IF EXISTS idx_devices_location RENAME TO idx_archive_devices_location;
+
+ALTER INDEX IF EXISTS idx_device_qrcodes_device_id RENAME TO idx_archive_device_qr_codes_device;
+ALTER INDEX IF EXISTS idx_device_qrcodes_status RENAME TO idx_archive_device_qr_codes_status;
+ALTER INDEX IF EXISTS idx_device_qrcodes_expires_at RENAME TO idx_archive_device_qr_codes_expires;
+
+ALTER INDEX IF EXISTS idx_device_archive_requests_device_status RENAME TO idx_review_archive_requests_device_status;
+ALTER INDEX IF EXISTS idx_device_archive_requests_freeze_until RENAME TO idx_review_archive_requests_freeze_until;
+ALTER INDEX IF EXISTS ux_device_archive_requests_pending_device RENAME TO ux_review_archive_requests_pending_device;
+
+ALTER INDEX IF EXISTS idx_device_verification_reports_device_created RENAME TO idx_operations_device_verification_reports_device_created;
+ALTER INDEX IF EXISTS idx_device_verification_reports_operator_created RENAME TO idx_operations_device_verification_reports_operator_created;
+ALTER INDEX IF EXISTS idx_device_verification_reports_result RENAME TO idx_operations_device_verification_reports_result;
+
+ALTER INDEX IF EXISTS idx_fault_reports_device_status RENAME TO idx_operations_fault_reports_device_status;
+ALTER INDEX IF EXISTS idx_fault_reports_status_created RENAME TO idx_operations_fault_reports_status_created;
+ALTER INDEX IF EXISTS idx_fault_reports_severity RENAME TO idx_operations_fault_reports_severity;
+ALTER INDEX IF EXISTS idx_fault_reports_reporter RENAME TO idx_operations_fault_reports_reporter;
+
+ALTER INDEX IF EXISTS idx_repair_tasks_maintainer_status RENAME TO idx_operations_repair_tasks_maintainer_status;
+ALTER INDEX IF EXISTS idx_repair_tasks_fault_status RENAME TO idx_operations_repair_tasks_fault_status;
+ALTER INDEX IF EXISTS ux_repair_tasks_active_fault RENAME TO ux_operations_repair_tasks_active_fault;
+
+ALTER INDEX IF EXISTS idx_repair_reports_fault RENAME TO idx_operations_repair_reports_fault;
+ALTER INDEX IF EXISTS idx_repair_reports_maintainer RENAME TO idx_operations_repair_reports_maintainer;
+ALTER INDEX IF EXISTS idx_repair_reports_result RENAME TO idx_operations_repair_reports_result;
+
+ALTER INDEX IF EXISTS idx_reinspection_reports_fault RENAME TO idx_operations_reinspection_reports_fault;
+ALTER INDEX IF EXISTS idx_reinspection_reports_repair_report RENAME TO idx_operations_reinspection_reports_repair_report;
+ALTER INDEX IF EXISTS idx_reinspection_reports_reinspector RENAME TO idx_operations_reinspection_reports_reinspector;
+ALTER INDEX IF EXISTS idx_reinspection_reports_result RENAME TO idx_operations_reinspection_reports_result;
+ALTER INDEX IF EXISTS ux_reinspection_reports_repair_report RENAME TO ux_operations_reinspection_reports_repair_report;
+
+ALTER INDEX IF EXISTS ux_operations_review_requests_target RENAME TO ux_review_operations_requests_target;
+ALTER INDEX IF EXISTS idx_operations_review_requests_status_submitted RENAME TO idx_review_operations_requests_status_submitted;
+ALTER INDEX IF EXISTS idx_operations_review_requests_reviewer RENAME TO idx_review_operations_requests_reviewer;
+ALTER INDEX IF EXISTS idx_operations_review_requests_fault RENAME TO idx_review_operations_requests_fault;
+
+ALTER INDEX IF EXISTS idx_audit_logs_occurred_at RENAME TO idx_log_entries_occurred_at;
+ALTER INDEX IF EXISTS idx_audit_logs_action_occurred_at RENAME TO idx_log_entries_action_occurred_at;
+ALTER INDEX IF EXISTS idx_audit_logs_actor_occurred_at RENAME TO idx_log_entries_actor_occurred_at;
+ALTER INDEX IF EXISTS idx_audit_logs_target RENAME TO idx_log_entries_target;
+
+ALTER INDEX IF EXISTS idx_users_status RENAME TO idx_user_accounts_status;
+ALTER INDEX IF EXISTS idx_users_display_name RENAME TO idx_user_accounts_display_name;
+ALTER INDEX IF EXISTS idx_user_roles_role_code RENAME TO idx_user_account_roles_role_code;
+ALTER INDEX IF EXISTS idx_user_permissions_permission_code RENAME TO idx_user_account_permissions_permission_code;
+
+ALTER INDEX IF EXISTS idx_token_sessions_user_expires RENAME TO idx_user_token_sessions_user_expires;
+ALTER INDEX IF EXISTS idx_token_sessions_expires RENAME TO idx_user_token_sessions_expires;
+ALTER INDEX IF EXISTS idx_token_sessions_revoked RENAME TO idx_user_token_sessions_revoked;
+ALTER INDEX IF EXISTS idx_password_verification_attempts_locked_until RENAME TO idx_user_password_verification_attempts_locked_until;
+ALTER INDEX IF EXISTS idx_password_verification_attempts_verified_until RENAME TO idx_user_password_verification_attempts_verified_until;
+ALTER INDEX IF EXISTS idx_login_attempts_locked_until RENAME TO idx_user_login_attempts_locked_until;

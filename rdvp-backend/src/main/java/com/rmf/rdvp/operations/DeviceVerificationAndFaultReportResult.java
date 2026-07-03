@@ -1,6 +1,6 @@
 package com.rmf.rdvp.operations;
 
-import com.rmf.rdvp.archive.DeviceVerificationReport;
+import com.rmf.rdvp.operations.DeviceVerificationReport;
 
 public record DeviceVerificationAndFaultReportResult(
         DeviceVerificationReport verificationReport,

@@ -4,7 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
-import com.rmf.rdvp.config.RdvpRuntimeProperties;
+import com.rmf.rdvp.shared.config.RdvpRuntimeProperties;
 
 @SpringBootApplication
 @EnableConfigurationProperties(RdvpRuntimeProperties.class)

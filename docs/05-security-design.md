@@ -12,7 +12,7 @@
 
 ## 1. 设计范围
 
-本文档定义 RDVP 的安全边界、身份认证、访问授权、二维码防伪、数据保护、当前在线提交安全、审计日志和密钥管理要求。附件安全、离线同步安全、消息通知安全和独立安全事件表为后续增强范围。
+本文档定义 RDVP 的安全边界、身份认证、访问授权、二维码防伪、数据保护、当前在线提交安全、日志追踪和密钥管理要求。附件安全、离线同步安全、消息通知安全和独立安全事件表为后续增强范围。
 
 安全设计覆盖以下系统组成：
 
@@ -29,7 +29,7 @@ RDVP 的安全目标如下：
 - 确认访问者身份，防止未授权用户访问业务功能。
 - 控制用户权限，防止越权查询、越权修改和越权审核。
 - 校验设备二维码真实性，降低设备伪造和二维码伪造风险。
-- 保护设备数据、故障数据、维修数据、附件和审计数据。
+- 保护设备数据、故障数据、维修数据、附件和日志数据。
 - 保证设备信息修改、故障接取、维修报告和复检等关键操作可追溯。
 - 降低本地缓存、后续附件上传、后续离线同步和后续消息推送带来的数据泄露风险。
 - 通过操作日志记录异常行为，支持后续审计和追踪。
@@ -46,7 +46,7 @@ RDVP 的安全目标如下：
 | 维修数据 | 维修任务、维修报告、更换部件 | 保证维修过程可信 |
 | 复检数据 | 复检结论、复检说明 | 保证重大故障闭环可信 |
 | 附件数据 | 图片、报告附件、现场材料 | 防止非法上传、下载和传播 |
-| 审计数据 | 操作日志、安全事件 | 防止删除、篡改和遗漏 |
+| 日志数据 | 操作日志、安全事件 | 防止删除、篡改和遗漏 |
 | 密钥和凭证 | 签名密钥、访问令牌、配置密钥 | 防止泄露和滥用 |
 
 ## 4. 数据分级
@@ -57,7 +57,7 @@ RDVP 的安全目标如下：
 | 内部数据 | 普通设备摘要、非敏感配置 | 需要登录后访问 |
 | 敏感数据 | 设备位置、故障详情、维修记录、附件 | 需要按角色授权访问 |
 | 高敏感数据 | 密码哈希、签名密钥、访问令牌、防伪校验密钥 | 严格限制访问和存储位置 |
-| 审计数据 | 操作日志、安全事件 | 追加记录，限制修改和删除 |
+| 日志数据 | 操作日志、安全事件 | 追加记录，限制修改和删除 |
 
 ## 5. 身份认证
 
@@ -128,7 +128,7 @@ READ_ONLY
 | `FIELD_OPERATOR` | `ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY`, `ARCHIVE_CENTER_DEVICE_ARCHIVE_UPDATE_REQUEST_SUBMIT`, `OPERATIONS_CENTER_DEVICE_VERIFICATION_SUBMIT`, `OPERATIONS_CENTER_DEVICE_FAULT_REPORT_SUBMIT` | 查询设备档案，提交档案申请、状态核验和故障报修 |
 | `MAINTAINER` | `ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY`, `OPERATIONS_CENTER_REPAIR_TASK_ACCEPT`, `OPERATIONS_CENTER_REPAIR_REPORT_SUBMIT` | 查询设备档案，接取维修任务并提交维修报告 |
 | `REINSPECTOR` | `ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY`, `OPERATIONS_CENTER_REINSPECTION_TASK_ACCEPT`, `OPERATIONS_CENTER_REINSPECTION_REPORT_SUBMIT` | 查询设备档案，接取复检任务并提交复检任务报告 |
-| `SUPERVISOR_AUDITOR` | `ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY`, `LOG_CENTER_ARCHIVE_OPERATION_LOG_QUERY`, `LOG_CENTER_ARCHIVE_REVIEW_LOG_QUERY`, `LOG_CENTER_OPERATIONS_OPERATION_LOG_QUERY`, `LOG_CENTER_OPERATIONS_REVIEW_LOG_QUERY` | 查询设备档案，查看业务日志和审计日志 |
+| `SUPERVISOR_AUDITOR` | `ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY`, `LOG_CENTER_ARCHIVE_OPERATION_LOG_QUERY`, `LOG_CENTER_ARCHIVE_REVIEW_LOG_QUERY`, `LOG_CENTER_OPERATIONS_OPERATION_LOG_QUERY`, `LOG_CENTER_OPERATIONS_REVIEW_LOG_QUERY` | 查询设备档案，查看业务日志和审核日志 |
 | `READ_ONLY` | `ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY` | 仅查询授权范围内的设备档案 |
 
 ### 6.2 授权边界
@@ -381,7 +381,7 @@ SYNC_FAILED
 SYNCED
 ```
 
-## 13. 日志与审计
+## 13. 日志与追溯
 
 ### 13.1 操作日志
 
@@ -516,6 +516,6 @@ config.example.json
 - 二维码签名算法和轮换策略。
 - 附件允许的文件类型、大小和数量。
 - 离线待同步内容本地加密方案。
-- 审计日志和安全事件保留周期。
+- 日志和安全事件保留周期。
 - 生产环境密钥管理方式。
 - 是否需要多因素认证。

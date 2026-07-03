@@ -6,737 +6,399 @@
 | --- | --- |
 | 项目名称 | RDVP |
 | 文档名称 | 数据库设计 |
-| 文档版本 | v0.1 |
+| 文档版本 | v0.2 |
 | 文档状态 | 草案 |
 | 创建日期 | 2026-05-27 |
+| 最近更新 | 2026-07-02 |
 
 ## 1. 设计范围
 
-本文档定义 RDVP 后端服务的核心数据模型。当前迁移已覆盖用户、角色权限、设备、二维码、设备核验、设备档案申请、故障报告、维修任务、维修报告、复检报告、档案审核、运维审核、日志查询、审计日志、密码复核和登录失败限制。附件、通知、离线同步和独立安全事件表属于后续预留设计，当前版本未创建这些表。
+本文档描述 RDVP 当前已落地的 PostgreSQL + PostGIS 物理 schema。当前版本覆盖用户认证、角色权限、设备档案、设备二维码、设备核验、故障报修、维修任务、维修报告、复检报告、档案审核、运维审核、日志查询、登录失败限制和敏感操作密码复核。
 
-后端数据库基线采用 PostgreSQL + PostGIS。文档中的逻辑类型用于表达业务语义，物理实现优先映射为 PostgreSQL 类型，例如 `datetime` 映射为 `TIMESTAMPTZ`，`json` 映射为 `JSONB`。
+附件、通知、离线同步、独立安全事件表和多租户字段仍是后续预留设计，当前数据库不创建对应业务表。历史迁移中出现的旧表名只表示演进路径，当前运行态以本文档列出的物理表名为准。
 
 ## 2. 命名约定
 
 | 对象 | 规则 | 示例 |
 | --- | --- | --- |
-| 表名 | 小写 snake_case，使用复数名词 | `devices` |
+| 表名 | 小写 snake_case，并以业务域作为前缀 | `archive_devices` |
+| 业务域前缀 | 当前使用 `archive_`、`operations_`、`review_`、`log_`、`user_` | `operations_repair_tasks` |
 | 字段名 | 小写 snake_case | `device_code` |
-| 主键 | 统一使用 `id` | `id` |
-| 外键 | 使用 `<entity>_id` | `device_id` |
+| 主键字段 | 统一使用 `id` | `id` |
+| 外键字段 | 使用 `<entity>_id`，跨域时保留业务实体语义 | `fault_report_id` |
 | 时间字段 | 使用 `_at` 后缀 | `created_at` |
-| 布尔字段 | 使用 `is_` 或 `has_` 前缀 | `is_active` |
 | 状态字段 | 使用 `status` | `status` |
+| 主键约束 | `pk_<table>` | `pk_archive_devices` |
+| 唯一约束 | `uq_<table>_<column_or_purpose>` | `uq_user_accounts_username` |
+| 外键约束 | `fk_<table>_<referenced_entity>` | `fk_operations_repair_tasks_fault_report` |
+| 检查约束 | `ck_<table>_<rule>` | `ck_user_login_attempts_failed_count_nonnegative` |
+| 普通索引 | `idx_<table>_<columns_or_purpose>` | `idx_operations_fault_reports_status_updated` |
+| 部分唯一索引 | `ux_<table>_<purpose>` | `ux_operations_repair_tasks_active_fault` |
+
+Flyway `V31__standardize_domain_table_names.sql` 负责表名与第一批索引名的域化；`V32__standardize_domain_constraint_names.sql` 负责主键、唯一约束、外键、检查约束和剩余索引名的域化。
 
 ## 3. 逻辑类型
 
 | 类型 | 说明 |
 | --- | --- |
-| `id` | 全局唯一字符串标识 |
+| `id` | 全局唯一字符串标识，物理类型为 `VARCHAR(64)` |
 | `string(n)` | 指定长度字符串 |
 | `text` | 长文本 |
 | `integer` | 整数 |
 | `decimal(p,s)` | 定点小数 |
 | `boolean` | 布尔值 |
-| `datetime` | UTC 时间 |
-| `json` | JSON 对象 |
+| `datetime` | UTC 时间，物理类型为 `TIMESTAMPTZ` |
+| `json` | JSON 对象，物理类型为 `JSONB` |
 
-## 4. 公共字段
-
-大多数业务表包含以下公共字段：
-
-| 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| `id` | id | 是 | 主键 |
-| `created_at` | datetime | 是 | 创建时间 |
-| `created_by` | id | 否 | 创建人 |
-| `updated_at` | datetime | 是 | 更新时间 |
-| `updated_by` | id | 否 | 更新人 |
-| `deleted_at` | datetime | 否 | 软删除时间 |
-
-审计日志、登录尝试、密码复核尝试等追加型或安全控制数据可不使用 `updated_by` 和 `deleted_at`。
-
-## 5. 实体关系概览
+## 4. 实体关系概览
 
 ```mermaid
 erDiagram
-  users ||--o{ user_roles : has
-  roles ||--o{ user_roles : has
-  roles ||--o{ role_permissions : has
-  permissions ||--o{ role_permissions : has
-  users ||--o{ maintainer_profiles : has
+  user_accounts ||--o{ user_account_roles : has
+  user_accounts ||--o{ user_account_permissions : has
+  user_accounts ||--o{ user_token_sessions : owns
+  user_accounts ||--o{ user_password_verification_attempts : verifies
 
-  devices ||--o{ device_qrcodes : has
-  devices ||--o{ device_verification_reports : has
-  devices ||--o{ device_archive_requests : has
-  devices ||--o{ fault_reports : has
+  archive_devices ||--o{ archive_device_qr_codes : has
+  archive_devices ||--o{ review_archive_requests : reviewed_by
+  archive_devices ||--o{ operations_device_verification_reports : checked_by
+  archive_devices ||--o{ operations_fault_reports : reports
 
-  fault_reports ||--o{ repair_tasks : has
-  repair_tasks ||--o{ repair_reports : has
-  fault_reports ||--o{ reinspection_reports : has
+  operations_fault_reports ||--o{ operations_repair_tasks : creates
+  operations_fault_reports ||--o{ operations_repair_reports : produces
+  operations_fault_reports ||--o{ operations_reinspection_reports : requires
+  operations_repair_tasks ||--o{ operations_repair_reports : produces
+  operations_repair_reports ||--o{ operations_reinspection_reports : verifies
 
-  fault_reports ||--o{ operations_review_requests : has
-  users ||--o{ password_verification_attempts : verifies
-  users ||--o{ operation_logs : acts
+  operations_fault_reports ||--o{ review_operations_requests : reviewed_by
+  archive_devices ||--o{ review_operations_requests : reviewed_by
+
+  user_accounts ||--o{ log_entries : acts
 ```
 
-## 6. 用户与权限
+## 5. 用户域
 
-### 6.1 users
+### 5.1 `user_accounts`
 
 用户账号表。
 
 | 字段 | 类型 | 必填 | 约束 | 说明 |
 | --- | --- | --- | --- | --- |
-| `id` | id | 是 | PK | 用户 ID |
-| `username` | string(64) | 是 | UNIQUE | 登录账号 |
+| `id` | id | 是 | `pk_user_accounts` | 用户 ID |
+| `username` | string(64) | 是 | `uq_user_accounts_username` | 登录账号 |
 | `password_hash` | string(255) | 是 |  | 密码哈希 |
 | `display_name` | string(100) | 是 |  | 显示名称 |
-| `phone` | string(32) | 否 |  | 手机号 |
-| `email` | string(128) | 否 |  | 邮箱 |
-| `status` | string(32) | 是 | INDEX | 用户状态 |
-| `last_login_at` | datetime | 否 |  | 最近登录时间 |
-| `created_at` | datetime | 是 |  | 创建时间 |
-| `created_by` | id | 否 | FK users.id | 创建人 |
-| `updated_at` | datetime | 是 |  | 更新时间 |
-| `updated_by` | id | 否 | FK users.id | 更新人 |
-| `deleted_at` | datetime | 否 |  | 软删除时间 |
-| `deleted_reason` | text | 否 |  | 软删除原因 |
-
-用户状态：
-
-```text
-ACTIVE
-DISABLED
-LOCKED
-```
-
-### 6.2 roles
-
-角色表。
-
-| 字段 | 类型 | 必填 | 约束 | 说明 |
-| --- | --- | --- | --- | --- |
-| `id` | id | 是 | PK | 角色 ID |
-| `code` | string(64) | 是 | UNIQUE | 角色编码 |
-| `name` | string(100) | 是 |  | 角色名称 |
-| `description` | text | 否 |  | 角色说明 |
-| `is_system` | boolean | 是 |  | 是否系统内置角色 |
+| `status` | string(32) | 是 | `idx_user_accounts_status` | 用户状态 |
 | `created_at` | datetime | 是 |  | 创建时间 |
 | `updated_at` | datetime | 是 |  | 更新时间 |
-
-核心角色编码：
-
-```text
-SYSTEM_ADMIN
-DEVICE_ADMIN
-FIELD_OPERATOR
-MAINTAINER
-REINSPECTOR
-SUPERVISOR_AUDITOR
-READ_ONLY
-```
-
-### 6.3 permissions
-
-权限表。
-
-| 字段 | 类型 | 必填 | 约束 | 说明 |
-| --- | --- | --- | --- | --- |
-| `id` | id | 是 | PK | 权限 ID |
-| `code` | string(100) | 是 | UNIQUE | 权限编码 |
-| `name` | string(100) | 是 |  | 权限名称 |
-| `description` | text | 否 |  | 权限说明 |
-| `created_at` | datetime | 是 |  | 创建时间 |
-| `updated_at` | datetime | 是 |  | 更新时间 |
-
-当前有效中心权限使用 `REVIEW_CENTER_*` 和 `LOG_CENTER_*`。迁移 `V27__split_review_and_record_center_permissions.sql`
-会将历史 `MANAGEMENT_CENTER_*` 审核/查询权限值迁移为审核中心和日志中心权限，并清理迁移后产生的重复用户权限。
-
-### 6.4 user_roles
-
-用户角色关联表。
-
-| 字段 | 类型 | 必填 | 约束 | 说明 |
-| --- | --- | --- | --- | --- |
-| `user_id` | id | 是 | PK, FK users.id | 用户 ID |
-| `role_id` | id | 是 | PK, FK roles.id | 角色 ID |
-| `created_at` | datetime | 是 |  | 创建时间 |
-| `created_by` | id | 否 | FK users.id | 创建人 |
-
-唯一约束：
-
-```text
-UNIQUE(user_id, role_id)
-```
-
-### 6.5 role_permissions
-
-角色权限关联表。
-
-| 字段 | 类型 | 必填 | 约束 | 说明 |
-| --- | --- | --- | --- | --- |
-| `role_id` | id | 是 | PK, FK roles.id | 角色 ID |
-| `permission_id` | id | 是 | PK, FK permissions.id | 权限 ID |
-| `created_at` | datetime | 是 |  | 创建时间 |
-| `created_by` | id | 否 | FK users.id | 创建人 |
-
-唯一约束：
-
-```text
-UNIQUE(role_id, permission_id)
-```
-
-### 6.6 maintainer_profiles
-
-维修人员扩展信息表。
-
-| 字段 | 类型 | 必填 | 约束 | 说明 |
-| --- | --- | --- | --- | --- |
-| `id` | id | 是 | PK | 维修人员资料 ID |
-| `user_id` | id | 是 | UNIQUE, FK users.id | 用户 ID |
-| `availability_status` | string(32) | 是 | INDEX | 空闲状态 |
-| `current_longitude` | decimal(10,7) | 否 |  | 当前经度 |
-| `current_latitude` | decimal(10,7) | 否 |  | 当前纬度 |
-| `location_updated_at` | datetime | 否 |  | 位置更新时间 |
-| `service_radius_km` | decimal(6,2) | 否 |  | 可服务半径 |
-| `created_at` | datetime | 是 |  | 创建时间 |
-| `updated_at` | datetime | 是 |  | 更新时间 |
-
-空闲状态：
-
-```text
-AVAILABLE
-BUSY
-OFFLINE
-UNAVAILABLE
-```
-
-索引：
-
-```text
-INDEX(availability_status)
-INDEX(current_longitude, current_latitude)
-```
-
-## 7. 设备
-
-### 7.1 devices
-
-设备基础信息表。
-
-| 字段 | 类型 | 必填 | 约束 | 说明 |
-| --- | --- | --- | --- | --- |
-| `id` | id | 是 | PK | 设备 ID |
-| `device_code` | string(64) | 是 | UNIQUE | 设备编号 |
-| `name` | string(128) | 是 | INDEX | 设备名称 |
-| `model` | string(128) | 否 | INDEX | 型号 |
-| `manufacturer` | string(128) | 否 |  | 厂商 |
-| `status` | string(32) | 是 | INDEX | 设备状态 |
-| `address` | string(255) | 否 |  | 设备地址 |
-| `longitude` | decimal(10,7) | 否 |  | 经度 |
-| `latitude` | decimal(10,7) | 否 |  | 纬度 |
-| `last_verification_time` | datetime | 否 | INDEX | 最近核验时间 |
-| `remark` | text | 否 |  | 备注 |
-| `created_at` | datetime | 是 |  | 创建时间 |
-| `created_by` | id | 否 | FK users.id | 创建人 |
-| `updated_at` | datetime | 是 |  | 更新时间 |
-| `updated_by` | id | 否 | FK users.id | 更新人 |
-| `deleted_at` | datetime | 否 |  | 软删除时间 |
-
-设备状态使用 API 文档中的设备状态枚举。
-
-索引：
-
-```text
-UNIQUE(device_code)
-INDEX(status)
-INDEX(name)
-INDEX(model)
-INDEX(longitude, latitude)
-```
-
-附近查询和地理围栏类能力应优先使用 PostGIS 空间类型与空间索引；当前经纬度组合索引用于早期筛选和本地联调。
-
-### 7.2 device_qrcodes
-
-设备二维码防伪信息表。
-
-| 字段 | 类型 | 必填 | 约束 | 说明 |
-| --- | --- | --- | --- | --- |
-| `id` | id | 是 | PK | 二维码记录 ID |
-| `device_id` | id | 是 | FK devices.id, INDEX | 设备 ID |
-| `version` | integer | 是 |  | 二维码版本 |
-| `nonce` | string(128) | 是 | UNIQUE | 随机标识 |
-| `signature_hash` | string(255) | 是 |  | 签名摘要 |
-| `status` | string(32) | 是 | INDEX | 二维码状态 |
-| `issued_at` | datetime | 是 |  | 签发时间 |
-| `expires_at` | datetime | 否 | INDEX | 过期时间 |
-| `revoked_at` | datetime | 否 |  | 吊销时间 |
-| `created_at` | datetime | 是 |  | 创建时间 |
-| `created_by` | id | 否 | FK users.id | 创建人 |
-
-二维码状态：
-
-```text
-ACTIVE
-EXPIRED
-REVOKED
-```
-
-## 8. 设备核验
-
-### 8.1 device_verification_reports
-
-设备状态核验报告表。
-
-| 字段 | 类型 | 必填 | 约束 | 说明 |
-| --- | --- | --- | --- | --- |
-| `id` | id | 是 | PK | 核验报告 ID |
-| `device_id` | id | 是 | FK devices.id, INDEX | 设备 ID |
-| `verifier_id` | id | 是 | FK users.id, INDEX | 核验人员 |
-| `result` | string(32) | 是 | INDEX | 核验结果 |
-| `description` | text | 否 |  | 核验说明 |
-| `longitude` | decimal(10,7) | 否 |  | 核验经度 |
-| `latitude` | decimal(10,7) | 否 |  | 核验纬度 |
-| `verified_at` | datetime | 是 | INDEX | 核验时间 |
-| `created_at` | datetime | 是 |  | 创建时间 |
-| `created_by` | id | 是 | FK users.id | 创建人 |
-
-核验结果：
-
-```text
-NORMAL
-ABNORMAL
-PENDING_VERIFICATION
-```
-
-索引：
-
-```text
-INDEX(device_id, verified_at)
-INDEX(verifier_id, verified_at)
-```
-
-## 9. 设备档案申请
-
-### 9.1 device_archive_requests
-
-设备档案添加、删除和修改申请表。当前物理表名沿用 `device_archive_requests`。
-
-| 字段 | 类型 | 必填 | 约束 | 说明 |
-| --- | --- | --- | --- | --- |
-| `id` | id | 是 | PK | 档案申请 ID |
-| `request_type` | string(32) | 是 |  | 申请类型：修改、添加、删除 |
-| `device_id` | id | 否 | FK devices.id, INDEX | 已存在设备 ID；添加档案申请可为空 |
-| `target_device_code` | string(64) | 否 | INDEX | 申请目标设备编号 |
-| `applicant_id` | id | 是 | FK users.id, INDEX | 申请人 |
-| `status` | string(32) | 是 | INDEX | 申请状态 |
-| `previous_device_status` | string(32) | 是 |  | 申请创建前设备状态 |
-| `reason` | text | 是 |  | 申请原因 |
-| `changes` | json | 是 |  | 字段变更内容 |
-| `reviewer_id` | id | 否 | FK users.id, INDEX | 审核人 |
-| `review_comment` | text | 否 |  | 审核意见 |
-| `reviewed_at` | datetime | 否 | INDEX | 审核时间 |
-| `freeze_until` | datetime | 否 | INDEX | 审核结束后的档案冻结截止时间 |
-| `created_at` | datetime | 是 |  | 创建时间 |
-| `created_by` | id | 是 | FK users.id | 创建人 |
-| `updated_at` | datetime | 是 |  | 更新时间 |
-| `updated_by` | id | 否 | FK users.id | 更新人 |
-
-申请状态使用 API 文档中的设备档案申请状态枚举。
-
-`changes` 示例：
-
-```json
-{
-  "location.address": {
-    "oldValue": "Old address",
-    "newValue": "New address"
-  }
-}
-```
-
-约束：
-
-```text
-INDEX(device_id, status)
-UNIQUE(target_device_code) WHERE status = 'PENDING_REVIEW'
-INDEX(applicant_id, created_at)
-INDEX(reviewer_id, reviewed_at)
-```
-
-## 10. 故障与维修
-
-### 10.1 fault_reports
-
-故障报告表。
-
-| 字段 | 类型 | 必填 | 约束 | 说明 |
-| --- | --- | --- | --- | --- |
-| `id` | id | 是 | PK | 故障报告 ID |
-| `fault_report_no` | string(64) | 是 | UNIQUE | 故障报告编号 |
-| `device_id` | id | 是 | FK devices.id, INDEX | 设备 ID |
-| `reporter_id` | id | 是 | FK users.id, INDEX | 报告人 |
-| `fault_type` | string(64) | 是 | INDEX | 故障类型 |
-| `severity` | string(32) | 是 | INDEX | 故障等级 |
-| `description` | text | 是 |  | 故障描述 |
-| `status` | string(32) | 是 | INDEX | 故障状态 |
-| `occurred_at` | datetime | 是 | INDEX | 发生时间 |
-| `reported_longitude` | decimal(10,7) | 否 |  | 上报经度 |
-| `reported_latitude` | decimal(10,7) | 否 |  | 上报纬度 |
-| `closed_at` | datetime | 否 | INDEX | 关闭时间 |
-| `closed_by` | id | 否 | FK users.id | 关闭人 |
-| `created_at` | datetime | 是 |  | 创建时间 |
-| `created_by` | id | 是 | FK users.id | 创建人 |
-| `updated_at` | datetime | 是 |  | 更新时间 |
-| `updated_by` | id | 否 | FK users.id | 更新人 |
-
-故障状态和故障等级使用 API 文档中的枚举。
-
-索引：
-
-```text
-UNIQUE(fault_report_no)
-INDEX(device_id, status)
-INDEX(reporter_id, created_at)
-INDEX(severity, status)
-INDEX(reported_longitude, reported_latitude)
-```
-
-### 10.2 repair_tasks
-
-维修任务表。
-
-| 字段 | 类型 | 必填 | 约束 | 说明 |
-| --- | --- | --- | --- | --- |
-| `id` | id | 是 | PK | 维修任务 ID |
-| `fault_report_id` | id | 是 | FK fault_reports.id, INDEX | 故障报告 ID |
-| `maintainer_id` | id | 是 | FK users.id, INDEX | 维修人员 |
-| `status` | string(32) | 是 | INDEX | 维修任务状态 |
-| `accepted_longitude` | decimal(10,7) | 否 |  | 接取经度 |
-| `accepted_latitude` | decimal(10,7) | 否 |  | 接取纬度 |
-| `accepted_at` | datetime | 是 | INDEX | 接取时间 |
-| `started_at` | datetime | 否 |  | 开始维修时间 |
-| `completed_at` | datetime | 否 | INDEX | 完成时间 |
-| `cancelled_at` | datetime | 否 |  | 取消时间 |
-| `cancel_reason` | text | 否 |  | 取消原因 |
-| `created_at` | datetime | 是 |  | 创建时间 |
-| `updated_at` | datetime | 是 |  | 更新时间 |
-| `updated_by` | id | 否 | FK users.id | 更新人 |
-
-约束：
-
-```text
-INDEX(fault_report_id, status)
-INDEX(maintainer_id, status)
-```
-
-同一故障在同一时间只能存在一个有效维修任务。具体数据库实现应通过唯一约束、部分唯一索引或事务锁保证并发接取一致性。
-
-### 10.3 repair_reports
-
-维修报告表。
-
-| 字段 | 类型 | 必填 | 约束 | 说明 |
-| --- | --- | --- | --- | --- |
-| `id` | id | 是 | PK | 维修报告 ID |
-| `repair_task_id` | id | 是 | UNIQUE, FK repair_tasks.id | 维修任务 ID |
-| `fault_report_id` | id | 是 | FK fault_reports.id, INDEX | 故障报告 ID |
-| `maintainer_id` | id | 是 | FK users.id, INDEX | 维修人员 |
-| `repair_description` | text | 是 |  | 维修过程 |
-| `repair_result` | string(32) | 是 | INDEX | 维修结果 |
-| `replaced_parts` | json | 否 |  | 更换部件 |
-| `repaired_at` | datetime | 是 | INDEX | 维修完成时间 |
-| `requires_reinspection` | boolean | 是 | INDEX | 是否需要复检 |
-| `created_at` | datetime | 是 |  | 创建时间 |
-| `created_by` | id | 是 | FK users.id | 创建人 |
-
-维修结果：
-
-```text
-REPAIRED
-TEMPORARY_RESTORED
-UNRESOLVED
-```
-
-## 11. 复检
-
-### 11.1 reinspection_reports
-
-复检报告表。当前物理表统一使用 `reinspection_reports` 命名。
-
-| 字段 | 类型 | 必填 | 约束 | 说明 |
-| --- | --- | --- | --- | --- |
-| `id` | id | 是 | PK | 复检报告 ID |
-| `fault_report_id` | id | 是 | FK fault_reports.id, INDEX | 故障报告 ID |
-| `repair_report_id` | id | 是 | FK repair_reports.id, INDEX | 维修报告 ID |
-| `reinspector_id` | id | 是 | FK users.id, INDEX | 复检人员 |
-| `result` | string(32) | 是 | INDEX | 复检结果 |
-| `description` | text | 否 |  | 复检说明 |
-| `reinspected_at` | datetime | 是 | INDEX | 复检时间 |
-| `created_at` | datetime | 是 |  | 创建时间 |
-| `created_by` | id | 是 | FK users.id | 创建人 |
-
-复检结果使用 API 文档中的复检结果枚举。
-
-索引：
-
-```text
-INDEX(fault_report_id, reinspected_at)
-INDEX(reinspector_id, reinspected_at)
-```
-
-## 12. 后续预留：附件
-
-当前版本未创建附件相关表，以下结构仅作为后续附件能力设计预留。
-
-### 12.1 attachments
-
-附件元数据表。
-
-| 字段 | 类型 | 必填 | 约束 | 说明 |
-| --- | --- | --- | --- | --- |
-| `id` | id | 是 | PK | 附件 ID |
-| `file_name` | string(255) | 是 |  | 原始文件名 |
-| `storage_key` | string(500) | 是 | UNIQUE | 存储对象键 |
-| `content_type` | string(128) | 是 | INDEX | 文件类型 |
-| `size_bytes` | integer | 是 |  | 文件大小 |
-| `checksum` | string(128) | 否 | INDEX | 文件校验值 |
-| `uploaded_by` | id | 是 | FK users.id, INDEX | 上传人 |
-| `created_at` | datetime | 是 | INDEX | 上传时间 |
 | `deleted_at` | datetime | 否 |  | 删除时间 |
 
-### 12.2 attachment_links
+当前用户状态：`ACTIVE`、`DISABLED`、`LOCKED`。
 
-附件业务关联表。
+### 5.2 `user_account_roles`
+
+用户角色关联表。当前角色是代码枚举，不单独落角色表。
 
 | 字段 | 类型 | 必填 | 约束 | 说明 |
 | --- | --- | --- | --- | --- |
-| `id` | id | 是 | PK | 关联 ID |
-| `attachment_id` | id | 是 | FK attachments.id, INDEX | 附件 ID |
-| `business_type` | string(64) | 是 | INDEX | 业务类型 |
-| `business_id` | id | 是 | INDEX | 业务对象 ID |
+| `user_id` | id | 是 | `pk_user_account_roles`, `fk_user_account_roles_user_account` | 用户 ID |
+| `role_code` | string(64) | 是 | `pk_user_account_roles`, `idx_user_account_roles_role_code` | 角色编码 |
+
+### 5.3 `user_account_permissions`
+
+用户权限关联表。当前权限是代码枚举，不单独落权限表。
+
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `user_id` | id | 是 | `pk_user_account_permissions`, `fk_user_account_permissions_user_account` | 用户 ID |
+| `permission_code` | string(100) | 是 | `pk_user_account_permissions`, `idx_user_account_permissions_permission_code` | 权限编码 |
+
+### 5.4 `user_token_sessions`
+
+登录访问凭证会话表。
+
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `id` | id | 是 | `pk_user_token_sessions` | 会话 ID |
+| `token_hash` | string(128) | 是 | `uq_user_token_sessions_token_hash` | Token 哈希 |
+| `user_id` | id | 是 | `fk_user_token_sessions_user_account`, `idx_user_token_sessions_user_expires` | 用户 ID |
+| `client_device_id` | string(128) | 否 |  | 客户端设备标识 |
+| `expires_at` | datetime | 是 | `idx_user_token_sessions_expires` | 过期时间 |
 | `created_at` | datetime | 是 |  | 创建时间 |
-| `created_by` | id | 是 | FK users.id | 创建人 |
+| `revoked_at` | datetime | 否 | `idx_user_token_sessions_revoked` | 撤销时间 |
 
-业务类型：
-
-```text
-DEVICE_VERIFICATION_RECORD
-DEVICE_ARCHIVE_REQUEST
-FAULT_REPORT
-REPAIR_REPORT
-REINSPECTION_REPORT
-```
-
-约束：
-
-```text
-UNIQUE(attachment_id, business_type, business_id)
-INDEX(business_type, business_id)
-```
-
-## 13. 后续预留：通知
-
-当前版本未创建通知相关表，以下结构仅作为后续消息中心或推送能力设计预留。
-
-### 13.1 notifications
-
-用户通知表。
-
-| 字段 | 类型 | 必填 | 约束 | 说明 |
-| --- | --- | --- | --- | --- |
-| `id` | id | 是 | PK | 通知 ID |
-| `recipient_id` | id | 是 | FK users.id, INDEX | 接收人 |
-| `type` | string(64) | 是 | INDEX | 通知类型 |
-| `title` | string(200) | 是 |  | 标题 |
-| `content` | text | 否 |  | 内容摘要 |
-| `business_type` | string(64) | 否 | INDEX | 业务类型 |
-| `business_id` | id | 否 | INDEX | 业务对象 ID |
-| `read_at` | datetime | 否 | INDEX | 已读时间 |
-| `created_at` | datetime | 是 | INDEX | 创建时间 |
-
-索引：
-
-```text
-INDEX(recipient_id, read_at, created_at)
-INDEX(business_type, business_id)
-```
-
-## 14. 后续预留：离线同步
-
-当前版本采用在线提交优先架构，`V17__drop_offline_sync_tables.sql` 已移除早期离线同步表。以下结构仅作为后续离线同步能力设计预留。
-
-### 14.1 offline_sync_batches
-
-离线同步批次表。
-
-| 字段 | 类型 | 必填 | 约束 | 说明 |
-| --- | --- | --- | --- | --- |
-| `id` | id | 是 | PK | 批次 ID |
-| `client_batch_id` | string(128) | 是 | UNIQUE | 客户端批次 ID |
-| `user_id` | id | 是 | FK users.id, INDEX | 提交用户 |
-| `status` | string(32) | 是 | INDEX | 同步状态 |
-| `submitted_at` | datetime | 是 | INDEX | 提交时间 |
-| `created_at` | datetime | 是 |  | 创建时间 |
-
-同步状态：
-
-```text
-PROCESSING
-COMPLETED
-PARTIALLY_FAILED
-FAILED
-```
-
-### 14.2 offline_sync_records
-
-离线同步记录表。
-
-| 字段 | 类型 | 必填 | 约束 | 说明 |
-| --- | --- | --- | --- | --- |
-| `id` | id | 是 | PK | 同步记录 ID |
-| `batch_id` | id | 是 | FK offline_sync_batches.id, INDEX | 批次 ID |
-| `client_record_id` | string(128) | 是 | INDEX | 客户端记录 ID |
-| `record_type` | string(64) | 是 | INDEX | 记录类型 |
-| `payload` | json | 是 |  | 提交内容 |
-| `status` | string(32) | 是 | INDEX | 处理状态 |
-| `server_record_id` | id | 否 |  | 服务端生成记录 ID |
-| `error_code` | string(100) | 否 |  | 错误码 |
-| `error_message` | text | 否 |  | 错误信息 |
-| `created_offline_at` | datetime | 是 |  | 离线创建时间 |
-| `processed_at` | datetime | 否 | INDEX | 处理时间 |
-| `created_at` | datetime | 是 |  | 创建时间 |
-
-约束：
-
-```text
-UNIQUE(batch_id, client_record_id)
-INDEX(record_type, status)
-```
-
-## 15. 审计与安全
-
-### 15.1 operation_logs
-
-操作日志表。
-
-| 字段 | 类型 | 必填 | 约束 | 说明 |
-| --- | --- | --- | --- | --- |
-| `id` | id | 是 | PK | 操作日志 ID |
-| `actor_id` | id | 否 | FK users.id, INDEX | 操作人 |
-| `action` | string(100) | 是 | INDEX | 操作类型 |
-| `target_type` | string(64) | 是 | INDEX | 操作对象类型 |
-| `target_id` | id | 否 | INDEX | 操作对象 ID |
-| `request_id` | string(128) | 否 | INDEX | 请求 ID |
-| `ip_address` | string(64) | 否 |  | IP 地址 |
-| `user_agent` | string(500) | 否 |  | 客户端信息 |
-| `before_data` | json | 否 |  | 操作前数据 |
-| `after_data` | json | 否 |  | 操作后数据 |
-| `created_at` | datetime | 是 | INDEX | 操作时间 |
-
-索引：
-
-```text
-INDEX(actor_id, created_at)
-INDEX(target_type, target_id)
-INDEX(action, created_at)
-INDEX(request_id)
-```
-
-### 15.2 login_attempts
+### 5.5 `user_login_attempts`
 
 登录失败限制表。
 
 | 字段 | 类型 | 必填 | 约束 | 说明 |
 | --- | --- | --- | --- | --- |
-| `username` | string(64) | 是 | PK | 归一化后的账号 |
-| `failed_count` | integer | 是 | CHECK failed_count >= 0 | 连续失败次数 |
-| `locked_until` | datetime | 否 | INDEX | 临时限制截止时间 |
+| `username` | string(64) | 是 | `pk_user_login_attempts` | 归一化登录账号 |
+| `failed_count` | integer | 是 | `ck_user_login_attempts_failed_count_nonnegative` | 连续失败次数 |
+| `locked_until` | datetime | 否 | `idx_user_login_attempts_locked_until` | 临时限制截止时间 |
 | `updated_at` | datetime | 是 |  | 更新时间 |
 
-该表用于登录防暴力尝试限制。`username` 保存归一化后的账号，不设外键，避免账号枚举和不存在账号产生持久化状态；密码正确且未被限制时，后端应清除对应账号的失败记录。
+### 5.6 `user_password_verification_attempts`
 
-### 15.3 password_verification_attempts
-
-二次密码校验尝试表。
+敏感操作密码复核尝试表。
 
 | 字段 | 类型 | 必填 | 约束 | 说明 |
 | --- | --- | --- | --- | --- |
-| `user_id` | id | 是 | PK, FK users.id | 用户 ID |
-| `failed_count` | integer | 是 | CHECK failed_count >= 0 | 连续失败次数 |
-| `locked_until` | datetime | 否 | INDEX | 临时锁定截止时间 |
-| `verified_until` | datetime | 否 | INDEX | 敏感操作免重复校验截止时间 |
+| `user_id` | id | 是 | `pk_user_password_verification_attempts`, `fk_user_password_verification_attempts_user_account` | 用户 ID |
+| `failed_count` | integer | 是 | `ck_user_password_verification_attempts_failed_count_nonnegative` | 连续失败次数 |
+| `locked_until` | datetime | 否 | `idx_user_password_verification_attempts_locked_until` | 临时锁定截止时间 |
 | `updated_at` | datetime | 是 |  | 更新时间 |
+| `verified_until` | datetime | 否 | `idx_user_password_verification_attempts_verified_until` | 免重复复核截止时间 |
 
-该表用于添加档案、删除档案、修改档案、维修报告、复检报告、档案审核和运维审核等敏感操作的密码复核流程。
+## 6. 档案域
 
-### 15.4 后续预留：security_events
+### 6.1 `archive_devices`
 
-当前版本将安全相关行为写入 `operation_logs`，未创建独立 `security_events` 表。以下结构仅作为后续独立安全事件能力设计预留。
+设备档案主表。
 
 | 字段 | 类型 | 必填 | 约束 | 说明 |
 | --- | --- | --- | --- | --- |
-| `id` | id | 是 | PK | 安全事件 ID |
-| `event_type` | string(100) | 是 | INDEX | 事件类型 |
-| `severity` | string(32) | 是 | INDEX | 严重程度 |
-| `actor_id` | id | 否 | FK users.id, INDEX | 关联用户 |
-| `target_type` | string(64) | 否 | INDEX | 关联对象类型 |
-| `target_id` | id | 否 | INDEX | 关联对象 ID |
-| `description` | text | 是 |  | 事件说明 |
-| `metadata` | json | 否 |  | 扩展信息 |
-| `created_at` | datetime | 是 | INDEX | 创建时间 |
+| `id` | id | 是 | `pk_archive_devices` | 设备 ID |
+| `device_code` | string(64) | 是 | `uq_archive_devices_device_code` | 设备编号 |
+| `name` | string(128) | 是 | `idx_archive_devices_name` | 设备名称 |
+| `model` | string(128) | 否 | `idx_archive_devices_model` | 型号 |
+| `manufacturer` | string(128) | 否 |  | 厂商 |
+| `status` | string(32) | 是 | `idx_archive_devices_status` | 设备状态 |
+| `address` | string(255) | 否 |  | 设备地址 |
+| `longitude` | decimal(10,7) | 否 | `idx_archive_devices_location`, `idx_archive_devices_location_geography` | 经度 |
+| `latitude` | decimal(10,7) | 否 | `idx_archive_devices_location`, `idx_archive_devices_location_geography` | 纬度 |
+| `last_verification_time` | datetime | 否 |  | 最近核验时间 |
+| `remark` | text | 否 |  | 备注 |
+| `created_at` | datetime | 是 |  | 创建时间 |
+| `created_by` | id | 否 |  | 创建人 |
+| `updated_at` | datetime | 是 |  | 更新时间 |
+| `updated_by` | id | 否 |  | 更新人 |
+| `deleted_at` | datetime | 否 |  | 删除时间 |
+| `deleted_reason` | text | 否 |  | 删除原因 |
 
-事件类型示例：
+设备编号是业务查询入口，必须全局唯一。软删除设备仍保留编号占用历史，是否允许复用编号由后续业务规则另行确认。
 
-```text
-LOGIN_FAILED
-QR_CODE_SIGNATURE_INVALID
-QR_CODE_REPLAY_SUSPECTED
-PERMISSION_DENIED
-ATTACHMENT_TYPE_REJECTED
-```
+### 6.2 `archive_device_qr_codes`
 
-## 16. 核心约束
+设备二维码防伪信息表。
 
-### 16.1 设备编号唯一
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `id` | id | 是 | `pk_archive_device_qr_codes` | 二维码记录 ID |
+| `device_id` | id | 是 | `fk_archive_device_qr_codes_device`, `idx_archive_device_qr_codes_device` | 设备 ID |
+| `version` | integer | 是 |  | 二维码版本 |
+| `nonce` | string(128) | 是 | `uq_archive_device_qr_codes_nonce` | 随机标识 |
+| `signature_hash` | string(255) | 是 |  | 签名摘要 |
+| `status` | string(32) | 是 | `idx_archive_device_qr_codes_status` | 二维码状态 |
+| `issued_at` | datetime | 是 |  | 签发时间 |
+| `expires_at` | datetime | 否 | `idx_archive_device_qr_codes_expires` | 过期时间 |
+| `revoked_at` | datetime | 否 |  | 吊销时间 |
+| `created_at` | datetime | 是 |  | 创建时间 |
+| `created_by` | id | 否 |  | 创建人 |
 
-`devices.device_code` 全局唯一。设备编号是业务查询入口，不能重复。
+二维码状态：`ACTIVE`、`EXPIRED`、`REVOKED`。
 
-### 16.2 二维码随机标识唯一
+## 7. 运维域
 
-`device_qrcodes.nonce` 全局唯一。二维码校验应结合版本、设备编号、随机标识和签名摘要。
+### 7.1 `operations_device_verification_reports`
 
-### 16.3 设备档案申请审核后生效
+设备核验报告表。
 
-设备档案申请先写入 `device_archive_requests`。审核通过后再创建、更新或删除 `devices`，并写入 `operation_logs`。
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `id` | id | 是 | `pk_operations_device_verification_reports` | 核验报告 ID |
+| `device_id` | id | 是 | `fk_operations_device_verification_reports_device`, `idx_operations_device_verification_reports_device_created` | 设备 ID |
+| `operator_id` | id | 是 | `idx_operations_device_verification_reports_operator_created` | 核验人员 |
+| `result` | string(32) | 是 | `idx_operations_device_verification_reports_result` | 核验结果 |
+| `description` | text | 否 |  | 核验说明 |
+| `remark` | text | 否 |  | 备注 |
+| `verified_at` | datetime | 是 |  | 核验时间 |
+| `created_at` | datetime | 是 |  | 创建时间 |
 
-### 16.4 故障接取并发控制
+### 7.2 `operations_fault_reports`
 
-同一故障在同一时间只能存在一个有效维修任务。后端实现接取时必须在数据库事务中完成故障状态检查、维修任务创建和故障状态更新。
+故障报修表。
 
-### 16.5 重大故障复检
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `id` | id | 是 | `pk_operations_fault_reports` | 故障报告 ID |
+| `fault_report_no` | string(64) | 是 | `uq_operations_fault_reports_fault_report_no` | 故障报告编号 |
+| `device_id` | id | 是 | `fk_operations_fault_reports_device`, `idx_operations_fault_reports_device_status` | 设备 ID |
+| `reporter_id` | id | 是 | `idx_operations_fault_reports_reporter` | 报告人 |
+| `fault_type` | string(64) | 是 |  | 故障类型 |
+| `severity` | string(32) | 是 | `idx_operations_fault_reports_severity` | 故障等级 |
+| `status` | string(32) | 是 | `idx_operations_fault_reports_status_created`, `idx_operations_fault_reports_status_updated` | 故障状态 |
+| `occurred_at` | datetime | 是 |  | 发生时间 |
+| `description` | text | 是 |  | 故障描述 |
+| `scene_condition` | text | 否 |  | 现场情况 |
+| `longitude` | decimal(10,7) | 否 |  | 上报经度 |
+| `latitude` | decimal(10,7) | 否 |  | 上报纬度 |
+| `accepted_task_id` | id | 否 |  | 当前接取任务 ID |
+| `closed_at` | datetime | 否 |  | 关闭时间 |
+| `created_at` | datetime | 是 |  | 创建时间 |
+| `updated_at` | datetime | 是 |  | 更新时间 |
 
-`repair_reports.requires_reinspection` 为 `true` 时，故障必须进入 `PENDING_REINSPECTION`。复检通过后才能关闭故障并恢复设备状态。
+`ux_operations_fault_reports_active_device` 保证同一设备同一时间只存在一个未关闭故障。
 
-### 16.6 后续预留：附件访问控制
+### 7.3 `operations_repair_tasks`
 
-附件能力落地后，文件内容不应直接暴露存储路径。业务访问应通过附件元数据和业务关联判断附件归属，再结合用户权限返回文件内容。
+维修任务表。维修任务既承载普通维修，也承载复检任务接取后的任务壳，具体由 `task_type` 区分。
 
-## 17. 数据保留与删除
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `id` | id | 是 | `pk_operations_repair_tasks` | 维修任务 ID |
+| `repair_task_no` | string(64) | 是 | `uq_operations_repair_tasks_repair_task_no` | 维修任务编号 |
+| `fault_report_id` | id | 是 | `fk_operations_repair_tasks_fault_report`, `idx_operations_repair_tasks_fault_status` | 故障报告 ID |
+| `maintainer_id` | id | 是 | `idx_operations_repair_tasks_maintainer_status`, `idx_operations_repair_tasks_maintainer_status_type` | 维修或复检人员 |
+| `status` | string(32) | 是 |  | 任务状态 |
+| `accepted_longitude` | decimal(10,7) | 否 |  | 接取经度 |
+| `accepted_latitude` | decimal(10,7) | 否 |  | 接取纬度 |
+| `accepted_at` | datetime | 是 |  | 接取时间 |
+| `completed_at` | datetime | 否 |  | 完成时间 |
+| `created_at` | datetime | 是 |  | 创建时间 |
+| `updated_at` | datetime | 是 |  | 更新时间 |
+| `task_type` | string(16) | 是 |  | 任务类型：`REPAIR` 或 `REINSPECTION` |
 
-- 用户、设备、故障、维修、复检和审计类数据默认采用逻辑删除或状态变更。
-- 审计日志属于追溯数据，不参与普通业务删除；后续独立安全事件表落地后同样按追溯数据处理。
-- 后续附件能力落地后，附件删除应同时处理业务关联和实际文件存储。
-- 涉及个人信息和敏感数据的保留周期需要在安全设计文档中进一步定义。
+`ux_operations_repair_tasks_active_fault` 保证同一故障同一时间只存在一个有效维修任务。
 
-## 18. 待确认问题
+### 7.4 `operations_repair_reports`
 
-- 主键生成策略。
-- 经纬度附近查询的空间字段类型与索引策略。
-- 故障报告编号生成规则。
-- 设备编号生成规则。
-- 附件文件校验算法。
-- 审计日志保留周期。
+维修报告表。
+
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `id` | id | 是 | `pk_operations_repair_reports` | 维修报告 ID |
+| `repair_report_no` | string(64) | 是 | `uq_operations_repair_reports_repair_report_no` | 维修报告编号 |
+| `repair_task_id` | id | 是 | `uq_operations_repair_reports_repair_task`, `fk_operations_repair_reports_repair_task` | 维修任务 ID |
+| `fault_report_id` | id | 是 | `fk_operations_repair_reports_fault_report`, `idx_operations_repair_reports_fault`, `idx_operations_repair_reports_fault_created` | 故障报告 ID |
+| `maintainer_id` | id | 是 | `idx_operations_repair_reports_maintainer` | 维修人员 |
+| `result` | string(32) | 是 | `idx_operations_repair_reports_result` | 维修结果 |
+| `repaired_at` | datetime | 是 |  | 维修完成时间 |
+| `process_description` | text | 是 |  | 维修过程 |
+| `parts_used` | text | 否 |  | 使用部件 |
+| `requires_reinspection` | boolean | 是 |  | 是否需要复检 |
+| `created_at` | datetime | 是 |  | 创建时间 |
+
+### 7.5 `operations_reinspection_reports`
+
+复检报告表。
+
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `id` | id | 是 | `pk_operations_reinspection_reports` | 复检报告 ID |
+| `reinspection_report_no` | string(64) | 是 | `uq_operations_reinspection_reports_reinspection_report_no` | 复检报告编号 |
+| `fault_report_id` | id | 是 | `fk_operations_reinspection_reports_fault_report`, `idx_operations_reinspection_reports_fault` | 故障报告 ID |
+| `repair_report_id` | id | 是 | `fk_operations_reinspection_reports_repair_report`, `ux_operations_reinspection_reports_repair_report` | 维修报告 ID |
+| `reinspector_id` | id | 是 | `idx_operations_reinspection_reports_reinspector` | 复检人员 |
+| `result` | string(32) | 是 | `idx_operations_reinspection_reports_result` | 复检结果 |
+| `reinspected_at` | datetime | 是 |  | 复检时间 |
+| `description` | text | 否 |  | 复检说明 |
+| `created_at` | datetime | 是 |  | 创建时间 |
+
+## 8. 审核域
+
+### 8.1 `review_archive_requests`
+
+档案添加、删除和修改审核申请表。
+
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `id` | id | 是 | `pk_review_archive_requests` | 档案审核申请 ID |
+| `device_id` | id | 否 | `fk_review_archive_requests_device`, `idx_review_archive_requests_device_status` | 已存在设备 ID；添加档案申请可为空 |
+| `applicant_id` | id | 是 |  | 申请人 |
+| `status` | string(32) | 是 |  | 申请状态 |
+| `previous_device_status` | string(32) | 是 |  | 申请前设备状态 |
+| `reason` | text | 是 |  | 申请原因 |
+| `changes` | json | 是 |  | 字段变更内容 |
+| `reviewer_id` | id | 否 |  | 审核人 |
+| `review_comment` | text | 否 |  | 审核意见 |
+| `reviewed_at` | datetime | 否 |  | 审核时间 |
+| `freeze_until` | datetime | 否 | `idx_review_archive_requests_freeze_until` | 审核结束后的冻结截止时间 |
+| `created_at` | datetime | 是 |  | 创建时间 |
+| `created_by` | id | 是 |  | 创建人 |
+| `updated_at` | datetime | 是 |  | 更新时间 |
+| `updated_by` | id | 否 |  | 更新人 |
+| `request_type` | string(32) | 是 |  | 申请类型：`CREATE`、`UPDATE`、`DELETE` |
+| `target_device_code` | string(64) | 否 | `ux_review_archive_requests_pending_target_code` | 目标设备编号 |
+| `initiated_at` | datetime | 是 | `idx_review_archive_requests_initiated_at` | 申请发起时间 |
+
+`ux_review_archive_requests_pending_device` 和 `ux_review_archive_requests_pending_target_code` 分别限制同一设备、同一目标设备编号不能同时存在待审核档案申请。冻结期统一为审核结束后 6 小时。
+
+### 8.2 `review_operations_requests`
+
+运维审核申请表。核验报告、报修报告、维修报告和复检报告提交后进入该表。
+
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `id` | id | 是 | `pk_review_operations_requests` | 运维审核申请 ID |
+| `request_type` | string(32) | 是 |  | 审核类型 |
+| `target_id` | id | 是 | `ux_review_operations_requests_target` | 被审核业务对象 ID |
+| `target_no` | string(64) | 是 | `ux_review_operations_requests_target` | 被审核业务对象编号 |
+| `fault_report_id` | id | 是 | `fk_review_operations_requests_fault_report`, `idx_review_operations_requests_fault` | 故障报告 ID |
+| `device_id` | id | 是 | `fk_review_operations_requests_device` | 设备 ID |
+| `operator_id` | id | 是 |  | 提交人 |
+| `summary` | text | 是 |  | 审核摘要 |
+| `status` | string(32) | 是 | `idx_review_operations_requests_status_submitted` | 审核状态 |
+| `submitted_at` | datetime | 是 | `idx_review_operations_requests_status_submitted` | 提交时间 |
+| `reviewer_id` | id | 否 | `idx_review_operations_requests_reviewer` | 审核人 |
+| `review_comment` | text | 否 |  | 审核意见 |
+| `reviewed_at` | datetime | 否 | `idx_review_operations_requests_reviewer` | 审核时间 |
+| `created_at` | datetime | 是 |  | 创建时间 |
+| `updated_at` | datetime | 是 |  | 更新时间 |
+
+## 9. 日志域
+
+### 9.1 `log_entries`
+
+底层日志条目表。日志中心的档案操作日志、档案审核日志、运维操作日志和运维审核日志中，部分列表由业务表实时组合生成；该表用于保存跨业务操作条目。
+
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `id` | id | 是 | `pk_log_entries` | 日志 ID |
+| `action` | string(100) | 是 | `idx_log_entries_action_occurred_at` | 操作类型 |
+| `target_id` | id | 否 | `idx_log_entries_target` | 目标对象 ID |
+| `target_no` | string(64) | 否 | `idx_log_entries_target` | 目标对象编号 |
+| `actor_id` | id | 否 | `idx_log_entries_actor_occurred_at` | 操作人 ID |
+| `actor_name` | string(100) | 否 |  | 操作人显示名称 |
+| `status` | string(32) | 是 |  | 日志状态 |
+| `description` | text | 否 |  | 日志描述 |
+| `occurred_at` | datetime | 是 | `idx_log_entries_occurred_at` | 发生时间 |
+
+日志状态：`SUCCESS`、`FAILED`。
+
+## 10. 核心约束
+
+### 10.1 档案写入受审核控制
+
+设备档案的新增、删除和修改必须先写入 `review_archive_requests`。审核通过后，后端在事务内更新 `archive_devices` 并写入相关日志。
+
+### 10.2 档案冻结期
+
+档案申请审核结束后，不论通过或驳回，后端都必须设置 6 小时冻结期。冻结期从审核结束时间开始计算，移动端禁用入口只是体验层辅助。
+
+### 10.3 故障接取并发控制
+
+同一故障在同一时间只能存在一个有效维修任务。后端接取接口必须在数据库事务内完成故障状态检查、维修任务创建和故障状态更新。
+
+### 10.4 重大故障复检
+
+`operations_repair_reports.requires_reinspection` 为 `true` 时，故障必须进入待复检状态；复检通过后才能关闭故障并恢复设备状态。
+
+### 10.5 登录和敏感操作防暴力尝试
+
+登录失败写入 `user_login_attempts`。敏感操作密码复核失败写入 `user_password_verification_attempts`，校验通过后可在 `verified_until` 前免重复复核。
+
+## 11. 数据保留与删除
+
+- 用户、设备、故障、维修、复检和审核类数据默认采用状态变更或逻辑删除。
+- 日志属于追溯数据，不参与普通业务删除。
+- 涉及个人信息和敏感操作的数据保留周期需要在安全设计文档中进一步定义。
+
+## 12. 待确认问题
+
+- 主键生成策略是否继续使用应用侧字符串 ID。
+- 经纬度附近查询是否进一步统一为 PostGIS geography 字段。
+- 设备编号和各类报告编号是否需要独立序列表或号段表。
+- 日志保留周期和归档策略。
+- 后续用户中心是否引入个人设置、注册、注销和账号删除相关表。
 - 是否需要多组织或多租户字段。

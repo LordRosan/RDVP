@@ -39,12 +39,12 @@ public class JdbcDeviceArchiveRepository implements DeviceArchiveRepository {
                             d.last_verification_time,
                             pcr.id AS pending_request_id,
                             fcr.freeze_until
-                        FROM devices d
-                        LEFT JOIN device_archive_requests pcr
+                        FROM archive_devices d
+                        LEFT JOIN review_archive_requests pcr
                           ON pcr.device_id = d.id AND pcr.status = 'PENDING_REVIEW'
                         LEFT JOIN LATERAL (
                             SELECT freeze_until
-                            FROM device_archive_requests
+                            FROM review_archive_requests
                             WHERE (device_id = d.id OR target_device_code = d.device_code)
                               AND freeze_until IS NOT NULL
                               AND freeze_until > now()
@@ -76,12 +76,12 @@ public class JdbcDeviceArchiveRepository implements DeviceArchiveRepository {
                             d.last_verification_time,
                             pcr.id AS pending_request_id,
                             fcr.freeze_until
-                        FROM devices d
-                        LEFT JOIN device_archive_requests pcr
+                        FROM archive_devices d
+                        LEFT JOIN review_archive_requests pcr
                           ON pcr.device_id = d.id AND pcr.status = 'PENDING_REVIEW'
                         LEFT JOIN LATERAL (
                             SELECT freeze_until
-                            FROM device_archive_requests
+                            FROM review_archive_requests
                             WHERE (device_id = d.id OR target_device_code = d.device_code)
                               AND freeze_until IS NOT NULL
                               AND freeze_until > now()
@@ -101,7 +101,7 @@ public class JdbcDeviceArchiveRepository implements DeviceArchiveRepository {
         Long count = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM devices
+                        FROM archive_devices
                         WHERE deleted_at IS NULL
                         """,
                 Map.of(),
@@ -114,7 +114,7 @@ public class JdbcDeviceArchiveRepository implements DeviceArchiveRepository {
         Integer count = jdbcTemplate.queryForObject(
                 """
                         SELECT count(*)
-                        FROM devices
+                        FROM archive_devices
                         WHERE device_code = :deviceCode
                           AND deleted_at IS NULL
                         """,
@@ -127,7 +127,7 @@ public class JdbcDeviceArchiveRepository implements DeviceArchiveRepository {
     public void create(DeviceArchiveCreate create) {
         jdbcTemplate.update(
                 """
-                        INSERT INTO devices (
+                        INSERT INTO archive_devices (
                             id,
                             device_code,
                             name,
@@ -175,7 +175,7 @@ public class JdbcDeviceArchiveRepository implements DeviceArchiveRepository {
     public void updateStatus(String id, String status, String updatedBy) {
         jdbcTemplate.update(
                 """
-                        UPDATE devices
+                        UPDATE archive_devices
                         SET status = :status,
                             updated_at = now(),
                             updated_by = :updatedBy
@@ -192,7 +192,7 @@ public class JdbcDeviceArchiveRepository implements DeviceArchiveRepository {
     public void updateLastVerificationTime(String id, OffsetDateTime verifiedAt, String updatedBy) {
         jdbcTemplate.update(
                 """
-                        UPDATE devices
+                        UPDATE archive_devices
                         SET last_verification_time = :verifiedAt,
                             updated_at = now(),
                             updated_by = :updatedBy
@@ -209,7 +209,7 @@ public class JdbcDeviceArchiveRepository implements DeviceArchiveRepository {
     public boolean softDelete(String id, String deletedBy, String deleteReason) {
         int updated = jdbcTemplate.update(
                 """
-                        UPDATE devices
+                        UPDATE archive_devices
                         SET deleted_at = now(),
                             deleted_reason = NULLIF(:deleteReason, ''),
                             updated_at = now(),

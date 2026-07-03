@@ -3,33 +3,28 @@ package com.rmf.rdvp.archive;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.Locale;
-import java.util.UUID;
 import java.util.regex.Pattern;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.MultiFormatWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
-import com.rmf.rdvp.audit.AuditAction;
-import com.rmf.rdvp.audit.AuditLogService;
-import com.rmf.rdvp.config.RdvpRuntimeProperties;
-import com.rmf.rdvp.domain.common.BusinessException;
-import com.rmf.rdvp.domain.common.ErrorCode;
-import com.rmf.rdvp.identity.AuthenticatedUser;
+import com.rmf.rdvp.log.LogAction;
+import com.rmf.rdvp.log.LogEntryService;
+import com.rmf.rdvp.shared.config.RdvpRuntimeProperties;
+import com.rmf.rdvp.shared.error.BusinessException;
+import com.rmf.rdvp.shared.error.ErrorCode;
+import com.rmf.rdvp.user.AuthenticatedUser;
 
 @Service
 public class DeviceArchiveService {
@@ -42,27 +37,21 @@ public class DeviceArchiveService {
     private static final String QR_HMAC_ALGORITHM = "HmacSHA256";
     private static final int MAX_QR_VERSION = 999;
     private static final int QR_EXPORT_IMAGE_SIZE = 512;
-    private static final int MAX_VERIFICATION_DESCRIPTION_LENGTH = 500;
-    private static final int MAX_VERIFICATION_REMARK_LENGTH = 300;
-    private static final DateTimeFormatter LOCAL_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private final DeviceArchiveRepository archiveRepository;
     private final DeviceQrCodeRepository qrCodeRepository;
-    private final DeviceVerificationReportRepository verificationRepository;
     private final RdvpRuntimeProperties runtimeProperties;
-    private final AuditLogService auditLogService;
+    private final LogEntryService logEntryService;
 
     public DeviceArchiveService(
             DeviceArchiveRepository archiveRepository,
             DeviceQrCodeRepository qrCodeRepository,
-            DeviceVerificationReportRepository verificationRepository,
             RdvpRuntimeProperties runtimeProperties,
-            AuditLogService auditLogService) {
+            LogEntryService logEntryService) {
         this.archiveRepository = archiveRepository;
         this.qrCodeRepository = qrCodeRepository;
-        this.verificationRepository = verificationRepository;
         this.runtimeProperties = runtimeProperties;
-        this.auditLogService = auditLogService;
+        this.logEntryService = logEntryService;
     }
 
     public DeviceArchive findByCode(String deviceCode) {
@@ -125,67 +114,20 @@ public class DeviceArchiveService {
                     generateQrPngBase64(qrContent),
                     sha256Hex(qrContent),
                     exportedAt);
-            auditLogService.recordSuccess(
-                    AuditAction.DEVICE_ARCHIVE_EXPORT,
+            logEntryService.recordSuccess(
+                    LogAction.DEVICE_ARCHIVE_EXPORT,
                     device.id(),
                     device.deviceCode(),
                     operator,
                     "导出设备二维码。");
             return export;
         } catch (BusinessException exception) {
-            auditLogService.recordFailure(
-                    AuditAction.DEVICE_ARCHIVE_EXPORT,
-                    device == null ? normalizeAuditTarget(deviceId) : device.id(),
-                    device == null ? normalizeAuditTarget(deviceId) : device.deviceCode(),
+            logEntryService.recordFailure(
+                    LogAction.DEVICE_ARCHIVE_EXPORT,
+                    device == null ? normalizeLogTarget(deviceId) : device.id(),
+                    device == null ? normalizeLogTarget(deviceId) : device.deviceCode(),
                     operator,
                     "设备二维码导出失败：%s。".formatted(exception.getErrorCode().code()));
-            throw exception;
-        }
-    }
-
-    @Transactional
-    public DeviceVerificationReport createVerificationReport(
-            String deviceId,
-            DeviceVerificationResult result,
-            String description,
-            String remark,
-            String verifiedAt,
-            AuthenticatedUser operator) {
-        DeviceArchive device = null;
-        try {
-            device = findById(deviceId);
-            OffsetDateTime normalizedVerifiedAt = parseDateTime(verifiedAt, "verifiedAt");
-            OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-            DeviceVerificationReportCreate create = new DeviceVerificationReportCreate(
-                    "verification-" + UUID.randomUUID(),
-                    device.id(),
-                    operator.id(),
-                    requireVerificationResult(result),
-                    normalizeRequiredText(
-                            description,
-                            "description",
-                            MAX_VERIFICATION_DESCRIPTION_LENGTH,
-                            ErrorCode.DEVICE_VERIFICATION_INVALID),
-                    normalizeOptionalText(
-                            remark,
-                            MAX_VERIFICATION_REMARK_LENGTH,
-                            ErrorCode.DEVICE_VERIFICATION_INVALID),
-                    normalizedVerifiedAt,
-                    now);
-
-            verificationRepository.create(create);
-            archiveRepository.updateLastVerificationTime(device.id(), normalizedVerifiedAt, operator.id());
-            DeviceVerificationReport report = verificationRepository.findById(create.id())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR));
-            auditLogService.recordSuccess(
-                    AuditAction.DEVICE_VERIFICATION,
-                    report.id(),
-                    device.deviceCode(),
-                    operator,
-                    "Submitted device verification report.");
-            return report;
-        } catch (BusinessException exception) {
-            recordDeviceVerificationFailure(deviceId, device, operator, exception);
             throw exception;
         }
     }
@@ -278,66 +220,13 @@ public class DeviceArchiveService {
         }
     }
 
-    private OffsetDateTime parseDateTime(String value, String field) {
-        String normalized = normalizeRequiredText(value, field, 64, ErrorCode.BAD_REQUEST);
-        try {
-            return OffsetDateTime.parse(normalized);
-        } catch (DateTimeParseException ignored) {
-        }
-
-        try {
-            return LocalDateTime.parse(normalized, LOCAL_DATE_TIME_FORMATTER).atOffset(ZoneOffset.UTC);
-        } catch (DateTimeParseException exception) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, field + " is invalid.");
-        }
-    }
-
-    private DeviceVerificationResult requireVerificationResult(DeviceVerificationResult result) {
-        if (result == null) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "result is invalid.");
-        }
-
-        return result;
-    }
-
-    private String normalizeRequiredText(String value, String field, int maxLength, ErrorCode errorCode) {
-        String normalized = normalizeOptionalText(value, maxLength, errorCode);
-        if (normalized.isBlank()) {
-            throw new BusinessException(errorCode, field + " is required.");
-        }
-
-        return normalized;
-    }
-
-    private String normalizeOptionalText(String value, int maxLength, ErrorCode errorCode) {
-        String normalized = value == null ? "" : value.trim();
-        if (normalized.length() > maxLength) {
-            throw new BusinessException(errorCode, "Text field must not exceed " + maxLength + " characters.");
-        }
-
-        return normalized;
-    }
-
     private boolean constantTimeEquals(String left, String right) {
         byte[] leftBytes = left.getBytes(StandardCharsets.UTF_8);
         byte[] rightBytes = right.getBytes(StandardCharsets.UTF_8);
         return MessageDigest.isEqual(leftBytes, rightBytes);
     }
 
-    private void recordDeviceVerificationFailure(
-            String deviceId,
-            DeviceArchive device,
-            AuthenticatedUser operator,
-            BusinessException exception) {
-        auditLogService.recordFailure(
-                AuditAction.DEVICE_VERIFICATION,
-                device == null ? normalizeAuditTarget(deviceId) : device.id(),
-                device == null ? normalizeAuditTarget(deviceId) : device.deviceCode(),
-                operator,
-                "设备核验提交失败：%s。".formatted(exception.getErrorCode().code()));
-    }
-
-    private String normalizeAuditTarget(String value) {
+    private String normalizeLogTarget(String value) {
         String normalized = value == null ? "" : value.trim();
         return normalized.isBlank() ? null : normalized;
     }

@@ -1,6 +1,6 @@
 # RDVP Backend
 
-RDVP Backend 是 RDVP 移动端应用的后端服务，负责认证、设备档案、二维码校验、运维流程、管理审核、操作审计和系统健康检查等服务端能力。
+RDVP Backend 是 RDVP 移动端应用的后端服务，负责认证、用户中心、设备档案、二维码校验、运维流程、审核中心、日志中心和系统健康检查等服务端能力。
 
 ## 技术栈
 
@@ -77,7 +77,7 @@ POST http://localhost:8080/api/v1/auth/login
 Authorization: Bearer <accessToken>
 ```
 
-数据库模式下，访问凭证以哈希形式保存到 `token_sessions` 表，并按登录响应中的有效期进行校验；登出会撤销当前访问凭证。敏感操作前的密码复核失败计数保存到 `password_verification_attempts` 表，达到阈值后会临时锁定密码复核。
+数据库模式下，访问凭证以哈希形式保存到 `user_token_sessions` 表，并按登录响应中的有效期进行校验；登出会撤销当前访问凭证。敏感操作前的密码复核失败计数保存到 `user_password_verification_attempts` 表，达到阈值后会临时锁定密码复核。
 
 ## 已实现业务接口
 
@@ -163,16 +163,17 @@ GET http://localhost:8080/api/v1/reinspections/pending
 POST http://localhost:8080/api/v1/fault-reports/{faultReportId}/reinspection-reports
 ```
 
-操作审计记录：
+日志查询：
 
 ```text
-GET http://localhost:8080/api/v1/audit-logs
-GET http://localhost:8080/api/v1/audit-logs?action=FAULT_REPORT
+GET http://localhost:8080/api/v1/log-center/logs?category=ARCHIVE_OPERATION
+GET http://localhost:8080/api/v1/log-entries
+GET http://localhost:8080/api/v1/log-entries?action=FAULT_REPORT
 ```
 
 ## 本地引导账号
 
-数据库模式下，本地引导账号会在服务启动时写入 `users`、`user_roles`、`user_permissions` 表。再次启动时会同步账号显示名、状态、角色和权限，但不会覆盖已经存在的密码哈希；测试配置使用内存账号仓储。
+数据库模式下，本地引导账号会在服务启动时写入 `user_accounts`、`user_account_roles`、`user_account_permissions` 表。再次启动时会同步账号显示名、状态、角色和权限，但不会覆盖已经存在的密码哈希；测试配置使用内存账号仓储。
 
 | 用户名 | 密码 | 权限名 |
 | --- | --- | --- |

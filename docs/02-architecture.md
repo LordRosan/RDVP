@@ -15,7 +15,7 @@
 RDVP 的架构设计目标如下：
 
 - 支持 HarmonyOS 移动端完成现场设备档案查询、核验、故障报修、维修任务接取、维修任务报告和复检任务报告等业务。
-- 支持后端统一管理设备数据、业务流程、权限控制、审核和审计日志。
+- 支持后端统一管理设备数据、业务流程、权限控制、审核和日志。
 - 保证关键业务状态以后端为准，移动端不能绕过后端直接改变设备真实状态。
 - 当前版本采用在线提交优先架构，正式业务数据必须在后端校验通过后才生效；离线同步、附件和推送为后续增强能力。
 - 支持后续扩展 Web 管理后台、统计报表、多组织管理和外部系统集成。
@@ -60,7 +60,7 @@ RDVP 的架构设计目标如下：
 | Database                    |
 | - 业务数据                  |
 | - 状态记录                  |
-| - 审计日志                  |
+| - 业务日志                  |
 | - 登录与密码复核尝试        |
 +-----------------------------+
 ```
@@ -143,56 +143,86 @@ RDVP 的架构设计目标如下：
 
 推送内容不得包含敏感设备详情，应只包含摘要和业务标识，由移动端打开后再通过鉴权接口获取详情。
 
-## 4. 后端分层建议
+## 4. 后端工程结构
 
-后端服务采用 Spring Boot 分层结构：
+后端服务采用 Spring Boot 域优先结构。顶层目录先按业务域收拢，再在域内放置 API、服务、模型、仓储和基础设施代码；跨域公共能力放入 `shared`。
 
 ```text
 rdvp-backend/
   src/
     main/java/com/rmf/rdvp/
-      api/       HTTP 接口入口和请求响应模型
-      archive/   设备档案与二维码核验用例
-      operations/ 故障报修、任务接取、维修报告和复检报告用例
-      identity/  身份认证、角色和权限模型
-      security/  安全过滤器和统一鉴权响应
-      config/    运行配置
-      domain/    跨领域通用模型和异常
+      archive/     档案域：设备档案、二维码、档案申请相关模型和仓储
+        api/       档案域 HTTP 接口和请求响应模型
+      operations/  运维域：核验、报修、维修、复检和运维审核申请
+        api/       运维域 HTTP 接口和请求响应模型
+      review/      审核域占位：后续可承接独立审核编排能力
+      log/         日志域：日志条目、日志查询和日志中心接口
+        api/       日志域 HTTP 接口和请求响应模型
+      home/        首页域：首页数据看板聚合
+        api/       首页 HTTP 接口和响应模型
+      user/        用户域：登录、会话、角色、权限和用户中心后续能力
+        api/       用户域 HTTP 接口和请求响应模型
+      shared/      跨域公共能力：API 响应、错误、配置、安全过滤器和系统接口
     main/resources/db/migration/
       Flyway 数据库迁移
 ```
 
-`rdvp-backend` 是 RDVP 唯一后端工程。后续新增附件、通知和离线同步能力时，应继续保持接口层、业务用例层、领域规则和基础设施适配的职责边界清晰。
+`rdvp-backend` 是 RDVP 唯一后端工程。后续新增附件、通知和离线同步能力时，应优先判断它属于哪个业务域；只有确实跨域共享的能力才进入 `shared`。
 
-分层规则：
+结构规则：
 
-- `api` 层只负责协议适配、参数接收和响应输出。
-- `application` 层负责编排业务用例和事务边界。
-- `domain` 层表达核心业务规则，例如故障状态流转、复检判定、接取规则。
-- `infrastructure` 层处理数据库、文件、推送等外部技术细节。
-- `security` 层集中处理认证和授权。
-- `audit` 层集中记录关键业务动作。
+- 域内 `api` 包只负责协议适配、参数接收和响应输出。
+- 业务服务负责编排用例、权限校验和事务边界。
+- 仓储实现负责数据库访问，SQL 必须使用当前域化物理表名。
+- `shared/security` 只放安全过滤器、鉴权入口和跨域安全辅助；具体用户、角色、权限模型归属 `user`。
+- `shared/api` 只放统一响应、异常处理和请求 ID 等协议公共件。
+- 禁止恢复旧的顶层 `api`、`identity`、`security`、`config`、`dashboard`、`audit`、`domain` 技术层目录。
 
-## 5. 移动端分层建议
+## 5. 移动端工程结构
 
-HarmonyOS App 建议按页面、状态、服务和模型拆分：
+HarmonyOS App 同样采用域优先结构。每个业务域内按同级语义放置 `pages`、`components`、`models`、`services`、`stores` 等目录；跨域通用 UI、主题、网络、安全和导航能力放入 `shared`。
 
 ```text
 entry/src/main/ets/
-  pages/       页面入口
-  components/ 复用组件
-  models/     前端数据模型
-  services/   API 调用、认证、档案、运维、审核和日志查询等服务
-  stores/     页面状态和会话状态
-  utils/      通用工具
+  archive/      档案中心
+    pages/
+    models/
+    services/
+    stores/
+  operations/   运维中心
+    pages/
+    components/
+    models/
+    services/
+  review/       审核中心
+    pages/
+    models/
+    services/
+  log/          日志中心
+    pages/
+    models/
+    services/
+  home/         首页
+    pages/
+    models/
+    services/
+    stores/
+  user/         用户中心、登录页和会话
+    pages/
+    models/
+    services/
+    stores/
+  shared/       跨域通用组件、主题、网络、导航、安全、工具和公共状态
 ```
 
 移动端实现规则：
 
 - 页面不直接拼接复杂业务规则。
-- API 调用集中放在 `services/`。
-- 业务状态枚举集中定义，避免页面中散落字符串。
+- API 调用放在对应业务域的 `services/`，跨域通用网络能力放在 `shared/services/`。
+- 业务状态枚举放在对应业务域的 `models/`，跨域公共模型放在 `shared/models/`。
 - 网络异常、权限不足和提交失败必须有明确用户提示。
+- 登录界面命名为 `LoginPage`；首页命名为 `HomePage`，用户相关入口统一使用“用户中心”语义。
+- 禁止恢复旧的顶层 `pages`、`components`、`models`、`services`、`stores`、`utils`、`styles` 技术层目录。
 - 后续离线同步能力落地后，离线待同步内容与正式提交数据必须有明确状态区分。
 
 ## 6. 核心业务流向
