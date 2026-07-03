@@ -139,7 +139,7 @@ class HomeDashboardControllerTests {
         String adminToken = login("admin", "password");
         String operatorToken = login("operator", "password");
 
-        mockMvc.perform(post("/api/v1/device-archive-requests")
+        mockMvc.perform(post("/api/v1/archive-requests")
                         .header("Authorization", "Bearer " + archiveAdminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -156,7 +156,7 @@ class HomeDashboardControllerTests {
                                 """))
                 .andExpect(status().isOk());
 
-        String pendingResponse = mockMvc.perform(get("/api/v1/device-archive-requests?status=PENDING_REVIEW")
+        String pendingResponse = mockMvc.perform(get("/api/v1/archive-requests?status=PENDING_REVIEW")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andReturn()
@@ -173,7 +173,7 @@ class HomeDashboardControllerTests {
                 .orElseThrow();
 
         verifyPassword(adminToken, "password");
-        mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", createRequestId)
+        mockMvc.perform(post("/api/v1/archive-requests/{requestId}/review", createRequestId)
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -317,7 +317,7 @@ class HomeDashboardControllerTests {
         String archiveAdminToken = login("archiveadmin", "password");
         String adminToken = login("admin", "password");
 
-        String createResponse = mockMvc.perform(post("/api/v1/device-archive-requests")
+        String createResponse = mockMvc.perform(post("/api/v1/archive-requests")
                         .header("Authorization", "Bearer " + archiveAdminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -347,7 +347,7 @@ class HomeDashboardControllerTests {
                 .andExpect(jsonPath("$.data.review.reviewedTotal").value(0));
 
         verifyPassword(adminToken, "password");
-        mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", createRequestId)
+        mockMvc.perform(post("/api/v1/archive-requests/{requestId}/review", createRequestId)
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -367,7 +367,7 @@ class HomeDashboardControllerTests {
                 .andExpect(jsonPath("$.data.archive.archiveDeletes").value(0))
                 .andExpect(jsonPath("$.data.review.reviewedTotal").value(1));
 
-        String updateResponse = mockMvc.perform(post("/api/v1/device-archive-requests")
+        String updateResponse = mockMvc.perform(post("/api/v1/archive-requests")
                         .header("Authorization", "Bearer " + archiveAdminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -398,7 +398,7 @@ class HomeDashboardControllerTests {
         String createdDeviceId = objectMapper.readTree(createdDeviceResponse).path("data").path("id").asText();
 
         verifyPassword(archiveAdminToken, "password");
-        String deleteResponse = mockMvc.perform(post("/api/v1/device-archive-requests")
+        String deleteResponse = mockMvc.perform(post("/api/v1/archive-requests")
                         .header("Authorization", "Bearer " + archiveAdminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -423,7 +423,7 @@ class HomeDashboardControllerTests {
                 .andExpect(jsonPath("$.data.review.reviewedTotal").value(1));
 
         verifyPassword(adminToken, "password");
-        mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", updateRequestId)
+        mockMvc.perform(post("/api/v1/archive-requests/{requestId}/review", updateRequestId)
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -445,7 +445,7 @@ class HomeDashboardControllerTests {
                 .andExpect(jsonPath("$.data.review.reviewedTotal").value(2));
 
         verifyPassword(adminToken, "password");
-        mockMvc.perform(post("/api/v1/device-archive-requests/{requestId}/review", deleteRequestId)
+        mockMvc.perform(post("/api/v1/archive-requests/{requestId}/review", deleteRequestId)
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""

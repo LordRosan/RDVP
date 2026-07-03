@@ -1,6 +1,6 @@
 # RDVP Backend
 
-RDVP Backend 是 RDVP 移动端应用的后端服务，负责认证、用户中心、设备档案、二维码校验、运维流程、审核中心、日志中心和系统健康检查等服务端能力。
+RDVP Backend 是 RDVP 移动端应用的后端服务，负责认证、用户中心、档案、二维码校验、运维流程、审核中心、日志中心和系统健康检查等服务端能力。
 
 ## 技术栈
 
@@ -81,7 +81,7 @@ Authorization: Bearer <accessToken>
 
 ## 已实现业务接口
 
-设备档案查询：
+档案查询：
 
 ```text
 GET http://localhost:8080/api/v1/devices/by-code/RDVP-DEVICE-0001
@@ -112,10 +112,10 @@ POST http://localhost:8080/api/v1/device-qrcodes/verify
 
 二维码签名密钥通过 `RDVP_QR_SIGNING_SECRET` 配置。本地默认值仅用于开发联调，部署环境必须使用独立密钥。
 
-设备档案申请：
+档案申请：
 
 ```text
-POST http://localhost:8080/api/v1/device-archive-requests
+POST http://localhost:8080/api/v1/archive-requests
 ```
 
 请求示例：
@@ -136,8 +136,8 @@ POST http://localhost:8080/api/v1/device-archive-requests
 管理员查询和审核档案申请：
 
 ```text
-GET http://localhost:8080/api/v1/device-archive-requests?status=PENDING_REVIEW
-POST http://localhost:8080/api/v1/device-archive-requests/{requestId}/review
+GET http://localhost:8080/api/v1/archive-requests?status=PENDING_REVIEW
+POST http://localhost:8080/api/v1/archive-requests/{requestId}/review
 ```
 
 审核请求示例：

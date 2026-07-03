@@ -21,7 +21,7 @@ struct ArchiveCenterPage {
   @State messageTargetId: string = '';
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveCenterDeviceArchiveQuery)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveCenterArchiveQuery)) {
       return;
     }
 
@@ -29,7 +29,7 @@ struct ArchiveCenterPage {
   }
 
   onPageShow(): void {
-    if (AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveCenterDeviceArchiveQuery)) {
+    if (AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ArchiveCenterArchiveQuery)) {
       this.refreshCenterState();
     }
   }
@@ -217,39 +217,39 @@ struct ArchiveCenterPage {
   }
 
   canQueryArchive(): boolean {
-    return SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveQuery);
+    return SessionStore.hasPermission(PermissionCode.ArchiveCenterArchiveQuery);
   }
 
   canUpdateArchive(): boolean {
-    return SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveUpdateRequestSubmit);
+    return SessionStore.hasPermission(PermissionCode.ArchiveCenterArchiveUpdateRequestSubmit);
   }
 
   canDeleteArchive(): boolean {
-    return SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveDeleteRequestSubmit);
+    return SessionStore.hasPermission(PermissionCode.ArchiveCenterArchiveDeleteRequestSubmit);
   }
 
   canCreateArchive(): boolean {
-    return SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveCreateRequestSubmit);
+    return SessionStore.hasPermission(PermissionCode.ArchiveCenterArchiveCreateRequestSubmit);
   }
 
   canExportArchive(): boolean {
-    return SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveExport);
+    return SessionStore.hasPermission(PermissionCode.ArchiveCenterArchiveExport);
   }
 
   openFeature(action: HomeAction): void {
     this.message = '';
     this.messageTargetId = '';
-    if (action.id === HomeActionId.DeviceArchiveQuery) {
-      AppNavigator.push(this.getUIContext(), 'archive/pages/DeviceArchiveQueryPage', () => {
-        this.message = UiFeedbackService.operationUnavailable('查询设备档案');
+    if (action.id === HomeActionId.ArchiveQuery) {
+      AppNavigator.push(this.getUIContext(), 'archive/pages/ArchiveQueryPage', () => {
+        this.message = UiFeedbackService.operationUnavailable('查询档案');
         this.messageTargetId = `${action.id}`;
       });
       return;
     }
 
-    if (action.id === HomeActionId.DeviceArchiveCreateRequest) {
-      AppNavigator.push(this.getUIContext(), 'archive/pages/DeviceArchiveCreatePage', () => {
-        this.message = UiFeedbackService.operationUnavailable('添加设备档案');
+    if (action.id === HomeActionId.ArchiveCreateRequest) {
+      AppNavigator.push(this.getUIContext(), 'archive/pages/ArchiveCreatePage', () => {
+        this.message = UiFeedbackService.operationUnavailable('添加档案');
         this.messageTargetId = `${action.id}`;
       });
       return;

@@ -47,7 +47,7 @@ export class DashboardRefreshStore {
       return true;
     }
 
-    if (normalizedPath.startsWith('/api/v1/device-archive-requests')) {
+    if (normalizedPath.startsWith('/api/v1/archive-requests')) {
       return true;
     }
 

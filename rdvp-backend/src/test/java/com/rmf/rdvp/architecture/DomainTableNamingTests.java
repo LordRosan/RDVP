@@ -16,6 +16,10 @@ class DomainTableNamingTests {
 
     private static final Path DOMAIN_CONSTRAINT_MIGRATION =
             Path.of("src/main/resources/db/migration/V32__standardize_domain_constraint_names.sql");
+    private static final Path ARCHIVE_FEATURE_VALUE_MIGRATION =
+            Path.of("src/main/resources/db/migration/V33__rename_archive_feature_values.sql");
+    private static final Path ARCHIVE_DESCRIPTION_VALUE_MIGRATION =
+            Path.of("src/main/resources/db/migration/V34__rename_archive_description_values.sql");
 
     private static final Set<String> ALLOWED_DOMAIN_PACKAGES = Set.of(
             "archive",
@@ -125,6 +129,21 @@ class DomainTableNamingTests {
             "ALTER INDEX IF EXISTS idx_device_archive_requests_initiated_at RENAME TO idx_review_archive_requests_initiated_at;",
             "ALTER INDEX IF EXISTS ux_device_archive_requests_pending_target_code RENAME TO ux_review_archive_requests_pending_target_code;");
 
+    private static final List<String> REQUIRED_ARCHIVE_FEATURE_VALUE_RENAMES = List.of(
+            "WHEN 'ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY' THEN 'ARCHIVE_CENTER_ARCHIVE_QUERY'",
+            "WHEN 'ARCHIVE_CENTER_DEVICE_ARCHIVE_CREATE_REQUEST_SUBMIT' THEN 'ARCHIVE_CENTER_ARCHIVE_CREATE_REQUEST_SUBMIT'",
+            "WHEN 'ARCHIVE_CENTER_DEVICE_ARCHIVE_UPDATE_REQUEST_SUBMIT' THEN 'ARCHIVE_CENTER_ARCHIVE_UPDATE_REQUEST_SUBMIT'",
+            "WHEN 'ARCHIVE_CENTER_DEVICE_ARCHIVE_DELETE_REQUEST_SUBMIT' THEN 'ARCHIVE_CENTER_ARCHIVE_DELETE_REQUEST_SUBMIT'",
+            "WHEN 'ARCHIVE_CENTER_DEVICE_ARCHIVE_EXPORT' THEN 'ARCHIVE_CENTER_ARCHIVE_EXPORT'",
+            "WHEN 'REVIEW_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW' THEN 'REVIEW_CENTER_ARCHIVE_REQUEST_REVIEW'",
+            "WHEN 'DEVICE_ARCHIVE_QUERY' THEN 'ARCHIVE_QUERY'",
+            "WHEN 'DEVICE_ARCHIVE_EXPORT' THEN 'ARCHIVE_EXPORT'",
+            "WHEN 'DEVICE_ARCHIVE_REQUEST' THEN 'ARCHIVE_REQUEST'",
+            "WHEN 'DEVICE_ARCHIVE_REVIEW' THEN 'ARCHIVE_REVIEW'",
+            "WHEN '查询设备档案。' THEN '查询档案。'",
+            "WHEN '导出设备档案。' THEN '导出档案。'",
+            "WHEN '新增设备档案。' THEN '新增档案。'");
+
     @Test
     void jdbcSqlUsesDomainTableNames() throws IOException {
         Path sourceRoot = Path.of("src/main/java");
@@ -189,6 +208,30 @@ class DomainTableNamingTests {
     }
 
     @Test
+    void archiveFeatureValueMigrationRenamesPersistedLegacyValues() throws IOException {
+        assertThat(ARCHIVE_FEATURE_VALUE_MIGRATION)
+                .exists();
+
+        String migration = Files.readString(ARCHIVE_FEATURE_VALUE_MIGRATION, StandardCharsets.UTF_8);
+
+        assertThat(migration.lines().map(String::trim).toList())
+                .containsAll(REQUIRED_ARCHIVE_FEATURE_VALUE_RENAMES);
+    }
+
+    @Test
+    void archiveDescriptionValueMigrationRemovesLegacyDeviceArchivePhrase() throws IOException {
+        assertThat(ARCHIVE_DESCRIPTION_VALUE_MIGRATION)
+                .exists();
+
+        String migration = Files.readString(ARCHIVE_DESCRIPTION_VALUE_MIGRATION, StandardCharsets.UTF_8);
+
+        assertThat(migration.lines().map(String::trim).toList())
+                .contains(
+                        "SET description = replace(description, '设备档案', '档案')",
+                        "WHERE description LIKE '%设备档案%';");
+    }
+
+    @Test
     void archiveDomainDoesNotOwnOperationsDeviceVerificationConcepts() throws IOException {
         Path archiveRoot = Path.of("src/main/java/com/rmf/rdvp/archive");
 
@@ -198,6 +241,37 @@ class DomainTableNamingTests {
                     .filter(path -> path.toString().endsWith(".java"))
                     .filter(DomainTableNamingTests::containsDeviceVerificationToken)
                     .map(Path::toString)
+                    .toList();
+        }
+
+        assertThat(violations).isEmpty();
+    }
+
+    @Test
+    void archiveDomainUsesArchiveFeatureNaming() throws IOException {
+        Path sourceRoot = Path.of("src/main/java");
+
+        List<String> violations;
+        try (Stream<Path> files = Files.walk(sourceRoot)) {
+            violations = files
+                    .filter(path -> path.toString().endsWith(".java"))
+                    .filter(path -> !path.toString().contains("db/migration"))
+                    .flatMap(DomainTableNamingTests::legacyArchiveFeatureViolations)
+                    .toList();
+        }
+
+        assertThat(violations).isEmpty();
+    }
+
+    @Test
+    void operationsCombinedVerificationAndFaultReportDropsDevicePrefix() throws IOException {
+        Path sourceRoot = Path.of("src/main/java");
+
+        List<String> violations;
+        try (Stream<Path> files = Files.walk(sourceRoot)) {
+            violations = files
+                    .filter(path -> path.toString().endsWith(".java"))
+                    .flatMap(DomainTableNamingTests::combinedVerificationAndFaultReportViolations)
                     .toList();
         }
 
@@ -281,6 +355,31 @@ class DomainTableNamingTests {
             }
 
             return Stream.of(file + " declares " + actualPackage + " but lives under " + expectedPackage);
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to inspect " + file, exception);
+        }
+    }
+
+    private static Stream<String> legacyArchiveFeatureViolations(Path file) {
+        try {
+            String content = Files.readString(file, StandardCharsets.UTF_8);
+            return Stream.of(
+                            "DeviceArchive",
+                            "DEVICE_ARCHIVE",
+                            "device-archive")
+                    .filter(content::contains)
+                    .map(legacyToken -> file + " contains " + legacyToken);
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to inspect " + file, exception);
+        }
+    }
+
+    private static Stream<String> combinedVerificationAndFaultReportViolations(Path file) {
+        try {
+            String content = Files.readString(file, StandardCharsets.UTF_8);
+            return Stream.of("DeviceVerificationAndFaultReport", "DEVICE_VERIFICATION_AND_FAULT_REPORT")
+                    .filter(content::contains)
+                    .map(legacyToken -> file + " contains " + legacyToken);
         } catch (IOException exception) {
             throw new IllegalStateException("Failed to inspect " + file, exception);
         }

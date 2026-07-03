@@ -9,7 +9,7 @@ export enum DeviceStatus {
   Retired = 'RETIRED'
 }
 
-export enum DeviceArchiveQueryMode {
+export enum ArchiveQueryMode {
   Code = 'CODE',
   Qr = 'QR'
 }
@@ -20,7 +20,7 @@ export interface DeviceLocation {
   latitude?: number;
 }
 
-export interface DeviceArchiveRequestState {
+export interface ArchiveRequestState {
   locked: boolean;
   pendingRequestId?: string;
   freezeUntil?: string;
@@ -35,7 +35,7 @@ export interface DeviceSummary {
   location: DeviceLocation;
   status: DeviceStatus;
   lastVerificationTime?: string;
-  archiveRequestState?: DeviceArchiveRequestState;
+  archiveRequestState?: ArchiveRequestState;
 }
 
 export interface DeviceCodeQueryForm {

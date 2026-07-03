@@ -2,9 +2,9 @@ package com.rmf.rdvp.home;
 
 import org.springframework.stereotype.Service;
 
-import com.rmf.rdvp.archive.DeviceArchiveRepository;
-import com.rmf.rdvp.archive.DeviceArchiveRequestRepository;
-import com.rmf.rdvp.archive.DeviceArchiveRequestType;
+import com.rmf.rdvp.archive.ArchiveRepository;
+import com.rmf.rdvp.archive.ArchiveRequestRepository;
+import com.rmf.rdvp.archive.ArchiveRequestType;
 import com.rmf.rdvp.operations.DeviceVerificationReportRepository;
 import com.rmf.rdvp.log.LogAction;
 import com.rmf.rdvp.log.LogEntryRepository;
@@ -15,15 +15,15 @@ import com.rmf.rdvp.operations.OperationsRepository;
 @Service
 public class HomeDashboardService {
 
-    private final DeviceArchiveRepository archiveRepository;
-    private final DeviceArchiveRequestRepository archiveRequestRepository;
+    private final ArchiveRepository archiveRepository;
+    private final ArchiveRequestRepository archiveRequestRepository;
     private final DeviceVerificationReportRepository verificationRepository;
     private final OperationsRepository operationsRepository;
     private final LogEntryRepository logEntryRepository;
 
     public HomeDashboardService(
-            DeviceArchiveRepository archiveRepository,
-            DeviceArchiveRequestRepository archiveRequestRepository,
+            ArchiveRepository archiveRepository,
+            ArchiveRequestRepository archiveRequestRepository,
             DeviceVerificationReportRepository verificationRepository,
             OperationsRepository operationsRepository,
             LogEntryRepository logEntryRepository) {
@@ -45,11 +45,11 @@ public class HomeDashboardService {
     private ArchiveDashboardStats archiveStats() {
         return new ArchiveDashboardStats(
                 archiveRepository.countActiveDevices(),
-                archiveRequestRepository.countApprovedByType(DeviceArchiveRequestType.CREATE),
-                archiveRequestRepository.countApprovedByType(DeviceArchiveRequestType.DELETE),
-                archiveRequestRepository.countApprovedByType(DeviceArchiveRequestType.UPDATE),
-                logEntryRepository.countSuccessByAction(LogAction.DEVICE_ARCHIVE_QUERY),
-                logEntryRepository.countSuccessByAction(LogAction.DEVICE_ARCHIVE_EXPORT));
+                archiveRequestRepository.countApprovedByType(ArchiveRequestType.CREATE),
+                archiveRequestRepository.countApprovedByType(ArchiveRequestType.DELETE),
+                archiveRequestRepository.countApprovedByType(ArchiveRequestType.UPDATE),
+                logEntryRepository.countSuccessByAction(LogAction.ARCHIVE_QUERY),
+                logEntryRepository.countSuccessByAction(LogAction.ARCHIVE_EXPORT));
     }
 
     private OperationsDashboardStats operationsStats() {
@@ -66,7 +66,7 @@ public class HomeDashboardService {
                 user,
                 PermissionCode.LOG_CENTER_ARCHIVE_REVIEW_LOG_QUERY,
                 PermissionCode.LOG_CENTER_OPERATIONS_REVIEW_LOG_QUERY);
-        boolean canViewPendingArchiveReviews = hasPermission(user, PermissionCode.REVIEW_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW);
+        boolean canViewPendingArchiveReviews = hasPermission(user, PermissionCode.REVIEW_CENTER_ARCHIVE_REQUEST_REVIEW);
         boolean canViewPendingOperationsReviews = hasPermission(user, PermissionCode.REVIEW_CENTER_OPERATIONS_REVIEW);
         if (!canViewReviewedTotal && !canViewPendingArchiveReviews && !canViewPendingOperationsReviews) {
             return null;
@@ -109,8 +109,8 @@ public class HomeDashboardService {
 
     private long archiveOperationLogCount() {
         return archiveRequestRepository.countAll()
-                + logEntryRepository.countSuccessByAction(LogAction.DEVICE_ARCHIVE_QUERY)
-                + logEntryRepository.countSuccessByAction(LogAction.DEVICE_ARCHIVE_EXPORT);
+                + logEntryRepository.countSuccessByAction(LogAction.ARCHIVE_QUERY)
+                + logEntryRepository.countSuccessByAction(LogAction.ARCHIVE_EXPORT);
     }
 
     private long archiveReviewLogCount() {
@@ -132,10 +132,10 @@ public class HomeDashboardService {
     private boolean canViewArchiveStats(AuthenticatedUser user) {
         return hasAnyPermission(
                 user,
-                PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_CREATE_REQUEST_SUBMIT,
-                PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_UPDATE_REQUEST_SUBMIT,
-                PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_DELETE_REQUEST_SUBMIT,
-                PermissionCode.ARCHIVE_CENTER_DEVICE_ARCHIVE_EXPORT);
+                PermissionCode.ARCHIVE_CENTER_ARCHIVE_CREATE_REQUEST_SUBMIT,
+                PermissionCode.ARCHIVE_CENTER_ARCHIVE_UPDATE_REQUEST_SUBMIT,
+                PermissionCode.ARCHIVE_CENTER_ARCHIVE_DELETE_REQUEST_SUBMIT,
+                PermissionCode.ARCHIVE_CENTER_ARCHIVE_EXPORT);
     }
 
     private boolean canViewOperationsStats(AuthenticatedUser user) {

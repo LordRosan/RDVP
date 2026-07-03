@@ -10,9 +10,9 @@ import com.rmf.rdvp.log.LogAction;
 import com.rmf.rdvp.log.LogEntryQuery;
 import com.rmf.rdvp.log.LogEntry;
 import com.rmf.rdvp.log.LogEntryRepository;
-import com.rmf.rdvp.archive.DeviceArchiveRequest;
-import com.rmf.rdvp.archive.DeviceArchiveRequestQuery;
-import com.rmf.rdvp.archive.DeviceArchiveRequestRepository;
+import com.rmf.rdvp.archive.ArchiveRequest;
+import com.rmf.rdvp.archive.ArchiveRequestQuery;
+import com.rmf.rdvp.archive.ArchiveRequestRepository;
 import com.rmf.rdvp.operations.OperationsReviewRequest;
 import com.rmf.rdvp.operations.OperationsReviewRequestPage;
 import com.rmf.rdvp.operations.OperationsRepository;
@@ -21,12 +21,12 @@ import com.rmf.rdvp.operations.OperationsRepository;
 @Profile("test")
 public class InMemoryLogQueryRepository implements LogQueryRepository {
 
-    private final DeviceArchiveRequestRepository archiveRequestRepository;
+    private final ArchiveRequestRepository archiveRequestRepository;
     private final OperationsRepository operationsRepository;
     private final LogEntryRepository logEntryRepository;
 
     public InMemoryLogQueryRepository(
-            DeviceArchiveRequestRepository archiveRequestRepository,
+            ArchiveRequestRepository archiveRequestRepository,
             OperationsRepository operationsRepository,
             LogEntryRepository logEntryRepository) {
         this.archiveRequestRepository = archiveRequestRepository;
@@ -42,7 +42,7 @@ public class InMemoryLogQueryRepository implements LogQueryRepository {
             int limit,
             int offset) {
         String normalizedKeyword = keyword == null ? "" : keyword.trim().toLowerCase();
-        var requestLogs = archiveRequestRepository.list(new DeviceArchiveRequestQuery(
+        var requestLogs = archiveRequestRepository.list(new ArchiveRequestQuery(
                         null,
                         null,
                         null,
@@ -85,7 +85,7 @@ public class InMemoryLogQueryRepository implements LogQueryRepository {
             int limit,
             int offset) {
         String normalizedKeyword = keyword == null ? "" : keyword.trim().toLowerCase();
-        var archiveRequests = archiveRequestRepository.list(new DeviceArchiveRequestQuery(
+        var archiveRequests = archiveRequestRepository.list(new ArchiveRequestQuery(
                         null,
                         null,
                         null,
@@ -143,7 +143,7 @@ public class InMemoryLogQueryRepository implements LogQueryRepository {
         return new LogList(List.of(), 0);
     }
 
-    private LogItem toArchiveLog(DeviceArchiveRequest request) {
+    private LogItem toArchiveLog(ArchiveRequest request) {
         return new LogItem(
                 "ARCHIVE_OPERATION",
                 request.type().name(),
@@ -167,7 +167,7 @@ public class InMemoryLogQueryRepository implements LogQueryRepository {
                 record.description());
     }
 
-    private LogItem toArchiveReviewLog(DeviceArchiveRequest request) {
+    private LogItem toArchiveReviewLog(ArchiveRequest request) {
         return new LogItem(
                 "ARCHIVE_REVIEW",
                 request.type().name(),
@@ -236,20 +236,20 @@ public class InMemoryLogQueryRepository implements LogQueryRepository {
             return null;
         }
 
-        if ("DEVICE_ARCHIVE_QUERY".equalsIgnoreCase(type)) {
-            return LogAction.DEVICE_ARCHIVE_QUERY;
+        if ("ARCHIVE_QUERY".equalsIgnoreCase(type)) {
+            return LogAction.ARCHIVE_QUERY;
         }
 
-        if ("DEVICE_ARCHIVE_EXPORT".equalsIgnoreCase(type)) {
-            return LogAction.DEVICE_ARCHIVE_EXPORT;
+        if ("ARCHIVE_EXPORT".equalsIgnoreCase(type)) {
+            return LogAction.ARCHIVE_EXPORT;
         }
 
         return null;
     }
 
     private boolean isAuditArchiveType(String type) {
-        return "DEVICE_ARCHIVE_QUERY".equalsIgnoreCase(type)
-                || "DEVICE_ARCHIVE_EXPORT".equalsIgnoreCase(type);
+        return "ARCHIVE_QUERY".equalsIgnoreCase(type)
+                || "ARCHIVE_EXPORT".equalsIgnoreCase(type);
     }
 
     private boolean shouldIncludeArchiveLogEntries(String type) {
@@ -257,8 +257,8 @@ public class InMemoryLogQueryRepository implements LogQueryRepository {
     }
 
     private boolean isArchiveLogAction(LogAction action) {
-        return action == LogAction.DEVICE_ARCHIVE_QUERY
-                || action == LogAction.DEVICE_ARCHIVE_EXPORT;
+        return action == LogAction.ARCHIVE_QUERY
+                || action == LogAction.ARCHIVE_EXPORT;
     }
 }
 

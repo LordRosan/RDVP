@@ -110,7 +110,7 @@ export class DeviceQrCodeExportService {
 
   private static validateForm(form: DeviceQrCodeExportForm): string {
     if (form.deviceId.trim().length === 0) {
-      return UiFeedbackService.requiredSelection('设备档案');
+      return UiFeedbackService.requiredSelection('档案');
     }
 
     return '';

@@ -54,10 +54,10 @@ export struct ActionTile {
 
   getIcon(): Resource {
     if (this.action.id === HomeActionId.ArchiveCenter ||
-      this.action.id === HomeActionId.DeviceArchiveQuery) {
+      this.action.id === HomeActionId.ArchiveQuery) {
       return $r('sys.symbol.text_clipboard');
     }
-    if (this.action.id === HomeActionId.DeviceArchiveCreateRequest) {
+    if (this.action.id === HomeActionId.ArchiveCreateRequest) {
       return $r('sys.symbol.plus_circle');
     }
     if (this.action.id === HomeActionId.OperationsCenter ||
@@ -69,7 +69,7 @@ export struct ActionTile {
       return $r('sys.symbol.location_up');
     }
     if (this.action.id === HomeActionId.ReviewCenter ||
-      this.action.id === HomeActionId.DeviceArchiveReview ||
+      this.action.id === HomeActionId.ArchiveReview ||
       this.action.id === HomeActionId.OperationsReview) {
       return $r('sys.symbol.checkmark_shield');
     }

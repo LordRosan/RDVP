@@ -15,8 +15,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.rmf.rdvp.archive.DeviceArchive;
-import com.rmf.rdvp.archive.DeviceArchiveRepository;
+import com.rmf.rdvp.archive.Archive;
+import com.rmf.rdvp.archive.ArchiveRepository;
 import com.rmf.rdvp.log.LogAction;
 import com.rmf.rdvp.log.LogEntryService;
 import com.rmf.rdvp.shared.error.BusinessException;
@@ -43,13 +43,13 @@ public class OperationsService {
     private static final DateTimeFormatter LOCAL_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final DateTimeFormatter BUSINESS_NO_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
-    private final DeviceArchiveRepository archiveRepository;
+    private final ArchiveRepository archiveRepository;
     private final DeviceVerificationReportRepository verificationRepository;
     private final OperationsRepository operationsRepository;
     private final LogEntryService logEntryService;
 
     public OperationsService(
-            DeviceArchiveRepository archiveRepository,
+            ArchiveRepository archiveRepository,
             DeviceVerificationReportRepository verificationRepository,
             OperationsRepository operationsRepository,
             LogEntryService logEntryService) {
@@ -97,7 +97,7 @@ public class OperationsService {
             BigDecimal longitude,
             BigDecimal latitude,
             AuthenticatedUser reporter) {
-        DeviceArchive device = archiveRepository.findByCode(normalizeDeviceCode(deviceCode))
+        Archive device = archiveRepository.findByCode(normalizeDeviceCode(deviceCode))
                 .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
         if (operationsRepository.hasActiveFaultForDevice(device.id())) {
             throw new BusinessException(ErrorCode.DEVICE_ACTIVE_FAULT_EXISTS);
@@ -173,7 +173,7 @@ public class OperationsService {
             String remark,
             String verifiedAt,
             AuthenticatedUser operator) {
-        DeviceArchive device = null;
+        Archive device = null;
         try {
             DeviceVerificationResult normalizedResult = requireEnum(result, "result");
             device = archiveRepository.findById(normalizeId(deviceId, "deviceId"))
@@ -215,7 +215,7 @@ public class OperationsService {
     }
 
     @Transactional
-    public DeviceVerificationAndFaultReportResult createVerificationAndFaultReport(
+    public VerificationAndFaultReportResult createVerificationAndFaultReport(
             String deviceId,
             DeviceVerificationResult result,
             String verificationDescription,
@@ -229,7 +229,7 @@ public class OperationsService {
             BigDecimal longitude,
             BigDecimal latitude,
             AuthenticatedUser operator) {
-        DeviceArchive device = null;
+        Archive device = null;
         try {
             DeviceVerificationResult normalizedResult = requireEnum(result, "result");
             if (normalizedResult == DeviceVerificationResult.NORMAL) {
@@ -342,7 +342,7 @@ public class OperationsService {
                             faultReport.severity().name(),
                             faultReport.description()),
                     faultReport.createdAt());
-            return new DeviceVerificationAndFaultReportResult(verificationReport, faultReport);
+            return new VerificationAndFaultReportResult(verificationReport, faultReport);
         } catch (BusinessException exception) {
             recordDeviceVerificationFailure(deviceId, device, operator, "设备核验联动报修失败", exception);
             throw exception;
@@ -425,7 +425,7 @@ public class OperationsService {
                 || operationsRepository.hasActiveRepairTaskForFault(faultReport.id())) {
             throw new BusinessException(ErrorCode.FAULT_ALREADY_ACCEPTED);
         }
-        DeviceArchive device = archiveRepository.findById(faultReport.deviceId())
+        Archive device = archiveRepository.findById(faultReport.deviceId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
         validateRepairTaskDistance(workload, device, normalizedLongitude, normalizedLatitude);
 
@@ -599,7 +599,7 @@ public class OperationsService {
         if (operationsRepository.hasActiveReinspectionTaskForFault(faultReport.id())) {
             throw new BusinessException(ErrorCode.REINSPECTION_REQUIRED, "An active reinspection task already exists for this fault.");
         }
-        DeviceArchive device = archiveRepository.findById(faultReport.deviceId())
+        Archive device = archiveRepository.findById(faultReport.deviceId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
         validateRepairTaskDistance(workload, device, normalizedLongitude, normalizedLatitude);
 
@@ -854,7 +854,7 @@ public class OperationsService {
 
     private void recordDeviceVerificationFailure(
             String deviceId,
-            DeviceArchive device,
+            Archive device,
             AuthenticatedUser operator,
             String messagePrefix,
             BusinessException exception) {
@@ -972,7 +972,7 @@ public class OperationsService {
 
     private void validateRepairTaskDistance(
             RepairerWorkloadSnapshot workload,
-            DeviceArchive device,
+            Archive device,
             BigDecimal longitude,
             BigDecimal latitude) {
         if (device.longitude() == null || device.latitude() == null) {
@@ -1105,7 +1105,7 @@ public class OperationsService {
 
         try {
             return archiveRepository.findByCode(deviceCode)
-                    .map(DeviceArchive::id)
+                    .map(Archive::id)
                     .orElse(null);
         } catch (RuntimeException exception) {
             return null;
@@ -1119,7 +1119,7 @@ public class OperationsService {
 
         try {
             return archiveRepository.findById(deviceId)
-                    .map(DeviceArchive::deviceCode)
+                    .map(Archive::deviceCode)
                     .orElse(deviceId);
         } catch (RuntimeException exception) {
             return deviceId;

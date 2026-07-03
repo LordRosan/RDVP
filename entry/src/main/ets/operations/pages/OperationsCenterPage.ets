@@ -240,8 +240,8 @@ struct OperationsCenterPage {
   openFeature(action: HomeAction): void {
     this.message = '';
     this.messageTargetId = '';
-    if (action.id === HomeActionId.DeviceVerificationAndFaultReport) {
-      this.openPage(this.getDeviceVerificationAndFaultReportEntryUrl(), UiFeedbackService.operationUnavailable('核验与报修'));
+    if (action.id === HomeActionId.VerificationAndFaultReport) {
+      this.openPage(this.getVerificationAndFaultReportEntryUrl(), UiFeedbackService.operationUnavailable('核验与报修'));
       return;
     }
 
@@ -267,8 +267,8 @@ struct OperationsCenterPage {
   }
 
   resolveActionIdByUrl(url: string): string {
-    if (url === HomeService.getDeviceVerificationAndFaultReportRoute()) {
-      return `${HomeActionId.DeviceVerificationAndFaultReport}`;
+    if (url === HomeService.getVerificationAndFaultReportRoute()) {
+      return `${HomeActionId.VerificationAndFaultReport}`;
     }
 
     if (url === 'operations/pages/TaskAcceptancePage') {
@@ -282,8 +282,8 @@ struct OperationsCenterPage {
     return '';
   }
 
-  getDeviceVerificationAndFaultReportEntryUrl(): string {
-    return HomeService.getDeviceVerificationAndFaultReportRoute();
+  getVerificationAndFaultReportEntryUrl(): string {
+    return HomeService.getVerificationAndFaultReportRoute();
   }
 
   getRepairAndReinspectionEntryUrl(): string {

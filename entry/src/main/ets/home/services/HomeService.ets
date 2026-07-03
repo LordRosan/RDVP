@@ -21,8 +21,8 @@ import { ApiClient } from '../../shared/services/ApiClient';
 import { AppRoutes } from '../../shared/navigation/AppRoutes';
 
 export class HomeService {
-  static getDeviceVerificationAndFaultReportRoute(): string {
-    return AppRoutes.DeviceVerificationAndFaultReportPage;
+  static getVerificationAndFaultReportRoute(): string {
+    return AppRoutes.VerificationAndFaultReportPage;
   }
 
   static getRepairAndReinspectionRoute(): string {
@@ -86,20 +86,20 @@ export class HomeService {
   }
 
   static getArchiveCenterActions(): HomeAction[] {
-    if (!SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveQuery)) {
+    if (!SessionStore.hasPermission(PermissionCode.ArchiveCenterArchiveQuery)) {
       return [];
     }
 
     const actions: HomeAction[] = [{
-      id: HomeActionId.DeviceArchiveQuery,
-      title: '查询设备档案',
+      id: HomeActionId.ArchiveQuery,
+      title: '查询档案',
       tone: AppTone.Primary
     }];
 
-    if (SessionStore.hasPermission(PermissionCode.ArchiveCenterDeviceArchiveCreateRequestSubmit)) {
+    if (SessionStore.hasPermission(PermissionCode.ArchiveCenterArchiveCreateRequestSubmit)) {
       actions.push({
-        id: HomeActionId.DeviceArchiveCreateRequest,
-        title: '添加设备档案',
+        id: HomeActionId.ArchiveCreateRequest,
+        title: '添加档案',
         tone: AppTone.Primary
       });
     }
@@ -111,7 +111,7 @@ export class HomeService {
     const actions: HomeAction[] = [];
 
     if (SessionStore.hasPermission(PermissionCode.OperationsCenterDeviceVerificationSubmit)) {
-      actions.push(HomeService.createAction(HomeActionId.DeviceVerificationAndFaultReport, '核验与报修', AppTone.Success));
+      actions.push(HomeService.createAction(HomeActionId.VerificationAndFaultReport, '核验与报修', AppTone.Success));
     }
 
     if (HomeService.canAcceptAnyOperationTask()) {
@@ -127,9 +127,9 @@ export class HomeService {
 
   static getReviewCenterActions(): HomeAction[] {
     const actions: HomeAction[] = [];
-    if (HomeService.canReviewDeviceArchiveRequest()) {
+    if (HomeService.canReviewArchiveRequest()) {
       actions.push({
-        id: HomeActionId.DeviceArchiveReview,
+        id: HomeActionId.ArchiveReview,
         title: '档案审核',
         tone: AppTone.Warning
       });
@@ -183,8 +183,8 @@ export class HomeService {
     return SessionStore.hasAnyPermission(LogCenterPermissions);
   }
 
-  static canReviewDeviceArchiveRequest(): boolean {
-    return SessionStore.hasPermission(PermissionCode.ReviewCenterDeviceArchiveRequestReview);
+  static canReviewArchiveRequest(): boolean {
+    return SessionStore.hasPermission(PermissionCode.ReviewCenterArchiveRequestReview);
   }
 
   static canQueryAnyLog(): boolean {

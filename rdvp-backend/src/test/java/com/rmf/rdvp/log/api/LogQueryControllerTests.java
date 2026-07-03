@@ -205,13 +205,13 @@ class LogQueryControllerTests {
 
         mockMvc.perform(get("/api/v1/log-center/logs")
                         .queryParam("category", "ARCHIVE_OPERATION")
-                        .queryParam("type", "DEVICE_ARCHIVE_QUERY")
+                        .queryParam("type", "ARCHIVE_QUERY")
                         .queryParam("keyword", "RDVP-DEVICE-0001")
                         .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items[0].logCategory").value("ARCHIVE_OPERATION"))
-                .andExpect(jsonPath("$.data.items[0].logType").value("DEVICE_ARCHIVE_QUERY"))
+                .andExpect(jsonPath("$.data.items[0].logType").value("ARCHIVE_QUERY"))
                 .andExpect(jsonPath("$.data.items[0].deviceCode").value("RDVP-DEVICE-0001"));
     }
 

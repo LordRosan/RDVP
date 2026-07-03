@@ -32,7 +32,7 @@ public class JdbcLogQueryRepository implements LogQueryRepository {
 
         List<String> requestConditions = new ArrayList<>();
         List<String> logEntryConditions = new ArrayList<>();
-        logEntryConditions.add("al.action IN ('DEVICE_ARCHIVE_QUERY', 'DEVICE_ARCHIVE_EXPORT')");
+        logEntryConditions.add("al.action IN ('ARCHIVE_QUERY', 'ARCHIVE_EXPORT')");
 
         if (!normalizedType.isBlank()) {
             if (isArchiveRequestType(normalizedType)) {
@@ -480,8 +480,8 @@ public class JdbcLogQueryRepository implements LogQueryRepository {
     }
 
     private boolean isArchiveLogEntryType(String type) {
-        return "DEVICE_ARCHIVE_QUERY".equalsIgnoreCase(type)
-                || "DEVICE_ARCHIVE_EXPORT".equalsIgnoreCase(type);
+        return "ARCHIVE_QUERY".equalsIgnoreCase(type)
+                || "ARCHIVE_EXPORT".equalsIgnoreCase(type);
     }
 }
 

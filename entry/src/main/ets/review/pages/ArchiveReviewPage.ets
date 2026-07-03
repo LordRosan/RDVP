@@ -4,14 +4,14 @@ import { AppSectionTitle } from '../../shared/components/AppSectionTitle';
 import { CenterTitleBar } from '../../shared/components/CenterTitleBar';
 import { InlineMessageSurface } from '../../shared/components/InlineMessageSurface';
 import {
-  DeviceArchiveRequestFieldDiff,
-  DeviceArchiveReviewDecision,
-  DeviceArchiveReviewItem,
-  DeviceArchiveReviewRequestType
-} from '../../archive/models/DeviceArchiveReviewModels';
+  ArchiveRequestFieldDiff,
+  ArchiveReviewDecision,
+  ArchiveReviewItem,
+  ArchiveReviewRequestType
+} from '../../archive/models/ArchiveReviewModels';
 import { PermissionCode } from '../../user/models/PermissionModels';
 import { UiFeedbackService } from '../../shared/services/UiFeedbackService';
-import { DeviceArchiveReviewService } from '../services/DeviceArchiveReviewService';
+import { ArchiveReviewService } from '../services/ArchiveReviewService';
 import { AuthService } from '../../user/services/AuthService';
 import { SessionStore } from '../../user/stores/SessionStore';
 import { AuthGuard } from '../../shared/security/AuthGuard';
@@ -26,8 +26,8 @@ const REVIEW_FILTER_CONTROL_HEIGHT = 56;
 @Component
 struct ArchiveReviewPage {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
-  @State allRequests: DeviceArchiveReviewItem[] = [];
-  @State requests: DeviceArchiveReviewItem[] = [];
+  @State allRequests: ArchiveReviewItem[] = [];
+  @State requests: ArchiveReviewItem[] = [];
   @State requestTypeFilterIndex: number = 0;
   @State selectedRequestId: string = '';
   @State reviewDecision: string = '';
@@ -44,7 +44,7 @@ struct ArchiveReviewPage {
   @State filterResetRevision: number = 0;
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ReviewCenterDeviceArchiveRequestReview)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.ReviewCenterArchiveRequestReview)) {
       return;
     }
 
@@ -257,16 +257,16 @@ struct ArchiveReviewPage {
       if (this.requests.length === 0) {
         this.EmptyState()
       } else {
-        ForEach(this.requests, (item: DeviceArchiveReviewItem) => {
+        ForEach(this.requests, (item: ArchiveReviewItem) => {
           this.RequestItem(item)
-        }, (item: DeviceArchiveReviewItem) => item.id)
+        }, (item: ArchiveReviewItem) => item.id)
       }
     }
     .width('100%')
   }
 
   @Builder
-  RequestItem(item: DeviceArchiveReviewItem) {
+  RequestItem(item: ArchiveReviewItem) {
     Column({ space: 10 }) {
       Row({ space: 12 }) {
         Stack() {
@@ -277,10 +277,10 @@ struct ArchiveReviewPage {
         .width(44)
         .height(44)
         .borderRadius(22)
-        .backgroundColor(DeviceArchiveReviewService.getRequestTypeTone(item.type))
+        .backgroundColor(ArchiveReviewService.getRequestTypeTone(item.type))
 
         Column({ space: 4 }) {
-          Text(DeviceArchiveReviewService.formatRequestType(item.type))
+          Text(ArchiveReviewService.formatRequestType(item.type))
             .fontSize(17)
             .fontWeight(FontWeight.Bold)
             .fontColor(AppColors.TextPrimary)
@@ -290,9 +290,9 @@ struct ArchiveReviewPage {
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
 
-        Text(DeviceArchiveReviewService.formatStatus(item.status))
+        Text(ArchiveReviewService.formatStatus(item.status))
           .fontSize(13)
-          .fontColor(DeviceArchiveReviewService.getStatusTone(item.status))
+          .fontColor(ArchiveReviewService.getStatusTone(item.status))
           .fontWeight(FontWeight.Medium)
           .maxLines(1)
       }
@@ -306,9 +306,9 @@ struct ArchiveReviewPage {
       this.ReasonBlock(item.reason)
 
       Column({ space: 8 }) {
-        ForEach(item.changes, (change: DeviceArchiveRequestFieldDiff) => {
+        ForEach(item.changes, (change: ArchiveRequestFieldDiff) => {
           this.ChangeDiffRow(change)
-        }, (change: DeviceArchiveRequestFieldDiff) => `${item.id}-${change.field}`)
+        }, (change: ArchiveRequestFieldDiff) => `${item.id}-${change.field}`)
       }
       .width('100%')
 
@@ -373,7 +373,7 @@ struct ArchiveReviewPage {
   }
 
   @Builder
-  ChangeDiffRow(change: DeviceArchiveRequestFieldDiff) {
+  ChangeDiffRow(change: ArchiveRequestFieldDiff) {
     Column({ space: 4 }) {
       Text(change.label)
         .fontSize(13)
@@ -400,7 +400,7 @@ struct ArchiveReviewPage {
   }
 
   @Builder
-  SelectRequestButton(item: DeviceArchiveReviewItem) {
+  SelectRequestButton(item: ArchiveReviewItem) {
     Button({ type: ButtonType.Capsule, stateEffect: true }) {
       Row({ space: 8 }) {
         SymbolGlyph(
@@ -439,7 +439,7 @@ struct ArchiveReviewPage {
         this.RequestIdField()
         this.DecisionSelector()
         this.ReviewedAtField()
-        if (this.reviewDecision === `${DeviceArchiveReviewDecision.Rejected}`) {
+        if (this.reviewDecision === `${ArchiveReviewDecision.Rejected}`) {
           this.ReviewCommentField()
         }
       }
@@ -496,8 +496,8 @@ struct ArchiveReviewPage {
       this.FieldTitle('审核结果')
 
       Row({ space: 10 }) {
-        this.DecisionOption(DeviceArchiveReviewDecision.Approved, $r('sys.symbol.checkmark_circle'))
-        this.DecisionOption(DeviceArchiveReviewDecision.Rejected, $r('sys.symbol.xmark_circle'))
+        this.DecisionOption(ArchiveReviewDecision.Approved, $r('sys.symbol.checkmark_circle'))
+        this.DecisionOption(ArchiveReviewDecision.Rejected, $r('sys.symbol.xmark_circle'))
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
@@ -507,14 +507,14 @@ struct ArchiveReviewPage {
   }
 
   @Builder
-  DecisionOption(decision: DeviceArchiveReviewDecision, icon: Resource) {
+  DecisionOption(decision: ArchiveReviewDecision, icon: Resource) {
     Button({ type: ButtonType.Capsule, stateEffect: true }) {
       Row({ space: 6 }) {
         SymbolGlyph(icon)
           .fontSize(18)
           .fontColor([this.reviewDecision === `${decision}` ? AppColors.OnPrimary : AppColors.TextPrimary])
 
-        Text(DeviceArchiveReviewService.formatDecision(decision))
+        Text(ArchiveReviewService.formatDecision(decision))
           .fontSize(15)
           .fontWeight(FontWeight.Medium)
           .fontColor(this.reviewDecision === `${decision}` ? AppColors.OnPrimary : AppColors.TextPrimary)
@@ -751,7 +751,7 @@ struct ArchiveReviewPage {
     }
 
     this.refreshing = true;
-    const response = await DeviceArchiveReviewService.listPendingReviewsRemoteFirst();
+    const response = await ArchiveReviewService.listPendingReviewsRemoteFirst();
     this.refreshing = false;
 
     if (!response.success) {
@@ -776,7 +776,7 @@ struct ArchiveReviewPage {
     }
   }
 
-  selectRequest(item: DeviceArchiveReviewItem): void {
+  selectRequest(item: ArchiveReviewItem): void {
     if (this.selectedRequestId === item.id) {
       this.clearReviewForm();
       this.message = '';
@@ -796,7 +796,7 @@ struct ArchiveReviewPage {
 
   applyRequestFilters(): void {
     const typeValue = REVIEW_TYPE_FILTER_VALUES[this.requestTypeFilterIndex];
-    this.requests = this.allRequests.filter((item: DeviceArchiveReviewItem) => {
+    this.requests = this.allRequests.filter((item: ArchiveReviewItem) => {
       return typeValue.length === 0 || item.type === typeValue;
     });
   }
@@ -857,8 +857,8 @@ struct ArchiveReviewPage {
         return;
       }
 
-      const decision = this.reviewDecision as DeviceArchiveReviewDecision;
-      const response = await DeviceArchiveReviewService.reviewArchiveRequestRemoteFirst({
+      const decision = this.reviewDecision as ArchiveReviewDecision;
+      const response = await ArchiveReviewService.reviewArchiveRequestRemoteFirst({
         requestId: this.selectedRequestId,
         decision,
         reviewedAt: this.reviewedAt,
@@ -894,7 +894,7 @@ struct ArchiveReviewPage {
       this.hasReviewDecision() &&
       this.reviewedAt.length > 0 &&
       this.password.length > 0 &&
-      (this.reviewDecision !== `${DeviceArchiveReviewDecision.Rejected}` || this.reviewComment.trim().length > 0);
+      (this.reviewDecision !== `${ArchiveReviewDecision.Rejected}` || this.reviewComment.trim().length > 0);
   }
 
   fillSubmitValidationMessage(): void {
@@ -908,7 +908,7 @@ struct ArchiveReviewPage {
       this.message = UiFeedbackService.requiredSelection('审核结果');
     } else if (this.reviewedAt.length === 0) {
       this.message = UiFeedbackService.requiredTime('审核');
-    } else if (this.reviewDecision === `${DeviceArchiveReviewDecision.Rejected}` &&
+    } else if (this.reviewDecision === `${ArchiveReviewDecision.Rejected}` &&
       this.reviewComment.trim().length === 0) {
       this.message = UiFeedbackService.requiredInput('审核意见');
     } else if (this.password.length === 0) {
@@ -929,11 +929,11 @@ struct ArchiveReviewPage {
   }
 
   canReview(): boolean {
-    return SessionStore.hasPermission(PermissionCode.ReviewCenterDeviceArchiveRequestReview);
+    return SessionStore.hasPermission(PermissionCode.ReviewCenterArchiveRequestReview);
   }
 
   hasRequest(requestId: string): boolean {
-    return this.requests.some((item: DeviceArchiveReviewItem) => {
+    return this.requests.some((item: ArchiveReviewItem) => {
       return item.id === requestId;
     });
   }
@@ -959,11 +959,11 @@ struct ArchiveReviewPage {
   }
 
   hasReviewDecision(): boolean {
-    return this.reviewDecision === `${DeviceArchiveReviewDecision.Approved}` ||
-      this.reviewDecision === `${DeviceArchiveReviewDecision.Rejected}`;
+    return this.reviewDecision === `${ArchiveReviewDecision.Approved}` ||
+      this.reviewDecision === `${ArchiveReviewDecision.Rejected}`;
   }
 
-  getOperatorName(item: DeviceArchiveReviewItem): string {
+  getOperatorName(item: ArchiveReviewItem): string {
     return item.operatorName === undefined || item.operatorName.length === 0 ? '-' : item.operatorName;
   }
 
@@ -987,17 +987,17 @@ struct ArchiveReviewPage {
     return false;
   }
 
-  getDecisionTone(decision: DeviceArchiveReviewDecision): string {
-    return decision === DeviceArchiveReviewDecision.Approved ? AppColors.Success : AppColors.Danger;
+  getDecisionTone(decision: ArchiveReviewDecision): string {
+    return decision === ArchiveReviewDecision.Approved ? AppColors.Success : AppColors.Danger;
   }
 
-  getRequestTypeIcon(type: DeviceArchiveReviewRequestType): Resource {
+  getRequestTypeIcon(type: ArchiveReviewRequestType): Resource {
     switch (type) {
-      case DeviceArchiveReviewRequestType.Create:
+      case ArchiveReviewRequestType.Create:
         return $r('sys.symbol.plus_circle');
-      case DeviceArchiveReviewRequestType.Delete:
+      case ArchiveReviewRequestType.Delete:
         return $r('sys.symbol.trash');
-      case DeviceArchiveReviewRequestType.Update:
+      case ArchiveReviewRequestType.Update:
       default:
         return $r('sys.symbol.text_clipboard');
     }

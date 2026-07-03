@@ -12,7 +12,7 @@
 
 ## 1. 设计范围
 
-本文档定义 RDVP 后端服务对移动端应用提供的 HTTP API。当前已实现接口覆盖用户认证、设备档案查询、二维码校验、设备核验、设备档案申请、故障报修、维修任务、维修报告、复检报告、档案审核、运维审核、日志查询和底层日志条目等业务。附件、离线同步和通知接口为后续增强预留，不属于当前可调用 API。
+本文档定义 RDVP 后端服务对移动端应用提供的 HTTP API。当前已实现接口覆盖用户认证、档案查询、二维码校验、设备核验、档案申请、故障报修、维修任务、维修报告、复检报告、档案审核、运维审核、日志查询和底层日志条目等业务。附件、离线同步和通知接口为后续增强预留，不属于当前可调用 API。
 
 API 采用版本化路径，第一版统一使用：
 
@@ -167,7 +167,7 @@ POST /api/v1/auth/login
     "username": "user001",
     "displayName": "User Name",
     "roles": ["MAINTAINER"],
-    "permissions": ["ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY", "OPERATIONS_CENTER_DEVICE_FAULT_REPORT_SUBMIT"]
+    "permissions": ["ARCHIVE_CENTER_ARCHIVE_QUERY", "OPERATIONS_CENTER_DEVICE_FAULT_REPORT_SUBMIT"]
   }
 }
 ```
@@ -188,7 +188,7 @@ GET /api/v1/auth/me
   "username": "user001",
   "displayName": "User Name",
   "roles": ["MAINTAINER"],
-  "permissions": ["ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY", "OPERATIONS_CENTER_DEVICE_FAULT_REPORT_SUBMIT"]
+  "permissions": ["ARCHIVE_CENTER_ARCHIVE_QUERY", "OPERATIONS_CENTER_DEVICE_FAULT_REPORT_SUBMIT"]
 }
 ```
 
@@ -282,11 +282,11 @@ GET /api/v1/home/dashboard
 
 | 字段 | 口径 |
 | --- | --- |
-| `archive.deviceTotal` | 当前未删除设备档案总量 |
+| `archive.deviceTotal` | 当前未删除档案总量 |
 | `archive.archiveCreates` | 已审核通过的新增档案申请数 |
 | `archive.archiveDeletes` | 已审核通过的删除档案申请数 |
 | `archive.archiveUpdates` | 已审核通过的修改档案申请数 |
-| `archive.archiveQueries` | 成功查询设备档案的日志数 |
+| `archive.archiveQueries` | 成功查询档案的日志数 |
 | `archive.archiveExports` | 成功导出设备二维码的日志数 |
 | `operations.taskPoolTotal` | 当前任务池中的维修任务与复检任务总数 |
 | `operations.verifications` | 设备核验报告总数 |
@@ -335,7 +335,7 @@ GET /api/v1/home/dashboard
 GET /api/v1/devices/by-code/{deviceCode}
 ```
 
-权限要求：`ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY`
+权限要求：`ARCHIVE_CENTER_ARCHIVE_QUERY`
 
 当前设备编号格式：
 
@@ -373,7 +373,7 @@ RDVP-DEVICE-0001
 GET /api/v1/devices/{deviceId}
 ```
 
-权限要求：`ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY`
+权限要求：`ARCHIVE_CENTER_ARCHIVE_QUERY`
 
 响应数据：
 
@@ -408,9 +408,9 @@ GET /api/v1/devices/{deviceId}
 GET /api/v1/device-codes/{deviceCode}/availability
 ```
 
-权限要求：`ARCHIVE_CENTER_DEVICE_ARCHIVE_CREATE_REQUEST_SUBMIT`
+权限要求：`ARCHIVE_CENTER_ARCHIVE_CREATE_REQUEST_SUBMIT`
 
-该接口用于添加设备档案申请前校验目标设备编号是否已被正式档案或待审核添加申请占用。
+该接口用于添加档案申请前校验目标设备编号是否已被正式档案或待审核添加申请占用。
 
 响应数据：
 
@@ -431,7 +431,7 @@ GET /api/v1/device-codes/{deviceCode}/availability
 POST /api/v1/device-qrcodes/verify
 ```
 
-权限要求：`ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY`
+权限要求：`ARCHIVE_CENTER_ARCHIVE_QUERY`
 
 二维码内容格式：
 
@@ -471,7 +471,7 @@ RDVP:<version>:<deviceCode>:<nonce>:<signature>
 POST /api/v1/devices/{deviceId}/qrcode-export
 ```
 
-权限要求：`ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY` 和 `ARCHIVE_CENTER_DEVICE_ARCHIVE_EXPORT`。提交前必须完成当前用户密码校验。
+权限要求：`ARCHIVE_CENTER_ARCHIVE_QUERY` 和 `ARCHIVE_CENTER_ARCHIVE_EXPORT`。提交前必须完成当前用户密码校验。
 
 响应数据：
 
@@ -492,7 +492,7 @@ POST /api/v1/devices/{deviceId}/qrcode-export
 POST /api/v1/devices/{deviceId}/archive-export-verification
 ```
 
-权限要求：`ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY` 和 `ARCHIVE_CENTER_DEVICE_ARCHIVE_EXPORT`。提交前必须完成当前用户密码校验。
+权限要求：`ARCHIVE_CENTER_ARCHIVE_QUERY` 和 `ARCHIVE_CENTER_ARCHIVE_EXPORT`。提交前必须完成当前用户密码校验。
 
 响应数据：
 
@@ -589,12 +589,12 @@ POST /api/v1/devices/{deviceId}/verification-reports/fault-report
 }
 ```
 
-## 9. 设备档案申请接口
+## 9. 档案申请接口
 
-### 9.1 创建设备档案申请
+### 9.1 创建档案申请
 
 ```text
-POST /api/v1/device-archive-requests
+POST /api/v1/archive-requests
 ```
 
 修改档案请求体：
@@ -651,9 +651,9 @@ POST /api/v1/device-archive-requests
 
 | 申请类型 | 权限 |
 | --- | --- |
-| `UPDATE` | `ARCHIVE_CENTER_DEVICE_ARCHIVE_UPDATE_REQUEST_SUBMIT` |
-| `CREATE` | `ARCHIVE_CENTER_DEVICE_ARCHIVE_CREATE_REQUEST_SUBMIT` |
-| `DELETE` | `ARCHIVE_CENTER_DEVICE_ARCHIVE_DELETE_REQUEST_SUBMIT` |
+| `UPDATE` | `ARCHIVE_CENTER_ARCHIVE_UPDATE_REQUEST_SUBMIT` |
+| `CREATE` | `ARCHIVE_CENTER_ARCHIVE_CREATE_REQUEST_SUBMIT` |
+| `DELETE` | `ARCHIVE_CENTER_ARCHIVE_DELETE_REQUEST_SUBMIT` |
 
 当前可修改字段：`name`、`model`、`manufacturer`、`location.address`。设备运行状态不通过档案修改申请直接修改，应由核验、故障、维修和复检流程驱动。
 
@@ -661,7 +661,7 @@ POST /api/v1/device-archive-requests
 
 - 设备不存在待审核档案申请。
 - 设备不处于档案申请冻结期。
-- 提交的新值与当前设备档案存在有效差异。
+- 提交的新值与当前档案存在有效差异。
 - 申请中的 `oldValue` 必须与后端当前档案值一致，避免基于过期页面提交覆盖更新。
 - 添加和删除档案申请在审核通过前不直接写入或删除正式档案。
 - 同一设备或同一目标设备编号不存在待审核申请。
@@ -679,10 +679,10 @@ POST /api/v1/device-archive-requests
 ### 9.2 查询档案申请列表
 
 ```text
-GET /api/v1/device-archive-requests
+GET /api/v1/archive-requests
 ```
 
-权限要求：`REVIEW_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW`
+权限要求：`REVIEW_CENTER_ARCHIVE_REQUEST_REVIEW`
 
 查询参数：
 
@@ -694,13 +694,13 @@ GET /api/v1/device-archive-requests
 | `page` | 页码 |
 | `pageSize` | 每页数量 |
 
-### 9.3 审核设备档案申请
+### 9.3 审核档案申请
 
 ```text
-POST /api/v1/device-archive-requests/{requestId}/review
+POST /api/v1/archive-requests/{requestId}/review
 ```
 
-权限要求：`REVIEW_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW`
+权限要求：`REVIEW_CENTER_ARCHIVE_REQUEST_REVIEW`
 
 请求体：
 
@@ -1153,7 +1153,7 @@ DISABLED
 RETIRED
 ```
 
-### 18.2 设备档案申请状态
+### 18.2 档案申请状态
 
 ```text
 PENDING_REVIEW
@@ -1233,7 +1233,7 @@ FAILED
 
 ```text
 VERIFICATION_RECORD
-DEVICE_ARCHIVE_REQUEST
+ARCHIVE_REQUEST
 FAULT_REPORT
 REPAIR_REPORT
 REINSPECTION_REPORT
@@ -1248,10 +1248,10 @@ REINSPECTION_REPORT
 | `QR_CODE_INVALID` | 二维码内容无效 |
 | `QR_CODE_EXPIRED` | 二维码已过期 |
 | `QR_CODE_SIGNATURE_INVALID` | 二维码签名校验失败 |
-| `DEVICE_ARCHIVE_REQUEST_LOCKED` | 设备存在待审核档案申请 |
-| `DEVICE_ARCHIVE_REQUEST_FROZEN` | 设备处于档案申请冻结期 |
-| `DEVICE_ARCHIVE_REQUEST_NOT_FOUND` | 设备档案申请不存在 |
-| `DEVICE_ARCHIVE_REQUEST_ALREADY_REVIEWED` | 设备档案申请已审核 |
+| `ARCHIVE_REQUEST_LOCKED` | 设备存在待审核档案申请 |
+| `ARCHIVE_REQUEST_FROZEN` | 设备处于档案申请冻结期 |
+| `ARCHIVE_REQUEST_NOT_FOUND` | 档案申请不存在 |
+| `ARCHIVE_REQUEST_ALREADY_REVIEWED` | 档案申请已审核 |
 | `FAULT_REPORT_NOT_FOUND` | 故障报告不存在 |
 | `FAULT_ALREADY_ACCEPTED` | 故障已被其他维修人员接取 |
 | `REPAIR_REPORT_INVALID` | 维修报告内容无效 |

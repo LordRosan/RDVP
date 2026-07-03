@@ -118,7 +118,7 @@ struct OperationsLogQueryPage {
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      Text('Operations Logs')
+      Text(this.getPageSubtitle(tab))
         .fontSize(13)
         .fontWeight(FontWeight.Medium)
         .fontColor(AppColors.TextTertiary)
@@ -620,6 +620,10 @@ struct OperationsLogQueryPage {
 
   getPageTitle(tab: LogQueryTab): string {
     return LogQueryService.formatPageTitle(this.getCategoryForTab(tab));
+  }
+
+  getPageSubtitle(tab: LogQueryTab): string {
+    return LogQueryService.formatPageSubtitle(this.getCategoryForTab(tab));
   }
 
   getListTitle(tab: LogQueryTab): string {

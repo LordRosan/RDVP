@@ -49,7 +49,7 @@ RDVP/
 
 - 设备：`device`
 - 设备核验：`device verification`
-- 设备档案申请：`device archive request`
+- 档案申请：`device archive request`
 - 设备故障报修：`device fault report`
 - 维修任务：`repair task`
 - 维修报告：`repair report`
@@ -62,7 +62,7 @@ RDVP/
 
 核心领域目录规则：
 
-- `archive` 表示档案领域，用于设备档案、二维码、档案申请和档案审核相关模型与服务。
+- `archive` 表示档案领域，用于档案、二维码、档案申请和档案审核相关模型与服务。
 - `operations` 表示运维领域，是领域集合名，不按普通复数理解；设备核验、故障报修、维修任务和复检任务均归入该领域。
 - `review` 表示审核领域，用于档案审核、运维审核相关模型与服务。
 - `log` 表示日志领域，用于档案、运维和审核日志查询相关模型与服务。
@@ -70,7 +70,7 @@ RDVP/
 - `home` 表示首页领域，用于首页入口、首页状态和首页数据看板。
 - `shared` 表示跨域公共能力，用于 API 响应、通用工具、主题、导航、安全过滤器和跨域基础模型。
 
-实体、页面、函数和变量命名应使用单数业务对象表达一个具体概念，例如 `RepairTask`、`RepairReport`、`ReinspectionReport`、`DeviceArchiveRequest`。涉及运维领域时使用 `operations`，例如 `operations` 目录、`OperationsCenterPage` 页面、`OperationsLogQueryPage`。
+实体、页面、函数和变量命名应使用单数业务对象表达一个具体概念，例如 `RepairTask`、`RepairReport`、`ReinspectionReport`、`ArchiveRequest`。涉及运维领域时使用 `operations`，例如 `operations` 目录、`OperationsCenterPage` 页面、`OperationsLogQueryPage`。
 
 页面文件统一使用 `*Page` 后缀。登录界面统一为 `LoginPage`，首页统一为 `HomePage`，用户相关入口统一使用“用户中心”和 `UserCenterPage` 语义。
 

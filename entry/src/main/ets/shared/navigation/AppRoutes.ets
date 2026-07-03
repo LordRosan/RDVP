@@ -4,15 +4,15 @@ export class AppRoutes {
   static readonly UserCenterPage: string = 'user/pages/UserCenterPage';
   static readonly UserSettingsPage: string = 'user/pages/UserSettingsPage';
   static readonly ArchiveCenterPage: string = 'archive/pages/ArchiveCenterPage';
-  static readonly DeviceArchiveQueryPage: string = 'archive/pages/DeviceArchiveQueryPage';
-  static readonly DeviceArchiveCreatePage: string = 'archive/pages/DeviceArchiveCreatePage';
-  static readonly DeviceArchiveDetailPage: string = 'archive/pages/DeviceArchiveDetailPage';
-  static readonly DeviceArchiveExportPage: string = 'archive/pages/DeviceArchiveExportPage';
-  static readonly DeviceArchiveUpdatePage: string = 'archive/pages/DeviceArchiveUpdatePage';
-  static readonly DeviceArchiveDeletePage: string = 'archive/pages/DeviceArchiveDeletePage';
+  static readonly ArchiveQueryPage: string = 'archive/pages/ArchiveQueryPage';
+  static readonly ArchiveCreatePage: string = 'archive/pages/ArchiveCreatePage';
+  static readonly ArchiveDetailPage: string = 'archive/pages/ArchiveDetailPage';
+  static readonly ArchiveExportPage: string = 'archive/pages/ArchiveExportPage';
+  static readonly ArchiveUpdatePage: string = 'archive/pages/ArchiveUpdatePage';
+  static readonly ArchiveDeletePage: string = 'archive/pages/ArchiveDeletePage';
   static readonly OperationsCenterPage: string = 'operations/pages/OperationsCenterPage';
-  static readonly DeviceVerificationAndFaultReportPage: string =
-    'operations/pages/DeviceVerificationAndFaultReportPage';
+  static readonly VerificationAndFaultReportPage: string =
+    'operations/pages/VerificationAndFaultReportPage';
   static readonly TaskAcceptancePage: string = 'operations/pages/TaskAcceptancePage';
   static readonly RepairAndReinspectionPage: string = 'operations/pages/RepairAndReinspectionPage';
   static readonly ReviewCenterPage: string = 'review/pages/ReviewCenterPage';

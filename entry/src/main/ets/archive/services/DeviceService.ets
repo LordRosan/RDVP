@@ -4,7 +4,7 @@ import { ApiResponse } from '../../shared/models/ApiModels';
 import {
   DeviceCodeQueryForm,
   DeviceCodeValidationResult,
-  DeviceArchiveRequestState,
+  ArchiveRequestState,
   DeviceStatus,
   DeviceQrQueryForm,
   DeviceQrValidationResult,
@@ -264,7 +264,7 @@ export class DeviceService {
     return '可提交档案申请';
   }
 
-  static getArchiveRequestState(device: DeviceSummary): DeviceArchiveRequestState | undefined {
+  static getArchiveRequestState(device: DeviceSummary): ArchiveRequestState | undefined {
     return device.archiveRequestState;
   }
 

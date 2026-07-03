@@ -3,13 +3,13 @@ import { AuthService } from '../../../main/ets/user/services/AuthService';
 import { DeviceService } from '../../../main/ets/archive/services/DeviceService';
 import { FaultSeverity, FaultType } from '../../../main/ets/operations/models/FaultModels';
 import { RepairReportResult } from '../../../main/ets/operations/models/RepairTaskModels';
-import { VerificationResult } from '../../../main/ets/operations/models/DeviceVerificationAndFaultReportModels';
+import { VerificationResult } from '../../../main/ets/operations/models/VerificationAndFaultReportModels';
 import { FaultReportService } from '../../../main/ets/operations/services/FaultReportService';
-import { DeviceVerificationAndFaultReportService } from '../../../main/ets/operations/services/DeviceVerificationAndFaultReportService';
+import { VerificationAndFaultReportService } from '../../../main/ets/operations/services/VerificationAndFaultReportService';
 import { RepairTaskService } from '../../../main/ets/operations/services/RepairTaskService';
 import { HomeService } from '../../../main/ets/home/services/HomeService';
-import { DeviceArchiveRequestService } from '../../../main/ets/archive/services/DeviceArchiveRequestService';
-import { DeviceArchiveUpdateService } from '../../../main/ets/archive/services/DeviceArchiveUpdateService';
+import { ArchiveRequestService } from '../../../main/ets/archive/services/ArchiveRequestService';
+import { ArchiveUpdateService } from '../../../main/ets/archive/services/ArchiveUpdateService';
 import { DeviceStatus } from '../../../main/ets/archive/models/DeviceModels';
 
 export default function abilityTest() {
@@ -46,7 +46,7 @@ export default function abilityTest() {
     });
 
     it('validatesVerificationForm', 0, () => {
-      const result = DeviceVerificationAndFaultReportService.validateVerificationForm({
+      const result = VerificationAndFaultReportService.validateVerificationForm({
         deviceCode: 'RDVP-DEVICE-0001',
         result: VerificationResult.Normal,
         description: '设备外观完整，运行状态正常。',
@@ -58,7 +58,7 @@ export default function abilityTest() {
     });
 
     it('validatesNormalVerificationRequiresDescription', 0, () => {
-      const result = DeviceVerificationAndFaultReportService.validateVerificationForm({
+      const result = VerificationAndFaultReportService.validateVerificationForm({
         deviceCode: 'RDVP-DEVICE-0001',
         result: VerificationResult.Normal,
         description: '',
@@ -71,7 +71,7 @@ export default function abilityTest() {
     });
 
     it('validatesNormalVerificationRequiresTime', 0, () => {
-      const result = DeviceVerificationAndFaultReportService.validateVerificationForm({
+      const result = VerificationAndFaultReportService.validateVerificationForm({
         deviceCode: 'RDVP-DEVICE-0001',
         result: VerificationResult.Normal,
         description: '设备外观完整，运行状态正常。',
@@ -84,7 +84,7 @@ export default function abilityTest() {
     });
 
     it('validatesAbnormalVerificationUsesFaultDescription', 0, () => {
-      const result = DeviceVerificationAndFaultReportService.validateVerificationAndFaultReportForm({
+      const result = VerificationAndFaultReportService.validateVerificationAndFaultReportForm({
         verification: {
           deviceCode: 'RDVP-DEVICE-0001',
           result: VerificationResult.Abnormal,
@@ -127,7 +127,7 @@ export default function abilityTest() {
     });
 
     it('validatesArchiveUpdateRequiresChangedField', 0, () => {
-      const result = DeviceArchiveUpdateService.validateUpdateRequestForm({
+      const result = ArchiveUpdateService.validateUpdateRequestForm({
         deviceId: 'device-local-0001',
         deviceCode: 'RDVP-DEVICE-0001',
         deviceName: 'A',
@@ -149,7 +149,7 @@ export default function abilityTest() {
     });
 
     it('validatesArchiveUpdateRequiresTime', 0, () => {
-      const result = DeviceArchiveUpdateService.validateUpdateRequestForm({
+      const result = ArchiveUpdateService.validateUpdateRequestForm({
         deviceId: 'device-local-0001',
         deviceCode: 'RDVP-DEVICE-0001',
         deviceName: 'A2',
@@ -171,7 +171,7 @@ export default function abilityTest() {
     });
 
     it('validatesArchiveDeleteRequiresTime', 0, () => {
-      const result = DeviceArchiveRequestService.validateDeleteRequestForm({
+      const result = ArchiveRequestService.validateDeleteRequestForm({
         device: {
           id: 'device-local-0001',
           deviceCode: 'RDVP-DEVICE-0001',

@@ -12,8 +12,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
-import com.rmf.rdvp.archive.DeviceArchive;
-import com.rmf.rdvp.archive.DeviceArchiveRepository;
+import com.rmf.rdvp.archive.Archive;
+import com.rmf.rdvp.archive.ArchiveRepository;
 
 @Repository
 @Profile("test")
@@ -24,9 +24,9 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     private final Map<String, RepairReportRecord> repairReportsById = new ConcurrentHashMap<>();
     private final Map<String, ReinspectionReportCreate> reinspectionReportsById = new ConcurrentHashMap<>();
     private final Map<String, OperationsReviewRequest> operationsReviewsById = new ConcurrentHashMap<>();
-    private final DeviceArchiveRepository archiveRepository;
+    private final ArchiveRepository archiveRepository;
 
-    public InMemoryOperationsRepository(DeviceArchiveRepository archiveRepository) {
+    public InMemoryOperationsRepository(ArchiveRepository archiveRepository) {
         this.archiveRepository = archiveRepository;
     }
 
@@ -343,7 +343,7 @@ public class InMemoryOperationsRepository implements OperationsRepository {
 
     @Override
     public void createOperationsReviewRequest(OperationsReviewRequestCreate create) {
-        DeviceArchive device = archiveRepository.findById(create.deviceId()).orElseThrow();
+        Archive device = archiveRepository.findById(create.deviceId()).orElseThrow();
         operationsReviewsById.put(create.id(), new OperationsReviewRequest(
                 create.id(),
                 create.type(),
@@ -443,7 +443,7 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     }
 
     private TaskAcceptanceItem toTaskAcceptanceItem(FaultReportRecord fault, BigDecimal longitude, BigDecimal latitude) {
-        DeviceArchive device = archiveRepository.findById(fault.deviceId()).orElseThrow();
+        Archive device = archiveRepository.findById(fault.deviceId()).orElseThrow();
         return new TaskAcceptanceItem(
                 fault.id(),
                 fault.id(),
@@ -482,7 +482,7 @@ public class InMemoryOperationsRepository implements OperationsRepository {
 
     private RepairTaskItem toRepairTaskItem(RepairTaskRecord task) {
         FaultReportRecord fault = faultReportsById.get(task.faultReportId());
-        DeviceArchive device = archiveRepository.findById(task.deviceId()).orElseThrow();
+        Archive device = archiveRepository.findById(task.deviceId()).orElseThrow();
         return new RepairTaskItem(
                 task.id(),
                 task.repairTaskNo(),
@@ -496,7 +496,7 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     }
 
     private ReinspectionTaskSummary toReinspectionTask(FaultReportRecord fault) {
-        DeviceArchive device = archiveRepository.findById(fault.deviceId()).orElseThrow();
+        Archive device = archiveRepository.findById(fault.deviceId()).orElseThrow();
         OffsetDateTime repairedAt = findLatestRepairReportByFaultReportId(fault.id())
                 .map(RepairReportRecord::repairedAt)
                 .orElse(null);

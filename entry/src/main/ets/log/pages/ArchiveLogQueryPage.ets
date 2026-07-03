@@ -118,7 +118,7 @@ struct ArchiveLogQueryPage {
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      Text('Archive Logs')
+      Text(this.getPageSubtitle(tab))
         .fontSize(13)
         .fontWeight(FontWeight.Medium)
         .fontColor(AppColors.TextTertiary)
@@ -618,6 +618,10 @@ struct ArchiveLogQueryPage {
 
   getPageTitle(tab: LogQueryTab): string {
     return LogQueryService.formatPageTitle(this.getCategoryForTab(tab));
+  }
+
+  getPageSubtitle(tab: LogQueryTab): string {
+    return LogQueryService.formatPageSubtitle(this.getCategoryForTab(tab));
   }
 
   getListTitle(tab: LogQueryTab): string {

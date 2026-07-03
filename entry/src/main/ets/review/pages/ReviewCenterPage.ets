@@ -115,7 +115,7 @@ struct ReviewCenterPage {
       Column({ space: 16 }) {
         Grid() {
           GridItem() {
-            this.PermissionCell('档案审核', this.canReviewDeviceArchiveRequest())
+            this.PermissionCell('档案审核', this.canReviewArchiveRequest())
           }
 
           GridItem() {
@@ -204,8 +204,8 @@ struct ReviewCenterPage {
     this.actions = HomeService.getReviewCenterActions();
   }
 
-  canReviewDeviceArchiveRequest(): boolean {
-    return SessionStore.hasPermission(PermissionCode.ReviewCenterDeviceArchiveRequestReview);
+  canReviewArchiveRequest(): boolean {
+    return SessionStore.hasPermission(PermissionCode.ReviewCenterArchiveRequestReview);
   }
 
   canReviewOperations(): boolean {
@@ -215,7 +215,7 @@ struct ReviewCenterPage {
   openFeature(action: HomeAction): void {
     this.message = '';
     this.messageTargetId = '';
-    if (action.id === HomeActionId.DeviceArchiveReview) {
+    if (action.id === HomeActionId.ArchiveReview) {
       this.openPage('review/pages/ArchiveReviewPage', UiFeedbackService.operationUnavailable('档案审核'));
       return;
     }
@@ -238,7 +238,7 @@ struct ReviewCenterPage {
 
   resolveActionIdByUrl(url: string): string {
     if (url === 'review/pages/ArchiveReviewPage') {
-      return `${HomeActionId.DeviceArchiveReview}`;
+      return `${HomeActionId.ArchiveReview}`;
     }
 
     if (url === 'review/pages/OperationsReviewPage') {

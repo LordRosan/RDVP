@@ -124,12 +124,12 @@ READ_ONLY
 | 角色 | 主要权限 | 说明 |
 | --- | --- | --- |
 | `SYSTEM_ADMIN` | `*` | 具备系统级管理和业务处理权限 |
-| `DEVICE_ADMIN` | `ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY`, `REVIEW_CENTER_DEVICE_ARCHIVE_REQUEST_REVIEW`, `LOG_CENTER_ARCHIVE_OPERATION_LOG_QUERY`, `LOG_CENTER_ARCHIVE_REVIEW_LOG_QUERY` | 查询设备档案，审核设备档案申请，查看档案日志 |
-| `FIELD_OPERATOR` | `ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY`, `ARCHIVE_CENTER_DEVICE_ARCHIVE_UPDATE_REQUEST_SUBMIT`, `OPERATIONS_CENTER_DEVICE_VERIFICATION_SUBMIT`, `OPERATIONS_CENTER_DEVICE_FAULT_REPORT_SUBMIT` | 查询设备档案，提交档案申请、状态核验和故障报修 |
-| `MAINTAINER` | `ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY`, `OPERATIONS_CENTER_REPAIR_TASK_ACCEPT`, `OPERATIONS_CENTER_REPAIR_REPORT_SUBMIT` | 查询设备档案，接取维修任务并提交维修报告 |
-| `REINSPECTOR` | `ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY`, `OPERATIONS_CENTER_REINSPECTION_TASK_ACCEPT`, `OPERATIONS_CENTER_REINSPECTION_REPORT_SUBMIT` | 查询设备档案，接取复检任务并提交复检任务报告 |
-| `SUPERVISOR_AUDITOR` | `ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY`, `LOG_CENTER_ARCHIVE_OPERATION_LOG_QUERY`, `LOG_CENTER_ARCHIVE_REVIEW_LOG_QUERY`, `LOG_CENTER_OPERATIONS_OPERATION_LOG_QUERY`, `LOG_CENTER_OPERATIONS_REVIEW_LOG_QUERY` | 查询设备档案，查看业务日志和审核日志 |
-| `READ_ONLY` | `ARCHIVE_CENTER_DEVICE_ARCHIVE_QUERY` | 仅查询授权范围内的设备档案 |
+| `DEVICE_ADMIN` | `ARCHIVE_CENTER_ARCHIVE_QUERY`, `REVIEW_CENTER_ARCHIVE_REQUEST_REVIEW`, `LOG_CENTER_ARCHIVE_OPERATION_LOG_QUERY`, `LOG_CENTER_ARCHIVE_REVIEW_LOG_QUERY` | 查询档案，审核档案申请，查看档案日志 |
+| `FIELD_OPERATOR` | `ARCHIVE_CENTER_ARCHIVE_QUERY`, `ARCHIVE_CENTER_ARCHIVE_UPDATE_REQUEST_SUBMIT`, `OPERATIONS_CENTER_DEVICE_VERIFICATION_SUBMIT`, `OPERATIONS_CENTER_DEVICE_FAULT_REPORT_SUBMIT` | 查询档案，提交档案申请、状态核验和故障报修 |
+| `MAINTAINER` | `ARCHIVE_CENTER_ARCHIVE_QUERY`, `OPERATIONS_CENTER_REPAIR_TASK_ACCEPT`, `OPERATIONS_CENTER_REPAIR_REPORT_SUBMIT` | 查询档案，接取维修任务并提交维修报告 |
+| `REINSPECTOR` | `ARCHIVE_CENTER_ARCHIVE_QUERY`, `OPERATIONS_CENTER_REINSPECTION_TASK_ACCEPT`, `OPERATIONS_CENTER_REINSPECTION_REPORT_SUBMIT` | 查询档案，接取复检任务并提交复检任务报告 |
+| `SUPERVISOR_AUDITOR` | `ARCHIVE_CENTER_ARCHIVE_QUERY`, `LOG_CENTER_ARCHIVE_OPERATION_LOG_QUERY`, `LOG_CENTER_ARCHIVE_REVIEW_LOG_QUERY`, `LOG_CENTER_OPERATIONS_OPERATION_LOG_QUERY`, `LOG_CENTER_OPERATIONS_REVIEW_LOG_QUERY` | 查询档案，查看业务日志和审核日志 |
+| `READ_ONLY` | `ARCHIVE_CENTER_ARCHIVE_QUERY` | 仅查询授权范围内的档案 |
 
 ### 6.2 授权边界
 
@@ -137,10 +137,10 @@ READ_ONLY
 
 后端应在以下位置执行授权校验：
 
-- 查询设备档案详情。
+- 查询档案详情。
 - 提交设备核验报告。
-- 创建设备档案添加、删除或修改申请。
-- 审核设备档案申请。
+- 创建档案添加、删除或修改申请。
+- 审核档案申请。
 - 提交设备故障报修。
 - 接取维修任务。
 - 提交维修任务报告。
@@ -158,7 +158,7 @@ READ_ONLY
 - 只读人员只能查询被授权范围内的设备。
 - 现场运维人员可以提交核验报告、档案修改申请和故障报告，但不能审核档案申请或处理维修任务。
 - 维修人员只能查看可接取故障、自己接取的任务和关联报告。
-- 设备管理员可以审核设备档案申请。
+- 设备管理员可以审核档案申请。
 - 主管/审计人员可以通过日志中心查询业务日志，但不一定具备修改设备数据的权限。
 
 ## 7. 二维码防伪
@@ -231,7 +231,7 @@ RDVP:<version>:<deviceCode>:<nonce>:<signature>
 受控状态包括：
 
 - 设备状态。
-- 设备档案申请状态。
+- 档案申请状态。
 - 故障报告状态。
 - 维修任务状态。
 - 维修报告结果。
@@ -256,9 +256,9 @@ RDVP:<version>:<deviceCode>:<nonce>:<signature>
 
 错误响应应提供稳定错误码和必要说明，不暴露内部堆栈、数据库结构、密钥路径、服务器路径或敏感配置。
 
-## 9. 设备档案申请安全
+## 9. 档案申请安全
 
-设备主数据不能由普通用户直接修改。设备档案添加、删除和修改均通过申请和审核流程完成。
+设备主数据不能由普通用户直接修改。档案添加、删除和修改均通过申请和审核流程完成。
 
 安全要求：
 
@@ -388,8 +388,8 @@ SYNCED
 以下操作必须写入操作日志：
 
 - 用户登录和退出。
-- 设备档案申请提交。
-- 设备档案申请审核。
+- 档案申请提交。
+- 档案申请审核。
 - 故障报告提交。
 - 故障报告驳回。
 - 维修任务接取。

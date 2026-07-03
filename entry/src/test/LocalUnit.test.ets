@@ -7,8 +7,8 @@ import { AppThemeService } from '../main/ets/shared/theme/AppThemeService';
 import { HomeService } from '../main/ets/home/services/HomeService';
 import { UiFeedbackService } from '../main/ets/shared/services/UiFeedbackService';
 import { AuthService } from '../main/ets/user/services/AuthService';
-import { DeviceArchiveRequestService } from '../main/ets/archive/services/DeviceArchiveRequestService';
-import { DeviceArchiveUpdateService } from '../main/ets/archive/services/DeviceArchiveUpdateService';
+import { ArchiveRequestService } from '../main/ets/archive/services/ArchiveRequestService';
+import { ArchiveUpdateService } from '../main/ets/archive/services/ArchiveUpdateService';
 import { ApiClient } from '../main/ets/shared/services/ApiClient';
 import { RepairTaskService } from '../main/ets/operations/services/RepairTaskService';
 import { AppNavigator } from '../main/ets/shared/navigation/AppNavigator';
@@ -110,8 +110,14 @@ export default function localUnitTest() {
       expect(AppRoutes.OperationsCenterPage).assertEqual('operations/pages/OperationsCenterPage');
       expect(AppRoutes.ReviewCenterPage).assertEqual('review/pages/ReviewCenterPage');
       expect(AppRoutes.LogCenterPage).assertEqual('log/pages/LogCenterPage');
-      expect(AppRoutes.DeviceVerificationAndFaultReportPage)
-        .assertEqual('operations/pages/DeviceVerificationAndFaultReportPage');
+      expect(AppRoutes.ArchiveQueryPage).assertEqual('archive/pages/ArchiveQueryPage');
+      expect(AppRoutes.ArchiveCreatePage).assertEqual('archive/pages/ArchiveCreatePage');
+      expect(AppRoutes.ArchiveDetailPage).assertEqual('archive/pages/ArchiveDetailPage');
+      expect(AppRoutes.ArchiveExportPage).assertEqual('archive/pages/ArchiveExportPage');
+      expect(AppRoutes.ArchiveUpdatePage).assertEqual('archive/pages/ArchiveUpdatePage');
+      expect(AppRoutes.ArchiveDeletePage).assertEqual('archive/pages/ArchiveDeletePage');
+      expect(AppRoutes.VerificationAndFaultReportPage)
+        .assertEqual('operations/pages/VerificationAndFaultReportPage');
       expect(AppRoutes.RepairAndReinspectionPage).assertEqual('operations/pages/RepairAndReinspectionPage');
       expect(AppRoutes.ArchiveLogQueryPage).assertEqual('log/pages/ArchiveLogQueryPage');
       expect(AppRoutes.OperationsLogQueryPage).assertEqual('log/pages/OperationsLogQueryPage');
@@ -155,7 +161,7 @@ export default function localUnitTest() {
     });
 
     it('formatsLogTypesForLogs', 0, () => {
-      expect(LogQueryService.formatTypeLabel('DEVICE_ARCHIVE_EXPORT', LogCategory.ArchiveOperation)).assertEqual('档案导出');
+      expect(LogQueryService.formatTypeLabel('ARCHIVE_EXPORT', LogCategory.ArchiveOperation)).assertEqual('档案导出');
       expect(LogQueryService.formatTypeLabel('DEVICE_VERIFICATION', LogCategory.OperationsOperation)).assertEqual('核验报告');
       expect(LogQueryService.formatTypeLabel('CREATE', LogCategory.ArchiveReview)).assertEqual('添加档案');
       expect(LogQueryService.formatTypeLabel('CREATE', LogCategory.ArchiveOperation)).assertEqual('档案添加');
@@ -166,6 +172,13 @@ export default function localUnitTest() {
       expect(LogQueryService.formatPageTitle(LogCategory.ArchiveReview)).assertEqual('档案审核日志');
       expect(LogQueryService.formatListTitle(LogCategory.OperationsOperation)).assertEqual('运维操作日志列表');
       expect(LogQueryService.formatListTitle(LogCategory.OperationsReview)).assertEqual('运维审核日志列表');
+    });
+
+    it('formatsLogQuerySubtitlesByCategory', 0, () => {
+      expect(LogQueryService.formatPageSubtitle(LogCategory.ArchiveOperation)).assertEqual('Archive Operation Logs');
+      expect(LogQueryService.formatPageSubtitle(LogCategory.ArchiveReview)).assertEqual('Archive Review Logs');
+      expect(LogQueryService.formatPageSubtitle(LogCategory.OperationsOperation)).assertEqual('Operations Operation Logs');
+      expect(LogQueryService.formatPageSubtitle(LogCategory.OperationsReview)).assertEqual('Operations Review Logs');
     });
 
     it('resolvesLogQueryTabContextWithoutCurrentTabState', 0, () => {
@@ -247,7 +260,7 @@ export default function localUnitTest() {
 
   describe('archiveMutationValidation', () => {
     it('validatesArchiveUpdateRequiresChangedField', 0, () => {
-      const result = DeviceArchiveUpdateService.validateUpdateRequestForm({
+      const result = ArchiveUpdateService.validateUpdateRequestForm({
         deviceId: 'device-local-0001',
         deviceCode: 'RDVP-DEVICE-0001',
         deviceName: 'A',
@@ -269,7 +282,7 @@ export default function localUnitTest() {
     });
 
     it('validatesArchiveUpdateRequiresTime', 0, () => {
-      const result = DeviceArchiveUpdateService.validateUpdateRequestForm({
+      const result = ArchiveUpdateService.validateUpdateRequestForm({
         deviceId: 'device-local-0001',
         deviceCode: 'RDVP-DEVICE-0001',
         deviceName: 'A2',
@@ -291,7 +304,7 @@ export default function localUnitTest() {
     });
 
     it('validatesArchiveDeleteRequiresTime', 0, () => {
-      const result = DeviceArchiveRequestService.validateDeleteRequestForm({
+      const result = ArchiveRequestService.validateDeleteRequestForm({
         device: {
           id: 'device-local-0001',
           deviceCode: 'RDVP-DEVICE-0001',
@@ -312,7 +325,7 @@ export default function localUnitTest() {
     });
 
     it('validatesArchiveCreateRequiresTime', 0, () => {
-      const result = DeviceArchiveRequestService.validateCreateRequestForm({
+      const result = ArchiveRequestService.validateCreateRequestForm({
         deviceCode: 'RDVP-DEVICE-0002',
         deviceName: 'B',
         model: 'M',
@@ -327,7 +340,7 @@ export default function localUnitTest() {
     });
 
     it('validatesArchiveCreateRequiresModel', 0, () => {
-      const result = DeviceArchiveRequestService.validateCreateRequestForm({
+      const result = ArchiveRequestService.validateCreateRequestForm({
         deviceCode: 'RDVP-DEVICE-0002',
         deviceName: 'B',
         model: '',
@@ -342,7 +355,7 @@ export default function localUnitTest() {
     });
 
     it('validatesArchiveCreateRequiresManufacturer', 0, () => {
-      const result = DeviceArchiveRequestService.validateCreateRequestForm({
+      const result = ArchiveRequestService.validateCreateRequestForm({
         deviceCode: 'RDVP-DEVICE-0002',
         deviceName: 'B',
         model: 'M',
@@ -357,7 +370,7 @@ export default function localUnitTest() {
     });
 
     it('validatesArchiveCreateRequiresLocation', 0, () => {
-      const result = DeviceArchiveRequestService.validateCreateRequestForm({
+      const result = ArchiveRequestService.validateCreateRequestForm({
         deviceCode: 'RDVP-DEVICE-0002',
         deviceName: 'B',
         model: 'M',

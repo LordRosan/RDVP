@@ -23,23 +23,23 @@ public enum ErrorCode {
     DEVICE_NOT_FOUND("DEVICE_NOT_FOUND", HttpStatus.NOT_FOUND, "Device not found."),
     DEVICE_CODE_DUPLICATED("DEVICE_CODE_DUPLICATED", HttpStatus.CONFLICT, "Device code already exists."),
     DEVICE_CODE_INVALID("DEVICE_CODE_INVALID", HttpStatus.BAD_REQUEST, "Device code format is invalid."),
-    DEVICE_ARCHIVE_INVALID("DEVICE_ARCHIVE_INVALID", HttpStatus.UNPROCESSABLE_CONTENT, "Device archive is invalid."),
-    DEVICE_ARCHIVE_DELETE_BLOCKED(
-            "DEVICE_ARCHIVE_DELETE_BLOCKED",
+    ARCHIVE_INVALID("ARCHIVE_INVALID", HttpStatus.UNPROCESSABLE_CONTENT, "Device archive is invalid."),
+    ARCHIVE_DELETE_BLOCKED(
+            "ARCHIVE_DELETE_BLOCKED",
             HttpStatus.CONFLICT,
             "Device archive cannot be deleted in its current state."),
     QR_CODE_INVALID("QR_CODE_INVALID", HttpStatus.BAD_REQUEST, "QR code content is invalid."),
     QR_CODE_EXPIRED("QR_CODE_EXPIRED", HttpStatus.BAD_REQUEST, "QR code is expired."),
     QR_CODE_SIGNATURE_INVALID("QR_CODE_SIGNATURE_INVALID", HttpStatus.BAD_REQUEST, "QR code signature verification failed."),
-    DEVICE_ARCHIVE_REQUEST_INVALID(
-            "DEVICE_ARCHIVE_REQUEST_INVALID",
+    ARCHIVE_REQUEST_INVALID(
+            "ARCHIVE_REQUEST_INVALID",
             HttpStatus.UNPROCESSABLE_CONTENT,
             "Device archive request is invalid."),
-    DEVICE_ARCHIVE_REQUEST_LOCKED("DEVICE_ARCHIVE_REQUEST_LOCKED", HttpStatus.CONFLICT, "Device archive has a pending archive request."),
-    DEVICE_ARCHIVE_REQUEST_FROZEN("DEVICE_ARCHIVE_REQUEST_FROZEN", HttpStatus.CONFLICT, "Device archive request is frozen."),
-    DEVICE_ARCHIVE_REQUEST_NOT_FOUND("DEVICE_ARCHIVE_REQUEST_NOT_FOUND", HttpStatus.NOT_FOUND, "Device archive request not found."),
-    DEVICE_ARCHIVE_REQUEST_ALREADY_REVIEWED(
-            "DEVICE_ARCHIVE_REQUEST_ALREADY_REVIEWED",
+    ARCHIVE_REQUEST_LOCKED("ARCHIVE_REQUEST_LOCKED", HttpStatus.CONFLICT, "Device archive has a pending archive request."),
+    ARCHIVE_REQUEST_FROZEN("ARCHIVE_REQUEST_FROZEN", HttpStatus.CONFLICT, "Device archive request is frozen."),
+    ARCHIVE_REQUEST_NOT_FOUND("ARCHIVE_REQUEST_NOT_FOUND", HttpStatus.NOT_FOUND, "Device archive request not found."),
+    ARCHIVE_REQUEST_ALREADY_REVIEWED(
+            "ARCHIVE_REQUEST_ALREADY_REVIEWED",
             HttpStatus.CONFLICT,
             "Device archive request has already been reviewed."),
     DEVICE_VERIFICATION_INVALID(

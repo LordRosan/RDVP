@@ -11,8 +11,8 @@ import { ApiClient } from '../../shared/services/ApiClient';
 
 const DEFAULT_LOG_PAGE_SIZE = 50;
 const ARCHIVE_OPERATION_TYPE_OPTIONS: string[] = ['全部', '档案添加', '档案删除', '档案修改', '档案查询', '档案导出'];
-const ARCHIVE_OPERATION_TYPE_VALUES: string[] = ['', 'CREATE', 'DELETE', 'UPDATE', 'DEVICE_ARCHIVE_QUERY',
-  'DEVICE_ARCHIVE_EXPORT'];
+const ARCHIVE_OPERATION_TYPE_VALUES: string[] = ['', 'CREATE', 'DELETE', 'UPDATE', 'ARCHIVE_QUERY',
+  'ARCHIVE_EXPORT'];
 const ARCHIVE_REVIEW_TYPE_OPTIONS: string[] = ['全部', '添加档案', '删除档案', '修改档案'];
 const ARCHIVE_REVIEW_TYPE_VALUES: string[] = ['', 'CREATE', 'DELETE', 'UPDATE'];
 const OPERATIONS_OPERATION_TYPE_OPTIONS: string[] = ['全部', '核验报告', '报修报告', '任务接取', '维修报告', '复检报告'];
@@ -193,13 +193,13 @@ export class LogQueryService {
 
   static formatTypeLabel(action: string, category?: LogCategory): string {
     switch (action) {
-      case 'DEVICE_ARCHIVE_REQUEST':
+      case 'ARCHIVE_REQUEST':
         return '档案申请';
-      case 'DEVICE_ARCHIVE_REVIEW':
+      case 'ARCHIVE_REVIEW':
         return '档案审核';
-      case 'DEVICE_ARCHIVE_QUERY':
+      case 'ARCHIVE_QUERY':
         return '档案查询';
-      case 'DEVICE_ARCHIVE_EXPORT':
+      case 'ARCHIVE_EXPORT':
         return '档案导出';
       case 'CREATE':
         return category === LogCategory.ArchiveOperation ? '档案添加' : '添加档案';
@@ -234,6 +234,20 @@ export class LogQueryService {
       case LogCategory.ArchiveOperation:
       default:
         return '档案操作日志';
+    }
+  }
+
+  static formatPageSubtitle(category: LogCategory): string {
+    switch (category) {
+      case LogCategory.ArchiveReview:
+        return 'Archive Review Logs';
+      case LogCategory.OperationsOperation:
+        return 'Operations Operation Logs';
+      case LogCategory.OperationsReview:
+        return 'Operations Review Logs';
+      case LogCategory.ArchiveOperation:
+      default:
+        return 'Archive Operation Logs';
     }
   }
 

@@ -1,12 +1,12 @@
 package com.rmf.rdvp.archive.api;
 
-import com.rmf.rdvp.archive.DeviceArchiveService;
+import com.rmf.rdvp.archive.ArchiveService;
 
 public record QrVerificationResponse(
         boolean valid,
-        DeviceArchiveResponse device) {
+        ArchiveResponse device) {
 
-    public static QrVerificationResponse from(DeviceArchiveService.QrVerificationResult result) {
-        return new QrVerificationResponse(result.valid(), DeviceArchiveResponse.from(result.device()));
+    public static QrVerificationResponse from(ArchiveService.QrVerificationResult result) {
+        return new QrVerificationResponse(result.valid(), ArchiveResponse.from(result.device()));
     }
 }
