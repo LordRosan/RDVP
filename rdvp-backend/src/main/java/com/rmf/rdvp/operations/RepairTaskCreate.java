@@ -11,5 +11,7 @@ public record RepairTaskCreate(
         BigDecimal acceptedLongitude,
         BigDecimal acceptedLatitude,
         OffsetDateTime acceptedAt,
-        String taskType) {
+        OffsetDateTime createdAt,
+        String taskType,
+        String parentTaskId) {
 }

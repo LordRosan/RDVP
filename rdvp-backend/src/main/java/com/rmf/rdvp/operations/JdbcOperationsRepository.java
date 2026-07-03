@@ -50,7 +50,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                             :reporterId,
                             :faultType,
                             :severity,
-                            'PENDING_ACCEPTANCE',
+                            'PENDING_REVIEW',
                             :occurredAt,
                             :description,
                             :sceneCondition,
@@ -119,6 +119,24 @@ public class JdbcOperationsRepository implements OperationsRepository {
     }
 
     @Override
+    public boolean approvePendingFaultReport(String faultReportId, String faultReportNo, OffsetDateTime updatedAt) {
+        int updated = jdbcTemplate.update(
+                """
+                        UPDATE operations_fault_reports
+                        SET status = 'PENDING_ACCEPTANCE',
+                            fault_report_no = :faultReportNo,
+                            updated_at = :updatedAt
+                        WHERE id = :faultReportId
+                          AND status = 'PENDING_REVIEW'
+                        """,
+                new MapSqlParameterSource()
+                        .addValue("faultReportId", faultReportId)
+                        .addValue("faultReportNo", faultReportNo)
+                        .addValue("updatedAt", updatedAt));
+        return updated > 0;
+    }
+
+    @Override
     public List<TaskAcceptanceItem> listTaskAcceptance(
             FaultSeverity severity,
             int radiusKm,
@@ -134,6 +152,8 @@ public class JdbcOperationsRepository implements OperationsRepository {
                 .addValue("latitude", latitude)
                 .addValue("radiusMeters", BigDecimal.valueOf(radiusKm).multiply(BigDecimal.valueOf(1000)));
         repairConditions.add("f.status = 'PENDING_ACCEPTANCE'");
+        repairConditions.add("rt.status = 'AVAILABLE'");
+        repairConditions.add("rt.task_type = 'REPAIR'");
         repairConditions.add("d.deleted_at IS NULL");
         if (severity != null) {
             repairConditions.add("f.severity = :severity");
@@ -157,7 +177,8 @@ public class JdbcOperationsRepository implements OperationsRepository {
 
         String repairSelect = """
                 SELECT
-                    f.id,
+                    rt.id,
+                    f.id AS fault_report_id,
                     f.fault_report_no,
                     d.device_code,
                     d.name AS device_name,
@@ -167,9 +188,11 @@ public class JdbcOperationsRepository implements OperationsRepository {
                     d.address,
                     d.longitude,
                     d.latitude,
-                    f.created_at,
-                    'REPAIR' AS task_type
-                FROM operations_fault_reports f
+                    rt.created_at,
+                    rt.status,
+                    rt.task_type
+                FROM operations_repair_tasks rt
+                JOIN operations_fault_reports f ON f.id = rt.fault_report_id
                 JOIN archive_devices d ON d.id = f.device_id
                 """.formatted(repairDistanceExpr);
 
@@ -192,15 +215,9 @@ public class JdbcOperationsRepository implements OperationsRepository {
 
         List<String> reinspectionConditions = new ArrayList<>();
         reinspectionConditions.add("f2.status = 'PENDING_REINSPECTION'");
+        reinspectionConditions.add("rt3.status = 'AVAILABLE'");
+        reinspectionConditions.add("rt3.task_type = 'REINSPECTION'");
         reinspectionConditions.add("d2.deleted_at IS NULL");
-        reinspectionConditions.add("""
-                NOT EXISTS (
-                    SELECT 1 FROM operations_repair_tasks rt2
-                    WHERE rt2.fault_report_id = f2.id
-                      AND rt2.task_type = 'REINSPECTION'
-                      AND rt2.status IN ('ACCEPTED', 'PROCESSING')
-                )
-                """);
         if (severity != null) {
             reinspectionConditions.add("f2.severity = :severity");
         }
@@ -212,7 +229,8 @@ public class JdbcOperationsRepository implements OperationsRepository {
 
         String reinspectionSelect = """
                 SELECT
-                    f2.id,
+                    rt3.id,
+                    f2.id AS fault_report_id,
                     f2.fault_report_no,
                     d2.device_code,
                     d2.name AS device_name,
@@ -222,9 +240,11 @@ public class JdbcOperationsRepository implements OperationsRepository {
                     d2.address,
                     d2.longitude,
                     d2.latitude,
-                    f2.created_at,
-                    'REINSPECTION' AS task_type
-                FROM operations_fault_reports f2
+                    rt3.created_at,
+                    rt3.status,
+                    rt3.task_type
+                FROM operations_repair_tasks rt3
+                JOIN operations_fault_reports f2 ON f2.id = rt3.fault_report_id
                 JOIN archive_devices d2 ON d2.id = f2.device_id
                 """.formatted(reinspectionDistanceExpr);
 
@@ -269,23 +289,23 @@ public class JdbcOperationsRepository implements OperationsRepository {
                 """
                         SELECT count(*)
                         FROM (
-                            SELECT f.id
-                            FROM operations_fault_reports f
+                            SELECT rt.id
+                            FROM operations_repair_tasks rt
+                            JOIN operations_fault_reports f ON f.id = rt.fault_report_id
                             JOIN archive_devices d ON d.id = f.device_id
-                            WHERE f.status = 'PENDING_ACCEPTANCE'
+                            WHERE rt.status = 'AVAILABLE'
+                              AND rt.task_type = 'REPAIR'
+                              AND f.status = 'PENDING_ACCEPTANCE'
                               AND d.deleted_at IS NULL
                             UNION ALL
-                            SELECT f2.id
-                            FROM operations_fault_reports f2
+                            SELECT rt2.id
+                            FROM operations_repair_tasks rt2
+                            JOIN operations_fault_reports f2 ON f2.id = rt2.fault_report_id
                             JOIN archive_devices d2 ON d2.id = f2.device_id
-                            WHERE f2.status = 'PENDING_REINSPECTION'
+                            WHERE rt2.status = 'AVAILABLE'
+                              AND rt2.task_type = 'REINSPECTION'
+                              AND f2.status = 'PENDING_REINSPECTION'
                               AND d2.deleted_at IS NULL
-                              AND NOT EXISTS (
-                                  SELECT 1 FROM operations_repair_tasks rt2
-                                  WHERE rt2.fault_report_id = f2.id
-                                    AND rt2.task_type = 'REINSPECTION'
-                                    AND rt2.status IN ('ACCEPTED', 'PROCESSING')
-                              )
                         ) pool_items
                         """,
                 Map.of(),
@@ -318,35 +338,6 @@ public class JdbcOperationsRepository implements OperationsRepository {
     }
 
     @Override
-    public boolean hasActiveRepairTaskForFault(String faultReportId) {
-        Integer count = jdbcTemplate.queryForObject(
-                """
-                        SELECT count(*)
-                        FROM operations_repair_tasks
-                        WHERE fault_report_id = :faultReportId
-                          AND status <> 'REPORT_SUBMITTED'
-                        """,
-                Map.of("faultReportId", faultReportId),
-                Integer.class);
-        return count != null && count > 0;
-    }
-
-    @Override
-    public boolean hasActiveReinspectionTaskForFault(String faultReportId) {
-        Integer count = jdbcTemplate.queryForObject(
-                """
-                        SELECT count(*)
-                        FROM operations_repair_tasks
-                        WHERE fault_report_id = :faultReportId
-                          AND task_type = 'REINSPECTION'
-                          AND status IN ('ACCEPTED', 'PROCESSING')
-                        """,
-                Map.of("faultReportId", faultReportId),
-                Integer.class);
-        return count != null && count > 0;
-    }
-
-    @Override
     public int countActiveRepairTasksByMaintainer(String maintainerId) {
         Integer count = jdbcTemplate.queryForObject(
                 """
@@ -374,6 +365,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                             accepted_longitude,
                             accepted_latitude,
                             accepted_at,
+                            parent_task_id,
                             created_at,
                             updated_at
                         ) VALUES (
@@ -381,13 +373,14 @@ public class JdbcOperationsRepository implements OperationsRepository {
                             :repairTaskNo,
                             :faultReportId,
                             :maintainerId,
-                            'ACCEPTED',
+                            :status,
                             :taskType,
                             :acceptedLongitude,
                             :acceptedLatitude,
                             :acceptedAt,
-                            :acceptedAt,
-                            :acceptedAt
+                            :parentTaskId,
+                            :createdAt,
+                            :createdAt
                         )
                         """,
                 new MapSqlParameterSource()
@@ -395,10 +388,70 @@ public class JdbcOperationsRepository implements OperationsRepository {
                         .addValue("repairTaskNo", create.repairTaskNo())
                         .addValue("faultReportId", create.faultReportId())
                         .addValue("maintainerId", create.maintainerId())
+                        .addValue("status", create.maintainerId() == null ? "AVAILABLE" : "ACCEPTED")
                         .addValue("taskType", create.taskType() != null ? create.taskType() : "REPAIR")
                         .addValue("acceptedLongitude", create.acceptedLongitude())
                         .addValue("acceptedLatitude", create.acceptedLatitude())
-                        .addValue("acceptedAt", create.acceptedAt()));
+                        .addValue("acceptedAt", create.acceptedAt())
+                        .addValue("parentTaskId", create.parentTaskId())
+                        .addValue("createdAt", create.createdAt()));
+    }
+
+    @Override
+    public Optional<RepairTaskRecord> findAvailableRepairTaskByFaultReportId(String faultReportId, String taskType) {
+        List<RepairTaskRecord> results = jdbcTemplate.query(
+                """
+                        SELECT
+                            rt.id,
+                            rt.repair_task_no,
+                            rt.fault_report_id,
+                            f.device_id,
+                            rt.maintainer_id,
+                            f.severity,
+                            rt.status,
+                            rt.accepted_longitude,
+                            rt.accepted_latitude,
+                            rt.accepted_at,
+                            rt.completed_at
+                        FROM operations_repair_tasks rt
+                        JOIN operations_fault_reports f ON f.id = rt.fault_report_id
+                        WHERE rt.fault_report_id = :faultReportId
+                          AND rt.task_type = :taskType
+                          AND rt.status = 'AVAILABLE'
+                        ORDER BY rt.created_at DESC
+                        LIMIT 1
+                        """,
+                Map.of("faultReportId", faultReportId, "taskType", taskType),
+                this::mapRepairTaskRecord);
+        return results.stream().findFirst();
+    }
+
+    @Override
+    public boolean acceptAvailableRepairTask(
+            String repairTaskId,
+            String maintainerId,
+            BigDecimal longitude,
+            BigDecimal latitude,
+            OffsetDateTime acceptedAt) {
+        int updated = jdbcTemplate.update(
+                """
+                        UPDATE operations_repair_tasks
+                        SET status = 'ACCEPTED',
+                            maintainer_id = :maintainerId,
+                            accepted_longitude = :longitude,
+                            accepted_latitude = :latitude,
+                            accepted_at = :acceptedAt,
+                            updated_at = :acceptedAt
+                        WHERE id = :repairTaskId
+                          AND status = 'AVAILABLE'
+                        """,
+                new MapSqlParameterSource()
+                        .addValue("repairTaskId", repairTaskId)
+                        .addValue("maintainerId", maintainerId)
+                        .addValue("longitude", longitude)
+                        .addValue("latitude", latitude)
+                        .addValue("acceptedAt", acceptedAt));
+        return updated > 0;
     }
 
     @Override
@@ -474,11 +527,41 @@ public class JdbcOperationsRepository implements OperationsRepository {
     }
 
     @Override
+    public Optional<RepairTaskRecord> findActiveReinspectionTaskByFaultReportId(String faultReportId) {
+        List<RepairTaskRecord> results = jdbcTemplate.query(
+                """
+                        SELECT
+                            rt.id,
+                            rt.repair_task_no,
+                            rt.fault_report_id,
+                            f.device_id,
+                            rt.maintainer_id,
+                            f.severity,
+                            rt.status,
+                            rt.accepted_longitude,
+                            rt.accepted_latitude,
+                            rt.accepted_at,
+                            rt.completed_at
+                        FROM operations_repair_tasks rt
+                        JOIN operations_fault_reports f ON f.id = rt.fault_report_id
+                        WHERE rt.fault_report_id = :faultReportId
+                          AND rt.task_type = 'REINSPECTION'
+                          AND rt.status IN ('ACCEPTED', 'PROCESSING')
+                        ORDER BY rt.accepted_at DESC
+                        LIMIT 1
+                        """,
+                Map.of("faultReportId", faultReportId),
+                this::mapRepairTaskRecord);
+        return results.stream().findFirst();
+    }
+
+    @Override
     public List<ReinspectionTaskSummary> listPendingReinspections(int limit) {
         return jdbcTemplate.query(
                 """
                         SELECT
-                            f.id,
+                            rt.id,
+                            f.id AS fault_report_id,
                             f.fault_report_no,
                             d.device_code,
                             d.name AS device_name,
@@ -488,7 +571,8 @@ public class JdbcOperationsRepository implements OperationsRepository {
                             d.latitude,
                             latest_report.repaired_at,
                             f.status
-                        FROM operations_fault_reports f
+                        FROM operations_repair_tasks rt
+                        JOIN operations_fault_reports f ON f.id = rt.fault_report_id
                         JOIN archive_devices d ON d.id = f.device_id
                         LEFT JOIN LATERAL (
                             SELECT rr.repaired_at
@@ -497,9 +581,11 @@ public class JdbcOperationsRepository implements OperationsRepository {
                             ORDER BY rr.created_at DESC
                             LIMIT 1
                         ) latest_report ON TRUE
-                        WHERE f.status = 'PENDING_REINSPECTION'
+                        WHERE rt.status = 'AVAILABLE'
+                          AND rt.task_type = 'REINSPECTION'
+                          AND f.status = 'PENDING_REINSPECTION'
                           AND d.deleted_at IS NULL
-                        ORDER BY f.updated_at DESC
+                        ORDER BY rt.created_at DESC
                         LIMIT :limit
                         """,
                 Map.of("limit", limit),
@@ -566,6 +652,19 @@ public class JdbcOperationsRepository implements OperationsRepository {
     }
 
     @Override
+    public boolean hasRepairReportForRepairTask(String repairTaskId) {
+        Integer count = jdbcTemplate.queryForObject(
+                """
+                        SELECT count(*)
+                        FROM operations_repair_reports
+                        WHERE repair_task_id = :repairTaskId
+                        """,
+                Map.of("repairTaskId", repairTaskId),
+                Integer.class);
+        return count != null && count > 0;
+    }
+
+    @Override
     public long countRepairReports() {
         Long count = jdbcTemplate.queryForObject(
                 """
@@ -575,6 +674,31 @@ public class JdbcOperationsRepository implements OperationsRepository {
                 Map.of(),
                 Long.class);
         return count == null ? 0 : count;
+    }
+
+    @Override
+    public Optional<RepairReportRecord> findRepairReportByIdOrNo(String idOrNo) {
+        List<RepairReportRecord> results = jdbcTemplate.query(
+                """
+                        SELECT
+                            id,
+                            repair_report_no,
+                            repair_task_id,
+                            fault_report_id,
+                            maintainer_id,
+                            result,
+                            repaired_at,
+                            process_description,
+                            parts_used,
+                            requires_reinspection,
+                            created_at
+                        FROM operations_repair_reports
+                        WHERE id = :idOrNo
+                           OR repair_report_no = :idOrNo
+                        """,
+                Map.of("idOrNo", idOrNo),
+                this::mapRepairReport);
+        return results.stream().findFirst();
     }
 
     @Override
@@ -701,6 +825,19 @@ public class JdbcOperationsRepository implements OperationsRepository {
     }
 
     @Override
+    public boolean hasReinspectionReportForRepairReport(String repairReportId) {
+        Integer count = jdbcTemplate.queryForObject(
+                """
+                        SELECT count(*)
+                        FROM operations_reinspection_reports
+                        WHERE repair_report_id = :repairReportId
+                        """,
+                Map.of("repairReportId", repairReportId),
+                Integer.class);
+        return count != null && count > 0;
+    }
+
+    @Override
     public long countReinspectionReports() {
         Long count = jdbcTemplate.queryForObject(
                 """
@@ -710,6 +847,29 @@ public class JdbcOperationsRepository implements OperationsRepository {
                 Map.of(),
                 Long.class);
         return count == null ? 0 : count;
+    }
+
+    @Override
+    public Optional<ReinspectionReportCreate> findReinspectionReportByIdOrNo(String idOrNo) {
+        List<ReinspectionReportCreate> results = jdbcTemplate.query(
+                """
+                        SELECT
+                            id,
+                            reinspection_report_no,
+                            fault_report_id,
+                            repair_report_id,
+                            reinspector_id,
+                            result,
+                            reinspected_at,
+                            description,
+                            created_at
+                        FROM operations_reinspection_reports
+                        WHERE id = :idOrNo
+                           OR reinspection_report_no = :idOrNo
+                        """,
+                Map.of("idOrNo", idOrNo),
+                this::mapReinspectionReportCreate);
+        return results.stream().findFirst();
     }
 
     @Override
@@ -839,6 +999,22 @@ public class JdbcOperationsRepository implements OperationsRepository {
     }
 
     @Override
+    public boolean updateOperationsReviewRequestTargetNo(String id, String targetNo, OffsetDateTime updatedAt) {
+        int updated = jdbcTemplate.update(
+                """
+                        UPDATE review_operations_requests
+                        SET target_no = :targetNo,
+                            updated_at = :updatedAt
+                        WHERE id = :id
+                        """,
+                new MapSqlParameterSource()
+                        .addValue("id", id)
+                        .addValue("targetNo", targetNo)
+                        .addValue("updatedAt", updatedAt));
+        return updated > 0;
+    }
+
+    @Override
     public long countPendingOperationsReviews() {
         Long count = jdbcTemplate.queryForObject(
                 """
@@ -931,7 +1107,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
     private TaskAcceptanceItem mapTaskAcceptance(ResultSet resultSet, int rowNumber) throws SQLException {
         return new TaskAcceptanceItem(
                 resultSet.getString("id"),
-                resultSet.getString("id"),
+                resultSet.getString("fault_report_id"),
                 resultSet.getString("fault_report_no"),
                 resultSet.getString("device_code"),
                 resultSet.getString("device_name"),
@@ -943,7 +1119,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                         resultSet.getBigDecimal("longitude"),
                         resultSet.getBigDecimal("latitude")),
                 resultSet.getObject("created_at", OffsetDateTime.class),
-                RepairTaskStatus.AVAILABLE,
+                RepairTaskStatus.valueOf(resultSet.getString("status")),
                 resultSet.getString("task_type"));
     }
 
@@ -978,7 +1154,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
     private ReinspectionTaskSummary mapReinspectionTask(ResultSet resultSet, int rowNumber) throws SQLException {
         return new ReinspectionTaskSummary(
                 resultSet.getString("id"),
-                resultSet.getString("id"),
+                resultSet.getString("fault_report_id"),
                 resultSet.getString("fault_report_no"),
                 resultSet.getString("device_code"),
                 resultSet.getString("device_name"),
@@ -1003,6 +1179,19 @@ public class JdbcOperationsRepository implements OperationsRepository {
                 resultSet.getString("process_description"),
                 resultSet.getString("parts_used"),
                 resultSet.getBoolean("requires_reinspection"),
+                resultSet.getObject("created_at", OffsetDateTime.class));
+    }
+
+    private ReinspectionReportCreate mapReinspectionReportCreate(ResultSet resultSet, int rowNumber) throws SQLException {
+        return new ReinspectionReportCreate(
+                resultSet.getString("id"),
+                resultSet.getString("reinspection_report_no"),
+                resultSet.getString("fault_report_id"),
+                resultSet.getString("repair_report_id"),
+                resultSet.getString("reinspector_id"),
+                ReinspectionResult.valueOf(resultSet.getString("result")),
+                resultSet.getObject("reinspected_at", OffsetDateTime.class),
+                resultSet.getString("description"),
                 resultSet.getObject("created_at", OffsetDateTime.class));
     }
 }

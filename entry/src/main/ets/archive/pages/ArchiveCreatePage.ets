@@ -106,7 +106,7 @@ struct ArchiveCreatePage {
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      Text('Device Archive Create')
+      Text('Archive Create')
         .fontSize(13)
         .fontWeight(FontWeight.Medium)
         .fontColor(AppColors.TextTertiary)

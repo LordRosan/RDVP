@@ -190,7 +190,7 @@ struct ArchiveDetailPage {
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .constraintSize({ maxWidth: '82%' })
 
-      Text('Device Archive Detail')
+      Text('Archive Detail')
         .fontSize(13)
         .fontWeight(FontWeight.Medium)
         .fontColor(AppColors.TextTertiary)

@@ -13,6 +13,8 @@ public interface OperationsRepository {
 
     boolean hasActiveFaultForDevice(String deviceId);
 
+    boolean approvePendingFaultReport(String faultReportId, String faultReportNo, OffsetDateTime updatedAt);
+
     List<TaskAcceptanceItem> listTaskAcceptance(
             FaultSeverity severity,
             int radiusKm,
@@ -30,13 +32,18 @@ public interface OperationsRepository {
 
     long countRepairTasks();
 
-    boolean hasActiveRepairTaskForFault(String faultReportId);
-
-    boolean hasActiveReinspectionTaskForFault(String faultReportId);
-
     int countActiveRepairTasksByMaintainer(String maintainerId);
 
     void createRepairTask(RepairTaskCreate create);
+
+    Optional<RepairTaskRecord> findAvailableRepairTaskByFaultReportId(String faultReportId, String taskType);
+
+    boolean acceptAvailableRepairTask(
+            String repairTaskId,
+            String maintainerId,
+            BigDecimal longitude,
+            BigDecimal latitude,
+            OffsetDateTime acceptedAt);
 
     boolean markFaultAccepted(String faultReportId, String repairTaskId, OffsetDateTime updatedAt);
 
@@ -44,13 +51,19 @@ public interface OperationsRepository {
 
     Optional<RepairTaskRecord> findRepairTaskByIdOrNo(String idOrNo);
 
+    Optional<RepairTaskRecord> findActiveReinspectionTaskByFaultReportId(String faultReportId);
+
     List<ReinspectionTaskSummary> listPendingReinspections(int limit);
 
     long countPendingReinspections();
 
     void createRepairReport(RepairReportCreate create);
 
+    boolean hasRepairReportForRepairTask(String repairTaskId);
+
     long countRepairReports();
+
+    Optional<RepairReportRecord> findRepairReportByIdOrNo(String idOrNo);
 
     Optional<RepairReportRecord> findLatestRepairReportByFaultReportId(String faultReportId);
 
@@ -66,7 +79,11 @@ public interface OperationsRepository {
 
     void createReinspectionReport(ReinspectionReportCreate create);
 
+    boolean hasReinspectionReportForRepairReport(String repairReportId);
+
     long countReinspectionReports();
+
+    Optional<ReinspectionReportCreate> findReinspectionReportByIdOrNo(String idOrNo);
 
     void createOperationsReviewRequest(OperationsReviewRequestCreate create);
 
@@ -85,6 +102,8 @@ public interface OperationsRepository {
             String reviewerId,
             String reviewComment,
             OffsetDateTime reviewedAt);
+
+    boolean updateOperationsReviewRequestTargetNo(String id, String targetNo, OffsetDateTime updatedAt);
 
     long countPendingOperationsReviews();
 

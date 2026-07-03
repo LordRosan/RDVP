@@ -20,6 +20,8 @@ class DomainTableNamingTests {
             Path.of("src/main/resources/db/migration/V33__rename_archive_feature_values.sql");
     private static final Path ARCHIVE_DESCRIPTION_VALUE_MIGRATION =
             Path.of("src/main/resources/db/migration/V34__rename_archive_description_values.sql");
+    private static final Path OPERATIONS_TASK_NODE_MIGRATION =
+            Path.of("src/main/resources/db/migration/V39__align_operations_task_node_constraints.sql");
 
     private static final Set<String> ALLOWED_DOMAIN_PACKAGES = Set.of(
             "archive",
@@ -264,6 +266,16 @@ class DomainTableNamingTests {
     }
 
     @Test
+    void sourceTextDoesNotUseLegacyDeviceArchivePhrase() throws IOException {
+        List<String> violations = Stream.concat(
+                        legacyDeviceArchivePhraseViolations(Path.of("src/main/java")),
+                        legacyDeviceArchivePhraseViolations(Path.of("../entry/src/main/ets")))
+                .toList();
+
+        assertThat(violations).isEmpty();
+    }
+
+    @Test
     void operationsCombinedVerificationAndFaultReportDropsDevicePrefix() throws IOException {
         Path sourceRoot = Path.of("src/main/java");
 
@@ -276,6 +288,30 @@ class DomainTableNamingTests {
         }
 
         assertThat(violations).isEmpty();
+    }
+
+    @Test
+    void operationsSourceTextDoesNotUseLegacyDeviceVerificationPhrase() throws IOException {
+        List<String> violations = Stream.concat(
+                        legacyDeviceVerificationPhraseViolations(Path.of("src/main/java")),
+                        legacyDeviceVerificationPhraseViolations(Path.of("../entry/src/main/ets")))
+                .toList();
+
+        assertThat(violations).isEmpty();
+    }
+
+    @Test
+    void operationsTaskNodeMigrationReplacesLegacyActiveFaultUniqueness() throws IOException {
+        assertThat(OPERATIONS_TASK_NODE_MIGRATION)
+                .exists();
+
+        String migration = Files.readString(OPERATIONS_TASK_NODE_MIGRATION, StandardCharsets.UTF_8);
+
+        assertThat(migration)
+                .contains("DROP INDEX IF EXISTS ux_operations_repair_tasks_active_fault")
+                .contains("ux_operations_repair_tasks_active_fault_node")
+                .contains("WHERE status IN ('AVAILABLE', 'ACCEPTED', 'PROCESSING')")
+                .contains("fk_operations_repair_tasks_parent_task");
     }
 
     private static Stream<String> legacyTableViolations(Path file) {
@@ -374,6 +410,26 @@ class DomainTableNamingTests {
         }
     }
 
+    private static Stream<String> legacyDeviceArchivePhraseViolations(Path sourceRoot) throws IOException {
+        if (!Files.exists(sourceRoot)) {
+            return Stream.empty();
+        }
+
+        return Files.walk(sourceRoot)
+                .filter(Files::isRegularFile)
+                .filter(path -> path.toString().endsWith(".java") || path.toString().endsWith(".ets"))
+                .flatMap(file -> {
+                    try {
+                        String content = Files.readString(file, StandardCharsets.UTF_8);
+                        return Stream.of("device archive", "Device Archive", "设备档案")
+                                .filter(content::contains)
+                                .map(legacyToken -> file + " contains " + legacyToken);
+                    } catch (IOException exception) {
+                        throw new IllegalStateException("Failed to inspect " + file, exception);
+                    }
+                });
+    }
+
     private static Stream<String> combinedVerificationAndFaultReportViolations(Path file) {
         try {
             String content = Files.readString(file, StandardCharsets.UTF_8);
@@ -383,6 +439,26 @@ class DomainTableNamingTests {
         } catch (IOException exception) {
             throw new IllegalStateException("Failed to inspect " + file, exception);
         }
+    }
+
+    private static Stream<String> legacyDeviceVerificationPhraseViolations(Path sourceRoot) throws IOException {
+        if (!Files.exists(sourceRoot)) {
+            return Stream.empty();
+        }
+
+        return Files.walk(sourceRoot)
+                .filter(Files::isRegularFile)
+                .filter(path -> path.toString().endsWith(".java") || path.toString().endsWith(".ets"))
+                .flatMap(file -> {
+                    try {
+                        String content = Files.readString(file, StandardCharsets.UTF_8);
+                        return Stream.of("设备核验")
+                                .filter(content::contains)
+                                .map(legacyToken -> file + " contains " + legacyToken);
+                    } catch (IOException exception) {
+                        throw new IllegalStateException("Failed to inspect " + file, exception);
+                    }
+                });
     }
 
     private static boolean containsDeviceVerificationToken(Path file) {

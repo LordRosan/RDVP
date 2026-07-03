@@ -3,6 +3,7 @@ package com.rmf.rdvp.operations;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +22,7 @@ public class InMemoryOperationsRepository implements OperationsRepository {
 
     private final Map<String, FaultReportRecord> faultReportsById = new ConcurrentHashMap<>();
     private final Map<String, RepairTaskRecord> repairTasksById = new ConcurrentHashMap<>();
+    private final Map<String, String> repairTaskTypesById = new ConcurrentHashMap<>();
     private final Map<String, RepairReportRecord> repairReportsById = new ConcurrentHashMap<>();
     private final Map<String, ReinspectionReportCreate> reinspectionReportsById = new ConcurrentHashMap<>();
     private final Map<String, OperationsReviewRequest> operationsReviewsById = new ConcurrentHashMap<>();
@@ -39,7 +41,7 @@ public class InMemoryOperationsRepository implements OperationsRepository {
                 create.reporterId(),
                 create.faultType(),
                 create.severity(),
-                FaultStatus.PENDING_ACCEPTANCE,
+                FaultStatus.PENDING_REVIEW,
                 create.description(),
                 create.sceneCondition(),
                 create.occurredAt(),
@@ -54,7 +56,7 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     public Optional<FaultReportRecord> findFaultReportByIdOrNo(String idOrNo) {
         return faultReportsById.values()
                 .stream()
-                .filter(item -> item.id().equals(idOrNo) || item.faultReportNo().equals(idOrNo))
+                .filter(item -> item.id().equals(idOrNo) || idOrNo.equals(item.faultReportNo()))
                 .findFirst();
     }
 
@@ -66,6 +68,32 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     }
 
     @Override
+    public boolean approvePendingFaultReport(String faultReportId, String faultReportNo, OffsetDateTime updatedAt) {
+        FaultReportRecord fault = faultReportsById.get(faultReportId);
+        if (fault == null || fault.status() != FaultStatus.PENDING_REVIEW) {
+            return false;
+        }
+
+        faultReportsById.put(faultReportId, new FaultReportRecord(
+                fault.id(),
+                faultReportNo,
+                fault.deviceId(),
+                fault.reporterId(),
+                fault.faultType(),
+                fault.severity(),
+                FaultStatus.PENDING_ACCEPTANCE,
+                fault.description(),
+                fault.sceneCondition(),
+                fault.occurredAt(),
+                fault.longitude(),
+                fault.latitude(),
+                fault.acceptedTaskId(),
+                fault.createdAt(),
+                updatedAt));
+        return true;
+    }
+
+    @Override
     public List<TaskAcceptanceItem> listTaskAcceptance(
             FaultSeverity severity,
             int radiusKm,
@@ -74,13 +102,25 @@ public class InMemoryOperationsRepository implements OperationsRepository {
             boolean includeRepairTasks,
             boolean includeReinspectionTasks,
             int limit) {
-        return faultReportsById.values()
-                .stream()
-                .filter(item -> (includeRepairTasks && item.status() == FaultStatus.PENDING_ACCEPTANCE)
-                        || (includeReinspectionTasks && item.status() == FaultStatus.PENDING_REINSPECTION
-                        && !hasActiveReinspectionTaskForFault(item.id())))
+        List<TaskAcceptanceItem> items = new ArrayList<>();
+        for (FaultReportRecord fault : faultReportsById.values()) {
+            for (RepairTaskRecord task : repairTasksById.values()) {
+                String taskType = repairTaskTypesById.getOrDefault(task.id(), "REPAIR");
+                if (!task.faultReportId().equals(fault.id()) || task.status() != RepairTaskStatus.AVAILABLE) {
+                    continue;
+                }
+                boolean canInclude = (includeRepairTasks && "REPAIR".equals(taskType))
+                        || (includeReinspectionTasks && "REINSPECTION".equals(taskType));
+                boolean matchesFaultStatus = (fault.status() == FaultStatus.PENDING_ACCEPTANCE && "REPAIR".equals(taskType))
+                        || (fault.status() == FaultStatus.PENDING_REINSPECTION && "REINSPECTION".equals(taskType));
+                if (canInclude && matchesFaultStatus) {
+                    items.add(toTaskAcceptanceItem(fault, task, longitude, latitude));
+                }
+            }
+        }
+
+        return items.stream()
                 .filter(item -> severity == null || item.severity() == severity)
-                .map(item -> toTaskAcceptanceItem(item, longitude, latitude))
                 .filter(item -> item.distanceKm() == null || item.distanceKm().compareTo(BigDecimal.valueOf(radiusKm)) <= 0)
                 .sorted(Comparator.comparing(TaskAcceptanceItem::submittedAt).reversed())
                 .limit(limit)
@@ -97,12 +137,17 @@ public class InMemoryOperationsRepository implements OperationsRepository {
 
     @Override
     public long countTaskPoolItems() {
-        long pendingReinspectionPoolItems = faultReportsById.values()
+        return repairTasksById.values()
                 .stream()
-                .filter(item -> item.status() == FaultStatus.PENDING_REINSPECTION)
-                .filter(item -> !hasActiveReinspectionTaskForFault(item.id()))
+                .filter(item -> item.status() == RepairTaskStatus.AVAILABLE)
+                .filter(item -> {
+                    FaultReportRecord fault = faultReportsById.get(item.faultReportId());
+                    String taskType = repairTaskTypesById.getOrDefault(item.id(), "REPAIR");
+                    return fault != null
+                            && ((fault.status() == FaultStatus.PENDING_ACCEPTANCE && "REPAIR".equals(taskType))
+                            || (fault.status() == FaultStatus.PENDING_REINSPECTION && "REINSPECTION".equals(taskType)));
+                })
                 .count();
-        return countPendingAcceptanceFaults() + pendingReinspectionPoolItems;
     }
 
     @Override
@@ -116,28 +161,10 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     }
 
     @Override
-    public boolean hasActiveRepairTaskForFault(String faultReportId) {
-        return repairTasksById.values()
-                .stream()
-                .anyMatch(item -> item.faultReportId().equals(faultReportId)
-                        && item.status() != RepairTaskStatus.REPORT_SUBMITTED);
-    }
-
-    @Override
-    public boolean hasActiveReinspectionTaskForFault(String faultReportId) {
-        // In-memory implementation: reinspection tasks share the repairTasksById map.
-        // The real implementation uses task_type column.
-        return repairTasksById.values()
-                .stream()
-                .anyMatch(item -> item.faultReportId().equals(faultReportId)
-                        && (item.status() == RepairTaskStatus.ACCEPTED || item.status() == RepairTaskStatus.PROCESSING));
-    }
-
-    @Override
     public int countActiveRepairTasksByMaintainer(String maintainerId) {
         return (int) repairTasksById.values()
                 .stream()
-                .filter(item -> item.maintainerId().equals(maintainerId))
+                .filter(item -> maintainerId.equals(item.maintainerId()))
                 .filter(item -> item.status() == RepairTaskStatus.ACCEPTED || item.status() == RepairTaskStatus.PROCESSING)
                 .count();
     }
@@ -145,6 +172,7 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     @Override
     public void createRepairTask(RepairTaskCreate create) {
         FaultReportRecord fault = faultReportsById.get(create.faultReportId());
+        repairTaskTypesById.put(create.id(), create.taskType() != null ? create.taskType() : "REPAIR");
         repairTasksById.put(create.id(), new RepairTaskRecord(
                 create.id(),
                 create.repairTaskNo(),
@@ -152,11 +180,48 @@ public class InMemoryOperationsRepository implements OperationsRepository {
                 fault.deviceId(),
                 create.maintainerId(),
                 fault.severity(),
-                RepairTaskStatus.ACCEPTED,
+                create.maintainerId() == null ? RepairTaskStatus.AVAILABLE : RepairTaskStatus.ACCEPTED,
                 create.acceptedLongitude(),
                 create.acceptedLatitude(),
                 create.acceptedAt(),
                 null));
+    }
+
+    @Override
+    public Optional<RepairTaskRecord> findAvailableRepairTaskByFaultReportId(String faultReportId, String taskType) {
+        return repairTasksById.values()
+                .stream()
+                .filter(item -> item.faultReportId().equals(faultReportId))
+                .filter(item -> item.status() == RepairTaskStatus.AVAILABLE)
+                .filter(item -> taskType.equals(repairTaskTypesById.getOrDefault(item.id(), "REPAIR")))
+                .max(Comparator.comparing(RepairTaskRecord::acceptedAt, Comparator.nullsFirst(Comparator.naturalOrder())));
+    }
+
+    @Override
+    public boolean acceptAvailableRepairTask(
+            String repairTaskId,
+            String maintainerId,
+            BigDecimal longitude,
+            BigDecimal latitude,
+            OffsetDateTime acceptedAt) {
+        RepairTaskRecord task = repairTasksById.get(repairTaskId);
+        if (task == null || task.status() != RepairTaskStatus.AVAILABLE) {
+            return false;
+        }
+
+        repairTasksById.put(repairTaskId, new RepairTaskRecord(
+                task.id(),
+                task.repairTaskNo(),
+                task.faultReportId(),
+                task.deviceId(),
+                maintainerId,
+                task.severity(),
+                RepairTaskStatus.ACCEPTED,
+                longitude,
+                latitude,
+                acceptedAt,
+                null));
+        return true;
     }
 
     @Override
@@ -206,13 +271,32 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     }
 
     @Override
-    public List<ReinspectionTaskSummary> listPendingReinspections(int limit) {
-        return faultReportsById.values()
+    public Optional<RepairTaskRecord> findActiveReinspectionTaskByFaultReportId(String faultReportId) {
+        return repairTasksById.values()
                 .stream()
-                .filter(item -> item.status() == FaultStatus.PENDING_REINSPECTION)
-                .sorted(Comparator.comparing(FaultReportRecord::updatedAt).reversed())
+                .filter(item -> item.faultReportId().equals(faultReportId))
+                .filter(item -> "REINSPECTION".equals(repairTaskTypesById.get(item.id())))
+                .filter(item -> item.status() == RepairTaskStatus.ACCEPTED || item.status() == RepairTaskStatus.PROCESSING)
+                .max(Comparator.comparing(RepairTaskRecord::acceptedAt));
+    }
+
+    @Override
+    public List<ReinspectionTaskSummary> listPendingReinspections(int limit) {
+        List<ReinspectionTaskSummary> items = new ArrayList<>();
+        for (FaultReportRecord fault : faultReportsById.values()) {
+            for (RepairTaskRecord task : repairTasksById.values()) {
+                if (task.faultReportId().equals(fault.id())
+                        && task.status() == RepairTaskStatus.AVAILABLE
+                        && "REINSPECTION".equals(repairTaskTypesById.get(task.id()))
+                        && fault.status() == FaultStatus.PENDING_REINSPECTION) {
+                    items.add(toReinspectionTask(fault, task));
+                }
+            }
+        }
+
+        return items.stream()
+                .sorted(Comparator.comparing(ReinspectionTaskSummary::repairedAt, Comparator.nullsFirst(Comparator.naturalOrder())).reversed())
                 .limit(limit)
-                .map(this::toReinspectionTask)
                 .toList();
     }
 
@@ -241,8 +325,23 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     }
 
     @Override
+    public boolean hasRepairReportForRepairTask(String repairTaskId) {
+        return repairReportsById.values()
+                .stream()
+                .anyMatch(item -> item.repairTaskId().equals(repairTaskId));
+    }
+
+    @Override
     public long countRepairReports() {
         return repairReportsById.size();
+    }
+
+    @Override
+    public Optional<RepairReportRecord> findRepairReportByIdOrNo(String idOrNo) {
+        return repairReportsById.values()
+                .stream()
+                .filter(item -> item.id().equals(idOrNo) || item.repairReportNo().equals(idOrNo))
+                .findFirst();
     }
 
     @Override
@@ -280,6 +379,7 @@ public class InMemoryOperationsRepository implements OperationsRepository {
         Optional<RepairTaskRecord> task = repairTasksById.values()
                 .stream()
                 .filter(item -> item.faultReportId().equals(faultReportId)
+                        && "REINSPECTION".equals(repairTaskTypesById.get(item.id()))
                         && (item.status() == RepairTaskStatus.ACCEPTED || item.status() == RepairTaskStatus.PROCESSING))
                 .findFirst();
         if (task.isEmpty()) {
@@ -337,8 +437,23 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     }
 
     @Override
+    public boolean hasReinspectionReportForRepairReport(String repairReportId) {
+        return reinspectionReportsById.values()
+                .stream()
+                .anyMatch(item -> item.repairReportId().equals(repairReportId));
+    }
+
+    @Override
     public long countReinspectionReports() {
         return reinspectionReportsById.size();
+    }
+
+    @Override
+    public Optional<ReinspectionReportCreate> findReinspectionReportByIdOrNo(String idOrNo) {
+        return reinspectionReportsById.values()
+                .stream()
+                .filter(item -> item.id().equals(idOrNo) || item.reinspectionReportNo().equals(idOrNo))
+                .findFirst();
     }
 
     @Override
@@ -426,6 +541,33 @@ public class InMemoryOperationsRepository implements OperationsRepository {
     }
 
     @Override
+    public boolean updateOperationsReviewRequestTargetNo(String id, String targetNo, OffsetDateTime updatedAt) {
+        OperationsReviewRequest request = operationsReviewsById.get(id);
+        if (request == null) {
+            return false;
+        }
+
+        operationsReviewsById.put(id, new OperationsReviewRequest(
+                request.id(),
+                request.type(),
+                request.targetId(),
+                targetNo,
+                request.faultReportId(),
+                request.deviceId(),
+                request.deviceCode(),
+                request.deviceName(),
+                request.operatorId(),
+                request.operatorName(),
+                request.summary(),
+                request.status(),
+                request.submittedAt(),
+                request.reviewerId(),
+                request.reviewComment(),
+                request.reviewedAt()));
+        return true;
+    }
+
+    @Override
     public long countPendingOperationsReviews() {
         return operationsReviewsById.values()
                 .stream()
@@ -442,10 +584,14 @@ public class InMemoryOperationsRepository implements OperationsRepository {
                 .count();
     }
 
-    private TaskAcceptanceItem toTaskAcceptanceItem(FaultReportRecord fault, BigDecimal longitude, BigDecimal latitude) {
+    private TaskAcceptanceItem toTaskAcceptanceItem(
+            FaultReportRecord fault,
+            RepairTaskRecord task,
+            BigDecimal longitude,
+            BigDecimal latitude) {
         Archive device = archiveRepository.findById(fault.deviceId()).orElseThrow();
         return new TaskAcceptanceItem(
-                fault.id(),
+                task.id(),
                 fault.id(),
                 fault.faultReportNo(),
                 device.deviceCode(),
@@ -454,9 +600,9 @@ public class InMemoryOperationsRepository implements OperationsRepository {
                 fault.severity(),
                 calculateDistanceKm(longitude, latitude, device.longitude(), device.latitude()),
                 new TaskAcceptanceItem.DeviceLocation(device.address(), device.longitude(), device.latitude()),
-                fault.createdAt(),
-                RepairTaskStatus.AVAILABLE,
-                fault.status() == FaultStatus.PENDING_REINSPECTION ? "REINSPECTION" : "REPAIR");
+                task.acceptedAt() == null ? fault.updatedAt() : task.acceptedAt(),
+                task.status(),
+                repairTaskTypesById.getOrDefault(task.id(), "REPAIR"));
     }
 
     private BigDecimal calculateDistanceKm(
@@ -495,13 +641,13 @@ public class InMemoryOperationsRepository implements OperationsRepository {
                 task.status());
     }
 
-    private ReinspectionTaskSummary toReinspectionTask(FaultReportRecord fault) {
+    private ReinspectionTaskSummary toReinspectionTask(FaultReportRecord fault, RepairTaskRecord task) {
         Archive device = archiveRepository.findById(fault.deviceId()).orElseThrow();
         OffsetDateTime repairedAt = findLatestRepairReportByFaultReportId(fault.id())
                 .map(RepairReportRecord::repairedAt)
                 .orElse(null);
         return new ReinspectionTaskSummary(
-                fault.id(),
+                task.id(),
                 fault.id(),
                 fault.faultReportNo(),
                 device.deviceCode(),
@@ -511,4 +657,5 @@ public class InMemoryOperationsRepository implements OperationsRepository {
                 repairedAt,
                 fault.status());
     }
+
 }

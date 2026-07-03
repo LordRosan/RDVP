@@ -99,6 +99,7 @@ class ArchiveControllerTests {
     void reportsPendingCreateRequestDeviceCodeAsUnavailable() throws Exception {
         String token = login("archiveadmin", "password");
 
+        verifyPassword(token, "password");
         mockMvc.perform(post("/api/v1/archive-requests")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -371,6 +372,7 @@ class ArchiveControllerTests {
     @Test
     void createsDeviceVerificationReportAndUpdatesArchiveTimestamp() throws Exception {
         String token = login("operator", "password");
+        String reviewerToken = login("operationsadmin", "password");
 
         verifyPassword(token, "password");
         mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-reports", "device-local-0001")
@@ -378,7 +380,7 @@ class ArchiveControllerTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "result": "ABNORMAL",
+                                  "result": "NORMAL",
                                   "description": "现场观察到运行噪声升高，需要持续跟踪。",
                                   "remark": "建议后续上报故障。",
                                   "verifiedAt": "2026-06-03T08:30:00Z"
@@ -387,9 +389,20 @@ class ArchiveControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.deviceId").value("device-local-0001"))
-                .andExpect(jsonPath("$.data.result").value("ABNORMAL"))
+                .andExpect(jsonPath("$.data.result").value("NORMAL"))
                 .andExpect(jsonPath("$.data.description").value("现场观察到运行噪声升高，需要持续跟踪。"))
                 .andExpect(jsonPath("$.data.verifiedAt").value("2026-06-03T08:30:00Z"));
+
+        mockMvc.perform(get("/api/v1/devices/by-code/RDVP-DEVICE-0001")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.lastVerificationTime").value("2026-05-28T09:30:00Z"));
+
+        approveFirstOperationsReviewRequest(
+                reviewerToken,
+                "DEVICE_VERIFICATION_REPORT",
+                "Verification report accepted.",
+                "2026-06-01T08:00:00Z");
 
         mockMvc.perform(get("/api/v1/devices/by-code/RDVP-DEVICE-0001")
                         .header("Authorization", "Bearer " + token))
@@ -434,6 +447,35 @@ class ArchiveControllerTests {
                                 }
                                 """.formatted(password)))
                 .andExpect(status().isOk());
+    }
+
+    private void approveFirstOperationsReviewRequest(
+            String reviewerToken,
+            String type,
+            String comment,
+            String reviewedAt) throws Exception {
+        String response = mockMvc.perform(get("/api/v1/operations-review-requests?type=%s&status=PENDING_REVIEW".formatted(type))
+                        .header("Authorization", "Bearer " + reviewerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        String requestId = objectMapper.readTree(response).path("data").path("items").get(0).path("id").asText();
+
+        verifyPassword(reviewerToken, "password");
+        mockMvc.perform(post("/api/v1/operations-review-requests/{requestId}/review", requestId)
+                        .header("Authorization", "Bearer " + reviewerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "decision": "APPROVED",
+                                  "reviewedAt": "%s",
+                                  "reviewComment": "%s"
+                                }
+                                """.formatted(reviewedAt, comment)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("APPROVED"));
     }
 
     private String login(String username, String password) throws Exception {

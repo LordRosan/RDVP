@@ -158,8 +158,8 @@ public class ArchiveRequestService {
                     reviewed.deviceCode(),
                     reviewer,
                     decision == ArchiveReviewDecision.APPROVED
-                            ? "Device archive request approved."
-                            : "Device archive request rejected.");
+                            ? "Archive request approved."
+                            : "Archive request rejected.");
             return reviewed;
         } catch (BusinessException exception) {
             recordArchiveReviewFailure(normalizedRequestId, request, reviewer, exception);
@@ -230,7 +230,7 @@ public class ArchiveRequestService {
                 created.id(),
                 created.deviceCode(),
                 applicant,
-                "Submitted device archive update request.");
+                "Submitted archive update request.");
         return created;
     }
 
@@ -269,7 +269,7 @@ public class ArchiveRequestService {
                 created.id(),
                 created.deviceCode(),
                 applicant,
-                "Submitted device archive create request.");
+                "Submitted archive create request.");
         return created;
     }
 
@@ -308,7 +308,7 @@ public class ArchiveRequestService {
                 created.id(),
                 created.deviceCode(),
                 applicant,
-                "Submitted device archive delete request.");
+                "Submitted archive delete request.");
         return created;
     }
 
@@ -428,7 +428,7 @@ public class ArchiveRequestService {
             if (value.oldValue() == null) {
                 throw new BusinessException(
                         ErrorCode.ARCHIVE_REQUEST_INVALID,
-                        "oldValue is required when updating a device archive.");
+                        "oldValue is required when updating an archive.");
             }
 
             String currentValue = currentFieldValue(device, field);
@@ -470,7 +470,7 @@ public class ArchiveRequestService {
         if (!normalizedChanges.containsKey("name")) {
             throw new BusinessException(
                     ErrorCode.ARCHIVE_REQUEST_INVALID,
-                    "name is required when creating a device archive.");
+                    "name is required when creating an archive.");
         }
 
         return Map.copyOf(normalizedChanges);

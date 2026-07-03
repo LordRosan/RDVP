@@ -106,7 +106,7 @@ struct ArchiveDeletePage {
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      Text('Device Archive Delete')
+      Text('Archive Delete')
         .fontSize(13)
         .fontWeight(FontWeight.Medium)
         .fontColor(AppColors.TextTertiary)

@@ -1,25 +1,15 @@
-import { ApiError, ApiResponse } from '../../shared/models/ApiModels';
 import {
   FaultReportForm,
-  FaultReportRecord,
   FaultReportValidationResult,
   FaultSeverity,
   FaultStatus,
   FaultType
 } from '../models/FaultModels';
-import { ApiClient } from '../../shared/services/ApiClient';
 import { DeviceService } from '../../archive/services/DeviceService';
 import { UiFeedbackService } from '../../shared/services/UiFeedbackService';
 
 const MAX_DESCRIPTION_LENGTH = 800;
 const MAX_SCENE_CONDITION_LENGTH = 500;
-
-interface FaultReportApiResult {
-  id: string;
-  faultReportNo: string;
-  status: FaultStatus;
-  createdAt: string;
-}
 
 export class FaultReportService {
   static normalizeText(value: string): string {
@@ -93,66 +83,6 @@ export class FaultReportService {
     return {
       valid: true,
       message: ''
-    };
-  }
-
-  static async submitFaultReportRemoteFirst(form: FaultReportForm): Promise<ApiResponse<FaultReportRecord>> {
-    const validation = FaultReportService.validateFaultReportForm(form);
-    if (!validation.valid) {
-      return {
-        success: false,
-        error: {
-          code: 'FAULT_REPORT_INVALID',
-          message: validation.message
-        }
-      };
-    }
-
-    if (!ApiClient.isConfigured()) {
-      return ApiClient.createServiceUnavailableResponse<FaultReportRecord>();
-    }
-
-    return FaultReportService.submitFaultReportToBackend(form);
-  }
-
-  private static async submitFaultReportToBackend(form: FaultReportForm): Promise<ApiResponse<FaultReportRecord>> {
-    const response = await ApiClient.request<FaultReportApiResult>('/api/v1/fault-reports', 'POST', true,
-      JSON.stringify({
-        deviceCode: DeviceService.normalizeDeviceCode(form.deviceCode),
-        faultType: form.faultType,
-        severity: form.severity,
-        occurredAt: FaultReportService.normalizeText(form.occurredAt),
-        description: FaultReportService.normalizeText(form.description),
-        sceneCondition: FaultReportService.normalizeText(form.sceneCondition)
-      }));
-
-    if (!response.success) {
-      return {
-        success: false,
-        error: FaultReportService.createSubmitError(response.error === undefined ? '' : `${response.error.code}`,
-          response.error === undefined ? '' : response.error.message),
-        requestId: response.requestId,
-        timestamp: response.timestamp
-      };
-    }
-
-    if (response.data === undefined) {
-      return {
-        success: false,
-        error: {
-          code: 'FAULT_REPORT_RESPONSE_INVALID',
-          message: UiFeedbackService.operationUnavailable('提交')
-        },
-        requestId: response.requestId,
-        timestamp: response.timestamp
-      };
-    }
-
-    return {
-      success: true,
-      data: FaultReportService.createRecordFromApiResult(form, response.data),
-      requestId: response.requestId,
-      timestamp: response.timestamp
     };
   }
 
@@ -260,31 +190,5 @@ export class FaultReportService {
       severity === FaultSeverity.Severe ||
       severity === FaultSeverity.General ||
       severity === FaultSeverity.Minor;
-  }
-
-  private static createRecordFromApiResult(form: FaultReportForm, result: FaultReportApiResult): FaultReportRecord {
-    return {
-      id: result.id,
-      reportNo: result.faultReportNo,
-      deviceCode: DeviceService.normalizeDeviceCode(form.deviceCode),
-      faultType: form.faultType,
-      severity: form.severity,
-      status: result.status as FaultStatus,
-      submittedAt: result.createdAt
-    };
-  }
-
-  private static createSubmitError(code: string, fallbackMessage: string): ApiError {
-    if (code === 'DEVICE_ACTIVE_FAULT_EXISTS') {
-      return {
-        code,
-        message: UiFeedbackService.operationUnavailable('报修')
-      };
-    }
-
-    return {
-      code: code.length === 0 ? 'FAULT_REPORT_SUBMIT_FAILED' : code,
-      message: fallbackMessage.length === 0 ? UiFeedbackService.operationUnavailable('提交') : UiFeedbackService.sanitize(fallbackMessage)
-    };
   }
 }

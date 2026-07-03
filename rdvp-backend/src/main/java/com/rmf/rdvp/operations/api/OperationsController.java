@@ -20,7 +20,6 @@ import com.rmf.rdvp.shared.error.ErrorCode;
 import com.rmf.rdvp.user.AuthenticatedUser;
 import com.rmf.rdvp.user.AuthenticationService;
 import com.rmf.rdvp.operations.FaultSeverity;
-import com.rmf.rdvp.operations.FaultType;
 import com.rmf.rdvp.operations.OperationsReviewDecision;
 import com.rmf.rdvp.operations.OperationsService;
 import com.rmf.rdvp.operations.ReinspectionResult;
@@ -41,25 +40,6 @@ public class OperationsController {
             AuthenticationService authenticationService) {
         this.operationsService = operationsService;
         this.authenticationService = authenticationService;
-    }
-
-    @PostMapping("/fault-reports")
-    @PreAuthorize("hasAuthority('OPERATIONS_CENTER_DEVICE_FAULT_REPORT_SUBMIT')")
-    public ResponseEntity<ApiResponse<FaultReportResponse>> createFaultReport(
-            @Valid @RequestBody CreateFaultReportRequest requestBody,
-            @AuthenticationPrincipal AuthenticatedUser user,
-            HttpServletRequest request) {
-        var result = operationsService.createFaultReport(
-                requestBody.deviceCode(),
-                parseEnum(FaultType.class, requestBody.faultType(), "faultType"),
-                parseEnum(FaultSeverity.class, requestBody.severity(), "severity"),
-                requestBody.occurredAt(),
-                requestBody.description(),
-                requestBody.sceneCondition(),
-                requestBody.longitude(),
-                requestBody.latitude(),
-                user);
-        return ResponseEntity.ok(ApiResponse.success(FaultReportResponse.from(result), RequestIds.resolve(request)));
     }
 
     @GetMapping("/operation-tasks/available")

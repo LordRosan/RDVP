@@ -46,6 +46,10 @@ public enum ErrorCode {
             "DEVICE_VERIFICATION_INVALID",
             HttpStatus.UNPROCESSABLE_CONTENT,
             "Device verification record is invalid."),
+    DEVICE_VERIFICATION_NOT_FOUND(
+            "DEVICE_VERIFICATION_NOT_FOUND",
+            HttpStatus.NOT_FOUND,
+            "Device verification report not found."),
     FAULT_REPORT_INVALID("FAULT_REPORT_INVALID", HttpStatus.UNPROCESSABLE_CONTENT, "Fault report is invalid."),
     FAULT_REPORT_NOT_FOUND("FAULT_REPORT_NOT_FOUND", HttpStatus.NOT_FOUND, "Fault report not found."),
     DEVICE_ACTIVE_FAULT_EXISTS(
@@ -73,6 +77,10 @@ public enum ErrorCode {
             "REINSPECTION_REPORT_INVALID",
             HttpStatus.UNPROCESSABLE_CONTENT,
             "Reinspection report is invalid."),
+    REINSPECTION_REPORT_NOT_FOUND(
+            "REINSPECTION_REPORT_NOT_FOUND",
+            HttpStatus.NOT_FOUND,
+            "Reinspection report not found."),
     REINSPECTION_REQUIRED(
             "REINSPECTION_REQUIRED",
             HttpStatus.UNPROCESSABLE_CONTENT,

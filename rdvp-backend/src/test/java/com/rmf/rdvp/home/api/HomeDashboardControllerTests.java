@@ -139,6 +139,7 @@ class HomeDashboardControllerTests {
         String adminToken = login("admin", "password");
         String operatorToken = login("operator", "password");
 
+        verifyPassword(archiveAdminToken, "password");
         mockMvc.perform(post("/api/v1/archive-requests")
                         .header("Authorization", "Bearer " + archiveAdminToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -200,6 +201,8 @@ class HomeDashboardControllerTests {
                                 }
                                 """))
                 .andExpect(status().isOk());
+        approveFirstOperationsReviewRequest("REPAIR_REPORT", "Repair report accepted.", "2026-06-01T09:00:00Z");
+
         mockMvc.perform(post("/api/v1/reinspections/{faultReportId}/accept", faultId)
                         .header("Authorization", "Bearer " + operatorToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -222,6 +225,7 @@ class HomeDashboardControllerTests {
                                 }
                                 """))
                 .andExpect(status().isOk());
+        approveFirstOperationsReviewRequest("REINSPECTION_REPORT", "Reinspection report accepted.", "2026-06-01T10:00:00Z");
 
         verifyPassword(operatorToken, "password");
         mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-reports", "device-local-0002")
@@ -235,6 +239,8 @@ class HomeDashboardControllerTests {
                                 }
                                 """))
                 .andExpect(status().isOk());
+        approveFirstOperationsReviewRequest("DEVICE_VERIFICATION_REPORT", "Verification report accepted.", "2026-06-01T11:00:00Z");
+
         mockMvc.perform(get("/api/v1/devices/by-code/RDVP-DEVICE-0001")
                         .header("Authorization", "Bearer " + operatorToken))
                 .andExpect(status().isOk());
@@ -245,16 +251,16 @@ class HomeDashboardControllerTests {
                 .andExpect(jsonPath("$.data.archive.deviceTotal").value(4))
                 .andExpect(jsonPath("$.data.archive.archiveCreates").value(1))
                 .andExpect(jsonPath("$.data.archive.archiveQueries").value(1))
-                .andExpect(jsonPath("$.data.operations.verifications").value(1))
+                .andExpect(jsonPath("$.data.operations.verifications").value(2))
                 .andExpect(jsonPath("$.data.operations.faultReports").value(1))
                 .andExpect(jsonPath("$.data.operations.repairs").value(1))
                 .andExpect(jsonPath("$.data.operations.reinspections").value(1))
-                .andExpect(jsonPath("$.data.review.reviewedTotal").value(1))
+                .andExpect(jsonPath("$.data.review.reviewedTotal").value(6))
                 .andExpect(jsonPath("$.data.log.archiveOperationLogs").value(3))
                 .andExpect(jsonPath("$.data.log.archiveReviewLogs").value(1))
-                .andExpect(jsonPath("$.data.log.operationsOperationLogs").value(6))
-                .andExpect(jsonPath("$.data.log.operationsReviewLogs").value(0))
-                .andExpect(jsonPath("$.data.log.logTotal").value(10));
+                .andExpect(jsonPath("$.data.log.operationsOperationLogs").value(7))
+                .andExpect(jsonPath("$.data.log.operationsReviewLogs").value(5))
+                .andExpect(jsonPath("$.data.log.logTotal").value(16));
     }
 
     @Test
@@ -281,8 +287,8 @@ class HomeDashboardControllerTests {
         mockMvc.perform(get("/api/v1/home/dashboard")
                         .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.review.reviewedTotal").value(0))
-                .andExpect(jsonPath("$.data.review.pendingOperationsReviews").value(2));
+                .andExpect(jsonPath("$.data.review.reviewedTotal").value(2))
+                .andExpect(jsonPath("$.data.review.pendingOperationsReviews").value(1));
 
         String pendingResponse = mockMvc.perform(get("/api/v1/operations-review-requests?status=PENDING_REVIEW")
                         .header("Authorization", "Bearer " + managerToken))
@@ -308,8 +314,8 @@ class HomeDashboardControllerTests {
         mockMvc.perform(get("/api/v1/home/dashboard")
                         .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.review.reviewedTotal").value(1))
-                .andExpect(jsonPath("$.data.review.pendingOperationsReviews").value(1));
+                .andExpect(jsonPath("$.data.review.reviewedTotal").value(3))
+                .andExpect(jsonPath("$.data.review.pendingOperationsReviews").value(0));
     }
 
     @Test
@@ -317,6 +323,7 @@ class HomeDashboardControllerTests {
         String archiveAdminToken = login("archiveadmin", "password");
         String adminToken = login("admin", "password");
 
+        verifyPassword(archiveAdminToken, "password");
         String createResponse = mockMvc.perform(post("/api/v1/archive-requests")
                         .header("Authorization", "Bearer " + archiveAdminToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -367,6 +374,7 @@ class HomeDashboardControllerTests {
                 .andExpect(jsonPath("$.data.archive.archiveDeletes").value(0))
                 .andExpect(jsonPath("$.data.review.reviewedTotal").value(1));
 
+        verifyPassword(archiveAdminToken, "password");
         String updateResponse = mockMvc.perform(post("/api/v1/archive-requests")
                         .header("Authorization", "Bearer " + archiveAdminToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -544,25 +552,33 @@ class HomeDashboardControllerTests {
     }
 
     private String createFaultReport(String token) throws Exception {
-        String response = mockMvc.perform(post("/api/v1/fault-reports")
+        verifyPassword(token, "password");
+        String response = mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-reports/fault-report", "device-local-0001")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "deviceCode": "RDVP-DEVICE-0001",
+                                  "result": "ABNORMAL",
+                                  "description": "现场核验发现设备运行异常。",
+                                  "remark": "已同步填写报修草稿。",
+                                  "verifiedAt": "2026-06-03T08:30:00Z",
                                   "faultType": "HARDWARE_DAMAGE",
                                   "severity": "SEVERE",
-                                  "occurredAt": "2026-05-29T04:00:00Z",
-                                  "description": "Primary bearing assembly is unstable.",
+                                  "occurredAt": "2026-06-03T08:20:00Z",
+                                  "faultDescription": "Primary bearing assembly is unstable.",
                                   "sceneCondition": "Site has reduced load."
                                 }
                                 """))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.faultReport.status").value("PENDING_REVIEW"))
                 .andReturn()
                 .getResponse()
                 .getContentAsString(StandardCharsets.UTF_8);
 
-        return objectMapper.readTree(response).path("data").path("id").asText();
+        String faultId = objectMapper.readTree(response).path("data").path("faultReport").path("id").asText();
+        approveFirstOperationsReviewRequest("DEVICE_VERIFICATION_REPORT", "Verification report accepted.", "2026-06-01T08:00:00Z");
+        approveFirstOperationsReviewRequest("FAULT_REPORT", "Fault report accepted.", "2026-06-01T08:05:00Z");
+        return faultId;
     }
 
     private String acceptFaultReport(String token, String faultId) throws Exception {
@@ -581,6 +597,34 @@ class HomeDashboardControllerTests {
                 .getContentAsString(StandardCharsets.UTF_8);
 
         return objectMapper.readTree(response).path("data").path("repairTaskId").asText();
+    }
+
+    private void approveFirstOperationsReviewRequest(String type, String comment, String reviewedAt) throws Exception {
+        String reviewerToken = login("operationsadmin", "password");
+        String response = mockMvc.perform(get("/api/v1/operations-review-requests")
+                        .queryParam("status", "PENDING_REVIEW")
+                        .queryParam("type", type)
+                        .header("Authorization", "Bearer " + reviewerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        String requestId = objectMapper.readTree(response).path("data").path("items").get(0).path("id").asText();
+
+        verifyPassword(reviewerToken, "password");
+        mockMvc.perform(post("/api/v1/operations-review-requests/{requestId}/review", requestId)
+                        .header("Authorization", "Bearer " + reviewerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "decision": "APPROVED",
+                                  "reviewedAt": "%s",
+                                  "reviewComment": "%s"
+                                }
+                                """.formatted(reviewedAt, comment)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("APPROVED"));
     }
 
     private void verifyPassword(String token, String password) throws Exception {

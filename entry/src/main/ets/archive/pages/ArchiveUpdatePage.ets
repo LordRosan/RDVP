@@ -102,7 +102,7 @@ struct ArchiveUpdatePage {
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      Text('Device Archive Update')
+      Text('Archive Update')
         .fontSize(13)
         .fontWeight(FontWeight.Medium)
         .fontColor(AppColors.TextTertiary)

@@ -62,13 +62,11 @@ public class ArchiveRequestController {
             @AuthenticationPrincipal AuthenticatedUser user,
             HttpServletRequest request) {
         ArchiveRequestType requestType = parseType(requestBody.type());
-        if (requestType == ArchiveRequestType.DELETE) {
-            try {
-                authenticationService.requireRecentPasswordVerification(user);
-            } catch (BusinessException exception) {
-                recordDeleteRequestVerificationFailure(requestBody.deviceId(), requestBody.deviceCode(), user, exception);
-                throw exception;
-            }
+        try {
+            authenticationService.requireRecentPasswordVerification(user);
+        } catch (BusinessException exception) {
+            recordRequestVerificationFailure(requestType, requestBody.deviceId(), requestBody.deviceCode(), user, exception);
+            throw exception;
         }
 
         var created = archiveRequestService.create(
@@ -150,7 +148,8 @@ public class ArchiveRequestController {
         }
     }
 
-    private void recordDeleteRequestVerificationFailure(
+    private void recordRequestVerificationFailure(
+            ArchiveRequestType requestType,
             String deviceId,
             String deviceCode,
             AuthenticatedUser user,
@@ -166,7 +165,15 @@ public class ArchiveRequestController {
                 targetId,
                 targetNo,
                 user,
-                "档案删除申请提交失败：%s。".formatted(exception.getErrorCode().code()));
+                "档案%s申请提交失败：%s。".formatted(formatRequestType(requestType), exception.getErrorCode().code()));
+    }
+
+    private String formatRequestType(ArchiveRequestType requestType) {
+        return switch (requestType) {
+            case UPDATE -> "修改";
+            case CREATE -> "新增";
+            case DELETE -> "删除";
+        };
     }
 
     private String normalizeLogText(String value) {

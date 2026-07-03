@@ -38,10 +38,11 @@ public class OperationsService {
     private static final int MAX_VERIFICATION_DESCRIPTION_LENGTH = 500;
     private static final int MAX_VERIFICATION_REMARK_LENGTH = 300;
     private static final int MAX_REVIEW_COMMENT_LENGTH = 500;
-    private static final Pattern DEVICE_CODE_PATTERN = Pattern.compile("^RDVP-DEVICE-\\d{4}$");
     private static final Pattern BUSINESS_ID_PATTERN = Pattern.compile("^[A-Za-z0-9_-]{1,64}$");
     private static final DateTimeFormatter LOCAL_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final DateTimeFormatter BUSINESS_NO_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+    private static final String SYSTEM_ACTOR_ID = "SYSTEM";
+    private static final String SYSTEM_ACTOR_NAME = "SYSTEM";
 
     private final ArchiveRepository archiveRepository;
     private final DeviceVerificationReportRepository verificationRepository;
@@ -60,112 +61,6 @@ public class OperationsService {
     }
 
     @Transactional
-    public FaultReportRecord createFaultReport(
-            String deviceCode,
-            FaultType faultType,
-            FaultSeverity severity,
-            String occurredAt,
-            String description,
-            String sceneCondition,
-            BigDecimal longitude,
-            BigDecimal latitude,
-            AuthenticatedUser reporter) {
-        try {
-            return createFaultReportChecked(
-                    deviceCode,
-                    faultType,
-                    severity,
-                    occurredAt,
-                    description,
-                    sceneCondition,
-                    longitude,
-                    latitude,
-                    reporter);
-        } catch (BusinessException exception) {
-            recordFaultReportFailure(deviceCode, reporter, exception);
-            throw exception;
-        }
-    }
-
-    private FaultReportRecord createFaultReportChecked(
-            String deviceCode,
-            FaultType faultType,
-            FaultSeverity severity,
-            String occurredAt,
-            String description,
-            String sceneCondition,
-            BigDecimal longitude,
-            BigDecimal latitude,
-            AuthenticatedUser reporter) {
-        Archive device = archiveRepository.findByCode(normalizeDeviceCode(deviceCode))
-                .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
-        if (operationsRepository.hasActiveFaultForDevice(device.id())) {
-            throw new BusinessException(ErrorCode.DEVICE_ACTIVE_FAULT_EXISTS);
-        }
-        BigDecimal normalizedLongitude = normalizeCoordinate(
-                longitude,
-                "longitude",
-                BigDecimal.valueOf(-180),
-                BigDecimal.valueOf(180),
-                ErrorCode.FAULT_REPORT_INVALID);
-        BigDecimal normalizedLatitude = normalizeCoordinate(
-                latitude,
-                "latitude",
-                BigDecimal.valueOf(-90),
-                BigDecimal.valueOf(90),
-                ErrorCode.FAULT_REPORT_INVALID);
-        if ((normalizedLongitude == null) != (normalizedLatitude == null)) {
-            throw new BusinessException(
-                    ErrorCode.FAULT_REPORT_INVALID,
-                    "longitude and latitude must be provided together.");
-        }
-
-        OffsetDateTime now = now();
-        FaultReportCreate create = new FaultReportCreate(
-                "fault-" + UUID.randomUUID(),
-                newBusinessNo("RDF", now),
-                device.id(),
-                reporter.id(),
-                requireEnum(faultType, "faultType"),
-                requireEnum(severity, "severity"),
-                normalizeRequiredText(description, "description", 1000, ErrorCode.FAULT_REPORT_INVALID),
-                normalizeOptionalText(sceneCondition, 500, ErrorCode.FAULT_REPORT_INVALID),
-                parseDateTime(occurredAt, "occurredAt"),
-                normalizedLongitude,
-                normalizedLatitude,
-                now);
-
-        try {
-            operationsRepository.createFaultReport(create);
-        } catch (DataIntegrityViolationException exception) {
-            throw new BusinessException(ErrorCode.DEVICE_ACTIVE_FAULT_EXISTS);
-        }
-
-        archiveRepository.updateStatus(device.id(), "FAULTED", reporter.id());
-        FaultReportRecord record = operationsRepository.findFaultReportByIdOrNo(create.id())
-                .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR));
-        logEntryService.recordSuccess(
-                LogAction.FAULT_REPORT,
-                record.id(),
-                record.faultReportNo(),
-                reporter,
-                "Submitted fault report.");
-        createOperationsReviewRequest(
-                OperationsReviewRequestType.FAULT_REPORT,
-                record.id(),
-                record.faultReportNo(),
-                record.id(),
-                record.deviceId(),
-                reporter.id(),
-                "报修类型：%s；故障等级：%s；报修说明：%s".formatted(
-                        record.faultType().name(),
-                        record.severity().name(),
-                        record.description()),
-                record.createdAt());
-        return record;
-    }
-
-    @Transactional
     public DeviceVerificationReport createVerificationReport(
             String deviceId,
             DeviceVerificationResult result,
@@ -176,8 +71,16 @@ public class OperationsService {
         Archive device = null;
         try {
             DeviceVerificationResult normalizedResult = requireEnum(result, "result");
+            if (normalizedResult != DeviceVerificationResult.NORMAL) {
+                throw new BusinessException(
+                        ErrorCode.DEVICE_VERIFICATION_INVALID,
+                        "Abnormal verification must include a fault report draft.");
+            }
             device = archiveRepository.findById(normalizeId(deviceId, "deviceId"))
                     .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
+            if (operationsRepository.hasActiveFaultForDevice(device.id())) {
+                throw new BusinessException(ErrorCode.DEVICE_ACTIVE_FAULT_EXISTS);
+            }
             OffsetDateTime normalizedVerifiedAt = parseDateTime(verifiedAt, "verifiedAt");
             OffsetDateTime now = now();
             DeviceVerificationReportCreate create = new DeviceVerificationReportCreate(
@@ -198,9 +101,19 @@ public class OperationsService {
                     now);
 
             verificationRepository.create(create);
-            archiveRepository.updateLastVerificationTime(device.id(), normalizedVerifiedAt, operator.id());
             DeviceVerificationReport report = verificationRepository.findById(create.id())
                     .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR));
+            createOperationsReviewRequest(
+                    OperationsReviewRequestType.DEVICE_VERIFICATION_REPORT,
+                    report.id(),
+                    report.id(),
+                    null,
+                    device.id(),
+                    operator.id(),
+                    "核验结果：%s；核验说明：%s".formatted(
+                            report.result().name(),
+                            report.description()),
+                    report.createdAt());
             logEntryService.recordSuccess(
                     LogAction.DEVICE_VERIFICATION,
                     report.id(),
@@ -209,7 +122,7 @@ public class OperationsService {
                     "Submitted device verification report.");
             return report;
         } catch (BusinessException exception) {
-            recordDeviceVerificationFailure(deviceId, device, operator, "设备核验提交失败", exception);
+            recordDeviceVerificationFailure(deviceId, device, operator, "核验提交失败", exception);
             throw exception;
         }
     }
@@ -280,11 +193,10 @@ public class OperationsService {
                     normalizedVerifiedAt,
                     now);
             verificationRepository.create(verificationCreate);
-            archiveRepository.updateLastVerificationTime(device.id(), normalizedVerifiedAt, operator.id());
 
             FaultReportCreate faultCreate = new FaultReportCreate(
                     "fault-" + UUID.randomUUID(),
-                    newBusinessNo("RDF", now),
+                    null,
                     device.id(),
                     operator.id(),
                     requireEnum(faultType, "faultType"),
@@ -302,7 +214,6 @@ public class OperationsService {
                 throw new BusinessException(ErrorCode.DEVICE_ACTIVE_FAULT_EXISTS);
             }
 
-            archiveRepository.updateStatus(device.id(), "FAULTED", operator.id());
             DeviceVerificationReport verificationReport = verificationRepository.findById(verificationCreate.id())
                     .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR));
             FaultReportRecord faultReport = operationsRepository.findFaultReportByIdOrNo(faultCreate.id())
@@ -316,7 +227,7 @@ public class OperationsService {
             logEntryService.recordSuccess(
                     LogAction.FAULT_REPORT,
                     faultReport.id(),
-                    faultReport.faultReportNo(),
+                    faultReportTargetNo(faultReport),
                     operator,
                     "Submitted fault report from device verification.");
             createOperationsReviewRequest(
@@ -330,21 +241,10 @@ public class OperationsService {
                             verificationReport.result().name(),
                             verificationReport.description()),
                     verificationReport.createdAt());
-            createOperationsReviewRequest(
-                    OperationsReviewRequestType.FAULT_REPORT,
-                    faultReport.id(),
-                    faultReport.faultReportNo(),
-                    faultReport.id(),
-                    device.id(),
-                    operator.id(),
-                    "报修类型：%s；故障等级：%s；报修说明：%s".formatted(
-                            faultReport.faultType().name(),
-                            faultReport.severity().name(),
-                            faultReport.description()),
-                    faultReport.createdAt());
             return new VerificationAndFaultReportResult(verificationReport, faultReport);
         } catch (BusinessException exception) {
-            recordDeviceVerificationFailure(deviceId, device, operator, "设备核验联动报修失败", exception);
+            recordDeviceVerificationFailure(deviceId, device, operator, "核验联动报修失败", exception);
+            recordFaultDraftFailure(deviceId, device, operator, exception);
             throw exception;
         }
     }
@@ -421,42 +321,37 @@ public class OperationsService {
         String normalizedFaultReportId = normalizeId(faultReportId, "faultReportId");
         FaultReportRecord faultReport = operationsRepository.findFaultReportByIdOrNo(normalizedFaultReportId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.FAULT_REPORT_NOT_FOUND));
-        if (faultReport.status() != FaultStatus.PENDING_ACCEPTANCE
-                || operationsRepository.hasActiveRepairTaskForFault(faultReport.id())) {
+        if (faultReport.status() != FaultStatus.PENDING_ACCEPTANCE) {
             throw new BusinessException(ErrorCode.FAULT_ALREADY_ACCEPTED);
         }
+        RepairTaskRecord availableTask = operationsRepository
+                .findAvailableRepairTaskByFaultReportId(faultReport.id(), "REPAIR")
+                .orElseThrow(() -> new BusinessException(ErrorCode.REPAIR_TASK_NOT_FOUND));
         Archive device = archiveRepository.findById(faultReport.deviceId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
         validateRepairTaskDistance(workload, device, normalizedLongitude, normalizedLatitude);
 
         OffsetDateTime now = now();
-        RepairTaskCreate create = new RepairTaskCreate(
-                "repair-task-" + UUID.randomUUID(),
-                newBusinessNo("RDT", now),
-                faultReport.id(),
+        if (!operationsRepository.markFaultAccepted(faultReport.id(), availableTask.id(), now)) {
+            throw new BusinessException(ErrorCode.FAULT_ALREADY_ACCEPTED);
+        }
+        if (!operationsRepository.acceptAvailableRepairTask(
+                availableTask.id(),
                 maintainer.id(),
                 normalizedLongitude,
                 normalizedLatitude,
-                now,
-                "REPAIR");
-        try {
-            operationsRepository.createRepairTask(create);
-        } catch (DataIntegrityViolationException exception) {
-            throw new BusinessException(ErrorCode.FAULT_ALREADY_ACCEPTED);
-        }
-
-        if (!operationsRepository.markFaultAccepted(faultReport.id(), create.id(), now)) {
+                now)) {
             throw new BusinessException(ErrorCode.FAULT_ALREADY_ACCEPTED);
         }
 
         archiveRepository.updateStatus(faultReport.deviceId(), "UNDER_REPAIR", maintainer.id());
         logEntryService.recordSuccess(
                 LogAction.REPAIR_TASK_ACCEPT,
-                create.id(),
-                create.repairTaskNo(),
+                availableTask.id(),
+                availableTask.repairTaskNo(),
                 maintainer,
                 "Accepted repair task.");
-        return new RepairTaskAcceptResult(create.id(), faultReport.id(), RepairTaskStatus.ACCEPTED, create.acceptedAt());
+        return new RepairTaskAcceptResult(availableTask.id(), faultReport.id(), RepairTaskStatus.ACCEPTED, now);
     }
 
     public RepairTaskList listRepairTasks(AuthenticatedUser maintainer) {
@@ -496,6 +391,9 @@ public class OperationsService {
         if (task.status() != RepairTaskStatus.ACCEPTED && task.status() != RepairTaskStatus.PROCESSING) {
             throw new BusinessException(ErrorCode.REPAIR_TASK_STATUS_INVALID);
         }
+        if (operationsRepository.hasRepairReportForRepairTask(task.id())) {
+            throw new BusinessException(ErrorCode.REPAIR_TASK_STATUS_INVALID);
+        }
 
         RepairReportResult normalizedResult = requireEnum(result, "result");
         boolean requiresReinspection = requiresReinspection(task.severity(), normalizedResult);
@@ -519,19 +417,6 @@ public class OperationsService {
             throw new BusinessException(ErrorCode.REPAIR_TASK_STATUS_INVALID);
         }
 
-        if (!operationsRepository.markRepairTaskReported(task.id(), now)) {
-            throw new BusinessException(ErrorCode.REPAIR_TASK_STATUS_INVALID);
-        }
-
-        FaultStatus nextFaultStatus = nextFaultStatus(task.severity(), normalizedResult);
-        FaultStatus expectedFaultStatus = task.status() == RepairTaskStatus.PROCESSING
-                ? FaultStatus.UNDER_REPAIR
-                : FaultStatus.ACCEPTED;
-        if (!operationsRepository.updateFaultStatusIfCurrent(task.faultReportId(), expectedFaultStatus, nextFaultStatus, now)) {
-            throw new BusinessException(ErrorCode.REPAIR_TASK_STATUS_INVALID);
-        }
-
-        archiveRepository.updateStatus(task.deviceId(), nextDeviceStatus(nextFaultStatus), maintainer.id());
         RepairReportRecord record = toRecord(create);
         createOperationsReviewRequest(
                 OperationsReviewRequestType.REPAIR_REPORT,
@@ -596,36 +481,30 @@ public class OperationsService {
         if (faultReport.status() != FaultStatus.PENDING_REINSPECTION) {
             throw new BusinessException(ErrorCode.REINSPECTION_REQUIRED, "Fault is not pending reinspection.");
         }
-        if (operationsRepository.hasActiveReinspectionTaskForFault(faultReport.id())) {
-            throw new BusinessException(ErrorCode.REINSPECTION_REQUIRED, "An active reinspection task already exists for this fault.");
-        }
+        RepairTaskRecord availableTask = operationsRepository
+                .findAvailableRepairTaskByFaultReportId(faultReport.id(), "REINSPECTION")
+                .orElseThrow(() -> new BusinessException(ErrorCode.REINSPECTION_REQUIRED, "Reinspection task is unavailable."));
         Archive device = archiveRepository.findById(faultReport.deviceId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
         validateRepairTaskDistance(workload, device, normalizedLongitude, normalizedLatitude);
 
         OffsetDateTime now = now();
-        RepairTaskCreate create = new RepairTaskCreate(
-                "reinspection-task-" + UUID.randomUUID(),
-                newBusinessNo("RDT", now),
-                faultReport.id(),
+        if (!operationsRepository.acceptAvailableRepairTask(
+                availableTask.id(),
                 reinspector.id(),
                 normalizedLongitude,
                 normalizedLatitude,
-                now,
-                "REINSPECTION");
-        try {
-            operationsRepository.createRepairTask(create);
-        } catch (DataIntegrityViolationException exception) {
-            throw new BusinessException(ErrorCode.REINSPECTION_REQUIRED, "Failed to create reinspection task.");
+                now)) {
+            throw new BusinessException(ErrorCode.REINSPECTION_REQUIRED, "Failed to accept reinspection task.");
         }
 
         logEntryService.recordSuccess(
                 LogAction.REPAIR_TASK_ACCEPT,
-                create.id(),
-                create.repairTaskNo(),
+                availableTask.id(),
+                availableTask.repairTaskNo(),
                 reinspector,
                 "Accepted reinspection task.");
-        return new RepairTaskAcceptResult(create.id(), faultReport.id(), RepairTaskStatus.ACCEPTED, create.acceptedAt());
+        return new RepairTaskAcceptResult(availableTask.id(), faultReport.id(), RepairTaskStatus.ACCEPTED, now);
     }
 
     @Transactional
@@ -655,8 +534,17 @@ public class OperationsService {
             throw new BusinessException(ErrorCode.REINSPECTION_REQUIRED);
         }
 
+        RepairTaskRecord reinspectionTask = operationsRepository.findActiveReinspectionTaskByFaultReportId(faultReport.id())
+                .orElseThrow(() -> new BusinessException(ErrorCode.REINSPECTION_REQUIRED));
+        if (!reinspectionTask.maintainerId().equals(reinspector.id())) {
+            throw new BusinessException(ErrorCode.REINSPECTION_REQUIRED, "Reinspection task does not belong to current user.");
+        }
+
         RepairReportRecord repairReport = operationsRepository.findLatestRepairReportByFaultReportId(faultReport.id())
                 .orElseThrow(() -> new BusinessException(ErrorCode.REPAIR_REPORT_NOT_FOUND));
+        if (operationsRepository.hasReinspectionReportForRepairReport(repairReport.id())) {
+            throw new BusinessException(ErrorCode.REINSPECTION_REQUIRED);
+        }
         ReinspectionResult normalizedResult = requireEnum(result, "result");
         OffsetDateTime now = now();
         ReinspectionReportCreate create = new ReinspectionReportCreate(
@@ -680,15 +568,6 @@ public class OperationsService {
             throw new BusinessException(ErrorCode.REINSPECTION_REQUIRED);
         }
 
-        if (!operationsRepository.updateFaultStatusIfCurrent(
-                faultReport.id(),
-                FaultStatus.PENDING_REINSPECTION,
-                nextFaultStatus,
-                now)) {
-            throw new BusinessException(ErrorCode.REINSPECTION_REQUIRED);
-        }
-
-        archiveRepository.updateStatus(faultReport.deviceId(), nextDeviceStatus, reinspector.id());
         ReinspectionReport report = new ReinspectionReport(
                 create.id(),
                 create.reinspectionReportNo(),
@@ -766,6 +645,11 @@ public class OperationsService {
         OperationsReviewRequestStatus nextStatus = normalizedDecision == OperationsReviewDecision.APPROVED
                 ? OperationsReviewRequestStatus.APPROVED
                 : OperationsReviewRequestStatus.REJECTED;
+        if (normalizedDecision == OperationsReviewDecision.APPROVED) {
+            applyApprovedOperationsRequest(request, reviewedAt, reviewOperator);
+        } else {
+            applyRejectedOperationsRequest(request, reviewedAt);
+        }
         boolean reviewed = operationsRepository.markOperationsReviewRequestReviewed(
                 request.id(),
                 nextStatus,
@@ -787,6 +671,231 @@ public class OperationsService {
                         ? "Approved operations review request."
                         : "Rejected operations review request.");
         return updated;
+    }
+
+    private void applyApprovedOperationsRequest(
+            OperationsReviewRequest request,
+            OffsetDateTime reviewedAt,
+            AuthenticatedUser reviewOperator) {
+        switch (request.type()) {
+            case FAULT_REPORT -> approveFaultReport(request, reviewedAt, reviewOperator);
+            case REPAIR_REPORT -> approveRepairReport(request, reviewedAt, reviewOperator);
+            case REINSPECTION_REPORT -> approveReinspectionReport(request, reviewedAt, reviewOperator);
+            case DEVICE_VERIFICATION_REPORT -> approveDeviceVerificationReport(request, reviewedAt, reviewOperator);
+        }
+    }
+
+    private void applyRejectedOperationsRequest(
+            OperationsReviewRequest request,
+            OffsetDateTime reviewedAt) {
+        if (request.type() == OperationsReviewRequestType.FAULT_REPORT) {
+            operationsRepository.updateFaultStatusIfCurrent(
+                    request.targetId(),
+                    FaultStatus.PENDING_REVIEW,
+                    FaultStatus.CLOSED,
+                    reviewedAt);
+            return;
+        }
+
+        if (request.type() == OperationsReviewRequestType.DEVICE_VERIFICATION_REPORT
+                && request.faultReportId() != null
+                && !request.faultReportId().isBlank()) {
+            operationsRepository.updateFaultStatusIfCurrent(
+                    request.faultReportId(),
+                    FaultStatus.PENDING_REVIEW,
+                    FaultStatus.CLOSED,
+                    reviewedAt);
+        }
+    }
+
+    private void approveDeviceVerificationReport(
+            OperationsReviewRequest request,
+            OffsetDateTime reviewedAt,
+            AuthenticatedUser reviewOperator) {
+        DeviceVerificationReport verificationReport = verificationRepository.findById(request.targetId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_VERIFICATION_NOT_FOUND));
+        archiveRepository.updateLastVerificationTime(
+                verificationReport.deviceId(),
+                verificationReport.verifiedAt(),
+                reviewOperator.id());
+        if (verificationReport.result() == DeviceVerificationResult.NORMAL) {
+            archiveRepository.updateStatus(verificationReport.deviceId(), "NORMAL", reviewOperator.id());
+            return;
+        }
+
+        if (request.faultReportId() == null || request.faultReportId().isBlank()) {
+            throw new BusinessException(ErrorCode.FAULT_REPORT_NOT_FOUND);
+        }
+        FaultReportRecord faultReport = operationsRepository.findFaultReportByIdOrNo(request.faultReportId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.FAULT_REPORT_NOT_FOUND));
+        createOperationsReviewRequest(
+                OperationsReviewRequestType.FAULT_REPORT,
+                faultReport.id(),
+                faultReportTargetNo(faultReport),
+                faultReport.id(),
+                faultReport.deviceId(),
+                faultReport.reporterId(),
+                "报修类型：%s；故障等级：%s；报修说明：%s".formatted(
+                        faultReport.faultType().name(),
+                        faultReport.severity().name(),
+                        faultReport.description()),
+                reviewedAt);
+    }
+
+    private void approveFaultReport(
+            OperationsReviewRequest request,
+            OffsetDateTime reviewedAt,
+            AuthenticatedUser reviewOperator) {
+        FaultReportRecord faultReport = operationsRepository.findFaultReportByIdOrNo(request.targetId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.FAULT_REPORT_NOT_FOUND));
+        String faultReportNo = newBusinessNo("RDF", reviewedAt);
+        try {
+            if (!operationsRepository.approvePendingFaultReport(faultReport.id(), faultReportNo, reviewedAt)) {
+                throw new BusinessException(ErrorCode.OPERATIONS_REVIEW_REQUEST_INVALID, "Fault report is not pending review.");
+            }
+        } catch (DataIntegrityViolationException exception) {
+            throw new BusinessException(ErrorCode.OPERATIONS_REVIEW_REQUEST_INVALID, "Fault report number already exists.");
+        }
+
+        operationsRepository.updateOperationsReviewRequestTargetNo(request.id(), faultReportNo, reviewedAt);
+        archiveRepository.updateStatus(faultReport.deviceId(), "FAULTED", reviewOperator.id());
+        createAvailableRepairTask(faultReport.id(), "REPAIR", null, reviewedAt);
+        logEntryService.recordSuccess(
+                LogAction.FAULT_REPORT,
+                faultReport.id(),
+                faultReportNo,
+                reviewOperator,
+                "Fault report approved and entered repair task pool.");
+    }
+
+    private void approveRepairReport(
+            OperationsReviewRequest request,
+            OffsetDateTime reviewedAt,
+            AuthenticatedUser reviewOperator) {
+        RepairReportRecord repairReport = operationsRepository.findRepairReportByIdOrNo(request.targetId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.REPAIR_REPORT_NOT_FOUND));
+        RepairTaskRecord task = operationsRepository.findRepairTaskByIdOrNo(repairReport.repairTaskId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.REPAIR_TASK_NOT_FOUND));
+        if (!operationsRepository.markRepairTaskReported(task.id(), reviewedAt)) {
+            throw new BusinessException(ErrorCode.REPAIR_TASK_STATUS_INVALID);
+        }
+
+        FaultStatus nextFaultStatus = nextFaultStatus(task.severity(), repairReport.result());
+        FaultStatus expectedFaultStatus = task.status() == RepairTaskStatus.PROCESSING
+                ? FaultStatus.UNDER_REPAIR
+                : FaultStatus.ACCEPTED;
+        if (!operationsRepository.updateFaultStatusIfCurrent(
+                task.faultReportId(),
+                expectedFaultStatus,
+                nextFaultStatus,
+                reviewedAt)) {
+            throw new BusinessException(ErrorCode.REPAIR_TASK_STATUS_INVALID);
+        }
+
+        archiveRepository.updateStatus(task.deviceId(), nextDeviceStatus(nextFaultStatus), reviewOperator.id());
+        if (nextFaultStatus == FaultStatus.PENDING_ACCEPTANCE) {
+            createAvailableRepairTask(task.faultReportId(), "REPAIR", task.id(), reviewedAt);
+        } else if (nextFaultStatus == FaultStatus.PENDING_REINSPECTION) {
+            createAvailableRepairTask(task.faultReportId(), "REINSPECTION", task.id(), reviewedAt);
+        }
+        recordRepairDispatchLog(repairReport, task, nextFaultStatus);
+    }
+
+    private void createAvailableRepairTask(
+            String faultReportId,
+            String taskType,
+            String parentTaskId,
+            OffsetDateTime createdAt) {
+        RepairTaskCreate create = new RepairTaskCreate(
+                ("%s-task-".formatted("REINSPECTION".equals(taskType) ? "reinspection" : "repair")) + UUID.randomUUID(),
+                newBusinessNo("RDT", createdAt),
+                faultReportId,
+                null,
+                null,
+                null,
+                null,
+                createdAt,
+                taskType,
+                parentTaskId);
+        try {
+            operationsRepository.createRepairTask(create);
+        } catch (DataIntegrityViolationException exception) {
+            throw new BusinessException(ErrorCode.REPAIR_TASK_STATUS_INVALID, "Failed to create available operations task.");
+        }
+    }
+
+    private void recordRepairDispatchLog(
+            RepairReportRecord repairReport,
+            RepairTaskRecord task,
+            FaultStatus nextFaultStatus) {
+        if (nextFaultStatus == FaultStatus.PENDING_ACCEPTANCE) {
+            recordSystemDispatchLog(
+                    LogAction.REPAIR_REPORT,
+                    task.faultReportId(),
+                    repairReport.repairReportNo(),
+                    "系统生成返修任务。");
+            return;
+        }
+
+        if (nextFaultStatus == FaultStatus.PENDING_REINSPECTION) {
+            recordSystemDispatchLog(
+                    LogAction.REPAIR_REPORT,
+                    task.faultReportId(),
+                    repairReport.repairReportNo(),
+                    "系统生成复检任务。");
+        }
+    }
+
+    private void approveReinspectionReport(
+            OperationsReviewRequest request,
+            OffsetDateTime reviewedAt,
+            AuthenticatedUser reviewOperator) {
+        ReinspectionReportCreate reinspectionReport = operationsRepository.findReinspectionReportByIdOrNo(request.targetId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.REINSPECTION_REPORT_NOT_FOUND));
+        FaultReportRecord faultReport = operationsRepository.findFaultReportByIdOrNo(reinspectionReport.faultReportId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.FAULT_REPORT_NOT_FOUND));
+        FaultStatus nextFaultStatus = reinspectionReport.result() == ReinspectionResult.PASSED
+                ? FaultStatus.CLOSED
+                : FaultStatus.PENDING_ACCEPTANCE;
+        String nextDeviceStatus = reinspectionReport.result() == ReinspectionResult.PASSED ? "NORMAL" : "FAULTED";
+        RepairTaskRecord reinspectionTask = operationsRepository.findActiveReinspectionTaskByFaultReportId(faultReport.id())
+                .orElseThrow(() -> new BusinessException(ErrorCode.REINSPECTION_REQUIRED));
+
+        if (!operationsRepository.markReinspectionTaskReported(faultReport.id(), reviewedAt)) {
+            throw new BusinessException(ErrorCode.REINSPECTION_REQUIRED);
+        }
+
+        if (!operationsRepository.updateFaultStatusIfCurrent(
+                faultReport.id(),
+                FaultStatus.PENDING_REINSPECTION,
+                nextFaultStatus,
+                reviewedAt)) {
+            throw new BusinessException(ErrorCode.REINSPECTION_REQUIRED);
+        }
+
+        archiveRepository.updateStatus(faultReport.deviceId(), nextDeviceStatus, reviewOperator.id());
+        if (nextFaultStatus == FaultStatus.PENDING_ACCEPTANCE) {
+            createAvailableRepairTask(faultReport.id(), "REPAIR", reinspectionTask.id(), reviewedAt);
+            recordSystemDispatchLog(
+                    LogAction.REINSPECTION_REPORT,
+                    faultReport.id(),
+                    reinspectionReport.reinspectionReportNo(),
+                    "系统生成返修任务。");
+        }
+    }
+
+    private void recordSystemDispatchLog(
+            LogAction action,
+            String targetId,
+            String targetNo,
+            String description) {
+        logEntryService.recordSuccess(
+                action,
+                targetId,
+                targetNo,
+                SYSTEM_ACTOR_ID,
+                SYSTEM_ACTOR_NAME,
+                description);
     }
 
     private RepairReportRecord toRecord(RepairReportCreate create) {
@@ -817,7 +926,7 @@ public class OperationsService {
                 "operations-review-" + UUID.randomUUID(),
                 type,
                 targetId,
-                targetNo,
+                normalizeReviewTargetNo(targetNo, targetId),
                 faultReportId,
                 deviceId,
                 operatorId,
@@ -839,19 +948,6 @@ public class OperationsService {
                 "维修任务接取失败：%s。".formatted(exception.getErrorCode().code()));
     }
 
-    private void recordFaultReportFailure(
-            String deviceCode,
-            AuthenticatedUser reporter,
-            BusinessException exception) {
-        String normalizedDeviceCode = normalizeLogDeviceCode(deviceCode);
-        logEntryService.recordFailure(
-                LogAction.FAULT_REPORT,
-                resolveDeviceIdByCode(normalizedDeviceCode),
-                normalizedDeviceCode,
-                reporter,
-                "设备报修提交失败：%s。".formatted(exception.getErrorCode().code()));
-    }
-
     private void recordDeviceVerificationFailure(
             String deviceId,
             Archive device,
@@ -865,6 +961,20 @@ public class OperationsService {
                 device == null ? resolveDeviceCodeById(normalizedDeviceId) : device.deviceCode(),
                 operator,
                 "%s：%s。".formatted(messagePrefix, exception.getErrorCode().code()));
+    }
+
+    private void recordFaultDraftFailure(
+            String deviceId,
+            Archive device,
+            AuthenticatedUser operator,
+            BusinessException exception) {
+        String normalizedDeviceId = normalizeLogTarget(deviceId);
+        logEntryService.recordFailure(
+                LogAction.FAULT_REPORT,
+                device == null ? normalizedDeviceId : device.id(),
+                device == null ? resolveDeviceCodeById(normalizedDeviceId) : device.deviceCode(),
+                operator,
+                "报修草稿提交失败：%s。".formatted(exception.getErrorCode().code()));
     }
 
     private void recordRepairReportFailure(
@@ -1046,15 +1156,6 @@ public class OperationsService {
         return BigDecimal.valueOf(earthRadiusKm * c).setScale(2, RoundingMode.HALF_UP);
     }
 
-    private String normalizeDeviceCode(String deviceCode) {
-        String normalized = deviceCode == null ? "" : deviceCode.trim().toUpperCase();
-        if (!DEVICE_CODE_PATTERN.matcher(normalized).matches()) {
-            throw new BusinessException(ErrorCode.DEVICE_CODE_INVALID);
-        }
-
-        return normalized;
-    }
-
     private OperationsReviewRequestStatus parseOptionalOperationsReviewStatus(String status) {
         if (status == null || status.isBlank()) {
             return null;
@@ -1093,23 +1194,18 @@ public class OperationsService {
         return normalized.isBlank() ? null : normalized;
     }
 
-    private String normalizeLogDeviceCode(String value) {
-        String normalized = normalizeLogTarget(value);
-        return normalized == null ? null : normalized.toUpperCase(Locale.ROOT);
+    private String normalizeReviewTargetNo(String targetNo, String fallbackTargetId) {
+        String normalizedTargetNo = normalizeLogTarget(targetNo);
+        if (normalizedTargetNo != null) {
+            return normalizedTargetNo;
+        }
+
+        String normalizedFallback = normalizeLogTarget(fallbackTargetId);
+        return normalizedFallback == null ? "PENDING" : normalizedFallback;
     }
 
-    private String resolveDeviceIdByCode(String deviceCode) {
-        if (deviceCode == null) {
-            return null;
-        }
-
-        try {
-            return archiveRepository.findByCode(deviceCode)
-                    .map(Archive::id)
-                    .orElse(null);
-        } catch (RuntimeException exception) {
-            return null;
-        }
+    private String faultReportTargetNo(FaultReportRecord faultReport) {
+        return normalizeReviewTargetNo(faultReport.faultReportNo(), faultReport.id());
     }
 
     private String resolveDeviceCodeById(String deviceId) {
@@ -1133,7 +1229,7 @@ public class OperationsService {
 
         try {
             return operationsRepository.findFaultReportByIdOrNo(faultReportId)
-                    .map(FaultReportRecord::faultReportNo)
+                    .map(this::faultReportTargetNo)
                     .orElse(faultReportId);
         } catch (RuntimeException exception) {
             return faultReportId;
@@ -1203,20 +1299,12 @@ public class OperationsService {
     }
 
     private boolean requiresReinspection(FaultSeverity severity, RepairReportResult result) {
-        if (result == RepairReportResult.UNRESOLVED) {
-            return false;
-        }
-
-        if (result == RepairReportResult.TEMPORARY_RESTORED) {
-            return !isHighSeverity(severity);
-        }
-
         return result == RepairReportResult.REPAIRED && isHighSeverity(severity);
     }
 
     private FaultStatus nextFaultStatus(FaultSeverity severity, RepairReportResult result) {
         if (result == RepairReportResult.UNRESOLVED
-                || (result == RepairReportResult.TEMPORARY_RESTORED && isHighSeverity(severity))) {
+                || result == RepairReportResult.TEMPORARY_RESTORED) {
             return FaultStatus.PENDING_ACCEPTANCE;
         }
 

@@ -56,6 +56,7 @@ class ArchiveRequestControllerTests {
     @Test
     void acceptsLocalDisplayInitiatedAtForArchiveRequest() throws Exception {
         String token = login("archivist", "password");
+        verifyPassword(token, "password");
 
         mockMvc.perform(post("/api/v1/archive-requests")
                         .header("Authorization", "Bearer " + token)
@@ -318,6 +319,7 @@ class ArchiveRequestControllerTests {
                 .andExpect(jsonPath("$.data.status").value("REJECTED"))
                 .andExpect(jsonPath("$.data.freezeUntil").value(freezeUntil.toString()));
 
+        verifyPassword(token, "password");
         mockMvc.perform(post("/api/v1/archive-requests")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -492,8 +494,65 @@ class ArchiveRequestControllerTests {
     }
 
     @Test
+    void rejectsCreateAndUpdateRequestsWithoutRecentPasswordVerification() throws Exception {
+        String token = login("archiveadmin", "password");
+
+        mockMvc.perform(post("/api/v1/archive-requests")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "type": "CREATE",
+                                  "deviceCode": "RDVP-DEVICE-0099",
+                                  "reason": "新增设备安装。",
+                                  "changes": {
+                                    "name": {
+                                      "newValue": "巡检网关G-99"
+                                    }
+                                  }
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("SENSITIVE_OPERATION_VERIFICATION_REQUIRED"));
+
+        mockMvc.perform(post("/api/v1/archive-requests")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "deviceId": "device-local-0001",
+                                  "reason": "名称修正。",
+                                  "changes": {
+                                    "name": {
+                                      "oldValue": "冷却泵A-01",
+                                      "newValue": "冷却泵A-02"
+                                    }
+                                  }
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("SENSITIVE_OPERATION_VERIFICATION_REQUIRED"));
+
+        String managerToken = login("manager", "password");
+        mockMvc.perform(get("/api/v1/log-entries?action=ARCHIVE_REQUEST&keyword=RDVP-DEVICE-0099")
+                        .header("Authorization", "Bearer " + managerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[*].status").value(hasItem("FAILED")))
+                .andExpect(jsonPath("$.data.items[*].description")
+                        .value(hasItem("档案新增申请提交失败：SENSITIVE_OPERATION_VERIFICATION_REQUIRED。")));
+
+        mockMvc.perform(get("/api/v1/log-entries?action=ARCHIVE_REQUEST&keyword=device-local-0001")
+                        .header("Authorization", "Bearer " + managerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[*].status").value(hasItem("FAILED")))
+                .andExpect(jsonPath("$.data.items[*].description")
+                        .value(hasItem("档案修改申请提交失败：SENSITIVE_OPERATION_VERIFICATION_REQUIRED。")));
+    }
+
+    @Test
     void rejectsDuplicatePendingArchiveRequest() throws Exception {
         String token = login("archivist", "password");
+        verifyPassword(token, "password");
 
         mockMvc.perform(post("/api/v1/archive-requests")
                         .header("Authorization", "Bearer " + token)
@@ -517,6 +576,7 @@ class ArchiveRequestControllerTests {
     @Test
     void rejectsFrozenArchiveRequest() throws Exception {
         String token = login("archivist", "password");
+        verifyPassword(token, "password");
 
         mockMvc.perform(post("/api/v1/archive-requests")
                         .header("Authorization", "Bearer " + token)
@@ -540,6 +600,7 @@ class ArchiveRequestControllerTests {
     @Test
     void rejectsStaleArchiveBaseline() throws Exception {
         String token = login("archivist", "password");
+        verifyPassword(token, "password");
 
         mockMvc.perform(post("/api/v1/archive-requests")
                         .header("Authorization", "Bearer " + token)
@@ -571,6 +632,7 @@ class ArchiveRequestControllerTests {
     }
 
     private String createNameChange(String token, String newName) throws Exception {
+        verifyPassword(token, "password");
         String response = mockMvc.perform(post("/api/v1/archive-requests")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -604,6 +666,7 @@ class ArchiveRequestControllerTests {
     }
 
     private String createArchiveCreateRequest(String token, String deviceCode) throws Exception {
+        verifyPassword(token, "password");
         String response = mockMvc.perform(post("/api/v1/archive-requests")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -642,6 +705,7 @@ class ArchiveRequestControllerTests {
     }
 
     private String createArchiveDeleteRequest(String token, String deviceId) throws Exception {
+        verifyPassword(token, "password");
         String response = mockMvc.perform(post("/api/v1/archive-requests")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)

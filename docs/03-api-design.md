@@ -582,12 +582,13 @@ POST /api/v1/devices/{deviceId}/verification-reports/fault-report
   },
   "faultReport": {
     "id": "fault-report-id",
-    "faultReportNo": "FR-20260527-0001",
-    "status": "PENDING_ACCEPTANCE",
+    "status": "PENDING_REVIEW",
     "createdAt": "2026-05-27T07:30:00Z"
   }
 }
 ```
+
+异常核验提交时只生成挂载在核验报告下的报修草稿，不生成正式报修编号，也不会进入维修任务池。核验审核通过且结果为异常后，系统按审核完成时间自动创建报修审核请求；报修审核通过后才生成正式报修编号和首个维修任务。
 
 ## 9. 档案申请接口
 
@@ -725,41 +726,11 @@ POST /api/v1/archive-requests/{requestId}/review
 
 审核通过后，后端按申请类型应用档案修改、添加或删除；审核结束后（通过或驳回）设置 6 小时档案申请冻结期，冻结期从 `reviewedAt` 开始计算。审核驳回时必须保留驳回意见。
 
-## 10. 故障报告接口
+## 10. 故障报告说明
 
-### 10.1 创建故障报告
+当前后端不开放独立创建故障报告接口。报修必须由 `POST /api/v1/devices/{deviceId}/verification-reports/fault-report` 提交异常核验并填写报修草稿发起，后续按“核验审核通过 -> 报修审核通过 -> 生成维修任务”的顺序推进。
 
-```text
-POST /api/v1/fault-reports
-```
-
-请求体：
-
-```json
-{
-  "deviceCode": "RDVP-DEVICE-0001",
-  "faultType": "ENERGY_FAULT",
-  "severity": "SEVERE",
-  "occurredAt": "2026-05-27T07:30:00Z",
-  "description": "Device power supply is unstable.",
-  "sceneCondition": "The site has reduced the operating load.",
-  "longitude": 114.1694,
-  "latitude": 22.3193
-}
-```
-
-响应数据：
-
-```json
-{
-  "id": "fault-report-id",
-  "faultReportNo": "FR-20260527-0001",
-  "status": "PENDING_ACCEPTANCE",
-  "createdAt": "2026-05-27T07:30:00Z"
-}
-```
-
-当前后端未开放独立的故障报告列表、详情和驳回接口。待接取故障通过 `GET /api/v1/operation-tasks/available` 查询；历史故障日志通过 `GET /api/v1/log-center/logs?category=OPERATIONS_OPERATION` 查询。
+待接取故障通过 `GET /api/v1/operation-tasks/available` 查询；历史故障日志通过 `GET /api/v1/log-center/logs?category=OPERATIONS_OPERATION` 查询。
 
 ## 11. 维修任务接口
 
