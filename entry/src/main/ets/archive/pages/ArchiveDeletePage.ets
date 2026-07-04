@@ -436,7 +436,7 @@ struct ArchiveDeletePage {
   }
 
   canSubmitDelete(): boolean {
-    return this.hasDevice && !this.submitting && !this.isSubmitted() && !this.isDeleteLocked();
+    return this.hasDevice && this.password.length > 0 && !this.submitting && !this.isSubmitted() && !this.isDeleteLocked();
   }
 
   isSubmitted(): boolean {

@@ -359,7 +359,7 @@ export struct ReinspectionReportTabContent {
       width: 1,
       color: this.result === `${result}` ? ReinspectionService.getResultTone(result) : AppColors.Border
     })
-    .enabled(this.canSubmitReport())
+    .enabled(this.canEditReportForm())
     .onClick(() => {
       this.result = `${result}`;
       this.reportMessage = '';
@@ -401,7 +401,7 @@ export struct ReinspectionReportTabContent {
         color: AppColors.Border
       })
       .onClick(() => {
-        if (!this.canSubmitReport()) {
+        if (!this.canEditReportForm()) {
           return;
         }
 
@@ -440,7 +440,7 @@ export struct ReinspectionReportTabContent {
           width: 1,
           color: AppColors.Border
         })
-        .enabled(this.canSubmitReport())
+        .enabled(this.canEditReportForm())
         .onChange((value: string) => {
           this.description = value;
           this.reportMessage = '';
@@ -479,9 +479,9 @@ export struct ReinspectionReportTabContent {
         .borderRadius(18)
         .padding({ left: 16, right: 16 })
         .border({ width: 1, color: AppColors.Border })
-        .enabled(this.canSubmitReport())
+        .enabled(this.canEditReportForm())
         .onChange((value: string) => {
-          if (!this.canSubmitReport()) {
+          if (!this.canEditReportForm()) {
             return;
           }
 
@@ -650,6 +650,10 @@ export struct ReinspectionReportTabContent {
   }
 
   canSubmitReport(): boolean {
+    return this.canEditReportForm() && this.password.length > 0;
+  }
+
+  canEditReportForm(): boolean {
     return !this.submitting && this.taskId.length > 0 && !this.isSelectedReinspectionTaskSubmitted();
   }
 
@@ -722,7 +726,7 @@ export struct ReinspectionReportTabContent {
   }
 
   showReinspectedAtPicker(): void {
-    if (!this.canSubmitReport()) {
+    if (!this.canEditReportForm()) {
       return;
     }
 

@@ -351,7 +351,7 @@ export struct RepairReportTabContent {
       width: 1,
       color: this.reportResult === `${result}` ? this.getRepairResultTone(result) : AppColors.Border
     })
-    .enabled(this.canSubmitRepairReport())
+    .enabled(this.canEditRepairReportForm())
     .onClick(() => {
       this.reportResult = `${result}`;
       this.reportMessage = '';
@@ -393,7 +393,7 @@ export struct RepairReportTabContent {
         color: AppColors.Border
       })
       .onClick(() => {
-        if (!this.canSubmitRepairReport()) {
+        if (!this.canEditRepairReportForm()) {
           return;
         }
 
@@ -432,7 +432,7 @@ export struct RepairReportTabContent {
           width: 1,
           color: AppColors.Border
         })
-        .enabled(this.canSubmitRepairReport())
+        .enabled(this.canEditRepairReportForm())
         .onChange((value: string) => {
           this.processDescription = value;
           this.reportMessage = '';
@@ -471,9 +471,9 @@ export struct RepairReportTabContent {
         .borderRadius(18)
         .padding({ left: 16, right: 16 })
         .border({ width: 1, color: AppColors.Border })
-        .enabled(this.canSubmitRepairReport())
+        .enabled(this.canEditRepairReportForm())
         .onChange((value: string) => {
-          if (!this.canSubmitRepairReport()) {
+          if (!this.canEditRepairReportForm()) {
             return;
           }
 
@@ -643,6 +643,10 @@ export struct RepairReportTabContent {
   }
 
   canSubmitRepairReport(): boolean {
+    return this.canEditRepairReportForm() && this.password.length > 0;
+  }
+
+  canEditRepairReportForm(): boolean {
     return !this.submitting && this.taskId.length > 0 && !this.isSelectedRepairTaskSubmitted();
   }
 
@@ -743,7 +747,7 @@ export struct RepairReportTabContent {
   }
 
   showRepairedAtPicker(): void {
-    if (!this.canSubmitRepairReport()) {
+    if (!this.canEditRepairReportForm()) {
       return;
     }
 

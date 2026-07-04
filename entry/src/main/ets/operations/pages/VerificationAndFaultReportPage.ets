@@ -139,7 +139,7 @@ struct VerificationAndFaultReportPage {
 
       this.PasswordSection()
       this.MessageText()
-      this.ActionButton(this.getSubmitButtonLabel(), this.getSubmitIcon(),!this.submitting && !this.submitted,
+      this.ActionButton(this.getSubmitButtonLabel(), this.getSubmitIcon(), this.canSubmitVerification(),
         () => {
           this.submitVerification();
         })
@@ -801,6 +801,10 @@ struct VerificationAndFaultReportPage {
 
   getSubmitIcon(): Resource {
     return $r('sys.symbol.checkmark_circle');
+  }
+
+  canSubmitVerification(): boolean {
+    return !this.submitting && !this.submitted && this.password.length > 0;
   }
 
   getSeverityTone(severity: FaultSeverity): string {

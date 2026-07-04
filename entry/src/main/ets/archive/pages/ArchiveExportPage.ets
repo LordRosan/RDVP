@@ -360,7 +360,7 @@ struct ArchiveExportPage {
 
   @Builder
   ExportButton(tab: string) {
-    Button({ type: ButtonType.Capsule, stateEffect: !this.exporting }) {
+    Button({ type: ButtonType.Capsule, stateEffect: this.canExport(tab) }) {
       Row({ space: 8 }) {
         Image($r('sys.media.ohos_save_button_line'))
           .width(20)
@@ -379,8 +379,8 @@ struct ArchiveExportPage {
     }
     .height(54)
     .width('100%')
-    .backgroundColor(this.exporting ? AppColors.Disabled : AppColors.Primary)
-    .enabled(!this.exporting)
+    .backgroundColor(this.canExport(tab) ? AppColors.Primary : AppColors.Disabled)
+    .enabled(this.canExport(tab))
     .onClick(() => {
       this.exportByTab(tab);
     })
@@ -579,6 +579,10 @@ struct ArchiveExportPage {
 
   getPassword(tab: string): string {
     return tab === EXPORT_TAB_DETAIL ? this.detailPassword : this.qrPassword;
+  }
+
+  canExport(tab: string): boolean {
+    return this.hasDevice && !this.exporting && this.getPassword(tab).length > 0;
   }
 
   setPassword(tab: string, value: string): void {

@@ -149,7 +149,7 @@ struct ArchiveUpdatePage {
       this.PasswordSection()
       this.MessageText()
       this.ActionButton(this.getSubmitButtonLabel(), this.getSubmitIcon(),
-        this.hasDevice && !this.submitting && !this.isUpdateSubmitted(), () => {
+        this.canSubmitUpdate(), () => {
           this.submitUpdateRequest();
         })
     }
@@ -605,6 +605,10 @@ struct ArchiveUpdatePage {
 
   isUpdateSubmitted(): boolean {
     return this.requestStatus === ArchiveRequestStatus.PendingReview;
+  }
+
+  canSubmitUpdate(): boolean {
+    return this.hasDevice && this.password.length > 0 && !this.submitting && !this.isUpdateSubmitted();
   }
 
   getSubmitButtonLabel(): string {

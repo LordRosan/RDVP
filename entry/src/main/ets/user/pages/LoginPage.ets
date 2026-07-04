@@ -29,6 +29,7 @@ struct LoginPage {
       Column({ space: 18 }) {
         this.BrandHeader()
         this.LoginPanel()
+        this.LoginButton()
       }
       .width('100%')
       .padding({
@@ -94,7 +95,6 @@ struct LoginPage {
       this.InputField('账号', '请输入账号', false)
       this.InputField('密码', '请输入密码', true)
       this.MessageText()
-      this.LoginButton()
     }
     .padding({
       left: 20,
@@ -169,7 +169,7 @@ struct LoginPage {
 
   @Builder
   LoginButton() {
-    Button({ type: ButtonType.Capsule, stateEffect: true }) {
+    Button({ type: ButtonType.Capsule, stateEffect: this.canSubmitLogin() }) {
       Row({ space: 8 }) {
         SymbolGlyph($r('sys.symbol.person_badge_checkmark'))
           .fontSize(20)
@@ -187,8 +187,8 @@ struct LoginPage {
     }
     .height(54)
     .width('100%')
-    .backgroundColor(this.submitting ? AppColors.Disabled : AppColors.Primary)
-    .enabled(!this.submitting)
+    .backgroundColor(this.canSubmitLogin() ? AppColors.Primary : AppColors.Disabled)
+    .enabled(this.canSubmitLogin())
     .onClick(() => {
       this.submitLogin();
     })
@@ -247,6 +247,10 @@ struct LoginPage {
     }
 
     return '';
+  }
+
+  canSubmitLogin(): boolean {
+    return !this.submitting && this.username.trim().length > 0 && this.password.length > 0;
   }
 
   openHomePage(): void {

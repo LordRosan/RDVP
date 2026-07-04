@@ -610,7 +610,7 @@ struct ArchiveCreatePage {
   }
 
   canSubmitCreate(): boolean {
-    return this.isDeviceCodeAvailable() && !this.submitting && !this.isSubmitted();
+    return this.isDeviceCodeAvailable() && this.password.length > 0 && !this.submitting && !this.isSubmitted();
   }
 
   isDeviceCodeAvailable(): boolean {
