@@ -3,26 +3,28 @@ import { AppSectionTitle } from '../../shared/components/AppSectionTitle';
 import { CenterTitleBar } from '../../shared/components/CenterTitleBar';
 import { InlineMessageSurface } from '../../shared/components/InlineMessageSurface';
 import { FaultSeverity, FaultType } from '../models/FaultModels';
+import {
+  DeviceVerificationForm,
+  VerificationAndFaultReportForm,
+  VerificationResult
+} from '../models/VerificationAndFaultReportModels';
 import { PermissionCode } from '../../user/models/PermissionModels';
-import { VerificationResult } from '../models/VerificationAndFaultReportModels';
 import { DeviceService } from '../../archive/services/DeviceService';
-import { UiFeedbackService } from '../../shared/services/UiFeedbackService';
-import { VerificationAndFaultReportService } from '../services/VerificationAndFaultReportService';
 import { FaultReportService } from '../services/FaultReportService';
+import { VerificationAndFaultReportService } from '../services/VerificationAndFaultReportService';
+import { UiFeedbackService } from '../../shared/services/UiFeedbackService';
 import { AuthService } from '../../user/services/AuthService';
-import { SessionStore } from '../../user/stores/SessionStore';
 import { AuthGuard } from '../../shared/security/AuthGuard';
 import { AppNavigator } from '../../shared/navigation/AppNavigator';
+import { AppRoutes } from '../../shared/navigation/AppRoutes';
 import { UiFeedbackTone } from '../../shared/models/UiFeedbackModels';
+import { VerificationReportFlowStore } from '../stores/VerificationReportFlowStore';
 
 @Entry
 @Component
-struct VerificationAndFaultReportPage {
+struct FaultReportPage {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   @State deviceCode: string = '';
-  @State verificationResult: string = '';
-  @State description: string = '';
-  @State verifiedAt: string = '';
   @State faultType: string = '';
   @State severity: string = '';
   @State occurredAt: string = '';
@@ -30,14 +32,23 @@ struct VerificationAndFaultReportPage {
   @State password: string = '';
   @State message: string = '';
   @State messageTone: string = UiFeedbackTone.Danger;
-  @State normalizedDeviceCode: string = '-';
   @State submitting: boolean = false;
   @State submitted: boolean = false;
+  @State hasVerification: boolean = false;
+  private verification: DeviceVerificationForm = {
+    deviceCode: '',
+    result: VerificationResult.Abnormal,
+    description: '',
+    verifiedAt: '',
+    remark: ''
+  };
 
   aboutToAppear(): void {
-    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.OperationsCenterDeviceVerificationSubmit)) {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.OperationsCenterDeviceFaultReportSubmit)) {
       return;
     }
+
+    this.loadVerificationContext();
   }
 
   build() {
@@ -47,7 +58,12 @@ struct VerificationAndFaultReportPage {
 
         Column({ space: 18 }) {
           this.ModeHeader()
-          this.VerificationForm()
+          if (this.hasVerification) {
+            this.VerificationSummarySection()
+            this.FaultReportFormBody()
+          } else {
+            this.EmptyPanel()
+          }
         }
         .alignItems(HorizontalAlign.Start)
         .justifyContent(FlexAlign.Start)
@@ -70,7 +86,7 @@ struct VerificationAndFaultReportPage {
   }
 
   onBackPress(): boolean {
-    this.backToOperationsCenter();
+    this.handleBackAction();
     return true;
   }
 
@@ -78,7 +94,7 @@ struct VerificationAndFaultReportPage {
   PageTitleBar() {
     CenterTitleBar({
       action: () => {
-        this.backToOperationsCenter();
+        this.handleBackAction();
       }
     })
   }
@@ -86,14 +102,14 @@ struct VerificationAndFaultReportPage {
   @Builder
   ModeHeader() {
     Column({ space: 5 }) {
-      Text('核验与报修')
+      Text('报修报告')
         .fontSize(34)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      Text('Verification and Fault Report')
+      Text('Fault Report')
         .fontSize(13)
         .fontWeight(FontWeight.Medium)
         .fontColor(AppColors.TextTertiary)
@@ -106,7 +122,7 @@ struct VerificationAndFaultReportPage {
   }
 
   @Builder
-  VerificationForm() {
+  VerificationSummarySection() {
     Column({ space: 12 }) {
       AppSectionTitle({
         title: '核验信息',
@@ -114,12 +130,8 @@ struct VerificationAndFaultReportPage {
       })
 
       Column({ space: 16 }) {
-        this.DeviceCodeField()
-        this.ResultSelector()
-        if (this.isNormalVerification()) {
-          this.VerifiedAtField()
-          this.DescriptionField()
-        }
+        this.ReadOnlyField('设备编号', this.deviceCode)
+        this.ReadOnlyField('核验结果', VerificationAndFaultReportService.formatVerificationResult(VerificationResult.Abnormal))
       }
       .padding({
         left: 18,
@@ -132,188 +144,13 @@ struct VerificationAndFaultReportPage {
       .borderRadius(AppRadii.Large)
       .border({ width: 1, color: AppColors.Divider })
       .alignItems(HorizontalAlign.Start)
-
-      if (this.requiresFaultReport()) {
-        this.FaultReportSection()
-      }
-
-      this.PasswordSection()
-      this.MessageText()
-      this.ActionButton(this.getSubmitButtonLabel(), this.getSubmitIcon(), this.canSubmitVerification(),
-        () => {
-          this.submitVerification();
-        })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
-  DeviceCodeField() {
-    Column({ space: 10 }) {
-      this.FieldTitle('设备编号')
-
-      TextInput({
-        placeholder: '请输入设备编号',
-        text: this.deviceCode
-      })
-        .height(56)
-        .fontSize(16)
-        .backgroundColor(AppColors.FieldBackground)
-        .borderRadius(18)
-        .padding({
-          left: 16,
-          right: 16
-        })
-        .border({
-          width: 1,
-          color: AppColors.Border
-        })
-        .enabled(!this.submitting && !this.submitted)
-        .onChange((value: string) => {
-          this.deviceCode = value;
-          this.markFormChanged();
-          this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(value);
-          if (this.normalizedDeviceCode.length === 0) {
-            this.normalizedDeviceCode = '-';
-          }
-        })
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-  }
-
-  @Builder
-  ResultSelector() {
-    Column({ space: 10 }) {
-      this.FieldTitle('核验结果')
-
-      Row({ space: 10 }) {
-        this.ResultOption(VerificationResult.Normal, $r('sys.symbol.checkmark_circle'))
-        this.ResultOption(VerificationResult.Abnormal, $r('sys.symbol.exclamationmark_shield_fill'))
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-  }
-
-  @Builder
-  ResultOption(result: VerificationResult, icon: Resource) {
-    Button({ type: ButtonType.Capsule, stateEffect: true }) {
-      Row({ space: 5 }) {
-        SymbolGlyph(icon)
-          .fontSize(17)
-          .fontColor([this.verificationResult === `${result}` ? AppColors.OnPrimary : AppColors.TextPrimary])
-
-        Text(VerificationAndFaultReportService.formatVerificationResult(result))
-          .fontSize(14)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(this.verificationResult === `${result}` ? AppColors.OnPrimary : AppColors.TextPrimary)
-          .maxLines(1)
-      }
-      .width('100%')
-      .justifyContent(FlexAlign.Center)
-      .alignItems(VerticalAlign.Center)
-    }
-    .height(42)
-    .layoutWeight(1)
-    .backgroundColor(this.verificationResult === `${result}` ? this.getResultTone(result) : AppColors.FieldBackground)
-    .border({
-      width: 1,
-      color: this.verificationResult === `${result}` ? this.getResultTone(result) : AppColors.Border
-    })
-    .enabled(!this.submitting && !this.submitted)
-    .onClick(() => {
-      this.verificationResult = `${result}`;
-      this.markFormChanged();
-    })
-  }
-
-  @Builder
-  VerifiedAtField() {
-    Column({ space: 10 }) {
-      this.FieldTitle('核验时间')
-
-      Row({ space: 10 }) {
-        SymbolGlyph($r('sys.symbol.calendar'))
-          .fontSize(20)
-          .fontColor([AppColors.TextPrimary])
-
-        Text(this.verifiedAt.length > 0 ? this.verifiedAt : '请选择核验时间')
-          .fontSize(16)
-          .fontColor(this.verifiedAt.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
-          .layoutWeight(1)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-        SymbolGlyph($r('sys.symbol.chevron_forward'))
-          .fontSize(18)
-          .fontColor([AppColors.TextSecondary])
-      }
-      .height(56)
-      .width('100%')
-      .backgroundColor(AppColors.FieldBackground)
-      .borderRadius(18)
-      .padding({
-        left: 16,
-        right: 16
-      })
-      .border({
-        width: 1,
-        color: AppColors.Border
-      })
-      .onClick(() => {
-        if (this.submitting || this.submitted) {
-          return;
-        }
-
-        this.showVerifiedAtPicker();
-      })
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-  }
-
-  @Builder
-  DescriptionField() {
-    Column({ space: 10 }) {
-      this.FieldTitle('核验说明')
-
-      TextArea({
-        placeholder: '请输入核验说明',
-        text: this.description
-      })
-        .height(118)
-        .width('100%')
-        .fontSize(15)
-        .lineHeight(22)
-        .maxLength(500)
-        .backgroundColor(AppColors.FieldBackground)
-        .borderRadius(18)
-        .padding({
-          left: 14,
-          right: 14,
-          top: 12,
-          bottom: 12
-        })
-        .border({
-          width: 1,
-          color: AppColors.Border
-        })
-        .enabled(!this.submitting && !this.submitted)
-        .onChange((value: string) => {
-          this.description = value;
-          this.markFormChanged();
-        })
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-  }
-
-  @Builder
-  FaultReportSection() {
+  FaultReportFormBody() {
     Column({ space: 12 }) {
       AppSectionTitle({
         title: '报修信息',
@@ -337,6 +174,40 @@ struct VerificationAndFaultReportPage {
       .borderRadius(AppRadii.Large)
       .border({ width: 1, color: AppColors.Divider })
       .alignItems(HorizontalAlign.Start)
+
+      this.PasswordSection()
+      this.MessageText()
+      this.ActionButton(this.getSubmitButtonLabel(), this.getSubmitIcon(), this.canUseSubmitAction(), () => {
+        this.handleSubmitAction();
+      })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  ReadOnlyField(title: string, value: string) {
+    Column({ space: 10 }) {
+      this.FieldTitle(title)
+
+      TextInput({
+        placeholder: title,
+        text: value
+      })
+        .height(56)
+        .fontSize(16)
+        .fontColor(AppColors.TextSecondary)
+        .backgroundColor(AppColors.FieldBackground)
+        .borderRadius(18)
+        .padding({
+          left: 16,
+          right: 16
+        })
+        .border({
+          width: 1,
+          color: AppColors.Border
+        })
+        .enabled(false)
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -636,8 +507,32 @@ struct VerificationAndFaultReportPage {
   }
 
   @Builder
+  EmptyPanel() {
+    Column({ space: 12 }) {
+      InlineMessageSurface({
+        message: this.message,
+        tone: this.messageTone
+      })
+    }
+    .padding({
+      left: 18,
+      right: 18,
+      top: 18,
+      bottom: 18
+    })
+    .width('100%')
+    .backgroundColor(AppColors.SurfaceRaised)
+    .borderRadius(AppRadii.Large)
+    .border({
+      width: 1,
+      color: AppColors.Divider
+    })
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
   ActionButton(label: string, icon: Resource, enabled: boolean, action: () => void) {
-    Button({ type: ButtonType.Capsule, stateEffect: true }) {
+    Button({ type: ButtonType.Capsule, stateEffect: enabled }) {
       Row({ space: 8 }) {
         SymbolGlyph(icon)
           .fontSize(20)
@@ -662,17 +557,42 @@ struct VerificationAndFaultReportPage {
     })
   }
 
-  async submitVerification(): Promise<void> {
-    if (this.submitting || this.submitted) {
+  loadVerificationContext(): void {
+    const pending = VerificationReportFlowStore.getPendingAbnormalVerification();
+    if (pending === undefined || pending.result !== VerificationResult.Abnormal) {
+      this.hasVerification = false;
+      this.message = UiFeedbackService.operationUnavailable('报修报告');
+      this.messageTone = UiFeedbackTone.Danger;
       return;
     }
 
-    this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(this.deviceCode);
-    if (this.normalizedDeviceCode.length === 0) {
-      this.normalizedDeviceCode = '-';
+    this.verification = pending;
+    this.deviceCode = DeviceService.normalizeDeviceCode(pending.deviceCode);
+    if (this.deviceCode.length === 0) {
+      this.deviceCode = pending.deviceCode;
     }
 
-    const validation = this.validateCurrentForm();
+    this.hasVerification = true;
+    this.message = '';
+    this.messageTone = UiFeedbackTone.Danger;
+  }
+
+  async handleSubmitAction(): Promise<void> {
+    if (this.submitted) {
+      this.backToVerificationReport();
+      return;
+    }
+
+    await this.submitFaultReport();
+  }
+
+  async submitFaultReport(): Promise<void> {
+    if (this.submitting || this.submitted || !this.hasVerification) {
+      return;
+    }
+
+    const form = this.buildForm();
+    const validation = VerificationAndFaultReportService.validateVerificationAndFaultReportForm(form);
     if (!validation.valid) {
       this.message = validation.message;
       this.messageTone = UiFeedbackTone.Danger;
@@ -692,99 +612,61 @@ struct VerificationAndFaultReportPage {
         return;
       }
 
-      if (this.requiresFaultReport()) {
-        await this.submitVerificationAndFaultReport();
-      } else {
-        await this.submitNormalVerification();
+      const response = await VerificationAndFaultReportService.submitVerificationAndFaultReportRemoteFirst(form);
+      if (!response.success) {
+        const error = response.error;
+        this.message = UiFeedbackService.operationError(error, '提交');
+        this.messageTone = UiFeedbackTone.Danger;
+        return;
       }
+
+      VerificationReportFlowStore.markFaultReportSubmitted();
+      this.password = '';
+      this.submitted = true;
+      this.message = '提交成功，核验报告将先进入审核；核验审核通过后报修报告进入审核';
+      this.messageTone = UiFeedbackTone.Success;
     } finally {
       this.submitting = false;
     }
   }
 
-  async submitNormalVerification(): Promise<void> {
-    const response = await VerificationAndFaultReportService.submitVerificationReportRemoteFirst({
-      deviceCode: this.deviceCode,
-      result: this.verificationResult as VerificationResult,
-      description: this.description,
-      verifiedAt: this.verifiedAt
-    });
-    if (!response.success) {
-      const error = response.error;
-      this.message = UiFeedbackService.operationError(error, '提交');
-      this.messageTone = UiFeedbackTone.Danger;
-      return;
-    }
-
-    this.message = UiFeedbackService.operationSuccess('提交');
-    this.messageTone = UiFeedbackTone.Success;
-    this.password = '';
-    this.submitted = true;
-  }
-
-  async submitVerificationAndFaultReport(): Promise<void> {
-    if (!SessionStore.hasPermission(PermissionCode.OperationsCenterDeviceFaultReportSubmit)) {
-      this.message = UiFeedbackService.operationUnavailable('提交');
-      this.messageTone = UiFeedbackTone.Danger;
-      return;
-    }
-
-    const response = await VerificationAndFaultReportService.submitVerificationAndFaultReportRemoteFirst({
+  buildForm(): VerificationAndFaultReportForm {
+    return {
       verification: {
-        deviceCode: this.deviceCode,
-        result: this.verificationResult as VerificationResult,
-        description: '',
-        verifiedAt: ''
+        deviceCode: this.verification.deviceCode,
+        result: VerificationResult.Abnormal,
+        description: this.verification.description,
+        verifiedAt: this.verification.verifiedAt,
+        remark: this.verification.remark
       },
       faultReport: {
-        deviceCode: this.deviceCode,
+        deviceCode: this.verification.deviceCode,
         faultType: this.faultType as FaultType,
         severity: this.severity as FaultSeverity,
         occurredAt: this.occurredAt,
         description: this.faultDescription,
         sceneCondition: ''
       }
-    });
-    if (!response.success) {
-      const error = response.error;
-      this.message = UiFeedbackService.operationError(error, '提交');
-      this.messageTone = UiFeedbackTone.Danger;
-      return;
+    };
+  }
+
+  async verifyPasswordForSubmit(password: string): Promise<boolean> {
+    const response = await AuthService.verifyCurrentUserPasswordRemoteFirst(password);
+    if (response.success && response.data === true) {
+      return true;
     }
 
-    this.message = UiFeedbackService.operationSuccess('提交');
-    this.messageTone = UiFeedbackTone.Success;
-    this.password = '';
-    this.submitted = true;
+    this.message = UiFeedbackService.passwordVerificationError(response.error, '提交');
+    this.messageTone = UiFeedbackTone.Danger;
+    return false;
   }
 
-  getVerificationResultStatusText(): string {
-    return this.verificationResult.length === 0 ? '-' :
-      VerificationAndFaultReportService.formatVerificationResult(this.verificationResult as VerificationResult);
-  }
-
-  getSelectedResultTone(): string {
-    return this.verificationResult.length === 0 ? AppColors.TextSecondary :
-      this.getResultTone(this.verificationResult as VerificationResult);
-  }
-
-  getResultTone(result: VerificationResult): string {
-    switch (result) {
-      case VerificationResult.Normal:
-        return AppColors.Success;
-      case VerificationResult.Abnormal:
-        return AppColors.Danger;
-      default:
-        return AppColors.TextSecondary;
+  canUseSubmitAction(): boolean {
+    if (this.submitted) {
+      return true;
     }
-  }
 
-  requiresFaultReport(): boolean {
-    return this.verificationResult === `${VerificationResult.Abnormal}`;
-  }
-
-  isNormalVerification(): boolean {
-    return this.verificationResult === `${VerificationResult.Normal}`;
+    return this.hasVerification && this.password.length > 0 && !this.submitting;
   }
 
   getSubmitButtonLabel(): string {
@@ -793,18 +675,14 @@ struct VerificationAndFaultReportPage {
     }
 
     if (this.submitted) {
-      return '已提交';
+      return '返回核验';
     }
 
-    return '提交报告';
+    return '提交';
   }
 
   getSubmitIcon(): Resource {
-    return $r('sys.symbol.checkmark_circle');
-  }
-
-  canSubmitVerification(): boolean {
-    return !this.submitting && !this.submitted && this.password.length > 0;
+    return this.submitted ? $r('sys.symbol.chevron_backward') : $r('sys.symbol.checkmark_circle');
   }
 
   getSeverityTone(severity: FaultSeverity): string {
@@ -825,48 +703,35 @@ struct VerificationAndFaultReportPage {
   markFormChanged(): void {
     this.message = '';
     this.messageTone = UiFeedbackTone.Danger;
-    this.submitted = false;
   }
 
-  validateCurrentForm() {
-    if (this.requiresFaultReport()) {
-      return VerificationAndFaultReportService.validateVerificationAndFaultReportForm({
-        verification: {
-          deviceCode: this.deviceCode,
-          result: this.verificationResult as VerificationResult,
-          description: '',
-          verifiedAt: '',
-          remark: ''
-        },
-        faultReport: {
-          deviceCode: this.deviceCode,
-          faultType: this.faultType as FaultType,
-          severity: this.severity as FaultSeverity,
-          occurredAt: this.occurredAt,
-          description: this.faultDescription,
-          sceneCondition: ''
+  handleBackAction(): void {
+    if (this.submitted || !this.hasVerification) {
+      this.backToVerificationReport();
+      return;
+    }
+
+    this.showDiscardConfirmation();
+  }
+
+  showDiscardConfirmation(): void {
+    AlertDialog.show({
+      title: '放弃报修报告填写？',
+      message: '返回将放弃本次异常核验与报修报告填写。',
+      autoCancel: false,
+      primaryButton: {
+        value: '继续填写',
+        action: () => {
         }
-      });
-    }
-
-    return VerificationAndFaultReportService.validateVerificationForm({
-      deviceCode: this.deviceCode,
-      result: this.verificationResult as VerificationResult,
-      description: this.description,
-      verifiedAt: this.verifiedAt,
-      remark: ''
+      },
+      secondaryButton: {
+        value: '放弃返回',
+        action: () => {
+          VerificationReportFlowStore.markFaultReportDiscarded();
+          this.backToVerificationReport();
+        }
+      }
     });
-  }
-
-  async verifyPasswordForSubmit(password: string): Promise<boolean> {
-    const response = await AuthService.verifyCurrentUserPasswordRemoteFirst(password);
-    if (response.success && response.data === true) {
-      return true;
-    }
-
-    this.message = UiFeedbackService.passwordVerificationError(response.error, '提交');
-    this.messageTone = UiFeedbackTone.Danger;
-    return false;
   }
 
   showOccurredAtPicker(): void {
@@ -882,24 +747,6 @@ struct VerificationAndFaultReportPage {
       useMilitaryTime: true,
       onDateAccept: (value: Date) => {
         this.occurredAt = this.formatDateTime(value);
-        this.markFormChanged();
-      }
-    });
-  }
-
-  showVerifiedAtPicker(): void {
-    if (this.submitting || this.submitted) {
-      return;
-    }
-
-    this.getUIContext().showDatePickerDialog({
-      start: new Date(2000, 0, 1, 0, 0),
-      end: new Date(2100, 11, 31, 23, 59),
-      selected: this.resolveSelectedDate(this.verifiedAt),
-      showTime: true,
-      useMilitaryTime: true,
-      onDateAccept: (value: Date) => {
-        this.verifiedAt = this.formatDateTime(value);
         this.markFormChanged();
       }
     });
@@ -943,8 +790,8 @@ struct VerificationAndFaultReportPage {
     return value < 10 ? `0${value}` : `${value}`;
   }
 
-  backToOperationsCenter(): void {
-    AppNavigator.backOrReplace(this.getUIContext(), 'operations/pages/OperationsCenterPage', {
+  backToVerificationReport(): void {
+    AppNavigator.backOrReplace(this.getUIContext(), AppRoutes.VerificationReportPage, {
       onFailure: () => {
         AppNavigator.showNavigationUnavailableToast(this.getUIContext());
       }

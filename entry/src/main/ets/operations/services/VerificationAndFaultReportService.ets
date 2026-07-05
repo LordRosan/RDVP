@@ -105,6 +105,38 @@ export class VerificationAndFaultReportService {
     };
   }
 
+  static validateAbnormalVerificationStepForm(form: DeviceVerificationForm): DeviceVerificationValidationResult {
+    const deviceCodeValidation = DeviceService.validateDeviceCodeQuery({
+      deviceCode: form.deviceCode
+    });
+
+    if (!deviceCodeValidation.valid) {
+      return {
+        valid: false,
+        message: deviceCodeValidation.message
+      };
+    }
+
+    if (!VerificationAndFaultReportService.isKnownResult(form.result)) {
+      return {
+        valid: false,
+        message: UiFeedbackService.requiredSelection('核验结果')
+      };
+    }
+
+    if (form.result !== VerificationResult.Abnormal) {
+      return {
+        valid: false,
+        message: UiFeedbackService.operationUnavailable('下一步')
+      };
+    }
+
+    return {
+      valid: true,
+      message: ''
+    };
+  }
+
   static validateVerificationAndFaultReportForm(form: VerificationAndFaultReportForm): DeviceVerificationValidationResult {
     const deviceCodeValidation = DeviceService.validateDeviceCodeQuery({
       deviceCode: form.verification.deviceCode

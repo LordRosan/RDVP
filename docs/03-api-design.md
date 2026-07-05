@@ -588,7 +588,7 @@ POST /api/v1/devices/{deviceId}/verification-reports/fault-report
 }
 ```
 
-异常核验提交时只生成挂载在核验报告下的报修草稿，不生成正式报修编号，也不会进入维修任务池。核验审核通过且结果为异常后，系统按审核完成时间自动创建报修审核请求；报修审核通过后才生成正式报修编号和首个维修任务。
+异常核验提交时会一并提交关联的报修报告信息；该报修报告在核验审核通过前不生成正式报修编号，也不会进入维修任务池。核验审核通过且结果为异常后，系统按审核完成时间自动创建报修审核请求；报修审核通过后才生成正式报修编号和首个维修任务。
 
 ## 9. 档案申请接口
 
@@ -728,7 +728,7 @@ POST /api/v1/archive-requests/{requestId}/review
 
 ## 10. 故障报告说明
 
-当前后端不开放独立创建故障报告接口。报修必须由 `POST /api/v1/devices/{deviceId}/verification-reports/fault-report` 提交异常核验并填写报修草稿发起，后续按“核验审核通过 -> 报修审核通过 -> 生成维修任务”的顺序推进。
+当前后端不开放独立创建故障报告接口。报修必须由 `POST /api/v1/devices/{deviceId}/verification-reports/fault-report` 提交异常核验并填写报修报告发起，后续按“核验审核通过 -> 报修审核通过 -> 生成维修任务”的顺序推进。
 
 待接取故障通过 `GET /api/v1/operation-tasks/available` 查询；历史故障日志通过 `GET /api/v1/log-center/logs?category=OPERATIONS_OPERATION` 查询。
 

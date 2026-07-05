@@ -1,0 +1,667 @@
+import { AppColors, AppRadii, AppSpacing } from '../../shared/theme/AppTheme';
+import { AppSectionTitle } from '../../shared/components/AppSectionTitle';
+import { CenterTitleBar } from '../../shared/components/CenterTitleBar';
+import { InlineMessageSurface } from '../../shared/components/InlineMessageSurface';
+import { PermissionCode } from '../../user/models/PermissionModels';
+import { DeviceVerificationForm, VerificationResult } from '../models/VerificationAndFaultReportModels';
+import { DeviceService } from '../../archive/services/DeviceService';
+import { UiFeedbackService } from '../../shared/services/UiFeedbackService';
+import { VerificationAndFaultReportService } from '../services/VerificationAndFaultReportService';
+import { AuthService } from '../../user/services/AuthService';
+import { SessionStore } from '../../user/stores/SessionStore';
+import { AuthGuard } from '../../shared/security/AuthGuard';
+import { AppNavigator } from '../../shared/navigation/AppNavigator';
+import { AppRoutes } from '../../shared/navigation/AppRoutes';
+import { UiFeedbackTone } from '../../shared/models/UiFeedbackModels';
+import { VerificationReportFlowStore } from '../stores/VerificationReportFlowStore';
+
+@Entry
+@Component
+struct VerificationReportPage {
+  @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
+  @State deviceCode: string = '';
+  @State verificationResult: string = '';
+  @State description: string = '';
+  @State verifiedAt: string = '';
+  @State password: string = '';
+  @State message: string = '';
+  @State messageTone: string = UiFeedbackTone.Danger;
+  @State normalizedDeviceCode: string = '-';
+  @State submitting: boolean = false;
+  @State submitted: boolean = false;
+
+  aboutToAppear(): void {
+    if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.OperationsCenterDeviceVerificationSubmit)) {
+      return;
+    }
+  }
+
+  onPageShow(): void {
+    if (VerificationReportFlowStore.consumeFaultReportSubmitted()) {
+      this.resetAfterFaultReportSubmitted();
+      return;
+    }
+
+    if (VerificationReportFlowStore.consumeFaultReportDiscarded()) {
+      this.resetAfterFaultReportDiscarded();
+    }
+  }
+
+  build() {
+    Scroll() {
+      Column() {
+        this.PageTitleBar()
+
+        Column({ space: 18 }) {
+          this.ModeHeader()
+          this.VerificationForm()
+        }
+        .alignItems(HorizontalAlign.Start)
+        .justifyContent(FlexAlign.Start)
+        .padding({
+          left: AppSpacing.PageX,
+          right: AppSpacing.PageX,
+          top: 0,
+          bottom: AppSpacing.PageBottom
+        })
+        .width('100%')
+      }
+      .width('100%')
+      .constraintSize({ minHeight: '100%' })
+      .alignItems(HorizontalAlign.Start)
+      .justifyContent(FlexAlign.Start)
+    }
+    .height('100%')
+    .width('100%')
+    .backgroundColor(AppColors.PageBackground)
+  }
+
+  onBackPress(): boolean {
+    this.backToOperationsCenter();
+    return true;
+  }
+
+  @Builder
+  PageTitleBar() {
+    CenterTitleBar({
+      action: () => {
+        this.backToOperationsCenter();
+      }
+    })
+  }
+
+  @Builder
+  ModeHeader() {
+    Column({ space: 5 }) {
+      Text('核验报告')
+        .fontSize(34)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+      Text('Verification Report')
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextTertiary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+    .padding({ top: 12, bottom: 6 })
+  }
+
+  @Builder
+  VerificationForm() {
+    Column({ space: 12 }) {
+      AppSectionTitle({
+        title: '核验信息',
+        subtitle: ''
+      })
+
+      Column({ space: 16 }) {
+        this.DeviceCodeField()
+        this.ResultSelector()
+        if (this.isNormalVerification()) {
+          this.VerifiedAtField()
+          this.DescriptionField()
+        }
+      }
+      .padding({
+        left: 18,
+        right: 18,
+        top: 18,
+        bottom: 18
+      })
+      .width('100%')
+      .backgroundColor(AppColors.SurfaceRaised)
+      .borderRadius(AppRadii.Large)
+      .border({ width: 1, color: AppColors.Divider })
+      .alignItems(HorizontalAlign.Start)
+
+      if (this.isNormalVerification()) {
+        this.PasswordSection()
+      }
+
+      this.MessageText()
+      this.ActionButton(this.getPrimaryButtonLabel(), this.getPrimaryButtonIcon(), this.canUsePrimaryAction(), () => {
+        this.handlePrimaryAction();
+      })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  DeviceCodeField() {
+    Column({ space: 10 }) {
+      this.FieldTitle('设备编号')
+
+      TextInput({
+        placeholder: '请输入设备编号',
+        text: this.deviceCode
+      })
+        .height(56)
+        .fontSize(16)
+        .backgroundColor(AppColors.FieldBackground)
+        .borderRadius(18)
+        .padding({
+          left: 16,
+          right: 16
+        })
+        .border({
+          width: 1,
+          color: AppColors.Border
+        })
+        .enabled(!this.submitting && !this.submitted)
+        .onChange((value: string) => {
+          this.deviceCode = value;
+          this.markFormChanged();
+          this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(value);
+          if (this.normalizedDeviceCode.length === 0) {
+            this.normalizedDeviceCode = '-';
+          }
+        })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  ResultSelector() {
+    Column({ space: 10 }) {
+      this.FieldTitle('核验结果')
+
+      Row({ space: 10 }) {
+        this.ResultOption(VerificationResult.Normal, $r('sys.symbol.checkmark_circle'))
+        this.ResultOption(VerificationResult.Abnormal, $r('sys.symbol.exclamationmark_shield_fill'))
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  ResultOption(result: VerificationResult, icon: Resource) {
+    Button({ type: ButtonType.Capsule, stateEffect: true }) {
+      Row({ space: 5 }) {
+        SymbolGlyph(icon)
+          .fontSize(17)
+          .fontColor([this.verificationResult === `${result}` ? AppColors.OnPrimary : AppColors.TextPrimary])
+
+        Text(VerificationAndFaultReportService.formatVerificationResult(result))
+          .fontSize(14)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.verificationResult === `${result}` ? AppColors.OnPrimary : AppColors.TextPrimary)
+          .maxLines(1)
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+    }
+    .height(42)
+    .layoutWeight(1)
+    .backgroundColor(this.verificationResult === `${result}` ? this.getResultTone(result) : AppColors.FieldBackground)
+    .border({
+      width: 1,
+      color: this.verificationResult === `${result}` ? this.getResultTone(result) : AppColors.Border
+    })
+    .enabled(!this.submitting && !this.submitted)
+    .onClick(() => {
+      this.verificationResult = `${result}`;
+      this.password = '';
+      this.markFormChanged();
+    })
+  }
+
+  @Builder
+  VerifiedAtField() {
+    Column({ space: 10 }) {
+      this.FieldTitle('核验时间')
+
+      Row({ space: 10 }) {
+        SymbolGlyph($r('sys.symbol.calendar'))
+          .fontSize(20)
+          .fontColor([AppColors.TextPrimary])
+
+        Text(this.verifiedAt.length > 0 ? this.verifiedAt : '请选择核验时间')
+          .fontSize(16)
+          .fontColor(this.verifiedAt.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
+          .layoutWeight(1)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+        SymbolGlyph($r('sys.symbol.chevron_forward'))
+          .fontSize(18)
+          .fontColor([AppColors.TextSecondary])
+      }
+      .height(56)
+      .width('100%')
+      .backgroundColor(AppColors.FieldBackground)
+      .borderRadius(18)
+      .padding({
+        left: 16,
+        right: 16
+      })
+      .border({
+        width: 1,
+        color: AppColors.Border
+      })
+      .onClick(() => {
+        if (this.submitting || this.submitted) {
+          return;
+        }
+
+        this.showVerifiedAtPicker();
+      })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  DescriptionField() {
+    Column({ space: 10 }) {
+      this.FieldTitle('核验说明')
+
+      TextArea({
+        placeholder: '请输入核验说明',
+        text: this.description
+      })
+        .height(118)
+        .width('100%')
+        .fontSize(15)
+        .lineHeight(22)
+        .maxLength(500)
+        .backgroundColor(AppColors.FieldBackground)
+        .borderRadius(18)
+        .padding({
+          left: 14,
+          right: 14,
+          top: 12,
+          bottom: 12
+        })
+        .border({
+          width: 1,
+          color: AppColors.Border
+        })
+        .enabled(!this.submitting && !this.submitted)
+        .onChange((value: string) => {
+          this.description = value;
+          this.markFormChanged();
+        })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  FieldTitle(title: string) {
+    Text(title)
+      .fontSize(17)
+      .fontWeight(FontWeight.Bold)
+      .fontColor(AppColors.TextPrimary)
+      .maxLines(1)
+  }
+
+  @Builder
+  PasswordSection() {
+    Column({ space: 12 }) {
+      AppSectionTitle({
+        title: '密码',
+        subtitle: ''
+      })
+
+      TextInput({
+        placeholder: '请输入密码',
+        text: this.password
+      })
+        .type(InputType.Password)
+        .height(56)
+        .fontSize(16)
+        .backgroundColor(AppColors.FieldBackground)
+        .borderRadius(18)
+        .padding({ left: 16, right: 16 })
+        .border({ width: 1, color: AppColors.Border })
+        .enabled(!this.submitting && !this.submitted)
+        .onChange((value: string) => {
+          if (this.submitting || this.submitted) {
+            return;
+          }
+
+          this.password = value;
+          this.message = '';
+          this.messageTone = UiFeedbackTone.Danger;
+        })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  MessageText() {
+    if (this.message.length > 0) {
+      InlineMessageSurface({
+        message: this.message,
+        tone: this.messageTone
+      })
+    }
+  }
+
+  @Builder
+  ActionButton(label: string, icon: Resource, enabled: boolean, action: () => void) {
+    Button({ type: ButtonType.Capsule, stateEffect: enabled }) {
+      Row({ space: 8 }) {
+        SymbolGlyph(icon)
+          .fontSize(20)
+          .fontColor([AppColors.OnPrimary])
+
+        Text(label)
+          .fontSize(17)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppColors.OnPrimary)
+          .maxLines(1)
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+    }
+    .height(54)
+    .width('100%')
+    .backgroundColor(enabled ? AppColors.Primary : AppColors.Disabled)
+    .enabled(enabled)
+    .onClick(() => {
+      action();
+    })
+  }
+
+  async handlePrimaryAction(): Promise<void> {
+    if (this.requiresFaultReport()) {
+      this.openFaultReportPage();
+      return;
+    }
+
+    await this.submitNormalVerification();
+  }
+
+  openFaultReportPage(): void {
+    if (this.submitting || this.submitted) {
+      return;
+    }
+
+    this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(this.deviceCode);
+    if (this.normalizedDeviceCode.length === 0) {
+      this.normalizedDeviceCode = '-';
+    }
+
+    const validation = VerificationAndFaultReportService.validateAbnormalVerificationStepForm(
+      this.buildAbnormalVerificationForm());
+    if (!validation.valid) {
+      this.message = validation.message;
+      this.messageTone = UiFeedbackTone.Danger;
+      return;
+    }
+
+    if (!SessionStore.hasPermission(PermissionCode.OperationsCenterDeviceFaultReportSubmit)) {
+      this.message = UiFeedbackService.operationUnavailable('报修报告');
+      this.messageTone = UiFeedbackTone.Danger;
+      return;
+    }
+
+    VerificationReportFlowStore.startFaultReportFlow(this.buildAbnormalVerificationForm());
+    AppNavigator.push(this.getUIContext(), AppRoutes.FaultReportPage, () => {
+      this.message = UiFeedbackService.operationUnavailable('报修报告');
+      this.messageTone = UiFeedbackTone.Danger;
+    });
+  }
+
+  async submitNormalVerification(): Promise<void> {
+    if (this.submitting || this.submitted) {
+      return;
+    }
+
+    this.normalizedDeviceCode = DeviceService.normalizeDeviceCode(this.deviceCode);
+    if (this.normalizedDeviceCode.length === 0) {
+      this.normalizedDeviceCode = '-';
+    }
+
+    const validation = VerificationAndFaultReportService.validateVerificationForm(this.buildNormalVerificationForm());
+    if (!validation.valid) {
+      this.message = validation.message;
+      this.messageTone = UiFeedbackTone.Danger;
+      return;
+    }
+
+    if (this.password.length === 0) {
+      this.message = UiFeedbackService.requiredInput('密码');
+      this.messageTone = UiFeedbackTone.Danger;
+      return;
+    }
+
+    this.submitting = true;
+    try {
+      const verified = await this.verifyPasswordForSubmit(this.password);
+      if (!verified) {
+        return;
+      }
+
+      const response = await VerificationAndFaultReportService.submitVerificationReportRemoteFirst(
+        this.buildNormalVerificationForm());
+      if (!response.success) {
+        const error = response.error;
+        this.message = UiFeedbackService.operationError(error, '提交');
+        this.messageTone = UiFeedbackTone.Danger;
+        return;
+      }
+
+      this.message = '提交成功，核验报告已进入审核';
+      this.messageTone = UiFeedbackTone.Success;
+      this.password = '';
+      this.submitted = true;
+    } finally {
+      this.submitting = false;
+    }
+  }
+
+  buildNormalVerificationForm(): DeviceVerificationForm {
+    return {
+      deviceCode: this.deviceCode,
+      result: this.verificationResult as VerificationResult,
+      description: this.description,
+      verifiedAt: this.verifiedAt,
+      remark: ''
+    };
+  }
+
+  buildAbnormalVerificationForm(): DeviceVerificationForm {
+    return {
+      deviceCode: this.deviceCode,
+      result: this.verificationResult as VerificationResult,
+      description: '',
+      verifiedAt: '',
+      remark: ''
+    };
+  }
+
+  async verifyPasswordForSubmit(password: string): Promise<boolean> {
+    const response = await AuthService.verifyCurrentUserPasswordRemoteFirst(password);
+    if (response.success && response.data === true) {
+      return true;
+    }
+
+    this.message = UiFeedbackService.passwordVerificationError(response.error, '提交');
+    this.messageTone = UiFeedbackTone.Danger;
+    return false;
+  }
+
+  requiresFaultReport(): boolean {
+    return this.verificationResult === `${VerificationResult.Abnormal}`;
+  }
+
+  isNormalVerification(): boolean {
+    return this.verificationResult === `${VerificationResult.Normal}`;
+  }
+
+  canUsePrimaryAction(): boolean {
+    if (this.submitting || this.submitted || this.verificationResult.length === 0) {
+      return false;
+    }
+
+    if (this.isNormalVerification()) {
+      return this.password.length > 0;
+    }
+
+    return true;
+  }
+
+  getPrimaryButtonLabel(): string {
+    if (this.submitting) {
+      return '提交中';
+    }
+
+    if (this.submitted) {
+      return '已提交';
+    }
+
+    if (this.requiresFaultReport()) {
+      return '下一步';
+    }
+
+    return '提交';
+  }
+
+  getPrimaryButtonIcon(): Resource {
+    return this.requiresFaultReport() ? $r('sys.symbol.chevron_forward') : $r('sys.symbol.checkmark_circle');
+  }
+
+  getResultTone(result: VerificationResult): string {
+    switch (result) {
+      case VerificationResult.Normal:
+        return AppColors.Success;
+      case VerificationResult.Abnormal:
+        return AppColors.Danger;
+      default:
+        return AppColors.TextSecondary;
+    }
+  }
+
+  markFormChanged(): void {
+    this.message = '';
+    this.messageTone = UiFeedbackTone.Danger;
+    this.submitted = false;
+  }
+
+  resetAfterFaultReportSubmitted(): void {
+    this.deviceCode = '';
+    this.verificationResult = '';
+    this.description = '';
+    this.verifiedAt = '';
+    this.password = '';
+    this.normalizedDeviceCode = '-';
+    this.submitting = false;
+    this.submitted = false;
+    this.message = '提交成功，核验报告将先进入审核；核验审核通过后报修报告进入审核';
+    this.messageTone = UiFeedbackTone.Success;
+  }
+
+  resetAfterFaultReportDiscarded(): void {
+    this.deviceCode = '';
+    this.verificationResult = '';
+    this.description = '';
+    this.verifiedAt = '';
+    this.password = '';
+    this.normalizedDeviceCode = '-';
+    this.submitting = false;
+    this.submitted = false;
+    this.message = '';
+    this.messageTone = UiFeedbackTone.Danger;
+  }
+
+  showVerifiedAtPicker(): void {
+    if (this.submitting || this.submitted) {
+      return;
+    }
+
+    this.getUIContext().showDatePickerDialog({
+      start: new Date(2000, 0, 1, 0, 0),
+      end: new Date(2100, 11, 31, 23, 59),
+      selected: this.resolveSelectedDate(this.verifiedAt),
+      showTime: true,
+      useMilitaryTime: true,
+      onDateAccept: (value: Date) => {
+        this.verifiedAt = this.formatDateTime(value);
+        this.markFormChanged();
+      }
+    });
+  }
+
+  resolveSelectedDate(value: string): Date {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      return new Date();
+    }
+
+    const segments = trimmed.split(' ');
+    if (segments.length !== 2) {
+      return new Date();
+    }
+
+    const dateSegments = segments[0].split('-');
+    const timeSegments = segments[1].split(':');
+    if (dateSegments.length !== 3 || timeSegments.length < 2) {
+      return new Date();
+    }
+
+    const year = Number(dateSegments[0]);
+    const month = Number(dateSegments[1]);
+    const day = Number(dateSegments[2]);
+    const hour = Number(timeSegments[0]);
+    const minute = Number(timeSegments[1]);
+    if (year !== year || month !== month || day !== day || hour !== hour || minute !== minute) {
+      return new Date();
+    }
+
+    return new Date(year, month - 1, day, hour, minute);
+  }
+
+  formatDateTime(value: Date): string {
+    return `${value.getFullYear()}-${this.pad2(value.getMonth() + 1)}-${this.pad2(value.getDate())} ${this.pad2(
+      value.getHours())}:${this.pad2(value.getMinutes())}`;
+  }
+
+  pad2(value: number): string {
+    return value < 10 ? `0${value}` : `${value}`;
+  }
+
+  backToOperationsCenter(): void {
+    VerificationReportFlowStore.clearFlow();
+    AppNavigator.backOrReplace(this.getUIContext(), AppRoutes.OperationsCenterPage, {
+      onFailure: () => {
+        AppNavigator.showNavigationUnavailableToast(this.getUIContext());
+      }
+    });
+  }
+}

@@ -560,7 +560,7 @@ class HomeDashboardControllerTests {
                                 {
                                   "result": "ABNORMAL",
                                   "description": "现场核验发现设备运行异常。",
-                                  "remark": "已同步填写报修草稿。",
+                                  "remark": "已同步填写报修报告。",
                                   "verifiedAt": "2026-06-03T08:30:00Z",
                                   "faultType": "HARDWARE_DAMAGE",
                                   "severity": "SEVERE",

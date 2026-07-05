@@ -21,8 +21,12 @@ import { ApiClient } from '../../shared/services/ApiClient';
 import { AppRoutes } from '../../shared/navigation/AppRoutes';
 
 export class HomeService {
-  static getVerificationAndFaultReportRoute(): string {
-    return AppRoutes.VerificationAndFaultReportPage;
+  static getVerificationReportRoute(): string {
+    return AppRoutes.VerificationReportPage;
+  }
+
+  static getFaultReportRoute(): string {
+    return AppRoutes.FaultReportPage;
   }
 
   static getRepairAndReinspectionRoute(): string {

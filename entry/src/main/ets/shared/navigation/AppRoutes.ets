@@ -11,8 +11,8 @@ export class AppRoutes {
   static readonly ArchiveUpdatePage: string = 'archive/pages/ArchiveUpdatePage';
   static readonly ArchiveDeletePage: string = 'archive/pages/ArchiveDeletePage';
   static readonly OperationsCenterPage: string = 'operations/pages/OperationsCenterPage';
-  static readonly VerificationAndFaultReportPage: string =
-    'operations/pages/VerificationAndFaultReportPage';
+  static readonly VerificationReportPage: string = 'operations/pages/VerificationReportPage';
+  static readonly FaultReportPage: string = 'operations/pages/FaultReportPage';
   static readonly TaskAcceptancePage: string = 'operations/pages/TaskAcceptancePage';
   static readonly RepairAndReinspectionPage: string = 'operations/pages/RepairAndReinspectionPage';
   static readonly ReviewCenterPage: string = 'review/pages/ReviewCenterPage';

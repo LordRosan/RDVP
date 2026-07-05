@@ -974,7 +974,7 @@ public class OperationsService {
                 device == null ? normalizedDeviceId : device.id(),
                 device == null ? resolveDeviceCodeById(normalizedDeviceId) : device.deviceCode(),
                 operator,
-                "报修草稿提交失败：%s。".formatted(exception.getErrorCode().code()));
+                "报修报告提交失败：%s。".formatted(exception.getErrorCode().code()));
     }
 
     private void recordRepairReportFailure(

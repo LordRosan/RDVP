@@ -241,7 +241,7 @@ struct OperationsCenterPage {
     this.message = '';
     this.messageTargetId = '';
     if (action.id === HomeActionId.VerificationAndFaultReport) {
-      this.openPage(this.getVerificationAndFaultReportEntryUrl(), UiFeedbackService.operationUnavailable('核验与报修'));
+      this.openPage(this.getVerificationReportEntryUrl(), UiFeedbackService.operationUnavailable('核验与报修'));
       return;
     }
 
@@ -267,7 +267,7 @@ struct OperationsCenterPage {
   }
 
   resolveActionIdByUrl(url: string): string {
-    if (url === HomeService.getVerificationAndFaultReportRoute()) {
+    if (url === HomeService.getVerificationReportRoute()) {
       return `${HomeActionId.VerificationAndFaultReport}`;
     }
 
@@ -282,8 +282,8 @@ struct OperationsCenterPage {
     return '';
   }
 
-  getVerificationAndFaultReportEntryUrl(): string {
-    return HomeService.getVerificationAndFaultReportRoute();
+  getVerificationReportEntryUrl(): string {
+    return HomeService.getVerificationReportRoute();
   }
 
   getRepairAndReinspectionEntryUrl(): string {

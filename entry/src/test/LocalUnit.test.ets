@@ -17,6 +17,8 @@ import { LogCategory, LogQueryTab } from '../main/ets/log/models/LogQueryModels'
 import { LogQueryService } from '../main/ets/log/services/LogQueryService';
 import { ReinspectionService } from '../main/ets/operations/services/ReinspectionService';
 import { ReinspectionTaskStatus } from '../main/ets/operations/models/ReinspectionModels';
+import { VerificationAndFaultReportService } from '../main/ets/operations/services/VerificationAndFaultReportService';
+import { VerificationResult } from '../main/ets/operations/models/VerificationAndFaultReportModels';
 
 export default function localUnitTest() {
   describe('uiFeedbackMessages', () => {
@@ -116,8 +118,8 @@ export default function localUnitTest() {
       expect(AppRoutes.ArchiveExportPage).assertEqual('archive/pages/ArchiveExportPage');
       expect(AppRoutes.ArchiveUpdatePage).assertEqual('archive/pages/ArchiveUpdatePage');
       expect(AppRoutes.ArchiveDeletePage).assertEqual('archive/pages/ArchiveDeletePage');
-      expect(AppRoutes.VerificationAndFaultReportPage)
-        .assertEqual('operations/pages/VerificationAndFaultReportPage');
+      expect(AppRoutes.VerificationReportPage).assertEqual('operations/pages/VerificationReportPage');
+      expect(AppRoutes.FaultReportPage).assertEqual('operations/pages/FaultReportPage');
       expect(AppRoutes.RepairAndReinspectionPage).assertEqual('operations/pages/RepairAndReinspectionPage');
       expect(AppRoutes.ArchiveLogQueryPage).assertEqual('log/pages/ArchiveLogQueryPage');
       expect(AppRoutes.OperationsLogQueryPage).assertEqual('log/pages/OperationsLogQueryPage');
@@ -213,6 +215,17 @@ export default function localUnitTest() {
       expect(ReinspectionService.formatTaskStatus(ReinspectionTaskStatus.Pending)).assertEqual('待复检');
       expect(ReinspectionService.formatTaskStatus(ReinspectionTaskStatus.Completed)).assertEqual('已完成');
     });
+
+    it('validatesAbnormalVerificationStepWithoutSubmissionFields', 0, () => {
+      const result = VerificationAndFaultReportService.validateAbnormalVerificationStepForm({
+        deviceCode: 'RDVP-DEVICE-0001',
+        result: VerificationResult.Abnormal,
+        description: '',
+        verifiedAt: ''
+      });
+
+      expect(result.valid).assertEqual(true);
+    });
   });
 
   describe('userLoginValidationFeedback', () => {
@@ -231,6 +244,11 @@ export default function localUnitTest() {
     it('usesSingleNativeTabsRouteForRepairAndReinspection', 0, () => {
       expect(HomeService.getRepairAndReinspectionRoute())
         .assertEqual('operations/pages/RepairAndReinspectionPage');
+    });
+
+    it('usesVerificationReportRouteAsOperationsEntry', 0, () => {
+      expect(HomeService.getVerificationReportRoute()).assertEqual('operations/pages/VerificationReportPage');
+      expect(HomeService.getFaultReportRoute()).assertEqual('operations/pages/FaultReportPage');
     });
 
     it('reportsRejectedNavigationPromises', 0, async (): Promise<void> => {
