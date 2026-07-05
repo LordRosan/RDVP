@@ -216,7 +216,7 @@ export default function localUnitTest() {
       expect(ReinspectionService.formatTaskStatus(ReinspectionTaskStatus.Completed)).assertEqual('已完成');
     });
 
-    it('validatesAbnormalVerificationStepWithoutSubmissionFields', 0, () => {
+    it('validatesAbnormalVerificationStepRequiresVerificationFields', 0, () => {
       const result = VerificationAndFaultReportService.validateAbnormalVerificationStepForm({
         deviceCode: 'RDVP-DEVICE-0001',
         result: VerificationResult.Abnormal,
@@ -224,7 +224,26 @@ export default function localUnitTest() {
         verifiedAt: ''
       });
 
-      expect(result.valid).assertEqual(true);
+      expect(result.valid).assertEqual(false);
+      expect(result.message).assertEqual('请选择核验时间');
+    });
+
+    it('formatsVerificationStepActionByResult', 0, () => {
+      expect(VerificationAndFaultReportService.formatVerificationStepActionLabel('', false, false))
+        .assertEqual('提交');
+      expect(VerificationAndFaultReportService.formatVerificationStepActionLabel(VerificationResult.Normal, false, false))
+        .assertEqual('提交');
+      expect(VerificationAndFaultReportService.formatVerificationStepActionLabel(VerificationResult.Abnormal, false, false))
+        .assertEqual('下一步');
+    });
+
+    it('enablesAbnormalVerificationStepWithoutPassword', 0, () => {
+      expect(VerificationAndFaultReportService.canUseVerificationStepAction(VerificationResult.Abnormal, '', false, false))
+        .assertEqual(true);
+      expect(VerificationAndFaultReportService.canUseVerificationStepAction(VerificationResult.Normal, '', false, false))
+        .assertEqual(false);
+      expect(VerificationAndFaultReportService.canUseVerificationStepAction(VerificationResult.Normal, 'password', false, false))
+        .assertEqual(true);
     });
   });
 

@@ -106,22 +106,9 @@ export class VerificationAndFaultReportService {
   }
 
   static validateAbnormalVerificationStepForm(form: DeviceVerificationForm): DeviceVerificationValidationResult {
-    const deviceCodeValidation = DeviceService.validateDeviceCodeQuery({
-      deviceCode: form.deviceCode
-    });
-
-    if (!deviceCodeValidation.valid) {
-      return {
-        valid: false,
-        message: deviceCodeValidation.message
-      };
-    }
-
-    if (!VerificationAndFaultReportService.isKnownResult(form.result)) {
-      return {
-        valid: false,
-        message: UiFeedbackService.requiredSelection('核验结果')
-      };
+    const verificationValidation = VerificationAndFaultReportService.validateVerificationForm(form);
+    if (!verificationValidation.valid) {
+      return verificationValidation;
     }
 
     if (form.result !== VerificationResult.Abnormal) {
@@ -138,22 +125,9 @@ export class VerificationAndFaultReportService {
   }
 
   static validateVerificationAndFaultReportForm(form: VerificationAndFaultReportForm): DeviceVerificationValidationResult {
-    const deviceCodeValidation = DeviceService.validateDeviceCodeQuery({
-      deviceCode: form.verification.deviceCode
-    });
-
-    if (!deviceCodeValidation.valid) {
-      return {
-        valid: false,
-        message: deviceCodeValidation.message
-      };
-    }
-
-    if (!VerificationAndFaultReportService.isKnownResult(form.verification.result)) {
-      return {
-        valid: false,
-        message: UiFeedbackService.requiredSelection('核验结果')
-      };
+    const verificationValidation = VerificationAndFaultReportService.validateVerificationForm(form.verification);
+    if (!verificationValidation.valid) {
+      return verificationValidation;
     }
 
     if (form.verification.result === VerificationResult.Normal) {
@@ -223,7 +197,7 @@ export class VerificationAndFaultReportService {
       return ApiClient.createServiceUnavailableResponse<VerificationAndFaultReportResult>();
     }
 
-    const verifiedAt = FaultReportService.normalizeText(form.faultReport.occurredAt);
+    const verifiedAt = VerificationAndFaultReportService.normalizeText(form.verification.verifiedAt);
     return VerificationAndFaultReportService.submitVerificationAndFaultReportToBackend(form, verifiedAt);
   }
 
@@ -380,6 +354,39 @@ export class VerificationAndFaultReportService {
       default:
         return '-';
     }
+  }
+
+  static formatVerificationStepActionLabel(result: string, submitting: boolean, submitted: boolean): string {
+    if (submitting) {
+      return '提交中';
+    }
+
+    if (submitted) {
+      return '已提交';
+    }
+
+    return VerificationAndFaultReportService.isAbnormalResult(result) ? '下一步' : '提交';
+  }
+
+  static canUseVerificationStepAction(
+    result: string,
+    password: string,
+    submitting: boolean,
+    submitted: boolean
+  ): boolean {
+    if (submitting || submitted || result.length === 0) {
+      return false;
+    }
+
+    if (VerificationAndFaultReportService.isAbnormalResult(result)) {
+      return true;
+    }
+
+    return result === VerificationResult.Normal && password.length > 0;
+  }
+
+  static isAbnormalResult(result: string): boolean {
+    return result === VerificationResult.Abnormal;
   }
 
   private static isKnownResult(result: VerificationResult): boolean {

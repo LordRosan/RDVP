@@ -123,10 +123,8 @@ struct VerificationReportPage {
       Column({ space: 16 }) {
         this.DeviceCodeField()
         this.ResultSelector()
-        if (this.isNormalVerification()) {
-          this.VerifiedAtField()
-          this.DescriptionField()
-        }
+        this.VerifiedAtField()
+        this.DescriptionField()
       }
       .padding({
         left: 18,
@@ -500,8 +498,8 @@ struct VerificationReportPage {
     return {
       deviceCode: this.deviceCode,
       result: this.verificationResult as VerificationResult,
-      description: '',
-      verifiedAt: '',
+      description: this.description,
+      verifiedAt: this.verifiedAt,
       remark: ''
     };
   }
@@ -526,31 +524,13 @@ struct VerificationReportPage {
   }
 
   canUsePrimaryAction(): boolean {
-    if (this.submitting || this.submitted || this.verificationResult.length === 0) {
-      return false;
-    }
-
-    if (this.isNormalVerification()) {
-      return this.password.length > 0;
-    }
-
-    return true;
+    return VerificationAndFaultReportService.canUseVerificationStepAction(this.verificationResult, this.password,
+      this.submitting, this.submitted);
   }
 
   getPrimaryButtonLabel(): string {
-    if (this.submitting) {
-      return '提交中';
-    }
-
-    if (this.submitted) {
-      return '已提交';
-    }
-
-    if (this.requiresFaultReport()) {
-      return '下一步';
-    }
-
-    return '提交';
+    return VerificationAndFaultReportService.formatVerificationStepActionLabel(this.verificationResult, this.submitting,
+      this.submitted);
   }
 
   getPrimaryButtonIcon(): Resource {
