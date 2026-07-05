@@ -3,9 +3,9 @@ import { AuthService } from '../../../main/ets/user/services/AuthService';
 import { DeviceService } from '../../../main/ets/archive/services/DeviceService';
 import { FaultSeverity, FaultType } from '../../../main/ets/operations/models/FaultModels';
 import { RepairReportResult } from '../../../main/ets/operations/models/RepairTaskModels';
-import { VerificationResult } from '../../../main/ets/operations/models/VerificationAndFaultReportModels';
+import { VerificationResult } from '../../../main/ets/operations/models/VerificationReportModels';
 import { FaultReportService } from '../../../main/ets/operations/services/FaultReportService';
-import { VerificationAndFaultReportService } from '../../../main/ets/operations/services/VerificationAndFaultReportService';
+import { VerificationReportService } from '../../../main/ets/operations/services/VerificationReportService';
 import { RepairTaskService } from '../../../main/ets/operations/services/RepairTaskService';
 import { HomeService } from '../../../main/ets/home/services/HomeService';
 import { ArchiveRequestService } from '../../../main/ets/archive/services/ArchiveRequestService';
@@ -46,7 +46,7 @@ export default function abilityTest() {
     });
 
     it('validatesVerificationForm', 0, () => {
-      const result = VerificationAndFaultReportService.validateVerificationForm({
+      const result = VerificationReportService.validateVerificationForm({
         deviceCode: 'RDVP-DEVICE-0001',
         result: VerificationResult.Normal,
         description: '设备外观完整，运行状态正常。',
@@ -58,7 +58,7 @@ export default function abilityTest() {
     });
 
     it('validatesNormalVerificationRequiresDescription', 0, () => {
-      const result = VerificationAndFaultReportService.validateVerificationForm({
+      const result = VerificationReportService.validateVerificationForm({
         deviceCode: 'RDVP-DEVICE-0001',
         result: VerificationResult.Normal,
         description: '',
@@ -71,7 +71,7 @@ export default function abilityTest() {
     });
 
     it('validatesNormalVerificationRequiresTime', 0, () => {
-      const result = VerificationAndFaultReportService.validateVerificationForm({
+      const result = VerificationReportService.validateVerificationForm({
         deviceCode: 'RDVP-DEVICE-0001',
         result: VerificationResult.Normal,
         description: '设备外观完整，运行状态正常。',
@@ -83,8 +83,8 @@ export default function abilityTest() {
       expect(result.message).assertEqual('请选择核验时间');
     });
 
-    it('validatesAbnormalVerificationUsesFaultDescription', 0, () => {
-      const result = VerificationAndFaultReportService.validateVerificationAndFaultReportForm({
+    it('validatesAbnormalVerificationRequiresVerificationFieldsBeforeFaultReport', 0, () => {
+      const result = VerificationReportService.validateAbnormalVerificationSubmissionForm({
         verification: {
           deviceCode: 'RDVP-DEVICE-0001',
           result: VerificationResult.Abnormal,
@@ -102,7 +102,8 @@ export default function abilityTest() {
         }
       });
 
-      expect(result.valid).assertEqual(true);
+      expect(result.valid).assertEqual(false);
+      expect(result.message).assertEqual('请选择核验时间');
     });
 
     it('validatesFaultReportForm', 0, () => {

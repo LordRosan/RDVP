@@ -276,14 +276,14 @@ class DomainTableNamingTests {
     }
 
     @Test
-    void operationsCombinedVerificationAndFaultReportDropsDevicePrefix() throws IOException {
+    void operationsAbnormalVerificationSubmissionDropsLegacyCombinedNaming() throws IOException {
         Path sourceRoot = Path.of("src/main/java");
 
         List<String> violations;
         try (Stream<Path> files = Files.walk(sourceRoot)) {
             violations = files
                     .filter(path -> path.toString().endsWith(".java"))
-                    .flatMap(DomainTableNamingTests::combinedVerificationAndFaultReportViolations)
+                    .flatMap(DomainTableNamingTests::legacyCombinedVerificationSubmissionViolations)
                     .toList();
         }
 
@@ -430,10 +430,13 @@ class DomainTableNamingTests {
                 });
     }
 
-    private static Stream<String> combinedVerificationAndFaultReportViolations(Path file) {
+    private static Stream<String> legacyCombinedVerificationSubmissionViolations(Path file) {
         try {
             String content = Files.readString(file, StandardCharsets.UTF_8);
-            return Stream.of("DeviceVerificationAndFaultReport", "DEVICE_VERIFICATION_AND_FAULT_REPORT")
+            return Stream.of(
+                            "Device" + "Verification" + "And" + "Fault" + "Report",
+                            "Verification" + "And" + "Fault" + "Report",
+                            "DEVICE_VERIFICATION" + "_AND_FAULT_REPORT")
                     .filter(content::contains)
                     .map(legacyToken -> file + " contains " + legacyToken);
         } catch (IOException exception) {

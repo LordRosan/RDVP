@@ -1,11 +1,11 @@
-import { DeviceVerificationForm } from '../models/VerificationAndFaultReportModels';
+import { VerificationReportForm } from '../models/VerificationReportModels';
 
 export class VerificationReportFlowStore {
-  private static pendingAbnormalVerification?: DeviceVerificationForm = undefined;
+  private static pendingAbnormalVerification?: VerificationReportForm = undefined;
   private static faultReportSubmitted: boolean = false;
   private static faultReportDiscarded: boolean = false;
 
-  static startFaultReportFlow(form: DeviceVerificationForm): void {
+  static startFaultReportFlow(form: VerificationReportForm): void {
     VerificationReportFlowStore.pendingAbnormalVerification = {
       deviceCode: form.deviceCode,
       result: form.result,
@@ -17,7 +17,7 @@ export class VerificationReportFlowStore {
     VerificationReportFlowStore.faultReportDiscarded = false;
   }
 
-  static getPendingAbnormalVerification(): DeviceVerificationForm | undefined {
+  static getPendingAbnormalVerification(): VerificationReportForm | undefined {
     const form = VerificationReportFlowStore.pendingAbnormalVerification;
     if (form === undefined) {
       return undefined;

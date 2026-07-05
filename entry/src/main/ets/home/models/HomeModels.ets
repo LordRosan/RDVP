@@ -7,7 +7,7 @@ export enum HomeActionId {
   LogCenter = 'LOG_CENTER',
   ArchiveQuery = 'ARCHIVE_QUERY',
   ArchiveCreateRequest = 'ARCHIVE_CREATE_REQUEST',
-  VerificationAndFaultReport = 'VERIFICATION_AND_FAULT_REPORT',
+  VerificationReport = 'VERIFICATION_REPORT',
   TaskAcceptance = 'TASK_ACCEPTANCE',
   RepairAndReinspection = 'REPAIR_AND_REINSPECTION',
   ArchiveReview = 'ARCHIVE_REVIEW',

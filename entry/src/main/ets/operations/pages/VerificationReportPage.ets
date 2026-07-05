@@ -3,10 +3,10 @@ import { AppSectionTitle } from '../../shared/components/AppSectionTitle';
 import { CenterTitleBar } from '../../shared/components/CenterTitleBar';
 import { InlineMessageSurface } from '../../shared/components/InlineMessageSurface';
 import { PermissionCode } from '../../user/models/PermissionModels';
-import { DeviceVerificationForm, VerificationResult } from '../models/VerificationAndFaultReportModels';
+import { VerificationReportForm, VerificationResult } from '../models/VerificationReportModels';
 import { DeviceService } from '../../archive/services/DeviceService';
 import { UiFeedbackService } from '../../shared/services/UiFeedbackService';
-import { VerificationAndFaultReportService } from '../services/VerificationAndFaultReportService';
+import { VerificationReportService } from '../services/VerificationReportService';
 import { AuthService } from '../../user/services/AuthService';
 import { SessionStore } from '../../user/stores/SessionStore';
 import { AuthGuard } from '../../shared/security/AuthGuard';
@@ -143,9 +143,7 @@ struct VerificationReportPage {
       }
 
       this.MessageText()
-      this.ActionButton(this.getPrimaryButtonLabel(), this.getPrimaryButtonIcon(), this.canUsePrimaryAction(), () => {
-        this.handlePrimaryAction();
-      })
+      this.PrimaryActionButton()
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -210,7 +208,7 @@ struct VerificationReportPage {
           .fontSize(17)
           .fontColor([this.verificationResult === `${result}` ? AppColors.OnPrimary : AppColors.TextPrimary])
 
-        Text(VerificationAndFaultReportService.formatVerificationResult(result))
+        Text(VerificationReportService.formatVerificationResult(result))
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
           .fontColor(this.verificationResult === `${result}` ? AppColors.OnPrimary : AppColors.TextPrimary)
@@ -370,14 +368,22 @@ struct VerificationReportPage {
   }
 
   @Builder
-  ActionButton(label: string, icon: Resource, enabled: boolean, action: () => void) {
-    Button({ type: ButtonType.Capsule, stateEffect: enabled }) {
+  PrimaryActionButton() {
+    Button({
+      type: ButtonType.Capsule,
+      stateEffect: !this.submitting && !this.submitted && this.verificationResult.length > 0 &&
+        (this.verificationResult === `${VerificationResult.Abnormal}` ||
+          (this.verificationResult === `${VerificationResult.Normal}` && this.password.length > 0))
+    }) {
       Row({ space: 8 }) {
-        SymbolGlyph(icon)
+        SymbolGlyph(this.verificationResult === `${VerificationResult.Abnormal}` ? $r('sys.symbol.chevron_forward') :
+          $r('sys.symbol.checkmark_circle'))
           .fontSize(20)
           .fontColor([AppColors.OnPrimary])
 
-        Text(label)
+        Text(this.submitting ? '提交中' :
+          this.submitted ? '已提交' :
+            this.verificationResult === `${VerificationResult.Abnormal}` ? '下一步' : '提交')
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
           .fontColor(AppColors.OnPrimary)
@@ -389,10 +395,15 @@ struct VerificationReportPage {
     }
     .height(54)
     .width('100%')
-    .backgroundColor(enabled ? AppColors.Primary : AppColors.Disabled)
-    .enabled(enabled)
+    .backgroundColor(!this.submitting && !this.submitted && this.verificationResult.length > 0 &&
+      (this.verificationResult === `${VerificationResult.Abnormal}` ||
+        (this.verificationResult === `${VerificationResult.Normal}` && this.password.length > 0)) ?
+      AppColors.Primary : AppColors.Disabled)
+    .enabled(!this.submitting && !this.submitted && this.verificationResult.length > 0 &&
+      (this.verificationResult === `${VerificationResult.Abnormal}` ||
+        (this.verificationResult === `${VerificationResult.Normal}` && this.password.length > 0)))
     .onClick(() => {
-      action();
+      this.handlePrimaryAction();
     })
   }
 
@@ -415,7 +426,7 @@ struct VerificationReportPage {
       this.normalizedDeviceCode = '-';
     }
 
-    const validation = VerificationAndFaultReportService.validateAbnormalVerificationStepForm(
+    const validation = VerificationReportService.validateAbnormalVerificationStepForm(
       this.buildAbnormalVerificationForm());
     if (!validation.valid) {
       this.message = validation.message;
@@ -446,7 +457,7 @@ struct VerificationReportPage {
       this.normalizedDeviceCode = '-';
     }
 
-    const validation = VerificationAndFaultReportService.validateVerificationForm(this.buildNormalVerificationForm());
+    const validation = VerificationReportService.validateVerificationForm(this.buildNormalVerificationForm());
     if (!validation.valid) {
       this.message = validation.message;
       this.messageTone = UiFeedbackTone.Danger;
@@ -466,7 +477,7 @@ struct VerificationReportPage {
         return;
       }
 
-      const response = await VerificationAndFaultReportService.submitVerificationReportRemoteFirst(
+      const response = await VerificationReportService.submitVerificationReportRemoteFirst(
         this.buildNormalVerificationForm());
       if (!response.success) {
         const error = response.error;
@@ -484,7 +495,7 @@ struct VerificationReportPage {
     }
   }
 
-  buildNormalVerificationForm(): DeviceVerificationForm {
+  buildNormalVerificationForm(): VerificationReportForm {
     return {
       deviceCode: this.deviceCode,
       result: this.verificationResult as VerificationResult,
@@ -494,7 +505,7 @@ struct VerificationReportPage {
     };
   }
 
-  buildAbnormalVerificationForm(): DeviceVerificationForm {
+  buildAbnormalVerificationForm(): VerificationReportForm {
     return {
       deviceCode: this.deviceCode,
       result: this.verificationResult as VerificationResult,
@@ -521,20 +532,6 @@ struct VerificationReportPage {
 
   isNormalVerification(): boolean {
     return this.verificationResult === `${VerificationResult.Normal}`;
-  }
-
-  canUsePrimaryAction(): boolean {
-    return VerificationAndFaultReportService.canUseVerificationStepAction(this.verificationResult, this.password,
-      this.submitting, this.submitted);
-  }
-
-  getPrimaryButtonLabel(): string {
-    return VerificationAndFaultReportService.formatVerificationStepActionLabel(this.verificationResult, this.submitting,
-      this.submitted);
-  }
-
-  getPrimaryButtonIcon(): Resource {
-    return this.requiresFaultReport() ? $r('sys.symbol.chevron_forward') : $r('sys.symbol.checkmark_circle');
   }
 
   getResultTone(result: VerificationResult): string {

@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-public record CreateVerificationAndFaultReportRequest(
+public record CreateAbnormalVerificationSubmissionRequest(
         @NotBlank @Size(max = 32) String result,
         @NotBlank @Size(max = 500) String description,
         @Size(max = 300) String remark,

@@ -1,13 +1,13 @@
 import { ApiResponse } from '../../shared/models/ApiModels';
 import { FaultStatus } from '../models/FaultModels';
 import {
-  DeviceVerificationForm,
-  VerificationAndFaultReportForm,
-  VerificationAndFaultReportResult,
-  DeviceVerificationReport,
-  DeviceVerificationValidationResult,
+  VerificationReportForm,
+  AbnormalVerificationSubmissionForm,
+  AbnormalVerificationSubmissionResult,
+  VerificationReportRecord,
+  VerificationReportValidationResult,
   VerificationResult
-} from '../models/VerificationAndFaultReportModels';
+} from '../models/VerificationReportModels';
 import { ApiClient } from '../../shared/services/ApiClient';
 import { DeviceService } from '../../archive/services/DeviceService';
 import { FaultReportService } from './FaultReportService';
@@ -16,7 +16,7 @@ import { UiFeedbackService } from '../../shared/services/UiFeedbackService';
 const MAX_DESCRIPTION_LENGTH = 500;
 const MAX_REMARK_LENGTH = 300;
 
-interface DeviceVerificationReportApiResult {
+interface VerificationReportApiResult {
   id: string;
   result: string;
   description: string;
@@ -32,17 +32,17 @@ interface FaultReportApiResult {
   createdAt: string;
 }
 
-interface VerificationAndFaultReportApiResult {
-  verificationReport: DeviceVerificationReportApiResult;
+interface AbnormalVerificationSubmissionApiResult {
+  verificationReport: VerificationReportApiResult;
   faultReport: FaultReportApiResult;
 }
 
-export class VerificationAndFaultReportService {
+export class VerificationReportService {
   static normalizeText(value: string): string {
     return value.trim();
   }
 
-  static validateVerificationForm(form: DeviceVerificationForm): DeviceVerificationValidationResult {
+  static validateVerificationForm(form: VerificationReportForm): VerificationReportValidationResult {
     const deviceCodeValidation = DeviceService.validateDeviceCodeQuery({
       deviceCode: form.deviceCode
     });
@@ -54,14 +54,14 @@ export class VerificationAndFaultReportService {
       };
     }
 
-    if (!VerificationAndFaultReportService.isKnownResult(form.result)) {
+    if (!VerificationReportService.isKnownResult(form.result)) {
       return {
         valid: false,
         message: UiFeedbackService.requiredSelection('核验结果')
       };
     }
 
-    const verifiedAt = VerificationAndFaultReportService.normalizeText(form.verifiedAt);
+    const verifiedAt = VerificationReportService.normalizeText(form.verifiedAt);
     if (verifiedAt.length === 0) {
       return {
         valid: false,
@@ -76,7 +76,7 @@ export class VerificationAndFaultReportService {
       };
     }
 
-    const description = VerificationAndFaultReportService.normalizeText(form.description);
+    const description = VerificationReportService.normalizeText(form.description);
     if (description.length === 0) {
       return {
         valid: false,
@@ -91,7 +91,7 @@ export class VerificationAndFaultReportService {
       };
     }
 
-    const remark = VerificationAndFaultReportService.normalizeText(form.remark ?? '');
+    const remark = VerificationReportService.normalizeText(form.remark ?? '');
     if (remark.length > MAX_REMARK_LENGTH) {
       return {
         valid: false,
@@ -105,8 +105,8 @@ export class VerificationAndFaultReportService {
     };
   }
 
-  static validateAbnormalVerificationStepForm(form: DeviceVerificationForm): DeviceVerificationValidationResult {
-    const verificationValidation = VerificationAndFaultReportService.validateVerificationForm(form);
+  static validateAbnormalVerificationStepForm(form: VerificationReportForm): VerificationReportValidationResult {
+    const verificationValidation = VerificationReportService.validateVerificationForm(form);
     if (!verificationValidation.valid) {
       return verificationValidation;
     }
@@ -124,8 +124,10 @@ export class VerificationAndFaultReportService {
     };
   }
 
-  static validateVerificationAndFaultReportForm(form: VerificationAndFaultReportForm): DeviceVerificationValidationResult {
-    const verificationValidation = VerificationAndFaultReportService.validateVerificationForm(form.verification);
+  static validateAbnormalVerificationSubmissionForm(
+    form: AbnormalVerificationSubmissionForm
+  ): VerificationReportValidationResult {
+    const verificationValidation = VerificationReportService.validateVerificationForm(form.verification);
     if (!verificationValidation.valid) {
       return verificationValidation;
     }
@@ -145,7 +147,7 @@ export class VerificationAndFaultReportService {
       };
     }
 
-    const verificationDescription = VerificationAndFaultReportService.resolveVerificationDescription(form);
+    const verificationDescription = VerificationReportService.resolveVerificationDescription(form);
     if (verificationDescription.length > MAX_DESCRIPTION_LENGTH) {
       return {
         valid: false,
@@ -159,8 +161,10 @@ export class VerificationAndFaultReportService {
     };
   }
 
-  static async submitVerificationReportRemoteFirst(form: DeviceVerificationForm): Promise<ApiResponse<DeviceVerificationReport>> {
-    const validation = VerificationAndFaultReportService.validateVerificationForm(form);
+  static async submitVerificationReportRemoteFirst(
+    form: VerificationReportForm
+  ): Promise<ApiResponse<VerificationReportRecord>> {
+    const validation = VerificationReportService.validateVerificationForm(form);
     if (!validation.valid) {
       return {
         success: false,
@@ -172,39 +176,39 @@ export class VerificationAndFaultReportService {
     }
 
     if (!ApiClient.isConfigured()) {
-      return ApiClient.createServiceUnavailableResponse<DeviceVerificationReport>();
+      return ApiClient.createServiceUnavailableResponse<VerificationReportRecord>();
     }
 
-    const verifiedAt = VerificationAndFaultReportService.normalizeText(form.verifiedAt);
-    return VerificationAndFaultReportService.submitVerificationReportToBackend(form, verifiedAt);
+    const verifiedAt = VerificationReportService.normalizeText(form.verifiedAt);
+    return VerificationReportService.submitVerificationReportToBackend(form, verifiedAt);
   }
 
-  static async submitVerificationAndFaultReportRemoteFirst(
-    form: VerificationAndFaultReportForm
-  ): Promise<ApiResponse<VerificationAndFaultReportResult>> {
-    const validation = VerificationAndFaultReportService.validateVerificationAndFaultReportForm(form);
+  static async submitAbnormalVerificationRemoteFirst(
+    form: AbnormalVerificationSubmissionForm
+  ): Promise<ApiResponse<AbnormalVerificationSubmissionResult>> {
+    const validation = VerificationReportService.validateAbnormalVerificationSubmissionForm(form);
     if (!validation.valid) {
       return {
         success: false,
         error: {
-          code: 'DEVICE_VERIFICATION_FAULT_REPORT_INVALID',
+          code: 'ABNORMAL_VERIFICATION_SUBMISSION_INVALID',
           message: validation.message
         }
       };
     }
 
     if (!ApiClient.isConfigured()) {
-      return ApiClient.createServiceUnavailableResponse<VerificationAndFaultReportResult>();
+      return ApiClient.createServiceUnavailableResponse<AbnormalVerificationSubmissionResult>();
     }
 
-    const verifiedAt = VerificationAndFaultReportService.normalizeText(form.verification.verifiedAt);
-    return VerificationAndFaultReportService.submitVerificationAndFaultReportToBackend(form, verifiedAt);
+    const verifiedAt = VerificationReportService.normalizeText(form.verification.verifiedAt);
+    return VerificationReportService.submitAbnormalVerificationToBackend(form, verifiedAt);
   }
 
   private static async submitVerificationReportToBackend(
-    form: DeviceVerificationForm,
+    form: VerificationReportForm,
     verifiedAt: string
-  ): Promise<ApiResponse<DeviceVerificationReport>> {
+  ): Promise<ApiResponse<VerificationReportRecord>> {
     const deviceResponse = await DeviceService.queryByCodeRemoteFirst({
       deviceCode: form.deviceCode
     });
@@ -217,14 +221,14 @@ export class VerificationAndFaultReportService {
       };
     }
 
-    const response = await ApiClient.request<DeviceVerificationReportApiResult>(
+    const response = await ApiClient.request<VerificationReportApiResult>(
       `/api/v1/devices/${encodeURIComponent(deviceResponse.data.id)}/verification-reports`,
       'POST',
       true,
       JSON.stringify({
         result: form.result,
-        description: VerificationAndFaultReportService.normalizeText(form.description),
-        remark: VerificationAndFaultReportService.normalizeText(form.remark ?? ''),
+        description: VerificationReportService.normalizeText(form.description),
+        remark: VerificationReportService.normalizeText(form.remark ?? ''),
         verifiedAt
       })
     );
@@ -265,10 +269,10 @@ export class VerificationAndFaultReportService {
     };
   }
 
-  private static async submitVerificationAndFaultReportToBackend(
-    form: VerificationAndFaultReportForm,
+  private static async submitAbnormalVerificationToBackend(
+    form: AbnormalVerificationSubmissionForm,
     verifiedAt: string
-  ): Promise<ApiResponse<VerificationAndFaultReportResult>> {
+  ): Promise<ApiResponse<AbnormalVerificationSubmissionResult>> {
     const deviceResponse = await DeviceService.queryByCodeRemoteFirst({
       deviceCode: form.verification.deviceCode
     });
@@ -281,14 +285,14 @@ export class VerificationAndFaultReportService {
       };
     }
 
-    const response = await ApiClient.request<VerificationAndFaultReportApiResult>(
+    const response = await ApiClient.request<AbnormalVerificationSubmissionApiResult>(
       `/api/v1/devices/${encodeURIComponent(deviceResponse.data.id)}/verification-reports/fault-report`,
       'POST',
       true,
       JSON.stringify({
         result: form.verification.result,
-        description: VerificationAndFaultReportService.resolveVerificationDescription(form),
-        remark: VerificationAndFaultReportService.normalizeText(form.verification.remark ?? ''),
+        description: VerificationReportService.resolveVerificationDescription(form),
+        remark: VerificationReportService.normalizeText(form.verification.remark ?? ''),
         verifiedAt,
         faultType: form.faultReport.faultType,
         severity: form.faultReport.severity,
@@ -311,7 +315,7 @@ export class VerificationAndFaultReportService {
       return {
         success: false,
         error: {
-          code: 'DEVICE_VERIFICATION_FAULT_REPORT_RESPONSE_INVALID',
+          code: 'ABNORMAL_VERIFICATION_SUBMISSION_RESPONSE_INVALID',
           message: UiFeedbackService.operationUnavailable('提交')
         },
         requestId: response.requestId,
@@ -365,7 +369,7 @@ export class VerificationAndFaultReportService {
       return '已提交';
     }
 
-    return VerificationAndFaultReportService.isAbnormalResult(result) ? '下一步' : '提交';
+    return VerificationReportService.isAbnormalResult(result) ? '下一步' : '提交';
   }
 
   static canUseVerificationStepAction(
@@ -378,7 +382,7 @@ export class VerificationAndFaultReportService {
       return false;
     }
 
-    if (VerificationAndFaultReportService.isAbnormalResult(result)) {
+    if (VerificationReportService.isAbnormalResult(result)) {
       return true;
     }
 
@@ -394,8 +398,8 @@ export class VerificationAndFaultReportService {
       result === VerificationResult.Abnormal;
   }
 
-  private static resolveVerificationDescription(form: VerificationAndFaultReportForm): string {
-    const verificationDescription = VerificationAndFaultReportService.normalizeText(form.verification.description);
+  private static resolveVerificationDescription(form: AbnormalVerificationSubmissionForm): string {
+    const verificationDescription = VerificationReportService.normalizeText(form.verification.description);
     if (verificationDescription.length > 0) {
       return verificationDescription;
     }

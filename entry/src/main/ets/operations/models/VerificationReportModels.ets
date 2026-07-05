@@ -5,7 +5,7 @@ export enum VerificationResult {
   Abnormal = 'ABNORMAL'
 }
 
-export interface DeviceVerificationForm {
+export interface VerificationReportForm {
   deviceCode: string;
   result: VerificationResult;
   description: string;
@@ -13,12 +13,12 @@ export interface DeviceVerificationForm {
   remark?: string;
 }
 
-export interface DeviceVerificationValidationResult {
+export interface VerificationReportValidationResult {
   valid: boolean;
   message: string;
 }
 
-export interface DeviceVerificationReport {
+export interface VerificationReportRecord {
   id: string;
   deviceCode: string;
   result: VerificationResult;
@@ -27,12 +27,12 @@ export interface DeviceVerificationReport {
   submittedAt: string;
 }
 
-export interface VerificationAndFaultReportForm {
-  verification: DeviceVerificationForm;
+export interface AbnormalVerificationSubmissionForm {
+  verification: VerificationReportForm;
   faultReport: FaultReportForm;
 }
 
-export interface VerificationAndFaultReportResult {
-  verificationReport: DeviceVerificationReport;
+export interface AbnormalVerificationSubmissionResult {
+  verificationReport: VerificationReportRecord;
   faultReport: FaultReportRecord;
 }

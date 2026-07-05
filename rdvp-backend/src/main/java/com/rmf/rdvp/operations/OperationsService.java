@@ -74,7 +74,7 @@ public class OperationsService {
             if (normalizedResult != DeviceVerificationResult.NORMAL) {
                 throw new BusinessException(
                         ErrorCode.DEVICE_VERIFICATION_INVALID,
-                        "Abnormal verification must include a fault report draft.");
+                        "Abnormal verification must include a fault report.");
             }
             device = archiveRepository.findById(normalizeId(deviceId, "deviceId"))
                     .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
@@ -128,7 +128,7 @@ public class OperationsService {
     }
 
     @Transactional
-    public VerificationAndFaultReportResult createVerificationAndFaultReport(
+    public AbnormalVerificationSubmissionResult createAbnormalVerificationSubmission(
             String deviceId,
             DeviceVerificationResult result,
             String verificationDescription,
@@ -241,10 +241,10 @@ public class OperationsService {
                             verificationReport.result().name(),
                             verificationReport.description()),
                     verificationReport.createdAt());
-            return new VerificationAndFaultReportResult(verificationReport, faultReport);
+            return new AbnormalVerificationSubmissionResult(verificationReport, faultReport);
         } catch (BusinessException exception) {
             recordDeviceVerificationFailure(deviceId, device, operator, "核验联动报修失败", exception);
-            recordFaultDraftFailure(deviceId, device, operator, exception);
+            recordLinkedFaultReportFailure(deviceId, device, operator, exception);
             throw exception;
         }
     }
@@ -963,7 +963,7 @@ public class OperationsService {
                 "%s：%s。".formatted(messagePrefix, exception.getErrorCode().code()));
     }
 
-    private void recordFaultDraftFailure(
+    private void recordLinkedFaultReportFailure(
             String deviceId,
             Archive device,
             AuthenticatedUser operator,

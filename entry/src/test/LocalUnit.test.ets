@@ -17,8 +17,8 @@ import { LogCategory, LogQueryTab } from '../main/ets/log/models/LogQueryModels'
 import { LogQueryService } from '../main/ets/log/services/LogQueryService';
 import { ReinspectionService } from '../main/ets/operations/services/ReinspectionService';
 import { ReinspectionTaskStatus } from '../main/ets/operations/models/ReinspectionModels';
-import { VerificationAndFaultReportService } from '../main/ets/operations/services/VerificationAndFaultReportService';
-import { VerificationResult } from '../main/ets/operations/models/VerificationAndFaultReportModels';
+import { VerificationReportService } from '../main/ets/operations/services/VerificationReportService';
+import { VerificationResult } from '../main/ets/operations/models/VerificationReportModels';
 
 export default function localUnitTest() {
   describe('uiFeedbackMessages', () => {
@@ -217,7 +217,7 @@ export default function localUnitTest() {
     });
 
     it('validatesAbnormalVerificationStepRequiresVerificationFields', 0, () => {
-      const result = VerificationAndFaultReportService.validateAbnormalVerificationStepForm({
+      const result = VerificationReportService.validateAbnormalVerificationStepForm({
         deviceCode: 'RDVP-DEVICE-0001',
         result: VerificationResult.Abnormal,
         description: '',
@@ -229,20 +229,20 @@ export default function localUnitTest() {
     });
 
     it('formatsVerificationStepActionByResult', 0, () => {
-      expect(VerificationAndFaultReportService.formatVerificationStepActionLabel('', false, false))
+      expect(VerificationReportService.formatVerificationStepActionLabel('', false, false))
         .assertEqual('提交');
-      expect(VerificationAndFaultReportService.formatVerificationStepActionLabel(VerificationResult.Normal, false, false))
+      expect(VerificationReportService.formatVerificationStepActionLabel(VerificationResult.Normal, false, false))
         .assertEqual('提交');
-      expect(VerificationAndFaultReportService.formatVerificationStepActionLabel(VerificationResult.Abnormal, false, false))
+      expect(VerificationReportService.formatVerificationStepActionLabel(VerificationResult.Abnormal, false, false))
         .assertEqual('下一步');
     });
 
     it('enablesAbnormalVerificationStepWithoutPassword', 0, () => {
-      expect(VerificationAndFaultReportService.canUseVerificationStepAction(VerificationResult.Abnormal, '', false, false))
+      expect(VerificationReportService.canUseVerificationStepAction(VerificationResult.Abnormal, '', false, false))
         .assertEqual(true);
-      expect(VerificationAndFaultReportService.canUseVerificationStepAction(VerificationResult.Normal, '', false, false))
+      expect(VerificationReportService.canUseVerificationStepAction(VerificationResult.Normal, '', false, false))
         .assertEqual(false);
-      expect(VerificationAndFaultReportService.canUseVerificationStepAction(VerificationResult.Normal, 'password', false, false))
+      expect(VerificationReportService.canUseVerificationStepAction(VerificationResult.Normal, 'password', false, false))
         .assertEqual(true);
     });
   });

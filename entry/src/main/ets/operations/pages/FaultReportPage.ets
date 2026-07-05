@@ -4,14 +4,14 @@ import { CenterTitleBar } from '../../shared/components/CenterTitleBar';
 import { InlineMessageSurface } from '../../shared/components/InlineMessageSurface';
 import { FaultSeverity, FaultType } from '../models/FaultModels';
 import {
-  DeviceVerificationForm,
-  VerificationAndFaultReportForm,
+  VerificationReportForm,
+  AbnormalVerificationSubmissionForm,
   VerificationResult
-} from '../models/VerificationAndFaultReportModels';
+} from '../models/VerificationReportModels';
 import { PermissionCode } from '../../user/models/PermissionModels';
 import { DeviceService } from '../../archive/services/DeviceService';
 import { FaultReportService } from '../services/FaultReportService';
-import { VerificationAndFaultReportService } from '../services/VerificationAndFaultReportService';
+import { VerificationReportService } from '../services/VerificationReportService';
 import { UiFeedbackService } from '../../shared/services/UiFeedbackService';
 import { AuthService } from '../../user/services/AuthService';
 import { AuthGuard } from '../../shared/security/AuthGuard';
@@ -35,7 +35,7 @@ struct FaultReportPage {
   @State submitting: boolean = false;
   @State submitted: boolean = false;
   @State hasVerification: boolean = false;
-  private verification: DeviceVerificationForm = {
+  private verification: VerificationReportForm = {
     deviceCode: '',
     result: VerificationResult.Abnormal,
     description: '',
@@ -131,7 +131,7 @@ struct FaultReportPage {
 
       Column({ space: 16 }) {
         this.ReadOnlyField('设备编号', this.deviceCode)
-        this.ReadOnlyField('核验结果', VerificationAndFaultReportService.formatVerificationResult(VerificationResult.Abnormal))
+        this.ReadOnlyField('核验结果', VerificationReportService.formatVerificationResult(VerificationResult.Abnormal))
       }
       .padding({
         left: 18,
@@ -177,9 +177,7 @@ struct FaultReportPage {
 
       this.PasswordSection()
       this.MessageText()
-      this.ActionButton(this.getSubmitButtonLabel(), this.getSubmitIcon(), this.canUseSubmitAction(), () => {
-        this.handleSubmitAction();
-      })
+      this.SubmitActionButton()
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -531,14 +529,17 @@ struct FaultReportPage {
   }
 
   @Builder
-  ActionButton(label: string, icon: Resource, enabled: boolean, action: () => void) {
-    Button({ type: ButtonType.Capsule, stateEffect: enabled }) {
+  SubmitActionButton() {
+    Button({
+      type: ButtonType.Capsule,
+      stateEffect: this.submitted || (this.hasVerification && this.password.length > 0 && !this.submitting)
+    }) {
       Row({ space: 8 }) {
-        SymbolGlyph(icon)
+        SymbolGlyph(this.submitted ? $r('sys.symbol.chevron_backward') : $r('sys.symbol.checkmark_circle'))
           .fontSize(20)
           .fontColor([AppColors.OnPrimary])
 
-        Text(label)
+        Text(this.submitting ? '提交中' : this.submitted ? '返回核验' : '提交')
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
           .fontColor(AppColors.OnPrimary)
@@ -550,10 +551,11 @@ struct FaultReportPage {
     }
     .height(54)
     .width('100%')
-    .backgroundColor(enabled ? AppColors.Primary : AppColors.Disabled)
-    .enabled(enabled)
+    .backgroundColor(this.submitted || (this.hasVerification && this.password.length > 0 && !this.submitting) ?
+      AppColors.Primary : AppColors.Disabled)
+    .enabled(this.submitted || (this.hasVerification && this.password.length > 0 && !this.submitting))
     .onClick(() => {
-      action();
+      this.handleSubmitAction();
     })
   }
 
@@ -592,7 +594,7 @@ struct FaultReportPage {
     }
 
     const form = this.buildForm();
-    const validation = VerificationAndFaultReportService.validateVerificationAndFaultReportForm(form);
+    const validation = VerificationReportService.validateAbnormalVerificationSubmissionForm(form);
     if (!validation.valid) {
       this.message = validation.message;
       this.messageTone = UiFeedbackTone.Danger;
@@ -612,7 +614,7 @@ struct FaultReportPage {
         return;
       }
 
-      const response = await VerificationAndFaultReportService.submitVerificationAndFaultReportRemoteFirst(form);
+      const response = await VerificationReportService.submitAbnormalVerificationRemoteFirst(form);
       if (!response.success) {
         const error = response.error;
         this.message = UiFeedbackService.operationError(error, '提交');
@@ -630,7 +632,7 @@ struct FaultReportPage {
     }
   }
 
-  buildForm(): VerificationAndFaultReportForm {
+  buildForm(): AbnormalVerificationSubmissionForm {
     return {
       verification: {
         deviceCode: this.verification.deviceCode,
@@ -659,30 +661,6 @@ struct FaultReportPage {
     this.message = UiFeedbackService.passwordVerificationError(response.error, '提交');
     this.messageTone = UiFeedbackTone.Danger;
     return false;
-  }
-
-  canUseSubmitAction(): boolean {
-    if (this.submitted) {
-      return true;
-    }
-
-    return this.hasVerification && this.password.length > 0 && !this.submitting;
-  }
-
-  getSubmitButtonLabel(): string {
-    if (this.submitting) {
-      return '提交中';
-    }
-
-    if (this.submitted) {
-      return '返回核验';
-    }
-
-    return '提交';
-  }
-
-  getSubmitIcon(): Resource {
-    return this.submitted ? $r('sys.symbol.chevron_backward') : $r('sys.symbol.checkmark_circle');
   }
 
   getSeverityTone(severity: FaultSeverity): string {

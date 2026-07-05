@@ -240,8 +240,8 @@ struct OperationsCenterPage {
   openFeature(action: HomeAction): void {
     this.message = '';
     this.messageTargetId = '';
-    if (action.id === HomeActionId.VerificationAndFaultReport) {
-      this.openPage(this.getVerificationReportEntryUrl(), UiFeedbackService.operationUnavailable('核验与报修'));
+    if (action.id === HomeActionId.VerificationReport) {
+      this.openPage(this.getVerificationReportEntryUrl(), UiFeedbackService.operationUnavailable('核验报告'));
       return;
     }
 
@@ -268,7 +268,7 @@ struct OperationsCenterPage {
 
   resolveActionIdByUrl(url: string): string {
     if (url === HomeService.getVerificationReportRoute()) {
-      return `${HomeActionId.VerificationAndFaultReport}`;
+      return `${HomeActionId.VerificationReport}`;
     }
 
     if (url === 'operations/pages/TaskAcceptancePage') {
