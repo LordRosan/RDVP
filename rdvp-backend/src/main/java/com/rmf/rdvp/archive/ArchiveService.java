@@ -10,9 +10,6 @@ import java.util.HexFormat;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-
 import org.springframework.stereotype.Service;
 
 import com.google.zxing.BarcodeFormat;
@@ -21,7 +18,6 @@ import com.google.zxing.common.BitMatrix;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.rmf.rdvp.log.LogAction;
 import com.rmf.rdvp.log.LogEntryService;
-import com.rmf.rdvp.shared.config.RdvpRuntimeProperties;
 import com.rmf.rdvp.shared.error.BusinessException;
 import com.rmf.rdvp.shared.error.ErrorCode;
 import com.rmf.rdvp.user.AuthenticatedUser;
@@ -33,24 +29,21 @@ public class ArchiveService {
     private static final Pattern DEVICE_ID_PATTERN = Pattern.compile("^[A-Za-z0-9_-]{1,64}$");
     private static final Pattern QR_NONCE_PATTERN = Pattern.compile("^[A-Za-z0-9._-]{1,128}$");
     private static final Pattern QR_SIGNATURE_PATTERN = Pattern.compile("^[0-9a-fA-F]{64}$");
-    private static final String QR_PREFIX = "RDVP";
-    private static final String QR_HMAC_ALGORITHM = "HmacSHA256";
-    private static final int MAX_QR_VERSION = 999;
     private static final int QR_EXPORT_IMAGE_SIZE = 512;
 
     private final ArchiveRepository archiveRepository;
     private final DeviceQrCodeRepository qrCodeRepository;
-    private final RdvpRuntimeProperties runtimeProperties;
+    private final DeviceQrCodeIssuer qrCodeIssuer;
     private final LogEntryService logEntryService;
 
     public ArchiveService(
             ArchiveRepository archiveRepository,
             DeviceQrCodeRepository qrCodeRepository,
-            RdvpRuntimeProperties runtimeProperties,
+            DeviceQrCodeIssuer qrCodeIssuer,
             LogEntryService logEntryService) {
         this.archiveRepository = archiveRepository;
         this.qrCodeRepository = qrCodeRepository;
-        this.runtimeProperties = runtimeProperties;
+        this.qrCodeIssuer = qrCodeIssuer;
         this.logEntryService = logEntryService;
     }
 
@@ -90,7 +83,7 @@ public class ArchiveService {
             throw new BusinessException(ErrorCode.QR_CODE_EXPIRED);
         }
 
-        String expectedSignature = buildSignature(parsed.version(), parsed.deviceCode(), parsed.nonce());
+        String expectedSignature = qrCodeIssuer.buildSignature(parsed.version(), parsed.deviceCode(), parsed.nonce());
         if (!constantTimeEquals(parsed.signature(), expectedSignature)
                 || !constantTimeEquals(parsed.signature(), qrCode.signatureHash())) {
             throw new BusinessException(ErrorCode.QR_CODE_SIGNATURE_INVALID);
@@ -103,10 +96,13 @@ public class ArchiveService {
         Archive device = null;
         try {
             device = findById(deviceId);
-            DeviceQrCode qrCode = qrCodeRepository.findLatestActiveByDeviceId(device.id())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.QR_CODE_INVALID, "No active QR code exists."));
-            String qrContent = buildQrContent(device.deviceCode(), qrCode);
             OffsetDateTime exportedAt = OffsetDateTime.now(ZoneOffset.UTC);
+            DeviceQrCode qrCode = qrCodeIssuer.findLatestActiveOrIssue(
+                    device.id(),
+                    device.deviceCode(),
+                    exportedAt,
+                    operator.id());
+            String qrContent = qrCodeIssuer.buildQrContent(device.deviceCode(), qrCode);
             DeviceQrCodeExport export = new DeviceQrCodeExport(
                     device.id(),
                     device.deviceCode(),
@@ -151,7 +147,7 @@ public class ArchiveService {
         }
 
         String[] segments = qrContent.trim().split(":", -1);
-        if (segments.length != 5 || !QR_PREFIX.equals(segments[0])) {
+        if (segments.length != 5 || !DeviceQrCodeIssuer.QR_PREFIX.equals(segments[0])) {
             throw new BusinessException(ErrorCode.QR_CODE_INVALID);
         }
 
@@ -165,36 +161,13 @@ public class ArchiveService {
         String signature = segments[4].trim();
         String nonce = segments[3].trim();
         if (version <= 0
-                || version > MAX_QR_VERSION
+                || version > DeviceQrCodeIssuer.MAX_QR_VERSION
                 || !QR_NONCE_PATTERN.matcher(nonce).matches()
                 || !QR_SIGNATURE_PATTERN.matcher(signature).matches()) {
             throw new BusinessException(ErrorCode.QR_CODE_INVALID);
         }
 
         return new ParsedQrContent(version, normalizeDeviceCode(segments[2]), nonce, signature.toLowerCase(Locale.ROOT));
-    }
-
-    private String buildSignature(int version, String deviceCode, String nonce) {
-        try {
-            Mac mac = Mac.getInstance(QR_HMAC_ALGORITHM);
-            SecretKeySpec key = new SecretKeySpec(
-                    runtimeProperties.getQrCode().getSigningSecret().getBytes(StandardCharsets.UTF_8),
-                    QR_HMAC_ALGORITHM);
-            mac.init(key);
-            byte[] digest = mac.doFinal("%d:%s:%s".formatted(version, deviceCode, nonce).getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest);
-        } catch (Exception exception) {
-            throw new BusinessException(ErrorCode.INTERNAL_ERROR);
-        }
-    }
-
-    private String buildQrContent(String deviceCode, DeviceQrCode qrCode) {
-        return "%s:%d:%s:%s:%s".formatted(
-                QR_PREFIX,
-                qrCode.version(),
-                deviceCode,
-                qrCode.nonce(),
-                qrCode.signatureHash());
     }
 
     private String generateQrPngBase64(String content) {

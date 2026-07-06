@@ -420,6 +420,14 @@ class ArchiveRequestControllerTests {
         String createdDeviceId = objectMapper.readTree(deviceResponse).path("data").path("id").asText();
 
         verifyPassword(token, "password");
+        mockMvc.perform(post("/api/v1/devices/{deviceId}/qrcode-export", createdDeviceId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.deviceCode").value("RDVP-DEVICE-0099"))
+                .andExpect(jsonPath("$.data.fileName").value("RDVP-DEVICE-0099.png"));
+
+        verifyPassword(token, "password");
         mockMvc.perform(post("/api/v1/archive-requests")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)

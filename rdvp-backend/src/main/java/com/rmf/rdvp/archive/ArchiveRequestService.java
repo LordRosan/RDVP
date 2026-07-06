@@ -34,16 +34,19 @@ public class ArchiveRequestService {
 
     private final ArchiveRepository archiveRepository;
     private final ArchiveRequestRepository archiveRequestRepository;
+    private final DeviceQrCodeIssuer qrCodeIssuer;
     private final UserAccountRepository userStore;
     private final LogEntryService logEntryService;
 
     public ArchiveRequestService(
             ArchiveRepository archiveRepository,
             ArchiveRequestRepository archiveRequestRepository,
+            DeviceQrCodeIssuer qrCodeIssuer,
             UserAccountRepository userStore,
             LogEntryService logEntryService) {
         this.archiveRepository = archiveRepository;
         this.archiveRequestRepository = archiveRequestRepository;
+        this.qrCodeIssuer = qrCodeIssuer;
         this.userStore = userStore;
         this.logEntryService = logEntryService;
     }
@@ -351,11 +354,17 @@ public class ArchiveRequestService {
                     throw new BusinessException(ErrorCode.DEVICE_CODE_DUPLICATED);
                 }
 
+                ArchiveCreate archiveCreate = buildArchiveCreate(request, reviewer.id(), reviewedAt);
                 try {
-                    archiveRepository.create(buildArchiveCreate(request, reviewer.id(), reviewedAt));
+                    archiveRepository.create(archiveCreate);
                 } catch (DataIntegrityViolationException exception) {
                     throw new BusinessException(ErrorCode.DEVICE_CODE_DUPLICATED);
                 }
+                qrCodeIssuer.issueInitial(
+                        archiveCreate.id(),
+                        archiveCreate.deviceCode(),
+                        reviewedAt,
+                        reviewer.id());
 
                 boolean reviewed = archiveRequestRepository.markApprovedReview(
                         request.id(),

@@ -7,4 +7,8 @@ public interface DeviceQrCodeRepository {
     Optional<DeviceQrCode> findByDeviceIdAndVersionAndNonce(String deviceId, int version, String nonce);
 
     Optional<DeviceQrCode> findLatestActiveByDeviceId(String deviceId);
+
+    int nextVersionByDeviceId(String deviceId);
+
+    void create(DeviceQrCodeCreate create);
 }
