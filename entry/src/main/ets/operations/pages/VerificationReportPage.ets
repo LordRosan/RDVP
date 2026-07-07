@@ -494,7 +494,8 @@ struct VerificationReportPage {
     Row() {
       Radio({
         value: `${result}`,
-        group: `verification-item-${itemCode}`
+        group: `verification-item-${itemCode}`,
+        indicatorType: RadioIndicatorType.DOT
       })
         .checked(this.verificationItems[index].result === result)
         .radioStyle({
@@ -979,7 +980,8 @@ struct VerificationReportPage {
     }
 
     if (group === 'type') {
-      this.verificationType = VERIFICATION_TYPE_VALUES[this.normalizePickerIndex(index, VERIFICATION_TYPE_VALUES.length)];
+      this.verificationType =
+        VERIFICATION_TYPE_VALUES[this.normalizePickerIndex(index, VERIFICATION_TYPE_VALUES.length)];
     } else if (group === 'status') {
       this.deviceStatus = DEVICE_STATUS_VALUES[this.normalizePickerIndex(index, DEVICE_STATUS_VALUES.length)];
     } else {
@@ -1060,14 +1062,15 @@ struct VerificationReportPage {
       return;
     }
 
-    const items = this.verificationItems.map((item: VerificationReportItem, itemIndex: number): VerificationReportItem => {
-      const updatedItem: VerificationReportItem = {
-        itemCode: item.itemCode,
-        itemName: item.itemName,
-        result: itemIndex === index ? result : item.result
-      };
-      return updatedItem;
-    });
+    const items =
+      this.verificationItems.map((item: VerificationReportItem, itemIndex: number): VerificationReportItem => {
+        const updatedItem: VerificationReportItem = {
+          itemCode: item.itemCode,
+          itemName: item.itemName,
+          result: itemIndex === index ? result : item.result
+        };
+        return updatedItem;
+      });
     this.verificationItems = items;
     this.password = '';
     this.markFormChanged();

@@ -19,6 +19,7 @@ import { ReinspectionService } from '../main/ets/operations/services/Reinspectio
 import { ReinspectionTaskStatus } from '../main/ets/operations/models/ReinspectionModels';
 import { VerificationReportService } from '../main/ets/operations/services/VerificationReportService';
 import { FaultReportService, FaultTypeSelection } from '../main/ets/operations/services/FaultReportService';
+import { LocationService } from '../main/ets/operations/services/LocationService';
 import {
   AbnormalVerificationSubmissionForm,
   VerificationDeviceStatus,
@@ -48,6 +49,53 @@ export default function localUnitTest() {
     it('formatsOperationMessages', 0, () => {
       expect(UiFeedbackService.operationSuccess('登录')).assertEqual('登录成功');
       expect(UiFeedbackService.operationUnavailable('导出')).assertEqual('导出功能暂不可用，请稍后重试');
+    });
+
+    it('formatsLocationFailureMessagesBySystemErrorCode', 0, () => {
+      expect(LocationService.formatLocationErrorMessage({
+        code: 3301100,
+        message: 'The location switch is off.'
+      })).assertEqual('请先开启系统定位服务');
+      expect(LocationService.formatLocationErrorMessage({
+        code: 201,
+        message: 'Permission verification failed.'
+      })).assertEqual('请允许定位权限');
+      expect(LocationService.formatLocationErrorMessage({
+        code: 801,
+        message: 'Capability not supported.'
+      })).assertEqual('当前设备定位能力不可用');
+      expect(LocationService.formatLocationErrorMessage({
+        code: 3301000,
+        message: 'The location service is unavailable.'
+      })).assertEqual('当前设备定位服务不可用');
+      expect(LocationService.formatLocationErrorMessage({
+        code: 3301200,
+        message: 'Failed to obtain the geographical location.'
+      })).assertEqual('定位失败，请稍后重试');
+    });
+
+    it('convertsSystemLocationToBusinessCoordinates', 0, () => {
+      const coordinates = LocationService.createCoordinatesFromValues(
+        121.472644,
+        31.231706,
+        11.24,
+        1782891759000
+      );
+
+      expect(coordinates === undefined).assertEqual(false);
+      if (coordinates !== undefined) {
+        expect(coordinates.longitude).assertEqual(121.472644);
+        expect(coordinates.latitude).assertEqual(31.231706);
+        expect(coordinates.accuracy).assertEqual(11.24);
+        expect(coordinates.locatedAt).assertEqual('2026-07-01T07:42:39.000Z');
+      }
+
+      expect(LocationService.createCoordinatesFromValues(
+        200,
+        31.231706,
+        11.24,
+        1782891759000
+      ) === undefined).assertEqual(true);
     });
 
     it('storesFeedbackToneAsStableSemanticValue', 0, () => {

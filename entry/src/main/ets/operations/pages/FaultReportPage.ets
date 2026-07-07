@@ -58,8 +58,8 @@ struct FaultReportPage {
   @State longitude: number = 0;
   @State latitude: number = 0;
   @State locationAccuracy: number = 0;
-  @State showLeaveGuard: boolean = false;
   @State hasVerification: boolean = false;
+  private showingLeaveDialog: boolean = false;
   private verification: VerificationReportForm = VerificationReportService.createEmptyAbnormalVerificationForm();
 
   aboutToAppear(): void {
@@ -168,7 +168,6 @@ struct FaultReportPage {
       .alignItems(HorizontalAlign.Start)
 
       this.PasswordSection()
-      this.LeaveGuardPanel()
       this.MessageText()
       this.SubmitActionButton()
     }
@@ -474,49 +473,6 @@ struct FaultReportPage {
   }
 
   @Builder
-  LeaveGuardPanel() {
-    if (this.showLeaveGuard && !this.submitted) {
-      Column({ space: 12 }) {
-        InlineMessageSurface({
-          message: '当前报修报告尚未提交，返回将放弃本次异常核验与报修报告填写',
-          tone: UiFeedbackTone.Warning
-        })
-
-        Row({ space: 10 }) {
-          this.SmallActionButton('继续填写', AppColors.Primary, () => {
-            this.showLeaveGuard = false;
-          })
-          this.SmallActionButton('放弃返回', AppColors.Danger, () => {
-            VerificationReportFlowStore.markFaultReportDiscarded();
-            this.backToVerificationReport();
-          })
-        }
-        .width('100%')
-        .alignItems(VerticalAlign.Center)
-      }
-      .width('100%')
-      .alignItems(HorizontalAlign.Start)
-    }
-  }
-
-  @Builder
-  SmallActionButton(label: string, color: string, action: () => void) {
-    Button({ type: ButtonType.Capsule, stateEffect: true }) {
-      Text(label)
-        .fontSize(14)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(AppColors.OnPrimary)
-        .maxLines(1)
-    }
-    .height(42)
-    .layoutWeight(1)
-    .backgroundColor(color)
-    .onClick(() => {
-      action();
-    })
-  }
-
-  @Builder
   MessageText() {
     if (this.message.length > 0) {
       InlineMessageSurface({
@@ -647,7 +603,6 @@ struct FaultReportPage {
       VerificationReportFlowStore.markFaultReportSubmitted();
       this.password = '';
       this.submitted = true;
-      this.showLeaveGuard = false;
       this.message = '提交成功，核验报告将先进入审核；核验审核通过后报修报告进入审核';
       this.messageTone = UiFeedbackTone.Success;
     } finally {
@@ -1006,7 +961,6 @@ struct FaultReportPage {
   markFormChanged(): void {
     this.message = '';
     this.messageTone = UiFeedbackTone.Danger;
-    this.showLeaveGuard = false;
   }
 
   handleBackAction(): void {
@@ -1015,9 +969,43 @@ struct FaultReportPage {
       return;
     }
 
-    this.showLeaveGuard = true;
     this.message = '';
     this.messageTone = UiFeedbackTone.Danger;
+    this.showLeaveConfirmDialog();
+  }
+
+  async showLeaveConfirmDialog(): Promise<void> {
+    if (this.showingLeaveDialog || this.submitted || !this.hasVerification) {
+      return;
+    }
+
+    this.showingLeaveDialog = true;
+    try {
+      const response = await this.getUIContext().getPromptAction().showDialog({
+        title: '放弃报修报告？',
+        message: '当前报修报告尚未提交，返回将放弃本次异常核验与报修报告填写',
+        buttons: [
+          {
+            text: '继续填写',
+            color: AppColors.Primary,
+            primary: true
+          },
+          {
+            text: '放弃返回',
+            color: AppColors.Danger
+          }
+        ]
+      });
+      if (response.index === 1) {
+        VerificationReportFlowStore.markFaultReportDiscarded();
+        this.backToVerificationReport();
+      }
+    } catch (err) {
+      this.message = '当前报修报告尚未提交，请先提交或确认放弃';
+      this.messageTone = UiFeedbackTone.Warning;
+    } finally {
+      this.showingLeaveDialog = false;
+    }
   }
 
   showOccurredAtPicker(): void {
