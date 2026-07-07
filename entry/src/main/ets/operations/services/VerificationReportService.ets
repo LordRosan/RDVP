@@ -1,12 +1,17 @@
 import { ApiResponse } from '../../shared/models/ApiModels';
 import { FaultStatus } from '../models/FaultModels';
 import {
-  VerificationReportForm,
   AbnormalVerificationSubmissionForm,
   AbnormalVerificationSubmissionResult,
+  VerificationDeviceStatus,
+  VerificationItemResult,
+  VerificationMethod,
+  VerificationReportForm,
+  VerificationReportItem,
   VerificationReportRecord,
   VerificationReportValidationResult,
-  VerificationResult
+  VerificationResult,
+  VerificationType
 } from '../models/VerificationReportModels';
 import { ApiClient } from '../../shared/services/ApiClient';
 import { DeviceService } from '../../archive/services/DeviceService';
@@ -16,9 +21,52 @@ import { UiFeedbackService } from '../../shared/services/UiFeedbackService';
 const MAX_DESCRIPTION_LENGTH = 500;
 const MAX_REMARK_LENGTH = 300;
 
+const DEFAULT_VERIFICATION_ITEMS: VerificationReportItem[] = [
+  {
+    itemCode: 'IDENTIFICATION_CONSISTENCY',
+    itemName: '标识一致性',
+    result: VerificationItemResult.Passed
+  },
+  {
+    itemCode: 'APPEARANCE_INTEGRITY',
+    itemName: '外观完整性',
+    result: VerificationItemResult.Passed
+  },
+  {
+    itemCode: 'RUNNING_RESPONSE',
+    itemName: '运行响应性',
+    result: VerificationItemResult.Passed
+  },
+  {
+    itemCode: 'CONNECTION_STABILITY',
+    itemName: '连接稳定性',
+    result: VerificationItemResult.Passed
+  },
+  {
+    itemCode: 'DATA_CONSISTENCY',
+    itemName: '数据一致性',
+    result: VerificationItemResult.Passed
+  },
+  {
+    itemCode: 'SAFETY_AVAILABILITY',
+    itemName: '安全可用性',
+    result: VerificationItemResult.Passed
+  }
+];
+
+interface VerificationReportItemApiResult {
+  itemCode: string;
+  itemName: string;
+  result: string;
+}
+
 interface VerificationReportApiResult {
   id: string;
+  verificationType: string;
+  deviceStatus: string;
+  verificationMethod: string;
   result: string;
+  items: VerificationReportItemApiResult[];
   description: string;
   remark?: string;
   verifiedAt: string;
@@ -28,6 +76,7 @@ interface VerificationReportApiResult {
 interface FaultReportApiResult {
   id: string;
   faultReportNo: string;
+  faultSubtype: string;
   status: FaultStatus;
   createdAt: string;
 }
@@ -42,6 +91,36 @@ export class VerificationReportService {
     return value.trim();
   }
 
+  static createDefaultVerificationItems(): VerificationReportItem[] {
+    return DEFAULT_VERIFICATION_ITEMS.map((item: VerificationReportItem): VerificationReportItem => {
+      const clonedItem: VerificationReportItem = {
+        itemCode: item.itemCode,
+        itemName: item.itemName,
+        result: item.result
+      };
+      return clonedItem;
+    });
+  }
+
+  static createEmptyAbnormalVerificationForm(): VerificationReportForm {
+    const items = VerificationReportService.createDefaultVerificationItems();
+    if (items.length > 0) {
+      items[0].result = VerificationItemResult.Failed;
+    }
+
+    const form: VerificationReportForm = {
+      deviceCode: '',
+      verificationType: VerificationType.Routine,
+      deviceStatus: VerificationDeviceStatus.Unknown,
+      verificationMethod: VerificationMethod.OnsiteObservation,
+      items,
+      description: '',
+      verifiedAt: '',
+      remark: ''
+    };
+    return form;
+  }
+
   static validateVerificationForm(form: VerificationReportForm): VerificationReportValidationResult {
     const deviceCodeValidation = DeviceService.validateDeviceCodeQuery({
       deviceCode: form.deviceCode
@@ -51,13 +130,6 @@ export class VerificationReportService {
       return {
         valid: false,
         message: deviceCodeValidation.message
-      };
-    }
-
-    if (!VerificationReportService.isKnownResult(form.result)) {
-      return {
-        valid: false,
-        message: UiFeedbackService.requiredSelection('核验结果')
       };
     }
 
@@ -74,6 +146,32 @@ export class VerificationReportService {
         valid: false,
         message: UiFeedbackService.fieldTooLong('核验时间', 64, '字')
       };
+    }
+
+    if (!VerificationReportService.isKnownVerificationType(form.verificationType)) {
+      return {
+        valid: false,
+        message: UiFeedbackService.requiredSelection('核验类型')
+      };
+    }
+
+    if (!VerificationReportService.isKnownDeviceStatus(form.deviceStatus)) {
+      return {
+        valid: false,
+        message: UiFeedbackService.requiredSelection('设备状态')
+      };
+    }
+
+    if (!VerificationReportService.isKnownVerificationMethod(form.verificationMethod)) {
+      return {
+        valid: false,
+        message: UiFeedbackService.requiredSelection('核验方式')
+      };
+    }
+
+    const itemsValidation = VerificationReportService.validateVerificationItems(form.items);
+    if (!itemsValidation.valid) {
+      return itemsValidation;
     }
 
     const description = VerificationReportService.normalizeText(form.description);
@@ -111,7 +209,7 @@ export class VerificationReportService {
       return verificationValidation;
     }
 
-    if (form.result !== VerificationResult.Abnormal) {
+    if (VerificationReportService.resolveVerificationResult(form.items) !== VerificationResult.Abnormal) {
       return {
         valid: false,
         message: UiFeedbackService.operationUnavailable('下一步')
@@ -132,7 +230,7 @@ export class VerificationReportService {
       return verificationValidation;
     }
 
-    if (form.verification.result === VerificationResult.Normal) {
+    if (VerificationReportService.resolveVerificationResult(form.verification.items) === VerificationResult.Normal) {
       return {
         valid: false,
         message: UiFeedbackService.operationUnavailable('提交')
@@ -151,7 +249,7 @@ export class VerificationReportService {
     if (verificationDescription.length > MAX_DESCRIPTION_LENGTH) {
       return {
         valid: false,
-        message: UiFeedbackService.fieldTooLong('故障说明', 500, '字')
+        message: UiFeedbackService.fieldTooLong('核验说明', 500, '字')
       };
     }
 
@@ -226,7 +324,11 @@ export class VerificationReportService {
       'POST',
       true,
       JSON.stringify({
-        result: form.result,
+        result: VerificationReportService.resolveVerificationResult(form.items),
+        verificationType: form.verificationType,
+        deviceStatus: form.deviceStatus,
+        verificationMethod: form.verificationMethod,
+        items: VerificationReportService.createRequestItems(form.items),
         description: VerificationReportService.normalizeText(form.description),
         remark: VerificationReportService.normalizeText(form.remark ?? ''),
         verifiedAt
@@ -259,7 +361,11 @@ export class VerificationReportService {
       data: {
         id: response.data.id,
         deviceCode: DeviceService.normalizeDeviceCode(form.deviceCode),
+        verificationType: response.data.verificationType as VerificationType,
+        deviceStatus: response.data.deviceStatus as VerificationDeviceStatus,
+        verificationMethod: response.data.verificationMethod as VerificationMethod,
         result: response.data.result as VerificationResult,
+        items: VerificationReportService.toRecordItems(response.data.items),
         description: response.data.description,
         remark: response.data.remark,
         submittedAt: response.data.createdAt
@@ -290,15 +396,22 @@ export class VerificationReportService {
       'POST',
       true,
       JSON.stringify({
-        result: form.verification.result,
+        result: VerificationReportService.resolveVerificationResult(form.verification.items),
+        verificationType: form.verification.verificationType,
+        deviceStatus: form.verification.deviceStatus,
+        verificationMethod: form.verification.verificationMethod,
+        items: VerificationReportService.createRequestItems(form.verification.items),
         description: VerificationReportService.resolveVerificationDescription(form),
         remark: VerificationReportService.normalizeText(form.verification.remark ?? ''),
         verifiedAt,
         faultType: form.faultReport.faultType,
+        faultSubtype: form.faultReport.faultSubtype,
         severity: form.faultReport.severity,
         occurredAt: FaultReportService.normalizeText(form.faultReport.occurredAt),
         faultDescription: FaultReportService.normalizeText(form.faultReport.description),
-        sceneCondition: FaultReportService.normalizeText(form.faultReport.sceneCondition)
+        sceneCondition: FaultReportService.normalizeText(form.faultReport.sceneCondition),
+        longitude: form.faultReport.longitude,
+        latitude: form.faultReport.latitude
       })
     );
 
@@ -329,7 +442,11 @@ export class VerificationReportService {
         verificationReport: {
           id: response.data.verificationReport.id,
           deviceCode: DeviceService.normalizeDeviceCode(form.verification.deviceCode),
+          verificationType: response.data.verificationReport.verificationType as VerificationType,
+          deviceStatus: response.data.verificationReport.deviceStatus as VerificationDeviceStatus,
+          verificationMethod: response.data.verificationReport.verificationMethod as VerificationMethod,
           result: response.data.verificationReport.result as VerificationResult,
+          items: VerificationReportService.toRecordItems(response.data.verificationReport.items),
           description: response.data.verificationReport.description,
           remark: response.data.verificationReport.remark,
           submittedAt: response.data.verificationReport.createdAt
@@ -339,6 +456,7 @@ export class VerificationReportService {
           reportNo: response.data.faultReport.faultReportNo,
           deviceCode: DeviceService.normalizeDeviceCode(form.faultReport.deviceCode),
           faultType: form.faultReport.faultType,
+          faultSubtype: form.faultReport.faultSubtype,
           severity: form.faultReport.severity,
           status: response.data.faultReport.status as FaultStatus,
           submittedAt: response.data.faultReport.createdAt
@@ -358,6 +476,86 @@ export class VerificationReportService {
       default:
         return '-';
     }
+  }
+
+  static formatVerificationType(type: VerificationType): string {
+    switch (type) {
+      case VerificationType.Routine:
+        return '例行';
+      case VerificationType.Temporary:
+        return '临时';
+      case VerificationType.Special:
+        return '专项';
+      case VerificationType.Initial:
+        return '首次';
+      case VerificationType.Sampling:
+        return '抽检';
+      case VerificationType.Other:
+        return '其他';
+      default:
+        return '-';
+    }
+  }
+
+  static formatDeviceStatus(status: VerificationDeviceStatus): string {
+    switch (status) {
+      case VerificationDeviceStatus.Running:
+        return '运行';
+      case VerificationDeviceStatus.Standby:
+        return '待机';
+      case VerificationDeviceStatus.Stopped:
+        return '停机';
+      case VerificationDeviceStatus.Offline:
+        return '离线';
+      case VerificationDeviceStatus.Unknown:
+        return '未知';
+      case VerificationDeviceStatus.Other:
+        return '其他';
+      default:
+        return '-';
+    }
+  }
+
+  static formatVerificationMethod(method: VerificationMethod): string {
+    switch (method) {
+      case VerificationMethod.OnsiteObservation:
+        return '现场观察';
+      case VerificationMethod.IdentificationCheck:
+        return '编号核对';
+      case VerificationMethod.FunctionTest:
+        return '功能测试';
+      case VerificationMethod.DataReading:
+        return '数据读取';
+      case VerificationMethod.RemoteConfirmation:
+        return '远程确认';
+      case VerificationMethod.Other:
+        return '其他方式';
+      default:
+        return '-';
+    }
+  }
+
+  static formatVerificationItemResult(result: VerificationItemResult): string {
+    switch (result) {
+      case VerificationItemResult.Passed:
+        return '通过';
+      case VerificationItemResult.Failed:
+        return '未通过';
+      case VerificationItemResult.NotApplicable:
+        return '不适用';
+      default:
+        return '-';
+    }
+  }
+
+  static resolveVerificationResult(items: VerificationReportItem[]): VerificationResult {
+    for (let index = 0; index < items.length; index++) {
+      if (items[index].result === VerificationItemResult.Failed) {
+        return VerificationResult.Abnormal;
+      }
+    }
+
+    return VerificationResult.Normal;
   }
 
   static formatVerificationStepActionLabel(result: string, submitting: boolean, submitted: boolean): string {
@@ -393,9 +591,101 @@ export class VerificationReportService {
     return result === VerificationResult.Abnormal;
   }
 
-  private static isKnownResult(result: VerificationResult): boolean {
-    return result === VerificationResult.Normal ||
-      result === VerificationResult.Abnormal;
+  private static validateVerificationItems(items: VerificationReportItem[]): VerificationReportValidationResult {
+    if (items.length === 0) {
+      return {
+        valid: false,
+        message: UiFeedbackService.requiredSelection('核验项')
+      };
+    }
+
+    let hasEffectiveResult = false;
+    for (let index = 0; index < items.length; index++) {
+      const item = items[index];
+      if (VerificationReportService.normalizeText(item.itemCode).length === 0 ||
+        VerificationReportService.normalizeText(item.itemName).length === 0 ||
+        !VerificationReportService.isKnownItemResult(item.result)) {
+        return {
+          valid: false,
+          message: UiFeedbackService.requiredSelection('核验项结果')
+        };
+      }
+
+      if (item.result === VerificationItemResult.Passed || item.result === VerificationItemResult.Failed) {
+        hasEffectiveResult = true;
+      }
+    }
+
+    if (!hasEffectiveResult) {
+      return {
+        valid: false,
+        message: UiFeedbackService.requiredSelection('核验项结果')
+      };
+    }
+
+    return {
+      valid: true,
+      message: ''
+    };
+  }
+
+  private static createRequestItems(items: VerificationReportItem[]): VerificationReportItem[] {
+    return items.map((item: VerificationReportItem): VerificationReportItem => {
+      const requestItem: VerificationReportItem = {
+        itemCode: VerificationReportService.normalizeText(item.itemCode),
+        itemName: VerificationReportService.normalizeText(item.itemName),
+        result: item.result
+      };
+      return requestItem;
+    });
+  }
+
+  private static toRecordItems(items: VerificationReportItemApiResult[] | undefined): VerificationReportItem[] {
+    if (items === undefined) {
+      return [];
+    }
+
+    return items.map((item: VerificationReportItemApiResult): VerificationReportItem => {
+      const recordItem: VerificationReportItem = {
+        itemCode: item.itemCode,
+        itemName: item.itemName,
+        result: item.result as VerificationItemResult
+      };
+      return recordItem;
+    });
+  }
+
+  private static isKnownVerificationType(type: VerificationType): boolean {
+    return type === VerificationType.Routine ||
+      type === VerificationType.Temporary ||
+      type === VerificationType.Special ||
+      type === VerificationType.Initial ||
+      type === VerificationType.Sampling ||
+      type === VerificationType.Other;
+  }
+
+  private static isKnownDeviceStatus(status: VerificationDeviceStatus): boolean {
+    return status === VerificationDeviceStatus.Running ||
+      status === VerificationDeviceStatus.Standby ||
+      status === VerificationDeviceStatus.Stopped ||
+      status === VerificationDeviceStatus.Offline ||
+      status === VerificationDeviceStatus.Unknown ||
+      status === VerificationDeviceStatus.Other;
+  }
+
+  private static isKnownVerificationMethod(method: VerificationMethod): boolean {
+    return method === VerificationMethod.OnsiteObservation ||
+      method === VerificationMethod.IdentificationCheck ||
+      method === VerificationMethod.FunctionTest ||
+      method === VerificationMethod.DataReading ||
+      method === VerificationMethod.RemoteConfirmation ||
+      method === VerificationMethod.Other;
+  }
+
+  private static isKnownItemResult(result: VerificationItemResult): boolean {
+    return result === VerificationItemResult.Passed ||
+      result === VerificationItemResult.Failed ||
+      result === VerificationItemResult.NotApplicable;
   }
 
   private static resolveVerificationDescription(form: AbnormalVerificationSubmissionForm): string {

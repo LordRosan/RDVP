@@ -215,14 +215,27 @@ class OperationsControllerTests {
                         .content("""
                                 {
                                   "result": "ABNORMAL",
+                                  "verificationType": "TEMPORARY",
+                                  "deviceStatus": "OFFLINE",
+                                  "verificationMethod": "FUNCTION_TEST",
+                                  "items": [
+                                    {
+                                      "itemCode": "RUNNING_RESPONSE",
+                                      "itemName": "运行响应性",
+                                      "result": "FAILED"
+                                    }
+                                  ],
                                   "description": "现场核验发现设备通信异常。",
                                   "remark": "",
                                   "verifiedAt": "2026-06-03T08:30:00Z",
                                   "faultType": "COMMUNICATION_FAULT",
+                                  "faultSubtype": "CONNECTION_INTERRUPTED",
                                   "severity": "GENERAL",
                                   "occurredAt": "2026-06-03T08:20:00Z",
                                   "faultDescription": "Communication link is unstable.",
-                                  "sceneCondition": "现场等待进一步排查。"
+                                  "sceneCondition": "现场等待进一步排查。",
+                                  "longitude": 114.1694,
+                                  "latitude": 22.3193
                                 }
                                 """))
                 .andExpect(status().isForbidden())
@@ -547,14 +560,27 @@ class OperationsControllerTests {
                         .content("""
                                 {
                                   "result": "ABNORMAL",
+                                  "verificationType": "TEMPORARY",
+                                  "deviceStatus": "RUNNING",
+                                  "verificationMethod": "ONSITE_OBSERVATION",
+                                  "items": [
+                                    {
+                                      "itemCode": "RUNNING_RESPONSE",
+                                      "itemName": "运行响应性",
+                                      "result": "FAILED"
+                                    }
+                                  ],
                                   "description": "现场核验发现设备运行噪声异常。",
                                   "remark": "已同步提交报修信息。",
                                   "verifiedAt": "2026-06-03T08:30:00Z",
                                   "faultType": "OPERATION_ABNORMAL",
+                                  "faultSubtype": "PERFORMANCE_DEGRADED",
                                   "severity": "GENERAL",
                                   "occurredAt": "2026-06-03T08:20:00Z",
                                   "faultDescription": "设备运行噪声持续升高，存在进一步恶化风险。",
-                                  "sceneCondition": "现场负载已降低，等待维修人员接取。"
+                                  "sceneCondition": "现场负载已降低，等待维修人员接取。",
+                                  "longitude": 114.1694,
+                                  "latitude": 22.3193
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -613,6 +639,127 @@ class OperationsControllerTests {
     }
 
     @Test
+    void createsNormalVerificationReportFromExpandedVerificationItems() throws Exception {
+        String operatorToken = login("operator", "password");
+
+        verifyPassword(operatorToken, "password");
+        mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-reports", "device-local-0001")
+                        .header("Authorization", "Bearer " + operatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "result": "ABNORMAL",
+                                  "verificationType": "ROUTINE",
+                                  "deviceStatus": "RUNNING",
+                                  "verificationMethod": "ONSITE_OBSERVATION",
+                                  "items": [
+                                    {
+                                      "itemCode": "IDENTIFICATION_CONSISTENCY",
+                                      "itemName": "标识一致性",
+                                      "result": "PASSED"
+                                    },
+                                    {
+                                      "itemCode": "CONNECTION_STABILITY",
+                                      "itemName": "连接稳定性",
+                                      "result": "NOT_APPLICABLE"
+                                    }
+                                  ],
+                                  "description": "各核验项未发现异常。",
+                                  "remark": "服务端应根据核验项推导结果。",
+                                  "verifiedAt": "2026-06-03T08:30:00Z"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.result").value("NORMAL"))
+                .andExpect(jsonPath("$.data.verificationType").value("ROUTINE"))
+                .andExpect(jsonPath("$.data.deviceStatus").value("RUNNING"))
+                .andExpect(jsonPath("$.data.verificationMethod").value("ONSITE_OBSERVATION"))
+                .andExpect(jsonPath("$.data.items[0].itemCode").value("IDENTIFICATION_CONSISTENCY"))
+                .andExpect(jsonPath("$.data.items[0].itemName").value("标识一致性"))
+                .andExpect(jsonPath("$.data.items[0].result").value("PASSED"))
+                .andExpect(jsonPath("$.data.items[1].result").value("NOT_APPLICABLE"));
+    }
+
+    @Test
+    void createsAbnormalVerificationAndFaultReportFromFailedVerificationItem() throws Exception {
+        String operatorToken = login("operator", "password");
+
+        verifyPassword(operatorToken, "password");
+        mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-reports/fault-report", "device-local-0001")
+                        .header("Authorization", "Bearer " + operatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "result": "NORMAL",
+                                  "verificationType": "TEMPORARY",
+                                  "deviceStatus": "OFFLINE",
+                                  "verificationMethod": "FUNCTION_TEST",
+                                  "items": [
+                                    {
+                                      "itemCode": "RUNNING_RESPONSE",
+                                      "itemName": "运行响应性",
+                                      "result": "FAILED"
+                                    }
+                                  ],
+                                  "description": "功能测试未通过。",
+                                  "remark": "服务端应根据核验项推导异常。",
+                                  "verifiedAt": "2026-06-03T08:30:00Z",
+                                  "faultType": "OPERATION_ABNORMAL",
+                                  "faultSubtype": "NO_RESPONSE",
+                                  "severity": "GENERAL",
+                                  "occurredAt": "2026-06-03T08:20:00Z",
+                                  "faultDescription": "设备对基础操作无响应。",
+                                  "sceneCondition": "已完成现场隔离。",
+                                  "longitude": 114.1694,
+                                  "latitude": 22.3193
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.verificationReport.result").value("ABNORMAL"))
+                .andExpect(jsonPath("$.data.verificationReport.verificationType").value("TEMPORARY"))
+                .andExpect(jsonPath("$.data.verificationReport.items[0].result").value("FAILED"))
+                .andExpect(jsonPath("$.data.faultReport.status").value("PENDING_REVIEW"))
+                .andExpect(jsonPath("$.data.faultReport.faultType").value("OPERATION_ABNORMAL"))
+                .andExpect(jsonPath("$.data.faultReport.faultSubtype").value("NO_RESPONSE"));
+    }
+
+    @Test
+    void rejectsVerificationFaultReportWhenLocationIsMissing() throws Exception {
+        String operatorToken = login("operator", "password");
+
+        verifyPassword(operatorToken, "password");
+        mockMvc.perform(post("/api/v1/devices/{deviceId}/verification-reports/fault-report", "device-local-0001")
+                        .header("Authorization", "Bearer " + operatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "result": "ABNORMAL",
+                                  "verificationType": "TEMPORARY",
+                                  "deviceStatus": "OFFLINE",
+                                  "verificationMethod": "FUNCTION_TEST",
+                                  "items": [
+                                    {
+                                      "itemCode": "RUNNING_RESPONSE",
+                                      "itemName": "运行响应性",
+                                      "result": "FAILED"
+                                    }
+                                  ],
+                                  "description": "现场核验发现设备通信异常。",
+                                  "remark": "定位未成功，应拒绝提交。",
+                                  "verifiedAt": "2026-06-03T08:30:00Z",
+                                  "faultType": "COMMUNICATION_FAULT",
+                                  "faultSubtype": "CONNECTION_INTERRUPTED",
+                                  "severity": "GENERAL",
+                                  "occurredAt": "2026-06-03T08:20:00Z",
+                                  "faultDescription": "通信链路持续不稳定。",
+                                  "sceneCondition": "现场等待进一步排查。"
+                                }
+                                """))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.error.code").value("FAULT_REPORT_INVALID"));
+    }
+
+    @Test
     void rejectsVerificationFaultReportWhenOnlyOneCoordinateIsProvided() throws Exception {
         String operatorToken = login("operator", "password");
 
@@ -623,10 +770,21 @@ class OperationsControllerTests {
                         .content("""
                                 {
                                   "result": "ABNORMAL",
+                                  "verificationType": "TEMPORARY",
+                                  "deviceStatus": "OFFLINE",
+                                  "verificationMethod": "FUNCTION_TEST",
+                                  "items": [
+                                    {
+                                      "itemCode": "RUNNING_RESPONSE",
+                                      "itemName": "运行响应性",
+                                      "result": "FAILED"
+                                    }
+                                  ],
                                   "description": "现场核验发现设备通信异常。",
                                   "remark": "坐标信息不完整，应拒绝提交。",
                                   "verifiedAt": "2026-06-03T08:30:00Z",
                                   "faultType": "COMMUNICATION_FAULT",
+                                  "faultSubtype": "CONNECTION_INTERRUPTED",
                                   "severity": "GENERAL",
                                   "occurredAt": "2026-06-03T08:20:00Z",
                                   "faultDescription": "通信链路持续不稳定。",
@@ -649,10 +807,21 @@ class OperationsControllerTests {
                         .content("""
                                 {
                                   "result": "ABNORMAL",
+                                  "verificationType": "TEMPORARY",
+                                  "deviceStatus": "OFFLINE",
+                                  "verificationMethod": "FUNCTION_TEST",
+                                  "items": [
+                                    {
+                                      "itemCode": "RUNNING_RESPONSE",
+                                      "itemName": "运行响应性",
+                                      "result": "FAILED"
+                                    }
+                                  ],
                                   "description": "现场核验发现设备通信异常。",
                                   "remark": "坐标越界，应拒绝提交。",
                                   "verifiedAt": "2026-06-03T08:30:00Z",
                                   "faultType": "COMMUNICATION_FAULT",
+                                  "faultSubtype": "CONNECTION_INTERRUPTED",
                                   "severity": "GENERAL",
                                   "occurredAt": "2026-06-03T08:20:00Z",
                                   "faultDescription": "通信链路持续不稳定。",
@@ -683,14 +852,27 @@ class OperationsControllerTests {
                         .content("""
                                 {
                                   "result": "ABNORMAL",
+                                  "verificationType": "TEMPORARY",
+                                  "deviceStatus": "OFFLINE",
+                                  "verificationMethod": "FUNCTION_TEST",
+                                  "items": [
+                                    {
+                                      "itemCode": "RUNNING_RESPONSE",
+                                      "itemName": "运行响应性",
+                                      "result": "FAILED"
+                                    }
+                                  ],
                                   "description": "设备已不可用。",
                                   "remark": "",
                                   "verifiedAt": "2026-06-03T08:30:00Z",
                                   "faultType": "ENERGY_FAULT",
+                                  "faultSubtype": "POWER_SUPPLY_ABNORMAL",
                                   "severity": "SEVERE",
                                   "occurredAt": "2026-06-03T08:20:00Z",
                                   "faultDescription": "重复提交同一设备的活跃故障。",
-                                  "sceneCondition": "应被系统拦截。"
+                                  "sceneCondition": "应被系统拦截。",
+                                  "longitude": 114.1694,
+                                  "latitude": 22.3193
                                 }
                                 """))
                 .andExpect(status().isConflict())
@@ -1071,14 +1253,27 @@ class OperationsControllerTests {
                         .content("""
                                 {
                                   "result": "ABNORMAL",
+                                  "verificationType": "TEMPORARY",
+                                  "deviceStatus": "RUNNING",
+                                  "verificationMethod": "ONSITE_OBSERVATION",
+                                  "items": [
+                                    {
+                                      "itemCode": "RUNNING_RESPONSE",
+                                      "itemName": "运行响应性",
+                                      "result": "FAILED"
+                                    }
+                                  ],
                                   "description": "现场核验发现设备运行噪声异常。",
                                   "remark": "已同步提交报修信息。",
                                   "verifiedAt": "2026-06-03T08:30:00Z",
                                   "faultType": "OPERATION_ABNORMAL",
+                                  "faultSubtype": "PERFORMANCE_DEGRADED",
                                   "severity": "SEVERE",
                                   "occurredAt": "2026-06-03T08:20:00Z",
                                   "faultDescription": "设备运行噪声持续升高，存在进一步恶化风险。",
-                                  "sceneCondition": "现场负载已降低，等待维修人员接取。"
+                                  "sceneCondition": "现场负载已降低，等待维修人员接取。",
+                                  "longitude": 114.1694,
+                                  "latitude": 22.3193
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -1292,14 +1487,27 @@ class OperationsControllerTests {
                         .content("""
                                 {
                                   "result": "ABNORMAL",
+                                  "verificationType": "TEMPORARY",
+                                  "deviceStatus": "OFFLINE",
+                                  "verificationMethod": "FUNCTION_TEST",
+                                  "items": [
+                                    {
+                                      "itemCode": "RUNNING_RESPONSE",
+                                      "itemName": "运行响应性",
+                                      "result": "FAILED"
+                                    }
+                                  ],
                                   "description": "Archivist must not submit fault reports.",
                                   "remark": "",
                                   "verifiedAt": "2026-06-03T08:30:00Z",
                                   "faultType": "ENERGY_FAULT",
+                                  "faultSubtype": "POWER_SUPPLY_ABNORMAL",
                                   "severity": "GENERAL",
                                   "occurredAt": "2026-06-03T08:20:00Z",
                                   "faultDescription": "Archivist must not submit fault reports.",
-                                  "sceneCondition": "Permission guard should reject this submission."
+                                  "sceneCondition": "Permission guard should reject this submission.",
+                                  "longitude": 114.1694,
+                                  "latitude": 22.3193
                                 }
                                 """))
                 .andExpect(status().isForbidden())
@@ -1357,14 +1565,27 @@ class OperationsControllerTests {
                         .content("""
                                 {
                                   "result": "ABNORMAL",
+                                  "verificationType": "TEMPORARY",
+                                  "deviceStatus": "OFFLINE",
+                                  "verificationMethod": "FUNCTION_TEST",
+                                  "items": [
+                                    {
+                                      "itemCode": "RUNNING_RESPONSE",
+                                      "itemName": "运行响应性",
+                                      "result": "FAILED"
+                                    }
+                                  ],
                                   "description": "现场核验发现设备运行异常。",
                                   "remark": "已同步填写报修报告。",
                                   "verifiedAt": "2026-06-03T08:30:00Z",
                                   "faultType": "%s",
+                                  "faultSubtype": "NO_RESPONSE",
                                   "severity": "%s",
                                   "occurredAt": "2026-06-03T08:20:00Z",
                                   "faultDescription": "%s",
-                                  "sceneCondition": "Site has reduced load."
+                                  "sceneCondition": "Site has reduced load.",
+                                  "longitude": 114.1694,
+                                  "latitude": 22.3193
                                 }
                                 """.formatted(faultType, severity, description)))
                 .andExpect(status().isOk())

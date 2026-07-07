@@ -3,7 +3,15 @@ import { AppSectionTitle } from '../../shared/components/AppSectionTitle';
 import { CenterTitleBar } from '../../shared/components/CenterTitleBar';
 import { InlineMessageSurface } from '../../shared/components/InlineMessageSurface';
 import { PermissionCode } from '../../user/models/PermissionModels';
-import { VerificationReportForm, VerificationResult } from '../models/VerificationReportModels';
+import {
+  VerificationDeviceStatus,
+  VerificationItemResult,
+  VerificationMethod,
+  VerificationReportForm,
+  VerificationReportItem,
+  VerificationResult,
+  VerificationType
+} from '../models/VerificationReportModels';
 import { DeviceService } from '../../archive/services/DeviceService';
 import { UiFeedbackService } from '../../shared/services/UiFeedbackService';
 import { VerificationReportService } from '../services/VerificationReportService';
@@ -15,12 +23,43 @@ import { AppRoutes } from '../../shared/navigation/AppRoutes';
 import { UiFeedbackTone } from '../../shared/models/UiFeedbackModels';
 import { VerificationReportFlowStore } from '../stores/VerificationReportFlowStore';
 
+const VERIFICATION_TYPE_VALUES: string[] = [
+  `${VerificationType.Routine}`,
+  `${VerificationType.Temporary}`,
+  `${VerificationType.Special}`,
+  `${VerificationType.Initial}`,
+  `${VerificationType.Sampling}`,
+  `${VerificationType.Other}`
+];
+const VERIFICATION_TYPE_LABELS: string[] = ['例行', '临时', '专项', '首次', '抽检', '其他'];
+const DEVICE_STATUS_VALUES: string[] = [
+  `${VerificationDeviceStatus.Running}`,
+  `${VerificationDeviceStatus.Standby}`,
+  `${VerificationDeviceStatus.Stopped}`,
+  `${VerificationDeviceStatus.Offline}`,
+  `${VerificationDeviceStatus.Unknown}`,
+  `${VerificationDeviceStatus.Other}`
+];
+const DEVICE_STATUS_LABELS: string[] = ['运行', '待机', '停机', '离线', '未知', '其他'];
+const VERIFICATION_METHOD_VALUES: string[] = [
+  `${VerificationMethod.OnsiteObservation}`,
+  `${VerificationMethod.IdentificationCheck}`,
+  `${VerificationMethod.FunctionTest}`,
+  `${VerificationMethod.DataReading}`,
+  `${VerificationMethod.RemoteConfirmation}`,
+  `${VerificationMethod.Other}`
+];
+const VERIFICATION_METHOD_LABELS: string[] = ['现场观察', '编号核对', '功能测试', '数据读取', '远程确认', '其他方式'];
+
 @Entry
 @Component
 struct VerificationReportPage {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   @State deviceCode: string = '';
-  @State verificationResult: string = '';
+  @State verificationType: string = `${VerificationType.Routine}`;
+  @State deviceStatus: string = `${VerificationDeviceStatus.Running}`;
+  @State verificationMethod: string = `${VerificationMethod.OnsiteObservation}`;
+  @State verificationItems: VerificationReportItem[] = VerificationReportService.createDefaultVerificationItems();
   @State description: string = '';
   @State verifiedAt: string = '';
   @State password: string = '';
@@ -93,14 +132,14 @@ struct VerificationReportPage {
   @Builder
   ModeHeader() {
     Column({ space: 5 }) {
-      Text('核验报告')
+      Text('核验与报修')
         .fontSize(34)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      Text('Verification Report')
+      Text('Verification And Fault Report')
         .fontSize(13)
         .fontWeight(FontWeight.Medium)
         .fontColor(AppColors.TextTertiary)
@@ -122,8 +161,12 @@ struct VerificationReportPage {
 
       Column({ space: 16 }) {
         this.DeviceCodeField()
-        this.ResultSelector()
         this.VerifiedAtField()
+        this.VerificationTypeSelector()
+        this.DeviceStatusSelector()
+        this.VerificationMethodSelector()
+        this.VerificationItemSection()
+        this.ResultDisplay()
         this.DescriptionField()
       }
       .padding({
@@ -185,55 +228,6 @@ struct VerificationReportPage {
   }
 
   @Builder
-  ResultSelector() {
-    Column({ space: 10 }) {
-      this.FieldTitle('核验结果')
-
-      Row({ space: 10 }) {
-        this.ResultOption(VerificationResult.Normal, $r('sys.symbol.checkmark_circle'))
-        this.ResultOption(VerificationResult.Abnormal, $r('sys.symbol.exclamationmark_shield_fill'))
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-  }
-
-  @Builder
-  ResultOption(result: VerificationResult, icon: Resource) {
-    Button({ type: ButtonType.Capsule, stateEffect: true }) {
-      Row({ space: 5 }) {
-        SymbolGlyph(icon)
-          .fontSize(17)
-          .fontColor([this.verificationResult === `${result}` ? AppColors.OnPrimary : AppColors.TextPrimary])
-
-        Text(VerificationReportService.formatVerificationResult(result))
-          .fontSize(14)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(this.verificationResult === `${result}` ? AppColors.OnPrimary : AppColors.TextPrimary)
-          .maxLines(1)
-      }
-      .width('100%')
-      .justifyContent(FlexAlign.Center)
-      .alignItems(VerticalAlign.Center)
-    }
-    .height(42)
-    .layoutWeight(1)
-    .backgroundColor(this.verificationResult === `${result}` ? this.getResultTone(result) : AppColors.FieldBackground)
-    .border({
-      width: 1,
-      color: this.verificationResult === `${result}` ? this.getResultTone(result) : AppColors.Border
-    })
-    .enabled(!this.submitting && !this.submitted)
-    .onClick(() => {
-      this.verificationResult = `${result}`;
-      this.password = '';
-      this.markFormChanged();
-    })
-  }
-
-  @Builder
   VerifiedAtField() {
     Column({ space: 10 }) {
       this.FieldTitle('核验时间')
@@ -273,6 +267,181 @@ struct VerificationReportPage {
 
         this.showVerifiedAtPicker();
       })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  VerificationTypeSelector() {
+    Column({ space: 10 }) {
+      this.FieldTitle('核验类型')
+      this.SingleTextPicker(VERIFICATION_TYPE_LABELS, this.getVerificationTypeIndex(), 'type')
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  DeviceStatusSelector() {
+    Column({ space: 10 }) {
+      this.FieldTitle('设备状态')
+      this.SingleTextPicker(DEVICE_STATUS_LABELS, this.getDeviceStatusIndex(), 'status')
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  VerificationMethodSelector() {
+    Column({ space: 10 }) {
+      this.FieldTitle('核验方式')
+      this.SingleTextPicker(VERIFICATION_METHOD_LABELS, this.getVerificationMethodIndex(), 'method')
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  SingleTextPicker(range: string[], selected: number, group: string) {
+    TextPicker({
+      range,
+      selected
+    })
+    .height(112)
+    .width('100%')
+    .backgroundColor(AppColors.FieldBackground)
+    .borderRadius(18)
+    .border({
+      width: 1,
+      color: AppColors.Border
+    })
+    .canLoop(false)
+    .defaultPickerItemHeight(36)
+    .selectedTextStyle({
+      color: AppColors.Primary,
+      font: {
+        size: 17,
+        weight: FontWeight.Bold
+      }
+    })
+    .textStyle({
+      color: AppColors.TextSecondary,
+      font: {
+        size: 14,
+        weight: FontWeight.Medium
+      }
+    })
+    .enabled(!this.submitting && !this.submitted)
+    .onChange((_value: string | string[], index: number | number[]) => {
+      this.applyPickerIndex(group, this.normalizeSinglePickerIndex(index));
+    })
+  }
+
+  @Builder
+  VerificationItemSection() {
+    Column({ space: 10 }) {
+      this.FieldTitle('核验项')
+
+      ForEach(this.verificationItems, (item: VerificationReportItem, index: number) => {
+        this.VerificationItemRow(item, index)
+      }, (item: VerificationReportItem) => item.itemCode)
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  VerificationItemRow(item: VerificationReportItem, index: number) {
+    Row({ space: 10 }) {
+      Text(item.itemName)
+        .fontSize(15)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TextPrimary)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .layoutWeight(1)
+
+      Row({ space: 6 }) {
+        this.ItemResultRadio(index, item.itemCode, VerificationItemResult.Passed)
+        this.ItemResultRadio(index, item.itemCode, VerificationItemResult.Failed)
+        this.ItemResultRadio(index, item.itemCode, VerificationItemResult.NotApplicable)
+      }
+      .width(212)
+      .alignItems(VerticalAlign.Center)
+    }
+    .width('100%')
+    .constraintSize({ minHeight: 58 })
+    .padding({
+      left: 12,
+      right: 12,
+      top: 10,
+      bottom: 10
+    })
+    .backgroundColor(AppColors.SurfaceMuted)
+    .borderRadius(18)
+    .border({ width: 1, color: AppColors.Divider })
+    .alignItems(VerticalAlign.Center)
+  }
+
+  @Builder
+  ItemResultRadio(index: number, itemCode: string, result: VerificationItemResult) {
+    Column({ space: 3 }) {
+      Radio({
+        value: `${result}`,
+        group: `verification-item-${itemCode}`
+      })
+        .checked(this.verificationItems[index].result === result)
+        .radioStyle({
+          checkedBackgroundColor: this.getItemResultTone(result),
+          uncheckedBorderColor: this.getItemResultTone(result),
+          indicatorColor: AppColors.OnPrimary
+        })
+        .enabled(!this.submitting && !this.submitted)
+        .onChange((checked: boolean) => {
+          if (checked) {
+            this.updateVerificationItemResult(index, result);
+          }
+        })
+
+      Text(VerificationReportService.formatVerificationItemResult(result))
+        .fontSize(11)
+        .fontWeight(this.verificationItems[index].result === result ? FontWeight.Bold : FontWeight.Medium)
+        .fontColor(this.getItemResultTone(result))
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .width(64)
+    .alignItems(HorizontalAlign.Center)
+    .onClick(() => {
+      this.updateVerificationItemResult(index, result);
+    })
+  }
+
+  @Builder
+  ResultDisplay() {
+    Column({ space: 10 }) {
+      this.FieldTitle('核验结果')
+
+      Row({ space: 10 }) {
+        SymbolGlyph(this.getVerificationResult() === VerificationResult.Abnormal ?
+          $r('sys.symbol.exclamationmark_shield_fill') : $r('sys.symbol.checkmark_circle'))
+          .fontSize(20)
+          .fontColor([AppColors.OnPrimary])
+
+        Text(VerificationReportService.formatVerificationResult(this.getVerificationResult()))
+          .fontSize(16)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppColors.OnPrimary)
+          .layoutWeight(1)
+          .maxLines(1)
+      }
+      .height(50)
+      .width('100%')
+      .padding({ left: 16, right: 16 })
+      .backgroundColor(this.getResultTone(this.getVerificationResult()))
+      .borderRadius(18)
+      .alignItems(VerticalAlign.Center)
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -371,19 +540,18 @@ struct VerificationReportPage {
   PrimaryActionButton() {
     Button({
       type: ButtonType.Capsule,
-      stateEffect: !this.submitting && !this.submitted && this.verificationResult.length > 0 &&
-        (this.verificationResult === `${VerificationResult.Abnormal}` ||
-          (this.verificationResult === `${VerificationResult.Normal}` && this.password.length > 0))
+      stateEffect: this.isPrimaryActionEnabled()
     }) {
       Row({ space: 8 }) {
-        SymbolGlyph(this.verificationResult === `${VerificationResult.Abnormal}` ? $r('sys.symbol.chevron_forward') :
-          $r('sys.symbol.checkmark_circle'))
+        SymbolGlyph(this.requiresFaultReport() ? $r('sys.symbol.chevron_forward') : $r('sys.symbol.checkmark_circle'))
           .fontSize(20)
           .fontColor([AppColors.OnPrimary])
 
-        Text(this.submitting ? '提交中' :
-          this.submitted ? '已提交' :
-            this.verificationResult === `${VerificationResult.Abnormal}` ? '下一步' : '提交')
+        Text(VerificationReportService.formatVerificationStepActionLabel(
+          `${this.getVerificationResult()}`,
+          this.submitting,
+          this.submitted
+        ))
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
           .fontColor(AppColors.OnPrimary)
@@ -395,13 +563,8 @@ struct VerificationReportPage {
     }
     .height(54)
     .width('100%')
-    .backgroundColor(!this.submitting && !this.submitted && this.verificationResult.length > 0 &&
-      (this.verificationResult === `${VerificationResult.Abnormal}` ||
-        (this.verificationResult === `${VerificationResult.Normal}` && this.password.length > 0)) ?
-      AppColors.Primary : AppColors.Disabled)
-    .enabled(!this.submitting && !this.submitted && this.verificationResult.length > 0 &&
-      (this.verificationResult === `${VerificationResult.Abnormal}` ||
-        (this.verificationResult === `${VerificationResult.Normal}` && this.password.length > 0)))
+    .backgroundColor(this.isPrimaryActionEnabled() ? AppColors.Primary : AppColors.Disabled)
+    .enabled(this.isPrimaryActionEnabled())
     .onClick(() => {
       this.handlePrimaryAction();
     })
@@ -427,7 +590,7 @@ struct VerificationReportPage {
     }
 
     const validation = VerificationReportService.validateAbnormalVerificationStepForm(
-      this.buildAbnormalVerificationForm());
+      this.buildVerificationForm());
     if (!validation.valid) {
       this.message = validation.message;
       this.messageTone = UiFeedbackTone.Danger;
@@ -440,7 +603,7 @@ struct VerificationReportPage {
       return;
     }
 
-    VerificationReportFlowStore.startFaultReportFlow(this.buildAbnormalVerificationForm());
+    VerificationReportFlowStore.startFaultReportFlow(this.buildVerificationForm());
     AppNavigator.push(this.getUIContext(), AppRoutes.FaultReportPage, () => {
       this.message = UiFeedbackService.operationUnavailable('报修报告');
       this.messageTone = UiFeedbackTone.Danger;
@@ -457,7 +620,7 @@ struct VerificationReportPage {
       this.normalizedDeviceCode = '-';
     }
 
-    const validation = VerificationReportService.validateVerificationForm(this.buildNormalVerificationForm());
+    const validation = VerificationReportService.validateVerificationForm(this.buildVerificationForm());
     if (!validation.valid) {
       this.message = validation.message;
       this.messageTone = UiFeedbackTone.Danger;
@@ -478,7 +641,7 @@ struct VerificationReportPage {
       }
 
       const response = await VerificationReportService.submitVerificationReportRemoteFirst(
-        this.buildNormalVerificationForm());
+        this.buildVerificationForm());
       if (!response.success) {
         const error = response.error;
         this.message = UiFeedbackService.operationError(error, '提交');
@@ -495,20 +658,20 @@ struct VerificationReportPage {
     }
   }
 
-  buildNormalVerificationForm(): VerificationReportForm {
+  buildVerificationForm(): VerificationReportForm {
     return {
       deviceCode: this.deviceCode,
-      result: this.verificationResult as VerificationResult,
-      description: this.description,
-      verifiedAt: this.verifiedAt,
-      remark: ''
-    };
-  }
-
-  buildAbnormalVerificationForm(): VerificationReportForm {
-    return {
-      deviceCode: this.deviceCode,
-      result: this.verificationResult as VerificationResult,
+      verificationType: this.verificationType as VerificationType,
+      deviceStatus: this.deviceStatus as VerificationDeviceStatus,
+      verificationMethod: this.verificationMethod as VerificationMethod,
+      items: this.verificationItems.map((item: VerificationReportItem): VerificationReportItem => {
+        const formItem: VerificationReportItem = {
+          itemCode: item.itemCode,
+          itemName: item.itemName,
+          result: item.result
+        };
+        return formItem;
+      }),
       description: this.description,
       verifiedAt: this.verifiedAt,
       remark: ''
@@ -526,12 +689,25 @@ struct VerificationReportPage {
     return false;
   }
 
+  isPrimaryActionEnabled(): boolean {
+    return VerificationReportService.canUseVerificationStepAction(
+      `${this.getVerificationResult()}`,
+      this.password,
+      this.submitting,
+      this.submitted
+    );
+  }
+
   requiresFaultReport(): boolean {
-    return this.verificationResult === `${VerificationResult.Abnormal}`;
+    return this.getVerificationResult() === VerificationResult.Abnormal;
   }
 
   isNormalVerification(): boolean {
-    return this.verificationResult === `${VerificationResult.Normal}`;
+    return this.getVerificationResult() === VerificationResult.Normal;
+  }
+
+  getVerificationResult(): VerificationResult {
+    return VerificationReportService.resolveVerificationResult(this.verificationItems);
   }
 
   getResultTone(result: VerificationResult): string {
@@ -545,6 +721,99 @@ struct VerificationReportPage {
     }
   }
 
+  getItemResultTone(result: VerificationItemResult): string {
+    switch (result) {
+      case VerificationItemResult.Passed:
+        return AppColors.Success;
+      case VerificationItemResult.Failed:
+        return AppColors.Danger;
+      case VerificationItemResult.NotApplicable:
+        return AppColors.Log;
+      default:
+        return AppColors.TextSecondary;
+    }
+  }
+
+  getVerificationTypeIndex(): number {
+    return this.indexOfPickerValue(VERIFICATION_TYPE_VALUES, this.verificationType);
+  }
+
+  getDeviceStatusIndex(): number {
+    return this.indexOfPickerValue(DEVICE_STATUS_VALUES, this.deviceStatus);
+  }
+
+  getVerificationMethodIndex(): number {
+    return this.indexOfPickerValue(VERIFICATION_METHOD_VALUES, this.verificationMethod);
+  }
+
+  applyPickerIndex(group: string, index: number): void {
+    if (this.submitting || this.submitted) {
+      return;
+    }
+
+    if (group === 'type') {
+      this.verificationType = VERIFICATION_TYPE_VALUES[this.normalizePickerIndex(index, VERIFICATION_TYPE_VALUES.length)];
+    } else if (group === 'status') {
+      this.deviceStatus = DEVICE_STATUS_VALUES[this.normalizePickerIndex(index, DEVICE_STATUS_VALUES.length)];
+    } else {
+      this.verificationMethod =
+        VERIFICATION_METHOD_VALUES[this.normalizePickerIndex(index, VERIFICATION_METHOD_VALUES.length)];
+    }
+
+    this.markFormChanged();
+  }
+
+  normalizeSinglePickerIndex(index: number | number[]): number {
+    if (typeof index === 'number') {
+      return index;
+    }
+
+    if (index.length === 0) {
+      return 0;
+    }
+
+    return index[0];
+  }
+
+  indexOfPickerValue(values: string[], value: string): number {
+    const index = values.indexOf(value);
+    if (index < 0) {
+      return 0;
+    }
+
+    return index;
+  }
+
+  normalizePickerIndex(index: number, length: number): number {
+    if (length <= 0 || index !== index || index < 0) {
+      return 0;
+    }
+
+    if (index >= length) {
+      return length - 1;
+    }
+
+    return Math.floor(index);
+  }
+
+  updateVerificationItemResult(index: number, result: VerificationItemResult): void {
+    if (this.submitting || this.submitted || index < 0 || index >= this.verificationItems.length) {
+      return;
+    }
+
+    const items = this.verificationItems.map((item: VerificationReportItem, itemIndex: number): VerificationReportItem => {
+      const updatedItem: VerificationReportItem = {
+        itemCode: item.itemCode,
+        itemName: item.itemName,
+        result: itemIndex === index ? result : item.result
+      };
+      return updatedItem;
+    });
+    this.verificationItems = items;
+    this.password = '';
+    this.markFormChanged();
+  }
+
   markFormChanged(): void {
     this.message = '';
     this.messageTone = UiFeedbackTone.Danger;
@@ -553,7 +822,10 @@ struct VerificationReportPage {
 
   resetAfterFaultReportSubmitted(): void {
     this.deviceCode = '';
-    this.verificationResult = '';
+    this.verificationType = `${VerificationType.Routine}`;
+    this.deviceStatus = `${VerificationDeviceStatus.Running}`;
+    this.verificationMethod = `${VerificationMethod.OnsiteObservation}`;
+    this.verificationItems = VerificationReportService.createDefaultVerificationItems();
     this.description = '';
     this.verifiedAt = '';
     this.password = '';
@@ -566,7 +838,10 @@ struct VerificationReportPage {
 
   resetAfterFaultReportDiscarded(): void {
     this.deviceCode = '';
-    this.verificationResult = '';
+    this.verificationType = `${VerificationType.Routine}`;
+    this.deviceStatus = `${VerificationDeviceStatus.Running}`;
+    this.verificationMethod = `${VerificationMethod.OnsiteObservation}`;
+    this.verificationItems = VerificationReportService.createDefaultVerificationItems();
     this.description = '';
     this.verifiedAt = '';
     this.password = '';

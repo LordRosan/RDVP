@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.rmf.rdvp.shared.api.ApiResponse;
 import com.rmf.rdvp.shared.api.RequestIds;
-import com.rmf.rdvp.operations.DeviceVerificationResult;
+import com.rmf.rdvp.operations.DeviceVerificationReportItem;
 import com.rmf.rdvp.shared.error.BusinessException;
 import com.rmf.rdvp.shared.error.ErrorCode;
 import com.rmf.rdvp.user.AuthenticatedUser;
@@ -19,6 +19,10 @@ import com.rmf.rdvp.user.AuthenticationService;
 import com.rmf.rdvp.operations.FaultSeverity;
 import com.rmf.rdvp.operations.FaultType;
 import com.rmf.rdvp.operations.OperationsService;
+import com.rmf.rdvp.operations.VerificationDeviceStatus;
+import com.rmf.rdvp.operations.VerificationItemResult;
+import com.rmf.rdvp.operations.VerificationMethod;
+import com.rmf.rdvp.operations.VerificationType;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -47,7 +51,10 @@ public class VerificationReportController {
         authenticationService.consumeRecentPasswordVerification(user);
         var report = operationsService.createVerificationReport(
                 deviceId,
-                parseResult(requestBody.result()),
+                parseEnum(VerificationType.class, requestBody.verificationType(), "verificationType"),
+                parseEnum(VerificationDeviceStatus.class, requestBody.deviceStatus(), "deviceStatus"),
+                parseEnum(VerificationMethod.class, requestBody.verificationMethod(), "verificationMethod"),
+                parseVerificationItems(requestBody.items()),
                 requestBody.description(),
                 requestBody.remark(),
                 requestBody.verifiedAt(),
@@ -65,11 +72,15 @@ public class VerificationReportController {
         authenticationService.consumeRecentPasswordVerification(user);
         var result = operationsService.createAbnormalVerificationSubmission(
                 deviceId,
-                parseEnum(DeviceVerificationResult.class, requestBody.result(), "result"),
+                parseEnum(VerificationType.class, requestBody.verificationType(), "verificationType"),
+                parseEnum(VerificationDeviceStatus.class, requestBody.deviceStatus(), "deviceStatus"),
+                parseEnum(VerificationMethod.class, requestBody.verificationMethod(), "verificationMethod"),
+                parseVerificationItems(requestBody.items()),
                 requestBody.description(),
                 requestBody.remark(),
                 requestBody.verifiedAt(),
                 parseEnum(FaultType.class, requestBody.faultType(), "faultType"),
+                requestBody.faultSubtype(),
                 parseEnum(FaultSeverity.class, requestBody.severity(), "severity"),
                 requestBody.occurredAt(),
                 requestBody.faultDescription(),
@@ -80,8 +91,15 @@ public class VerificationReportController {
         return ResponseEntity.ok(ApiResponse.success(AbnormalVerificationSubmissionResponse.from(result), RequestIds.resolve(request)));
     }
 
-    private DeviceVerificationResult parseResult(String value) {
-        return parseEnum(DeviceVerificationResult.class, value, "result");
+    private java.util.List<DeviceVerificationReportItem> parseVerificationItems(
+            java.util.List<DeviceVerificationReportItemRequest> items) {
+        return items.stream()
+                .map(item -> new DeviceVerificationReportItem(
+                        item.itemCode(),
+                        item.itemName(),
+                        parseEnum(VerificationItemResult.class, item.result(), "item.result"),
+                        0))
+                .toList();
     }
 
     private <T extends Enum<T>> T parseEnum(Class<T> enumType, String value, String field) {

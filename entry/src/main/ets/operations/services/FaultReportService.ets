@@ -3,6 +3,7 @@ import {
   FaultReportValidationResult,
   FaultSeverity,
   FaultStatus,
+  FaultSubtype,
   FaultType
 } from '../models/FaultModels';
 import { DeviceService } from '../../archive/services/DeviceService';
@@ -10,6 +11,145 @@ import { UiFeedbackService } from '../../shared/services/UiFeedbackService';
 
 const MAX_DESCRIPTION_LENGTH = 800;
 const MAX_SCENE_CONDITION_LENGTH = 500;
+
+export interface FaultSubtypeOption {
+  type: FaultType;
+  subtype: FaultSubtype;
+  label: string;
+}
+
+const FAULT_SUBTYPE_OPTIONS: FaultSubtypeOption[] = [
+  {
+    type: FaultType.OperationAbnormal,
+    subtype: FaultSubtype.NoResponse,
+    label: '无响应'
+  },
+  {
+    type: FaultType.OperationAbnormal,
+    subtype: FaultSubtype.PerformanceDegraded,
+    label: '性能下降'
+  },
+  {
+    type: FaultType.OperationAbnormal,
+    subtype: FaultSubtype.IntermittentAbnormal,
+    label: '间歇异常'
+  },
+  {
+    type: FaultType.OperationAbnormal,
+    subtype: FaultSubtype.ParameterAbnormal,
+    label: '参数异常'
+  },
+  {
+    type: FaultType.HardwareDamage,
+    subtype: FaultSubtype.PartDamaged,
+    label: '部件损坏'
+  },
+  {
+    type: FaultType.HardwareDamage,
+    subtype: FaultSubtype.LoosenedOrDeformed,
+    label: '松动变形'
+  },
+  {
+    type: FaultType.HardwareDamage,
+    subtype: FaultSubtype.WearOrAging,
+    label: '磨损老化'
+  },
+  {
+    type: FaultType.HardwareDamage,
+    subtype: FaultSubtype.MissingPart,
+    label: '部件缺失'
+  },
+  {
+    type: FaultType.CommunicationFault,
+    subtype: FaultSubtype.ConnectionInterrupted,
+    label: '连接中断'
+  },
+  {
+    type: FaultType.CommunicationFault,
+    subtype: FaultSubtype.SignalAbnormal,
+    label: '信号异常'
+  },
+  {
+    type: FaultType.CommunicationFault,
+    subtype: FaultSubtype.DataAbnormal,
+    label: '数据异常'
+  },
+  {
+    type: FaultType.CommunicationFault,
+    subtype: FaultSubtype.SyncFailed,
+    label: '同步失败'
+  },
+  {
+    type: FaultType.LogicFault,
+    subtype: FaultSubtype.LogicException,
+    label: '逻辑异常'
+  },
+  {
+    type: FaultType.LogicFault,
+    subtype: FaultSubtype.ConfigurationMismatch,
+    label: '配置不符'
+  },
+  {
+    type: FaultType.LogicFault,
+    subtype: FaultSubtype.ProcessBlocked,
+    label: '流程阻塞'
+  },
+  {
+    type: FaultType.LogicFault,
+    subtype: FaultSubtype.StateConflict,
+    label: '状态冲突'
+  },
+  {
+    type: FaultType.EnergyFault,
+    subtype: FaultSubtype.PowerSupplyAbnormal,
+    label: '供能异常'
+  },
+  {
+    type: FaultType.EnergyFault,
+    subtype: FaultSubtype.EnergyConsumptionAbnormal,
+    label: '能耗异常'
+  },
+  {
+    type: FaultType.EnergyFault,
+    subtype: FaultSubtype.Overheated,
+    label: '过热'
+  },
+  {
+    type: FaultType.EnergyFault,
+    subtype: FaultSubtype.ProtectionTriggered,
+    label: '保护触发'
+  },
+  {
+    type: FaultType.ExternalFactor,
+    subtype: FaultSubtype.MoistureOrWater,
+    label: '受潮进水'
+  },
+  {
+    type: FaultType.ExternalFactor,
+    subtype: FaultSubtype.DustPollution,
+    label: '积尘污染'
+  },
+  {
+    type: FaultType.ExternalFactor,
+    subtype: FaultSubtype.ExternalImpact,
+    label: '外力影响'
+  },
+  {
+    type: FaultType.ExternalFactor,
+    subtype: FaultSubtype.EnvironmentExceeded,
+    label: '环境超限'
+  },
+  {
+    type: FaultType.Other,
+    subtype: FaultSubtype.ToBeConfirmed,
+    label: '待确认'
+  },
+  {
+    type: FaultType.Other,
+    subtype: FaultSubtype.OtherAbnormal,
+    label: '其他异常'
+  }
+];
 
 export class FaultReportService {
   static normalizeText(value: string): string {
@@ -35,6 +175,13 @@ export class FaultReportService {
       };
     }
 
+    if (!FaultReportService.isKnownFaultSubtype(form.faultType, form.faultSubtype)) {
+      return {
+        valid: false,
+        message: UiFeedbackService.requiredSelection('故障小类')
+      };
+    }
+
     if (!FaultReportService.isKnownSeverity(form.severity)) {
       return {
         valid: false,
@@ -54,6 +201,13 @@ export class FaultReportService {
       return {
         valid: false,
         message: UiFeedbackService.fieldTooLong('故障时间', 64, '字')
+      };
+    }
+
+    if (!FaultReportService.hasValidLocation(form.longitude, form.latitude)) {
+      return {
+        valid: false,
+        message: UiFeedbackService.requiredAction('获取故障地点')
       };
     }
 
@@ -95,9 +249,9 @@ export class FaultReportService {
       case FaultType.CommunicationFault:
         return '通信故障';
       case FaultType.LogicFault:
-        return '逻辑故障';
+        return '逻辑异常';
       case FaultType.EnergyFault:
-        return '能源故障';
+        return '供能异常';
       case FaultType.ExternalFactor:
         return '外部因素';
       case FaultType.Other:
@@ -105,6 +259,46 @@ export class FaultReportService {
       default:
         return '-';
     }
+  }
+
+  static getFaultSubtypeOptions(type: FaultType): FaultSubtypeOption[] {
+    return FAULT_SUBTYPE_OPTIONS.filter((item: FaultSubtypeOption) => {
+      return item.type === type;
+    }).map((item: FaultSubtypeOption): FaultSubtypeOption => {
+      const option: FaultSubtypeOption = {
+        type: item.type,
+        subtype: item.subtype,
+        label: item.label
+      };
+      return option;
+    });
+  }
+
+  static getDefaultFaultSubtype(type: FaultType): FaultSubtype {
+    const options = FaultReportService.getFaultSubtypeOptions(type);
+    if (options.length === 0) {
+      return FaultSubtype.OtherAbnormal;
+    }
+
+    return options[0].subtype;
+  }
+
+  static formatFaultSubtype(subtype: FaultSubtype): string {
+    for (let index = 0; index < FAULT_SUBTYPE_OPTIONS.length; index++) {
+      if (FAULT_SUBTYPE_OPTIONS[index].subtype === subtype) {
+        return FAULT_SUBTYPE_OPTIONS[index].label;
+      }
+    }
+
+    return '-';
+  }
+
+  static formatFaultLocation(longitude: number | undefined, latitude: number | undefined): string {
+    if (!FaultReportService.hasValidLocation(longitude, latitude)) {
+      return '未获取';
+    }
+
+    return `${latitude?.toFixed(6)}, ${longitude?.toFixed(6)}`;
   }
 
   static formatSeverity(severity: FaultSeverity): string {
@@ -185,10 +379,31 @@ export class FaultReportService {
       type === FaultType.Other;
   }
 
+  private static isKnownFaultSubtype(type: FaultType, subtype: FaultSubtype): boolean {
+    for (let index = 0; index < FAULT_SUBTYPE_OPTIONS.length; index++) {
+      const item = FAULT_SUBTYPE_OPTIONS[index];
+      if (item.type === type && item.subtype === subtype) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   private static isKnownSeverity(severity: FaultSeverity): boolean {
     return severity === FaultSeverity.Emergency ||
       severity === FaultSeverity.Severe ||
       severity === FaultSeverity.General ||
       severity === FaultSeverity.Minor;
+  }
+
+  private static hasValidLocation(longitude: number | undefined, latitude: number | undefined): boolean {
+    if (longitude === undefined || latitude === undefined) {
+      return false;
+    }
+
+    return longitude === longitude && latitude === latitude &&
+      longitude >= -180 && longitude <= 180 &&
+      latitude >= -90 && latitude <= 90;
   }
 }

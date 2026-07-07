@@ -18,7 +18,17 @@ import { LogQueryService } from '../main/ets/log/services/LogQueryService';
 import { ReinspectionService } from '../main/ets/operations/services/ReinspectionService';
 import { ReinspectionTaskStatus } from '../main/ets/operations/models/ReinspectionModels';
 import { VerificationReportService } from '../main/ets/operations/services/VerificationReportService';
-import { VerificationResult } from '../main/ets/operations/models/VerificationReportModels';
+import {
+  AbnormalVerificationSubmissionForm,
+  VerificationDeviceStatus,
+  VerificationItemResult,
+  VerificationMethod,
+  VerificationReportForm,
+  VerificationReportItem,
+  VerificationResult,
+  VerificationType
+} from '../main/ets/operations/models/VerificationReportModels';
+import { FaultReportForm, FaultSeverity, FaultSubtype, FaultType } from '../main/ets/operations/models/FaultModels';
 
 export default function localUnitTest() {
   describe('uiFeedbackMessages', () => {
@@ -217,12 +227,25 @@ export default function localUnitTest() {
     });
 
     it('validatesAbnormalVerificationStepRequiresVerificationFields', 0, () => {
-      const result = VerificationReportService.validateAbnormalVerificationStepForm({
+      const items: VerificationReportItem[] = VerificationReportService.createDefaultVerificationItems()
+        .map((item: VerificationReportItem): VerificationReportItem => {
+          const verificationItem: VerificationReportItem = {
+            itemCode: item.itemCode,
+            itemName: item.itemName,
+            result: item.itemCode === 'RUNNING_RESPONSE' ? VerificationItemResult.Failed : item.result
+          };
+          return verificationItem;
+        });
+      const form: VerificationReportForm = {
         deviceCode: 'RDVP-DEVICE-0001',
-        result: VerificationResult.Abnormal,
+        verificationType: VerificationType.Routine,
+        deviceStatus: VerificationDeviceStatus.Running,
+        verificationMethod: VerificationMethod.OnsiteObservation,
+        items,
         description: '',
         verifiedAt: ''
-      });
+      };
+      const result = VerificationReportService.validateAbnormalVerificationStepForm(form);
 
       expect(result.valid).assertEqual(false);
       expect(result.message).assertEqual('请选择核验时间');
@@ -244,6 +267,77 @@ export default function localUnitTest() {
         .assertEqual(false);
       expect(VerificationReportService.canUseVerificationStepAction(VerificationResult.Normal, 'password', false, false))
         .assertEqual(true);
+    });
+
+    it('derivesVerificationResultFromItemResults', 0, () => {
+      const items = VerificationReportService.createDefaultVerificationItems();
+      expect(VerificationReportService.resolveVerificationResult(items)).assertEqual(VerificationResult.Normal);
+
+      items[1].result = VerificationItemResult.Failed;
+      expect(VerificationReportService.resolveVerificationResult(items)).assertEqual(VerificationResult.Abnormal);
+    });
+
+    it('rejectsVerificationItemsWithoutPassedOrFailedResult', 0, () => {
+      const items: VerificationReportItem[] = VerificationReportService.createDefaultVerificationItems()
+        .map((item: VerificationReportItem): VerificationReportItem => {
+        const verificationItem: VerificationReportItem = {
+          itemCode: item.itemCode,
+          itemName: item.itemName,
+          result: VerificationItemResult.NotApplicable
+        };
+        return verificationItem;
+      });
+      const form: VerificationReportForm = {
+        deviceCode: 'RDVP-DEVICE-0001',
+        verificationType: VerificationType.Routine,
+        deviceStatus: VerificationDeviceStatus.Running,
+        verificationMethod: VerificationMethod.OnsiteObservation,
+        items,
+        description: '现场核验完成',
+        verifiedAt: '2026-07-07 10:00'
+      };
+      const result = VerificationReportService.validateVerificationForm(form);
+
+      expect(result.valid).assertEqual(false);
+      expect(result.message).assertEqual('请选择核验项结果');
+    });
+
+    it('requiresFaultReportLocationCoordinates', 0, () => {
+      const items: VerificationReportItem[] = VerificationReportService.createDefaultVerificationItems()
+        .map((item: VerificationReportItem): VerificationReportItem => {
+          const verificationItem: VerificationReportItem = {
+            itemCode: item.itemCode,
+            itemName: item.itemName,
+            result: item.itemCode === 'RUNNING_RESPONSE' ? VerificationItemResult.Failed : item.result
+          };
+          return verificationItem;
+        });
+      const verification: VerificationReportForm = {
+        deviceCode: 'RDVP-DEVICE-0001',
+        verificationType: VerificationType.Routine,
+        deviceStatus: VerificationDeviceStatus.Running,
+        verificationMethod: VerificationMethod.OnsiteObservation,
+        items,
+        description: '运行响应异常',
+        verifiedAt: '2026-07-07 10:00'
+      };
+      const faultReport: FaultReportForm = {
+        deviceCode: 'RDVP-DEVICE-0001',
+        faultType: FaultType.OperationAbnormal,
+        faultSubtype: FaultSubtype.NoResponse,
+        severity: FaultSeverity.General,
+        occurredAt: '2026-07-07 10:10',
+        description: '运行响应异常',
+        sceneCondition: ''
+      };
+      const form: AbnormalVerificationSubmissionForm = {
+        verification,
+        faultReport
+      };
+      const result = VerificationReportService.validateAbnormalVerificationSubmissionForm(form);
+
+      expect(result.valid).assertEqual(false);
+      expect(result.message).assertEqual('请获取故障地点');
     });
   });
 

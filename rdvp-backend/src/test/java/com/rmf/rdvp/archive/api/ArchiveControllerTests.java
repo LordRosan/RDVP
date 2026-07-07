@@ -381,6 +381,16 @@ class ArchiveControllerTests {
                         .content("""
                                 {
                                   "result": "NORMAL",
+                                  "verificationType": "ROUTINE",
+                                  "deviceStatus": "RUNNING",
+                                  "verificationMethod": "ONSITE_OBSERVATION",
+                                  "items": [
+                                    {
+                                      "itemCode": "IDENTIFICATION_CONSISTENCY",
+                                      "itemName": "标识一致性",
+                                      "result": "PASSED"
+                                    }
+                                  ],
                                   "description": "现场观察到运行噪声升高，需要持续跟踪。",
                                   "remark": "建议后续上报故障。",
                                   "verifiedAt": "2026-06-03T08:30:00Z"
@@ -420,6 +430,16 @@ class ArchiveControllerTests {
                         .content("""
                                 {
                                   "result": "NORMAL",
+                                  "verificationType": "ROUTINE",
+                                  "deviceStatus": "RUNNING",
+                                  "verificationMethod": "ONSITE_OBSERVATION",
+                                  "items": [
+                                    {
+                                      "itemCode": "IDENTIFICATION_CONSISTENCY",
+                                      "itemName": "标识一致性",
+                                      "result": "PASSED"
+                                    }
+                                  ],
                                   "description": "Archivist must not submit verification records.",
                                   "verifiedAt": "2026-06-03T08:30:00Z"
                                 }

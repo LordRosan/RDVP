@@ -5,9 +5,51 @@ export enum VerificationResult {
   Abnormal = 'ABNORMAL'
 }
 
+export enum VerificationType {
+  Routine = 'ROUTINE',
+  Temporary = 'TEMPORARY',
+  Special = 'SPECIAL',
+  Initial = 'INITIAL',
+  Sampling = 'SAMPLING',
+  Other = 'OTHER'
+}
+
+export enum VerificationDeviceStatus {
+  Running = 'RUNNING',
+  Standby = 'STANDBY',
+  Stopped = 'STOPPED',
+  Offline = 'OFFLINE',
+  Unknown = 'UNKNOWN',
+  Other = 'OTHER'
+}
+
+export enum VerificationMethod {
+  OnsiteObservation = 'ONSITE_OBSERVATION',
+  IdentificationCheck = 'IDENTIFICATION_CHECK',
+  FunctionTest = 'FUNCTION_TEST',
+  DataReading = 'DATA_READING',
+  RemoteConfirmation = 'REMOTE_CONFIRMATION',
+  Other = 'OTHER'
+}
+
+export enum VerificationItemResult {
+  Passed = 'PASSED',
+  Failed = 'FAILED',
+  NotApplicable = 'NOT_APPLICABLE'
+}
+
+export interface VerificationReportItem {
+  itemCode: string;
+  itemName: string;
+  result: VerificationItemResult;
+}
+
 export interface VerificationReportForm {
   deviceCode: string;
-  result: VerificationResult;
+  verificationType: VerificationType;
+  deviceStatus: VerificationDeviceStatus;
+  verificationMethod: VerificationMethod;
+  items: VerificationReportItem[];
   description: string;
   verifiedAt: string;
   remark?: string;
@@ -21,7 +63,11 @@ export interface VerificationReportValidationResult {
 export interface VerificationReportRecord {
   id: string;
   deviceCode: string;
+  verificationType?: VerificationType;
+  deviceStatus?: VerificationDeviceStatus;
+  verificationMethod?: VerificationMethod;
   result: VerificationResult;
+  items?: VerificationReportItem[];
   description: string;
   remark?: string;
   submittedAt: string;

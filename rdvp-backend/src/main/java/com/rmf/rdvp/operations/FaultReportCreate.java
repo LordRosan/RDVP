@@ -9,6 +9,7 @@ public record FaultReportCreate(
         String deviceId,
         String reporterId,
         FaultType faultType,
+        String faultSubtype,
         FaultSeverity severity,
         String description,
         String sceneCondition,

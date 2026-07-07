@@ -160,6 +160,16 @@ class LogEntryControllerTests {
                         .content("""
                                 {
                                   "result": "NORMAL",
+                                  "verificationType": "ROUTINE",
+                                  "deviceStatus": "RUNNING",
+                                  "verificationMethod": "ONSITE_OBSERVATION",
+                                  "items": [
+                                    {
+                                      "itemCode": "IDENTIFICATION_CONSISTENCY",
+                                      "itemName": "标识一致性",
+                                      "result": "PASSED"
+                                    }
+                                  ],
                                   "description": "Verification time should be rejected.",
                                   "remark": "",
                                   "verifiedAt": "not-a-date"
@@ -275,14 +285,27 @@ class LogEntryControllerTests {
                         .content("""
                                 {
                                   "result": "ABNORMAL",
+                                  "verificationType": "TEMPORARY",
+                                  "deviceStatus": "OFFLINE",
+                                  "verificationMethod": "FUNCTION_TEST",
+                                  "items": [
+                                    {
+                                      "itemCode": "RUNNING_RESPONSE",
+                                      "itemName": "运行响应性",
+                                      "result": "FAILED"
+                                    }
+                                  ],
                                   "description": "设备已不可用。",
                                   "remark": "",
                                   "verifiedAt": "2026-06-03T08:30:00Z",
                                   "faultType": "ENERGY_FAULT",
+                                  "faultSubtype": "POWER_SUPPLY_ABNORMAL",
                                   "severity": "SEVERE",
                                   "occurredAt": "2026-06-03T08:20:00Z",
                                   "faultDescription": "重复提交同一设备的活跃故障。",
-                                  "sceneCondition": "应被系统拦截。"
+                                  "sceneCondition": "应被系统拦截。",
+                                  "longitude": 114.1694,
+                                  "latitude": 22.3193
                                 }
                                 """))
                 .andExpect(status().isConflict())
@@ -420,14 +443,27 @@ class LogEntryControllerTests {
                         .content("""
                                 {
                                   "result": "ABNORMAL",
+                                  "verificationType": "TEMPORARY",
+                                  "deviceStatus": "OFFLINE",
+                                  "verificationMethod": "FUNCTION_TEST",
+                                  "items": [
+                                    {
+                                      "itemCode": "RUNNING_RESPONSE",
+                                      "itemName": "运行响应性",
+                                      "result": "FAILED"
+                                    }
+                                  ],
                                   "description": "现场核验发现设备运行异常。",
                                   "remark": "已同步填写报修报告。",
                                   "verifiedAt": "2026-06-03T08:30:00Z",
                                   "faultType": "%s",
+                                  "faultSubtype": "NO_RESPONSE",
                                   "severity": "%s",
                                   "occurredAt": "2026-06-03T08:20:00Z",
                                   "faultDescription": "%s",
-                                  "sceneCondition": "Site has reduced load."
+                                  "sceneCondition": "Site has reduced load.",
+                                  "longitude": 114.1694,
+                                  "latitude": 22.3193
                                 }
                                 """.formatted(faultType, severity, description)))
                 .andExpect(status().isOk())

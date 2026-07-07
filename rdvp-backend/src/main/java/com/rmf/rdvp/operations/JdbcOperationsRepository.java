@@ -34,6 +34,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                             device_id,
                             reporter_id,
                             fault_type,
+                            fault_subtype,
                             severity,
                             status,
                             occurred_at,
@@ -49,6 +50,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                             :deviceId,
                             :reporterId,
                             :faultType,
+                            :faultSubtype,
                             :severity,
                             'PENDING_REVIEW',
                             :occurredAt,
@@ -66,6 +68,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                         .addValue("deviceId", create.deviceId())
                         .addValue("reporterId", create.reporterId())
                         .addValue("faultType", create.faultType().name())
+                        .addValue("faultSubtype", create.faultSubtype())
                         .addValue("severity", create.severity().name())
                         .addValue("occurredAt", create.occurredAt())
                         .addValue("description", create.description())
@@ -85,6 +88,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                             device_id,
                             reporter_id,
                             fault_type,
+                            fault_subtype,
                             severity,
                             status,
                             description,
@@ -1092,6 +1096,7 @@ public class JdbcOperationsRepository implements OperationsRepository {
                 resultSet.getString("device_id"),
                 resultSet.getString("reporter_id"),
                 FaultType.valueOf(resultSet.getString("fault_type")),
+                resultSet.getString("fault_subtype"),
                 FaultSeverity.valueOf(resultSet.getString("severity")),
                 FaultStatus.valueOf(resultSet.getString("status")),
                 resultSet.getString("description"),

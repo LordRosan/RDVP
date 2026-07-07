@@ -1,4 +1,4 @@
-import { VerificationReportForm } from '../models/VerificationReportModels';
+import { VerificationReportForm, VerificationReportItem } from '../models/VerificationReportModels';
 
 export class VerificationReportFlowStore {
   private static pendingAbnormalVerification?: VerificationReportForm = undefined;
@@ -8,7 +8,17 @@ export class VerificationReportFlowStore {
   static startFaultReportFlow(form: VerificationReportForm): void {
     VerificationReportFlowStore.pendingAbnormalVerification = {
       deviceCode: form.deviceCode,
-      result: form.result,
+      verificationType: form.verificationType,
+      deviceStatus: form.deviceStatus,
+      verificationMethod: form.verificationMethod,
+      items: form.items.map((item: VerificationReportItem): VerificationReportItem => {
+        const flowItem: VerificationReportItem = {
+          itemCode: item.itemCode,
+          itemName: item.itemName,
+          result: item.result
+        };
+        return flowItem;
+      }),
       description: form.description,
       verifiedAt: form.verifiedAt,
       remark: form.remark
@@ -25,7 +35,17 @@ export class VerificationReportFlowStore {
 
     return {
       deviceCode: form.deviceCode,
-      result: form.result,
+      verificationType: form.verificationType,
+      deviceStatus: form.deviceStatus,
+      verificationMethod: form.verificationMethod,
+      items: form.items.map((item: VerificationReportItem): VerificationReportItem => {
+        const flowItem: VerificationReportItem = {
+          itemCode: item.itemCode,
+          itemName: item.itemName,
+          result: item.result
+        };
+        return flowItem;
+      }),
       description: form.description,
       verifiedAt: form.verifiedAt,
       remark: form.remark

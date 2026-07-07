@@ -7,7 +7,11 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -35,8 +39,12 @@ public class OperationsService {
     private static final int MAX_ACTIVE_REPAIR_TASK_COUNT = 3;
     private static final int MAX_OPERATION_LIST_ITEMS = 100;
     private static final int MAX_TASK_ACCEPTANCE_CANDIDATES = 500;
+    private static final int MAX_VERIFICATION_ITEMS = 20;
+    private static final int MAX_VERIFICATION_ITEM_CODE_LENGTH = 64;
+    private static final int MAX_VERIFICATION_ITEM_NAME_LENGTH = 100;
     private static final int MAX_VERIFICATION_DESCRIPTION_LENGTH = 500;
     private static final int MAX_VERIFICATION_REMARK_LENGTH = 300;
+    private static final int MAX_FAULT_SUBTYPE_LENGTH = 64;
     private static final int MAX_REVIEW_COMMENT_LENGTH = 500;
     private static final Pattern BUSINESS_ID_PATTERN = Pattern.compile("^[A-Za-z0-9_-]{1,64}$");
     private static final DateTimeFormatter LOCAL_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -63,14 +71,18 @@ public class OperationsService {
     @Transactional
     public DeviceVerificationReport createVerificationReport(
             String deviceId,
-            DeviceVerificationResult result,
+            VerificationType verificationType,
+            VerificationDeviceStatus deviceStatus,
+            VerificationMethod verificationMethod,
+            List<DeviceVerificationReportItem> items,
             String description,
             String remark,
             String verifiedAt,
             AuthenticatedUser operator) {
         Archive device = null;
         try {
-            DeviceVerificationResult normalizedResult = requireEnum(result, "result");
+            List<DeviceVerificationReportItem> normalizedItems = normalizeVerificationItems(items);
+            DeviceVerificationResult normalizedResult = resolveVerificationResult(normalizedItems);
             if (normalizedResult != DeviceVerificationResult.NORMAL) {
                 throw new BusinessException(
                         ErrorCode.DEVICE_VERIFICATION_INVALID,
@@ -87,7 +99,11 @@ public class OperationsService {
                     "verification-" + UUID.randomUUID(),
                     device.id(),
                     operator.id(),
+                    requireEnum(verificationType, "verificationType"),
+                    requireEnum(deviceStatus, "deviceStatus"),
+                    requireEnum(verificationMethod, "verificationMethod"),
                     normalizedResult,
+                    normalizedItems,
                     normalizeRequiredText(
                             description,
                             "description",
@@ -130,11 +146,15 @@ public class OperationsService {
     @Transactional
     public AbnormalVerificationSubmissionResult createAbnormalVerificationSubmission(
             String deviceId,
-            DeviceVerificationResult result,
+            VerificationType verificationType,
+            VerificationDeviceStatus deviceStatus,
+            VerificationMethod verificationMethod,
+            List<DeviceVerificationReportItem> items,
             String verificationDescription,
             String remark,
             String verifiedAt,
             FaultType faultType,
+            String faultSubtype,
             FaultSeverity severity,
             String occurredAt,
             String faultDescription,
@@ -144,7 +164,8 @@ public class OperationsService {
             AuthenticatedUser operator) {
         Archive device = null;
         try {
-            DeviceVerificationResult normalizedResult = requireEnum(result, "result");
+            List<DeviceVerificationReportItem> normalizedItems = normalizeVerificationItems(items);
+            DeviceVerificationResult normalizedResult = resolveVerificationResult(normalizedItems);
             if (normalizedResult == DeviceVerificationResult.NORMAL) {
                 throw new BusinessException(
                         ErrorCode.DEVICE_VERIFICATION_INVALID,
@@ -156,23 +177,16 @@ public class OperationsService {
             if (operationsRepository.hasActiveFaultForDevice(device.id())) {
                 throw new BusinessException(ErrorCode.DEVICE_ACTIVE_FAULT_EXISTS);
             }
-            BigDecimal normalizedLongitude = normalizeCoordinate(
+            BigDecimal normalizedLongitude = normalizeRequiredFaultCoordinate(
                     longitude,
                     "longitude",
                     BigDecimal.valueOf(-180),
-                    BigDecimal.valueOf(180),
-                    ErrorCode.FAULT_REPORT_INVALID);
-            BigDecimal normalizedLatitude = normalizeCoordinate(
+                    BigDecimal.valueOf(180));
+            BigDecimal normalizedLatitude = normalizeRequiredFaultCoordinate(
                     latitude,
                     "latitude",
                     BigDecimal.valueOf(-90),
-                    BigDecimal.valueOf(90),
-                    ErrorCode.FAULT_REPORT_INVALID);
-            if ((normalizedLongitude == null) != (normalizedLatitude == null)) {
-                throw new BusinessException(
-                        ErrorCode.FAULT_REPORT_INVALID,
-                        "longitude and latitude must be provided together.");
-            }
+                    BigDecimal.valueOf(90));
 
             OffsetDateTime normalizedVerifiedAt = parseDateTime(verifiedAt, "verifiedAt");
             OffsetDateTime now = now();
@@ -180,7 +194,11 @@ public class OperationsService {
                     "verification-" + UUID.randomUUID(),
                     device.id(),
                     operator.id(),
+                    requireEnum(verificationType, "verificationType"),
+                    requireEnum(deviceStatus, "deviceStatus"),
+                    requireEnum(verificationMethod, "verificationMethod"),
                     normalizedResult,
+                    normalizedItems,
                     normalizeRequiredText(
                             verificationDescription,
                             "description",
@@ -200,6 +218,7 @@ public class OperationsService {
                     device.id(),
                     operator.id(),
                     requireEnum(faultType, "faultType"),
+                    normalizeFaultSubtype(faultSubtype),
                     requireEnum(severity, "severity"),
                     normalizeRequiredText(faultDescription, "faultDescription", 1000, ErrorCode.FAULT_REPORT_INVALID),
                     normalizeOptionalText(sceneCondition, 500, ErrorCode.FAULT_REPORT_INVALID),
@@ -1108,6 +1127,87 @@ public class OperationsService {
         return radiusKm;
     }
 
+    private List<DeviceVerificationReportItem> normalizeVerificationItems(List<DeviceVerificationReportItem> items) {
+        if (items == null || items.isEmpty()) {
+            throw new BusinessException(ErrorCode.DEVICE_VERIFICATION_INVALID, "verification items are required.");
+        }
+
+        if (items.size() > MAX_VERIFICATION_ITEMS) {
+            throw new BusinessException(
+                    ErrorCode.DEVICE_VERIFICATION_INVALID,
+                    "verification items must not exceed " + MAX_VERIFICATION_ITEMS + ".");
+        }
+
+        List<DeviceVerificationReportItem> normalizedItems = new ArrayList<>();
+        Set<String> itemCodes = new HashSet<>();
+        boolean hasEffectiveResult = false;
+        int displayOrder = 1;
+        for (DeviceVerificationReportItem item : items) {
+            if (item == null) {
+                throw new BusinessException(ErrorCode.DEVICE_VERIFICATION_INVALID, "verification item is required.");
+            }
+            String itemCode = normalizeRequiredText(
+                    item.itemCode(),
+                    "itemCode",
+                    MAX_VERIFICATION_ITEM_CODE_LENGTH,
+                    ErrorCode.DEVICE_VERIFICATION_INVALID);
+            if (!BUSINESS_ID_PATTERN.matcher(itemCode).matches()) {
+                throw new BusinessException(ErrorCode.DEVICE_VERIFICATION_INVALID, "itemCode is invalid.");
+            }
+            if (!itemCodes.add(itemCode)) {
+                throw new BusinessException(ErrorCode.DEVICE_VERIFICATION_INVALID, "itemCode is duplicated.");
+            }
+
+            String itemName = normalizeRequiredText(
+                    item.itemName(),
+                    "itemName",
+                    MAX_VERIFICATION_ITEM_NAME_LENGTH,
+                    ErrorCode.DEVICE_VERIFICATION_INVALID);
+            VerificationItemResult itemResult = requireEnum(item.result(), "itemResult");
+            if (itemResult == VerificationItemResult.PASSED || itemResult == VerificationItemResult.FAILED) {
+                hasEffectiveResult = true;
+            }
+
+            normalizedItems.add(new DeviceVerificationReportItem(
+                    itemCode,
+                    itemName,
+                    itemResult,
+                    displayOrder));
+            displayOrder++;
+        }
+
+        if (!hasEffectiveResult) {
+            throw new BusinessException(
+                    ErrorCode.DEVICE_VERIFICATION_INVALID,
+                    "at least one verification item must be passed or failed.");
+        }
+
+        return List.copyOf(normalizedItems);
+    }
+
+    private DeviceVerificationResult resolveVerificationResult(List<DeviceVerificationReportItem> items) {
+        for (DeviceVerificationReportItem item : items) {
+            if (item.result() == VerificationItemResult.FAILED) {
+                return DeviceVerificationResult.ABNORMAL;
+            }
+        }
+
+        return DeviceVerificationResult.NORMAL;
+    }
+
+    private String normalizeFaultSubtype(String value) {
+        String normalized = normalizeRequiredText(
+                value,
+                "faultSubtype",
+                MAX_FAULT_SUBTYPE_LENGTH,
+                ErrorCode.FAULT_REPORT_INVALID);
+        if (!BUSINESS_ID_PATTERN.matcher(normalized).matches()) {
+            throw new BusinessException(ErrorCode.FAULT_REPORT_INVALID, "faultSubtype is invalid.");
+        }
+
+        return normalized;
+    }
+
     private BigDecimal normalizeCoordinate(BigDecimal value, String field, BigDecimal min, BigDecimal max) {
         return normalizeCoordinate(value, field, min, max, ErrorCode.REPAIR_TASK_RADIUS_INVALID);
     }
@@ -1127,6 +1227,16 @@ public class OperationsService {
         }
 
         return value;
+    }
+
+    private BigDecimal normalizeRequiredFaultCoordinate(BigDecimal value, String field, BigDecimal min, BigDecimal max) {
+        if (value == null) {
+            throw new BusinessException(
+                    ErrorCode.FAULT_REPORT_INVALID,
+                    field + " is required for fault report location.");
+        }
+
+        return normalizeCoordinate(value, field, min, max, ErrorCode.FAULT_REPORT_INVALID);
     }
 
     private BigDecimal normalizeRequiredCoordinate(BigDecimal value, String field, BigDecimal min, BigDecimal max) {

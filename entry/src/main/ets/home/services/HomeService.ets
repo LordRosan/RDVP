@@ -115,7 +115,7 @@ export class HomeService {
     const actions: HomeAction[] = [];
 
     if (SessionStore.hasPermission(PermissionCode.OperationsCenterDeviceVerificationSubmit)) {
-      actions.push(HomeService.createAction(HomeActionId.VerificationReport, '核验报告', AppTone.Success));
+      actions.push(HomeService.createAction(HomeActionId.VerificationReport, '核验与报修', AppTone.Success));
     }
 
     if (HomeService.canAcceptAnyOperationTask()) {

@@ -2,16 +2,17 @@ import { AppColors, AppRadii, AppSpacing } from '../../shared/theme/AppTheme';
 import { AppSectionTitle } from '../../shared/components/AppSectionTitle';
 import { CenterTitleBar } from '../../shared/components/CenterTitleBar';
 import { InlineMessageSurface } from '../../shared/components/InlineMessageSurface';
-import { FaultSeverity, FaultType } from '../models/FaultModels';
+import { FaultSeverity, FaultSubtype, FaultType } from '../models/FaultModels';
 import {
-  VerificationReportForm,
   AbnormalVerificationSubmissionForm,
+  VerificationReportForm,
   VerificationResult
 } from '../models/VerificationReportModels';
 import { PermissionCode } from '../../user/models/PermissionModels';
 import { DeviceService } from '../../archive/services/DeviceService';
-import { FaultReportService } from '../services/FaultReportService';
+import { FaultReportService, FaultSubtypeOption } from '../services/FaultReportService';
 import { VerificationReportService } from '../services/VerificationReportService';
+import { LocationService, LocationResolutionResult } from '../services/LocationService';
 import { UiFeedbackService } from '../../shared/services/UiFeedbackService';
 import { AuthService } from '../../user/services/AuthService';
 import { AuthGuard } from '../../shared/security/AuthGuard';
@@ -20,13 +21,31 @@ import { AppRoutes } from '../../shared/navigation/AppRoutes';
 import { UiFeedbackTone } from '../../shared/models/UiFeedbackModels';
 import { VerificationReportFlowStore } from '../stores/VerificationReportFlowStore';
 
+const FAULT_TYPE_VALUES: string[] = [
+  `${FaultType.OperationAbnormal}`,
+  `${FaultType.HardwareDamage}`,
+  `${FaultType.CommunicationFault}`,
+  `${FaultType.LogicFault}`,
+  `${FaultType.EnergyFault}`,
+  `${FaultType.ExternalFactor}`,
+  `${FaultType.Other}`
+];
+const SEVERITY_VALUES: string[] = [
+  `${FaultSeverity.Emergency}`,
+  `${FaultSeverity.Severe}`,
+  `${FaultSeverity.General}`,
+  `${FaultSeverity.Minor}`
+];
+const SEVERITY_LABELS: string[] = ['紧急', '严重', '一般', '轻微'];
+
 @Entry
 @Component
 struct FaultReportPage {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   @State deviceCode: string = '';
-  @State faultType: string = '';
-  @State severity: string = '';
+  @State faultType: string = `${FaultType.OperationAbnormal}`;
+  @State faultSubtype: string = `${FaultSubtype.NoResponse}`;
+  @State severity: string = `${FaultSeverity.General}`;
   @State occurredAt: string = '';
   @State faultDescription: string = '';
   @State password: string = '';
@@ -34,14 +53,14 @@ struct FaultReportPage {
   @State messageTone: string = UiFeedbackTone.Danger;
   @State submitting: boolean = false;
   @State submitted: boolean = false;
+  @State locating: boolean = false;
+  @State hasLocation: boolean = false;
+  @State longitude: number = 0;
+  @State latitude: number = 0;
+  @State locationAccuracy: number = 0;
+  @State showLeaveGuard: boolean = false;
   @State hasVerification: boolean = false;
-  private verification: VerificationReportForm = {
-    deviceCode: '',
-    result: VerificationResult.Abnormal,
-    description: '',
-    verifiedAt: '',
-    remark: ''
-  };
+  private verification: VerificationReportForm = VerificationReportService.createEmptyAbnormalVerificationForm();
 
   aboutToAppear(): void {
     if (!AuthGuard.requirePermission(this.getUIContext(), PermissionCode.OperationsCenterDeviceFaultReportSubmit)) {
@@ -59,7 +78,6 @@ struct FaultReportPage {
         Column({ space: 18 }) {
           this.ModeHeader()
           if (this.hasVerification) {
-            this.VerificationSummarySection()
             this.FaultReportFormBody()
           } else {
             this.EmptyPanel()
@@ -122,34 +140,6 @@ struct FaultReportPage {
   }
 
   @Builder
-  VerificationSummarySection() {
-    Column({ space: 12 }) {
-      AppSectionTitle({
-        title: '核验信息',
-        subtitle: ''
-      })
-
-      Column({ space: 16 }) {
-        this.ReadOnlyField('设备编号', this.deviceCode)
-        this.ReadOnlyField('核验结果', VerificationReportService.formatVerificationResult(VerificationResult.Abnormal))
-      }
-      .padding({
-        left: 18,
-        right: 18,
-        top: 18,
-        bottom: 18
-      })
-      .width('100%')
-      .backgroundColor(AppColors.SurfaceRaised)
-      .borderRadius(AppRadii.Large)
-      .border({ width: 1, color: AppColors.Divider })
-      .alignItems(HorizontalAlign.Start)
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-  }
-
-  @Builder
   FaultReportFormBody() {
     Column({ space: 12 }) {
       AppSectionTitle({
@@ -158,9 +148,11 @@ struct FaultReportPage {
       })
 
       Column({ space: 16 }) {
-        this.FaultTypeSelector()
-        this.SeveritySelector()
+        this.ReadOnlyField('设备编号', this.deviceCode)
         this.OccurredAtField()
+        this.LocationField()
+        this.FaultTypePicker()
+        this.SeverityPicker()
         this.FaultDescriptionField()
       }
       .padding({
@@ -176,6 +168,7 @@ struct FaultReportPage {
       .alignItems(HorizontalAlign.Start)
 
       this.PasswordSection()
+      this.LeaveGuardPanel()
       this.MessageText()
       this.SubmitActionButton()
     }
@@ -195,7 +188,7 @@ struct FaultReportPage {
         .height(56)
         .fontSize(16)
         .fontColor(AppColors.TextSecondary)
-        .backgroundColor(AppColors.FieldBackground)
+        .backgroundColor(AppColors.SurfaceMuted)
         .borderRadius(18)
         .padding({
           left: 16,
@@ -203,171 +196,12 @@ struct FaultReportPage {
         })
         .border({
           width: 1,
-          color: AppColors.Border
+          color: AppColors.Divider
         })
         .enabled(false)
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
-  }
-
-  @Builder
-  FaultTypeSelector() {
-    Column({ space: 10 }) {
-      this.FieldTitle('故障类型')
-
-      Column({ space: 10 }) {
-        Row({ space: 10 }) {
-          Column() {
-            this.FaultTypeOption(FaultType.OperationAbnormal, $r('sys.symbol.exclamationmark_message'))
-          }
-          .layoutWeight(1)
-
-          Column() {
-            this.FaultTypeOption(FaultType.HardwareDamage, $r('sys.symbol.wrench_and_screwdriver'))
-          }
-          .layoutWeight(1)
-        }
-        .width('100%')
-        .alignItems(VerticalAlign.Center)
-
-        Row({ space: 10 }) {
-          Column() {
-            this.FaultTypeOption(FaultType.CommunicationFault, $r('sys.symbol.wifi_badge_exclamationmark'))
-          }
-          .layoutWeight(1)
-
-          Column() {
-            this.FaultTypeOption(FaultType.LogicFault, $r('sys.symbol.gearshape'))
-          }
-          .layoutWeight(1)
-        }
-        .width('100%')
-        .alignItems(VerticalAlign.Center)
-
-        Row({ space: 10 }) {
-          Column() {
-            this.FaultTypeOption(FaultType.EnergyFault, $r('sys.symbol.bolt'))
-          }
-          .layoutWeight(1)
-
-          Column() {
-            this.FaultTypeOption(FaultType.ExternalFactor, $r('sys.symbol.geologic_hazard'))
-          }
-          .layoutWeight(1)
-        }
-        .width('100%')
-        .alignItems(VerticalAlign.Center)
-
-        Row() {
-          Blank()
-            .layoutWeight(1)
-
-          Column() {
-            this.FaultTypeOption(FaultType.Other, $r('sys.symbol.text_clipboard'))
-          }
-          .width('48%')
-
-          Blank()
-            .layoutWeight(1)
-        }
-        .width('100%')
-        .alignItems(VerticalAlign.Center)
-      }
-      .width('100%')
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-  }
-
-  @Builder
-  FaultTypeOption(type: FaultType, icon: Resource) {
-    Button({ type: ButtonType.Capsule, stateEffect: true }) {
-      Row({ space: 5 }) {
-        SymbolGlyph(icon)
-          .fontSize(17)
-          .fontColor([this.faultType === `${type}` ? AppColors.OnPrimary : AppColors.TextPrimary])
-
-        Text(FaultReportService.formatFaultType(type))
-          .fontSize(14)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(this.faultType === `${type}` ? AppColors.OnPrimary : AppColors.TextPrimary)
-          .maxLines(1)
-      }
-      .width('100%')
-      .justifyContent(FlexAlign.Center)
-      .alignItems(VerticalAlign.Center)
-    }
-    .height(42)
-    .width('100%')
-    .backgroundColor(this.faultType === `${type}` ? AppColors.Primary : AppColors.FieldBackground)
-    .border({
-      width: 1,
-      color: this.faultType === `${type}` ? AppColors.Primary : AppColors.Border
-    })
-    .enabled(!this.submitting && !this.submitted)
-    .onClick(() => {
-      this.faultType = `${type}`;
-      this.markFormChanged();
-    })
-  }
-
-  @Builder
-  SeveritySelector() {
-    Column({ space: 10 }) {
-      this.FieldTitle('故障等级')
-
-      Column({ space: 10 }) {
-        Row({ space: 10 }) {
-          this.SeverityOption(FaultSeverity.Emergency, $r('sys.symbol.exclamationmark_triangle_fill'))
-          this.SeverityOption(FaultSeverity.Severe, $r('sys.symbol.exclamationmark_circle'))
-        }
-        .width('100%')
-        .alignItems(VerticalAlign.Center)
-
-        Row({ space: 10 }) {
-          this.SeverityOption(FaultSeverity.General, $r('sys.symbol.exclamationmark_message'))
-          this.SeverityOption(FaultSeverity.Minor, $r('sys.symbol.checkmark_circle'))
-        }
-        .width('100%')
-        .alignItems(VerticalAlign.Center)
-      }
-      .width('100%')
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-  }
-
-  @Builder
-  SeverityOption(severity: FaultSeverity, icon: Resource) {
-    Button({ type: ButtonType.Capsule, stateEffect: true }) {
-      Row({ space: 6 }) {
-        SymbolGlyph(icon)
-          .fontSize(17)
-          .fontColor([this.severity === `${severity}` ? AppColors.OnPrimary : AppColors.TextPrimary])
-
-        Text(FaultReportService.formatSeverity(severity))
-          .fontSize(14)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(this.severity === `${severity}` ? AppColors.OnPrimary : AppColors.TextPrimary)
-          .maxLines(1)
-      }
-      .width('100%')
-      .justifyContent(FlexAlign.Center)
-      .alignItems(VerticalAlign.Center)
-    }
-    .height(42)
-    .layoutWeight(1)
-    .backgroundColor(this.severity === `${severity}` ? this.getSeverityTone(severity) : AppColors.FieldBackground)
-    .border({
-      width: 1,
-      color: this.severity === `${severity}` ? this.getSeverityTone(severity) : AppColors.Border
-    })
-    .enabled(!this.submitting && !this.submitted)
-    .onClick(() => {
-      this.severity = `${severity}`;
-      this.markFormChanged();
-    })
   }
 
   @Builder
@@ -409,6 +243,143 @@ struct FaultReportPage {
         }
 
         this.showOccurredAtPicker();
+      })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  LocationField() {
+    Column({ space: 10 }) {
+      this.FieldTitle('故障地点')
+
+      Row({ space: 10 }) {
+        SymbolGlyph($r('sys.symbol.location_up'))
+          .fontSize(20)
+          .fontColor([this.hasLocation ? AppColors.Success : AppColors.TextPrimary])
+
+        Column({ space: 3 }) {
+          Text(this.hasLocation ? FaultReportService.formatFaultLocation(this.longitude, this.latitude) : '请获取故障地点')
+            .fontSize(15)
+            .fontColor(this.hasLocation ? AppColors.TextPrimary : AppColors.TextTertiary)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+          Text(this.hasLocation ? `精度 ${this.locationAccuracy.toFixed(0)} m` : '定位成功后才可提交')
+            .fontSize(12)
+            .fontColor(AppColors.TextTertiary)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+
+        Text(this.locating ? '定位中' : this.hasLocation ? '重新获取' : '获取')
+          .fontSize(14)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppColors.Primary)
+          .maxLines(1)
+      }
+      .height(64)
+      .width('100%')
+      .backgroundColor(AppColors.FieldBackground)
+      .borderRadius(18)
+      .padding({
+        left: 16,
+        right: 16
+      })
+      .border({
+        width: 1,
+        color: this.hasLocation ? AppColors.Success : AppColors.Border
+      })
+      .alignItems(VerticalAlign.Center)
+      .onClick(() => {
+        this.resolveFaultLocation();
+      })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  FaultTypePicker() {
+    Column({ space: 10 }) {
+      this.FieldTitle('故障类型')
+
+      TextPicker({
+        range: this.createFaultCascadeRange(),
+        selected: [this.getFaultTypeIndex(), this.getFaultSubtypeIndex()]
+      })
+      .height(124)
+      .width('100%')
+      .backgroundColor(AppColors.FieldBackground)
+      .borderRadius(18)
+      .border({
+        width: 1,
+        color: AppColors.Border
+      })
+      .canLoop(false)
+      .defaultPickerItemHeight(38)
+      .selectedTextStyle({
+        color: AppColors.Primary,
+        font: {
+          size: 17,
+          weight: FontWeight.Bold
+        }
+      })
+      .textStyle({
+        color: AppColors.TextSecondary,
+        font: {
+          size: 14,
+          weight: FontWeight.Medium
+        }
+      })
+      .enabled(!this.submitting && !this.submitted)
+      .onChange((_value: string | string[], index: number | number[]) => {
+        this.applyFaultCascadeIndex(index);
+      })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  SeverityPicker() {
+    Column({ space: 10 }) {
+      this.FieldTitle('故障等级')
+
+      TextPicker({
+        range: SEVERITY_LABELS,
+        selected: this.getSeverityIndex()
+      })
+      .height(112)
+      .width('100%')
+      .backgroundColor(AppColors.FieldBackground)
+      .borderRadius(18)
+      .border({
+        width: 1,
+        color: AppColors.Border
+      })
+      .canLoop(false)
+      .defaultPickerItemHeight(36)
+      .selectedTextStyle({
+        color: this.getSeverityTone(this.severity as FaultSeverity),
+        font: {
+          size: 17,
+          weight: FontWeight.Bold
+        }
+      })
+      .textStyle({
+        color: AppColors.TextSecondary,
+        font: {
+          size: 14,
+          weight: FontWeight.Medium
+        }
+      })
+      .enabled(!this.submitting && !this.submitted)
+      .onChange((_value: string | string[], index: number | number[]) => {
+        this.applySeverityIndex(this.normalizeSinglePickerIndex(index));
       })
     }
     .width('100%')
@@ -495,6 +466,49 @@ struct FaultReportPage {
   }
 
   @Builder
+  LeaveGuardPanel() {
+    if (this.showLeaveGuard && !this.submitted) {
+      Column({ space: 12 }) {
+        InlineMessageSurface({
+          message: '当前报修报告尚未提交，返回将放弃本次异常核验与报修报告填写',
+          tone: UiFeedbackTone.Warning
+        })
+
+        Row({ space: 10 }) {
+          this.SmallActionButton('继续填写', AppColors.Primary, () => {
+            this.showLeaveGuard = false;
+          })
+          this.SmallActionButton('放弃返回', AppColors.Danger, () => {
+            VerificationReportFlowStore.markFaultReportDiscarded();
+            this.backToVerificationReport();
+          })
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+    }
+  }
+
+  @Builder
+  SmallActionButton(label: string, color: string, action: () => void) {
+    Button({ type: ButtonType.Capsule, stateEffect: true }) {
+      Text(label)
+        .fontSize(14)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.OnPrimary)
+        .maxLines(1)
+    }
+    .height(42)
+    .layoutWeight(1)
+    .backgroundColor(color)
+    .onClick(() => {
+      action();
+    })
+  }
+
+  @Builder
   MessageText() {
     if (this.message.length > 0) {
       InlineMessageSurface({
@@ -532,7 +546,7 @@ struct FaultReportPage {
   SubmitActionButton() {
     Button({
       type: ButtonType.Capsule,
-      stateEffect: this.submitted || (this.hasVerification && this.password.length > 0 && !this.submitting)
+      stateEffect: this.isSubmitActionEnabled()
     }) {
       Row({ space: 8 }) {
         SymbolGlyph(this.submitted ? $r('sys.symbol.chevron_backward') : $r('sys.symbol.checkmark_circle'))
@@ -551,9 +565,8 @@ struct FaultReportPage {
     }
     .height(54)
     .width('100%')
-    .backgroundColor(this.submitted || (this.hasVerification && this.password.length > 0 && !this.submitting) ?
-      AppColors.Primary : AppColors.Disabled)
-    .enabled(this.submitted || (this.hasVerification && this.password.length > 0 && !this.submitting))
+    .backgroundColor(this.isSubmitActionEnabled() ? AppColors.Primary : AppColors.Disabled)
+    .enabled(this.isSubmitActionEnabled())
     .onClick(() => {
       this.handleSubmitAction();
     })
@@ -561,7 +574,8 @@ struct FaultReportPage {
 
   loadVerificationContext(): void {
     const pending = VerificationReportFlowStore.getPendingAbnormalVerification();
-    if (pending === undefined || pending.result !== VerificationResult.Abnormal) {
+    if (pending === undefined ||
+      VerificationReportService.resolveVerificationResult(pending.items) !== VerificationResult.Abnormal) {
       this.hasVerification = false;
       this.message = UiFeedbackService.operationUnavailable('报修报告');
       this.messageTone = UiFeedbackTone.Danger;
@@ -625,6 +639,7 @@ struct FaultReportPage {
       VerificationReportFlowStore.markFaultReportSubmitted();
       this.password = '';
       this.submitted = true;
+      this.showLeaveGuard = false;
       this.message = '提交成功，核验报告将先进入审核；核验审核通过后报修报告进入审核';
       this.messageTone = UiFeedbackTone.Success;
     } finally {
@@ -634,22 +649,48 @@ struct FaultReportPage {
 
   buildForm(): AbnormalVerificationSubmissionForm {
     return {
-      verification: {
-        deviceCode: this.verification.deviceCode,
-        result: VerificationResult.Abnormal,
-        description: this.verification.description,
-        verifiedAt: this.verification.verifiedAt,
-        remark: this.verification.remark
-      },
+      verification: this.verification,
       faultReport: {
         deviceCode: this.verification.deviceCode,
         faultType: this.faultType as FaultType,
+        faultSubtype: this.faultSubtype as FaultSubtype,
         severity: this.severity as FaultSeverity,
         occurredAt: this.occurredAt,
         description: this.faultDescription,
-        sceneCondition: ''
+        sceneCondition: '',
+        longitude: this.hasLocation ? this.longitude : undefined,
+        latitude: this.hasLocation ? this.latitude : undefined
       }
     };
+  }
+
+  async resolveFaultLocation(): Promise<void> {
+    if (this.locating || this.submitting || this.submitted) {
+      return;
+    }
+
+    this.locating = true;
+    this.message = '';
+    this.messageTone = UiFeedbackTone.Danger;
+    try {
+      const result: LocationResolutionResult =
+        await LocationService.resolveCurrentLocation(this.getUIContext().getHostContext());
+      if (!result.success || result.coordinates === undefined) {
+        this.hasLocation = false;
+        this.message = `${result.message}，报修报告需定位成功后才可提交`;
+        this.messageTone = UiFeedbackTone.Danger;
+        return;
+      }
+
+      this.hasLocation = true;
+      this.longitude = result.coordinates.longitude;
+      this.latitude = result.coordinates.latitude;
+      this.locationAccuracy = result.coordinates.accuracy;
+      this.message = result.message;
+      this.messageTone = UiFeedbackTone.Success;
+    } finally {
+      this.locating = false;
+    }
   }
 
   async verifyPasswordForSubmit(password: string): Promise<boolean> {
@@ -661,6 +702,130 @@ struct FaultReportPage {
     this.message = UiFeedbackService.passwordVerificationError(response.error, '提交');
     this.messageTone = UiFeedbackTone.Danger;
     return false;
+  }
+
+  isSubmitActionEnabled(): boolean {
+    return this.submitted ||
+      (this.hasVerification && this.password.length > 0 && this.hasLocation && !this.submitting && !this.locating);
+  }
+
+  createFaultCascadeRange(): TextCascadePickerRangeContent[] {
+    const range: TextCascadePickerRangeContent[] = [];
+    for (let typeIndex = 0; typeIndex < FAULT_TYPE_VALUES.length; typeIndex++) {
+      const type = FAULT_TYPE_VALUES[typeIndex] as FaultType;
+      const options = FaultReportService.getFaultSubtypeOptions(type);
+      const children: TextCascadePickerRangeContent[] = [];
+      for (let optionIndex = 0; optionIndex < options.length; optionIndex++) {
+        const child: TextCascadePickerRangeContent = {
+          text: options[optionIndex].label
+        };
+        children.push(child);
+      }
+
+      const item: TextCascadePickerRangeContent = {
+        text: FaultReportService.formatFaultType(type),
+        children
+      };
+      range.push(item);
+    }
+
+    return range;
+  }
+
+  getFaultTypeIndex(): number {
+    return this.indexOfPickerValue(FAULT_TYPE_VALUES, this.faultType);
+  }
+
+  getFaultSubtypeIndex(): number {
+    const options = FaultReportService.getFaultSubtypeOptions(this.faultType as FaultType);
+    for (let index = 0; index < options.length; index++) {
+      if (`${options[index].subtype}` === this.faultSubtype) {
+        return index;
+      }
+    }
+
+    return 0;
+  }
+
+  getSeverityIndex(): number {
+    return this.indexOfPickerValue(SEVERITY_VALUES, this.severity);
+  }
+
+  applyFaultCascadeIndex(index: number | number[]): void {
+    if (this.submitting || this.submitted) {
+      return;
+    }
+
+    const indices = this.normalizeMultiPickerIndex(index);
+    const typeIndex = this.normalizePickerIndex(indices[0], FAULT_TYPE_VALUES.length);
+    const type = FAULT_TYPE_VALUES[typeIndex] as FaultType;
+    const options = FaultReportService.getFaultSubtypeOptions(type);
+    const subtypeIndex = this.normalizePickerIndex(indices[1], options.length);
+    this.faultType = `${type}`;
+    if (options.length > 0) {
+      this.faultSubtype = `${options[subtypeIndex].subtype}`;
+    } else {
+      this.faultSubtype = `${FaultReportService.getDefaultFaultSubtype(type)}`;
+    }
+    this.markFormChanged();
+  }
+
+  applySeverityIndex(index: number): void {
+    if (this.submitting || this.submitted) {
+      return;
+    }
+
+    this.severity = SEVERITY_VALUES[this.normalizePickerIndex(index, SEVERITY_VALUES.length)];
+    this.markFormChanged();
+  }
+
+  normalizeSinglePickerIndex(index: number | number[]): number {
+    if (typeof index === 'number') {
+      return index;
+    }
+
+    if (index.length === 0) {
+      return 0;
+    }
+
+    return index[0];
+  }
+
+  normalizeMultiPickerIndex(index: number | number[]): number[] {
+    if (typeof index === 'number') {
+      return [index, 0];
+    }
+
+    if (index.length === 0) {
+      return [0, 0];
+    }
+
+    if (index.length === 1) {
+      return [index[0], 0];
+    }
+
+    return [index[0], index[1]];
+  }
+
+  indexOfPickerValue(values: string[], value: string): number {
+    const index = values.indexOf(value);
+    if (index < 0) {
+      return 0;
+    }
+
+    return index;
+  }
+
+  normalizePickerIndex(index: number, length: number): number {
+    if (length <= 0 || index !== index || index < 0) {
+      return 0;
+    }
+
+    if (index >= length) {
+      return length - 1;
+    }
+
+    return Math.floor(index);
   }
 
   getSeverityTone(severity: FaultSeverity): string {
@@ -681,6 +846,7 @@ struct FaultReportPage {
   markFormChanged(): void {
     this.message = '';
     this.messageTone = UiFeedbackTone.Danger;
+    this.showLeaveGuard = false;
   }
 
   handleBackAction(): void {
@@ -689,27 +855,9 @@ struct FaultReportPage {
       return;
     }
 
-    this.showDiscardConfirmation();
-  }
-
-  showDiscardConfirmation(): void {
-    AlertDialog.show({
-      title: '放弃报修报告填写？',
-      message: '返回将放弃本次异常核验与报修报告填写。',
-      autoCancel: false,
-      primaryButton: {
-        value: '继续填写',
-        action: () => {
-        }
-      },
-      secondaryButton: {
-        value: '放弃返回',
-        action: () => {
-          VerificationReportFlowStore.markFaultReportDiscarded();
-          this.backToVerificationReport();
-        }
-      }
-    });
+    this.showLeaveGuard = true;
+    this.message = '';
+    this.messageTone = UiFeedbackTone.Danger;
   }
 
   showOccurredAtPicker(): void {

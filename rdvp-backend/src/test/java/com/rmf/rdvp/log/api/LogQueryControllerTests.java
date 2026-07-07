@@ -241,14 +241,27 @@ class LogQueryControllerTests {
                         .content("""
                                 {
                                   "result": "ABNORMAL",
+                                  "verificationType": "TEMPORARY",
+                                  "deviceStatus": "OFFLINE",
+                                  "verificationMethod": "FUNCTION_TEST",
+                                  "items": [
+                                    {
+                                      "itemCode": "RUNNING_RESPONSE",
+                                      "itemName": "运行响应性",
+                                      "result": "FAILED"
+                                    }
+                                  ],
                                   "description": "现场核验发现设备运行异常。",
                                   "remark": "已同步填写报修报告。",
                                   "verifiedAt": "2026-06-03T08:30:00Z",
                                   "faultType": "ENERGY_FAULT",
+                                  "faultSubtype": "POWER_SUPPLY_ABNORMAL",
                                   "severity": "GENERAL",
                                   "occurredAt": "2026-06-03T08:20:00Z",
                                   "faultDescription": "Power supply fluctuates under load.",
-                                  "sceneCondition": "Site has reduced load."
+                                  "sceneCondition": "Site has reduced load.",
+                                  "longitude": 114.1694,
+                                  "latitude": 22.3193
                                 }
                                 """))
                 .andExpect(status().isOk())

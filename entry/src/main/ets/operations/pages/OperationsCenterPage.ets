@@ -241,7 +241,7 @@ struct OperationsCenterPage {
     this.message = '';
     this.messageTargetId = '';
     if (action.id === HomeActionId.VerificationReport) {
-      this.openPage(this.getVerificationReportEntryUrl(), UiFeedbackService.operationUnavailable('核验报告'));
+      this.openPage(this.getVerificationReportEntryUrl(), UiFeedbackService.operationUnavailable('核验与报修'));
       return;
     }
 
