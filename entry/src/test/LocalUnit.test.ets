@@ -320,12 +320,18 @@ export default function localUnitTest() {
 
     it('resolvesFaultPickerDisplayValues', 0, () => {
       const faultSelection: FaultTypeSelection | undefined =
-        FaultReportService.resolveFaultTypeSelection('运行异常', '无响应');
+        FaultReportService.resolveFaultTypeSelection('运行故障', '无响应');
       expect(faultSelection === undefined).assertEqual(false);
       if (faultSelection !== undefined) {
         expect(faultSelection.faultType).assertEqual(FaultType.OperationAbnormal);
         expect(faultSelection.faultSubtype).assertEqual(FaultSubtype.NoResponse);
       }
+      expect(FaultReportService.formatFaultType(FaultType.OperationAbnormal)).assertEqual('运行故障');
+      expect(FaultReportService.formatFaultType(FaultType.HardwareDamage)).assertEqual('部件故障');
+      expect(FaultReportService.formatFaultType(FaultType.LogicFault)).assertEqual('逻辑故障');
+      expect(FaultReportService.formatFaultType(FaultType.EnergyFault)).assertEqual('能源故障');
+      expect(FaultReportService.formatFaultType(FaultType.ExternalFactor)).assertEqual('外部故障');
+      expect(FaultReportService.formatFaultType(FaultType.Other)).assertEqual('其他故障');
       expect(FaultReportService.resolveSeveritySelection('严重')).assertEqual(FaultSeverity.Severe);
     });
 

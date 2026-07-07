@@ -115,7 +115,7 @@ struct OperationsCenterPage {
       Column({ space: 16 }) {
         Grid() {
           GridItem() {
-            this.PermissionCell('核验', this.canVerifyDevice())
+            this.PermissionCell('设备核验', this.canVerifyDevice())
           }
 
           GridItem() {

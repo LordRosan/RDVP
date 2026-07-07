@@ -24,7 +24,7 @@ import { UiFeedbackTone } from '../../shared/models/UiFeedbackModels';
 
 const REFRESH_TIMEOUT_MS = 5000;
 const TASK_ACCEPTANCE_TYPE_FILTER_OPTIONS: string[] =
-  ['全部', '运行异常', '部件损坏', '通信故障', '逻辑故障', '能源故障', '外部因素', '其他'];
+  ['全部', '运行故障', '部件故障', '通信故障', '逻辑故障', '能源故障', '外部故障', '其他故障'];
 const TASK_ACCEPTANCE_TYPE_FILTER_VALUES: string[] =
   ['', `${FaultType.OperationAbnormal}`, `${FaultType.HardwareDamage}`,
     `${FaultType.CommunicationFault}`, `${FaultType.LogicFault}`, `${FaultType.EnergyFault}`,

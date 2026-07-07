@@ -248,17 +248,17 @@ export class FaultReportService {
   static formatFaultType(type: FaultType): string {
     switch (type) {
       case FaultType.OperationAbnormal:
-        return '运行异常';
+        return '运行故障';
       case FaultType.HardwareDamage:
-        return '部件损坏';
+        return '部件故障';
       case FaultType.CommunicationFault:
         return '通信故障';
       case FaultType.LogicFault:
-        return '逻辑异常';
+        return '逻辑故障';
       case FaultType.EnergyFault:
-        return '供能异常';
+        return '能源故障';
       case FaultType.ExternalFactor:
-        return '外部因素';
+        return '外部故障';
       case FaultType.Other:
         return '其他';
       default:
@@ -424,19 +424,19 @@ export class FaultReportService {
 
   private static resolveFaultTypeLabel(label: string): FaultType | undefined {
     switch (FaultReportService.normalizeText(label)) {
-      case '运行异常':
+      case '运行故障':
         return FaultType.OperationAbnormal;
-      case '部件损坏':
+      case '部件故障':
         return FaultType.HardwareDamage;
       case '通信故障':
         return FaultType.CommunicationFault;
-      case '逻辑异常':
+      case '逻辑故障':
         return FaultType.LogicFault;
-      case '供能异常':
+      case '能源故障':
         return FaultType.EnergyFault;
-      case '外部因素':
+      case '外部故障':
         return FaultType.ExternalFactor;
-      case '其他':
+      case '其他故障':
         return FaultType.Other;
       default:
         return undefined;
