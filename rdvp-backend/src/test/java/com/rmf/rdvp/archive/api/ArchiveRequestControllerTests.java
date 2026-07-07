@@ -630,7 +630,7 @@ class ArchiveRequestControllerTests {
     }
 
     @Test
-    void requiresReviewPermissionForManagementEndpoints() throws Exception {
+    void requiresReviewPermissionForArchiveReviewEndpoints() throws Exception {
         String token = login("operator", "password");
 
         mockMvc.perform(get("/api/v1/archive-requests?status=PENDING_REVIEW")

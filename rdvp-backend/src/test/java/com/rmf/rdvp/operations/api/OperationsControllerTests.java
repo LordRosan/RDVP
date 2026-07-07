@@ -681,7 +681,7 @@ class OperationsControllerTests {
     }
 
     @Test
-    void createsAbnormalVerificationAndFaultReportFromFailedVerificationItem() throws Exception {
+    void createsAbnormalVerificationSubmissionFromFailedVerificationItem() throws Exception {
         String operatorToken = login("operator", "password");
 
         verifyPassword(operatorToken, "password");
@@ -1381,7 +1381,7 @@ class OperationsControllerTests {
     }
 
     @Test
-    void requiresOperationsReviewPermissionForManagementReviewEndpoints() throws Exception {
+    void requiresOperationsReviewPermissionForOperationsReviewEndpoints() throws Exception {
         String operatorToken = login("operator", "password");
 
         mockMvc.perform(get("/api/v1/operations-review-requests?status=PENDING_REVIEW")

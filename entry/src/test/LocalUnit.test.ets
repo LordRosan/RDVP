@@ -18,6 +18,7 @@ import { LogQueryService } from '../main/ets/log/services/LogQueryService';
 import { ReinspectionService } from '../main/ets/operations/services/ReinspectionService';
 import { ReinspectionTaskStatus } from '../main/ets/operations/models/ReinspectionModels';
 import { VerificationReportService } from '../main/ets/operations/services/VerificationReportService';
+import { FaultReportService, FaultTypeSelection } from '../main/ets/operations/services/FaultReportService';
 import {
   AbnormalVerificationSubmissionForm,
   VerificationDeviceStatus,
@@ -258,6 +259,26 @@ export default function localUnitTest() {
         .assertEqual('提交');
       expect(VerificationReportService.formatVerificationStepActionLabel(VerificationResult.Abnormal, false, false))
         .assertEqual('下一步');
+    });
+
+    it('resolvesVerificationPickerDisplayValues', 0, () => {
+      expect(VerificationReportService.resolveVerificationTypeSelection('专项'))
+        .assertEqual(VerificationType.Special);
+      expect(VerificationReportService.resolveDeviceStatusSelection('未知'))
+        .assertEqual(VerificationDeviceStatus.Unknown);
+      expect(VerificationReportService.resolveVerificationMethodSelection('数据读取'))
+        .assertEqual(VerificationMethod.DataReading);
+    });
+
+    it('resolvesFaultPickerDisplayValues', 0, () => {
+      const faultSelection: FaultTypeSelection | undefined =
+        FaultReportService.resolveFaultTypeSelection('运行异常', '无响应');
+      expect(faultSelection === undefined).assertEqual(false);
+      if (faultSelection !== undefined) {
+        expect(faultSelection.faultType).assertEqual(FaultType.OperationAbnormal);
+        expect(faultSelection.faultSubtype).assertEqual(FaultSubtype.NoResponse);
+      }
+      expect(FaultReportService.resolveSeveritySelection('严重')).assertEqual(FaultSeverity.Severe);
     });
 
     it('enablesAbnormalVerificationStepWithoutPassword', 0, () => {

@@ -56,9 +56,9 @@ const VERIFICATION_METHOD_LABELS: string[] = ['现场观察', '编号核对', '�
 struct VerificationReportPage {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   @State deviceCode: string = '';
-  @State verificationType: string = `${VerificationType.Routine}`;
-  @State deviceStatus: string = `${VerificationDeviceStatus.Running}`;
-  @State verificationMethod: string = `${VerificationMethod.OnsiteObservation}`;
+  @State verificationType: string = '';
+  @State deviceStatus: string = '';
+  @State verificationMethod: string = '';
   @State verificationItems: VerificationReportItem[] = VerificationReportService.createDefaultVerificationItems();
   @State description: string = '';
   @State verifiedAt: string = '';
@@ -276,7 +276,7 @@ struct VerificationReportPage {
   VerificationTypeSelector() {
     Column({ space: 10 }) {
       this.FieldTitle('核验类型')
-      this.SingleTextPicker(VERIFICATION_TYPE_LABELS, this.getVerificationTypeIndex(), 'type')
+      this.VerificationTypeSelectionField()
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -286,7 +286,7 @@ struct VerificationReportPage {
   DeviceStatusSelector() {
     Column({ space: 10 }) {
       this.FieldTitle('设备状态')
-      this.SingleTextPicker(DEVICE_STATUS_LABELS, this.getDeviceStatusIndex(), 'status')
+      this.DeviceStatusSelectionField()
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -296,52 +296,125 @@ struct VerificationReportPage {
   VerificationMethodSelector() {
     Column({ space: 10 }) {
       this.FieldTitle('核验方式')
-      this.SingleTextPicker(VERIFICATION_METHOD_LABELS, this.getVerificationMethodIndex(), 'method')
+      this.VerificationMethodSelectionField()
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
-  SingleTextPicker(range: string[], selected: number, group: string) {
-    TextPicker({
-      range,
-      selected
-    })
-    .height(112)
+  VerificationTypeSelectionField() {
+    Row({ space: 10 }) {
+      Text(VerificationReportService.formatVerificationTypeSelection(this.verificationType as VerificationType))
+        .fontSize(16)
+        .fontColor(this.verificationType.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
+        .layoutWeight(1)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+      SymbolGlyph($r('sys.symbol.chevron_forward'))
+        .fontSize(18)
+        .fontColor([AppColors.TextSecondary])
+    }
+    .height(56)
     .width('100%')
     .backgroundColor(AppColors.FieldBackground)
     .borderRadius(18)
+    .padding({
+      left: 16,
+      right: 16
+    })
     .border({
       width: 1,
       color: AppColors.Border
     })
-    .canLoop(false)
-    .defaultPickerItemHeight(36)
-    .selectedTextStyle({
-      color: AppColors.Primary,
-      font: {
-        size: 17,
-        weight: FontWeight.Bold
+    .enabled(!this.submitting && !this.submitted)
+    .onClick(() => {
+      if (this.submitting || this.submitted) {
+        return;
       }
+
+      this.showVerificationTypePicker();
     })
-    .textStyle({
-      color: AppColors.TextSecondary,
-      font: {
-        size: 14,
-        weight: FontWeight.Medium
-      }
+  }
+
+  @Builder
+  DeviceStatusSelectionField() {
+    Row({ space: 10 }) {
+      Text(VerificationReportService.formatDeviceStatusSelection(this.deviceStatus as VerificationDeviceStatus))
+        .fontSize(16)
+        .fontColor(this.deviceStatus.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
+        .layoutWeight(1)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+      SymbolGlyph($r('sys.symbol.chevron_forward'))
+        .fontSize(18)
+        .fontColor([AppColors.TextSecondary])
+    }
+    .height(56)
+    .width('100%')
+    .backgroundColor(AppColors.FieldBackground)
+    .borderRadius(18)
+    .padding({
+      left: 16,
+      right: 16
+    })
+    .border({
+      width: 1,
+      color: AppColors.Border
     })
     .enabled(!this.submitting && !this.submitted)
-    .onChange((_value: string | string[], index: number | number[]) => {
-      this.applyPickerIndex(group, this.normalizeSinglePickerIndex(index));
+    .onClick(() => {
+      if (this.submitting || this.submitted) {
+        return;
+      }
+
+      this.showDeviceStatusPicker();
+    })
+  }
+
+  @Builder
+  VerificationMethodSelectionField() {
+    Row({ space: 10 }) {
+      Text(VerificationReportService.formatVerificationMethodSelection(this.verificationMethod as VerificationMethod))
+        .fontSize(16)
+        .fontColor(this.verificationMethod.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
+        .layoutWeight(1)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+      SymbolGlyph($r('sys.symbol.chevron_forward'))
+        .fontSize(18)
+        .fontColor([AppColors.TextSecondary])
+    }
+    .height(56)
+    .width('100%')
+    .backgroundColor(AppColors.FieldBackground)
+    .borderRadius(18)
+    .padding({
+      left: 16,
+      right: 16
+    })
+    .border({
+      width: 1,
+      color: AppColors.Border
+    })
+    .enabled(!this.submitting && !this.submitted)
+    .onClick(() => {
+      if (this.submitting || this.submitted) {
+        return;
+      }
+
+      this.showVerificationMethodPicker();
     })
   }
 
   @Builder
   VerificationItemSection() {
-    Column({ space: 10 }) {
+    Column({ space: 8 }) {
       this.FieldTitle('核验项')
+      this.VerificationItemOptionHeader()
 
       ForEach(this.verificationItems, (item: VerificationReportItem, index: number) => {
         this.VerificationItemRow(item, index)
@@ -352,41 +425,73 @@ struct VerificationReportPage {
   }
 
   @Builder
-  VerificationItemRow(item: VerificationReportItem, index: number) {
+  VerificationItemOptionHeader() {
     Row({ space: 10 }) {
-      Text(item.itemName)
-        .fontSize(15)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(AppColors.TextPrimary)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
+      Blank()
         .layoutWeight(1)
 
-      Row({ space: 6 }) {
-        this.ItemResultRadio(index, item.itemCode, VerificationItemResult.Passed)
-        this.ItemResultRadio(index, item.itemCode, VerificationItemResult.Failed)
-        this.ItemResultRadio(index, item.itemCode, VerificationItemResult.NotApplicable)
+      Row() {
+        this.ItemResultHeaderLabel(VerificationItemResult.Passed)
+        this.ItemResultHeaderLabel(VerificationItemResult.Failed)
+        this.ItemResultHeaderLabel(VerificationItemResult.NotApplicable)
       }
-      .width(212)
+      .width(144)
       .alignItems(VerticalAlign.Center)
     }
     .width('100%')
-    .constraintSize({ minHeight: 58 })
+    .padding({ left: 12, right: 10 })
+  }
+
+  @Builder
+  ItemResultHeaderLabel(result: VerificationItemResult) {
+    Text(VerificationReportService.formatVerificationItemResult(result))
+      .fontSize(11)
+      .fontWeight(FontWeight.Medium)
+      .fontColor(this.getItemResultTone(result))
+      .width(48)
+      .textAlign(TextAlign.Center)
+      .maxLines(1)
+      .textOverflow({ overflow: TextOverflow.Ellipsis })
+  }
+
+  @Builder
+  VerificationItemRow(item: VerificationReportItem, index: number) {
+    Column() {
+      Row({ space: 10 }) {
+        Text(item.itemName)
+          .fontSize(15)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppColors.TextPrimary)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .layoutWeight(1)
+
+        Row() {
+          this.ItemResultRadio(index, item.itemCode, VerificationItemResult.Passed)
+          this.ItemResultRadio(index, item.itemCode, VerificationItemResult.Failed)
+          this.ItemResultRadio(index, item.itemCode, VerificationItemResult.NotApplicable)
+        }
+        .width(144)
+        .alignItems(VerticalAlign.Center)
+      }
+      .height(44)
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+    }
+    .width('100%')
     .padding({
       left: 12,
-      right: 12,
-      top: 10,
-      bottom: 10
+      right: 10
     })
     .backgroundColor(AppColors.SurfaceMuted)
-    .borderRadius(18)
+    .borderRadius(14)
     .border({ width: 1, color: AppColors.Divider })
-    .alignItems(VerticalAlign.Center)
+    .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
   ItemResultRadio(index: number, itemCode: string, result: VerificationItemResult) {
-    Column({ space: 3 }) {
+    Row() {
       Radio({
         value: `${result}`,
         group: `verification-item-${itemCode}`
@@ -403,16 +508,10 @@ struct VerificationReportPage {
             this.updateVerificationItemResult(index, result);
           }
         })
-
-      Text(VerificationReportService.formatVerificationItemResult(result))
-        .fontSize(11)
-        .fontWeight(this.verificationItems[index].result === result ? FontWeight.Bold : FontWeight.Medium)
-        .fontColor(this.getItemResultTone(result))
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
-    .width(64)
-    .alignItems(HorizontalAlign.Center)
+    .width(48)
+    .justifyContent(FlexAlign.Center)
+    .alignItems(VerticalAlign.Center)
     .onClick(() => {
       this.updateVerificationItemResult(index, result);
     })
@@ -746,6 +845,134 @@ struct VerificationReportPage {
     return this.indexOfPickerValue(VERIFICATION_METHOD_VALUES, this.verificationMethod);
   }
 
+  showVerificationTypePicker(): void {
+    const previousValue = this.verificationType;
+    this.showSingleSelectionPicker(
+      VERIFICATION_TYPE_LABELS,
+      this.getVerificationTypeIndex(),
+      (index: number, label: string) => {
+        this.applyVerificationTypePickerSelection(index, label);
+      },
+      () => {
+        this.verificationType = previousValue;
+      }
+    );
+  }
+
+  showDeviceStatusPicker(): void {
+    const previousValue = this.deviceStatus;
+    this.showSingleSelectionPicker(
+      DEVICE_STATUS_LABELS,
+      this.getDeviceStatusIndex(),
+      (index: number, label: string) => {
+        this.applyDeviceStatusPickerSelection(index, label);
+      },
+      () => {
+        this.deviceStatus = previousValue;
+      }
+    );
+  }
+
+  showVerificationMethodPicker(): void {
+    const previousValue = this.verificationMethod;
+    this.showSingleSelectionPicker(
+      VERIFICATION_METHOD_LABELS,
+      this.getVerificationMethodIndex(),
+      (index: number, label: string) => {
+        this.applyVerificationMethodPickerSelection(index, label);
+      },
+      () => {
+        this.verificationMethod = previousValue;
+      }
+    );
+  }
+
+  showSingleSelectionPicker(
+    range: string[],
+    selected: number,
+    applySelection: (index: number, label: string) => void,
+    restoreSelection: () => void
+  ): void {
+    if (this.submitting || this.submitted) {
+      return;
+    }
+
+    this.getUIContext().showTextPickerDialog({
+      range,
+      selected,
+      canLoop: false,
+      defaultPickerItemHeight: 38,
+      selectedTextStyle: {
+        color: AppColors.Primary,
+        font: {
+          size: 17,
+          weight: FontWeight.Bold
+        }
+      },
+      textStyle: {
+        color: AppColors.TextSecondary,
+        font: {
+          size: 14,
+          weight: FontWeight.Medium
+        }
+      },
+      onAccept: (value: TextPickerResult) => {
+        this.applySinglePickerResult(range, value, applySelection);
+      },
+      onChange: (value: TextPickerResult) => {
+        this.applySinglePickerResult(range, value, applySelection);
+      },
+      onScrollStop: (value: TextPickerResult) => {
+        this.applySinglePickerResult(range, value, applySelection);
+      },
+      onCancel: () => {
+        restoreSelection();
+      }
+    });
+  }
+
+  applySinglePickerResult(
+    range: string[],
+    result: TextPickerResult,
+    applySelection: (index: number, label: string) => void
+  ): void {
+    const index = this.normalizeSinglePickerValue(range, result.value, result.index);
+    applySelection(index, range[this.normalizePickerIndex(index, range.length)]);
+  }
+
+  applyVerificationTypePickerSelection(index: number, label: string): void {
+    const value = VerificationReportService.resolveVerificationTypeSelection(label);
+    if (value !== undefined) {
+      this.verificationType = `${value}`;
+      this.markFormChanged();
+      return;
+    }
+
+    this.applyPickerIndex('type', index);
+  }
+
+  applyDeviceStatusPickerSelection(index: number, label: string): void {
+    const value = VerificationReportService.resolveDeviceStatusSelection(label);
+    if (value !== undefined) {
+      this.deviceStatus = `${value}`;
+      this.markFormChanged();
+      return;
+    }
+
+    this.applyPickerIndex('status', index);
+  }
+
+  applyVerificationMethodPickerSelection(index: number, label: string): void {
+    const value = VerificationReportService.resolveVerificationMethodSelection(label);
+    if (value !== undefined) {
+      this.verificationMethod = `${value}`;
+      this.markFormChanged();
+      return;
+    }
+
+    this.applyPickerIndex('method', index);
+  }
+
   applyPickerIndex(group: string, index: number): void {
     if (this.submitting || this.submitted) {
       return;
@@ -773,6 +1000,38 @@ struct VerificationReportPage {
     }
 
     return index[0];
+  }
+
+  normalizeSinglePickerValue(range: string[], value: string | string[], fallbackIndex: number | number[]): number {
+    const fallback = this.normalizeSinglePickerIndex(fallbackIndex);
+    const selectedLabel = this.normalizeSinglePickerLabel(value);
+    if (selectedLabel.length === 0) {
+      return fallback;
+    }
+
+    return this.indexOfPickerLabel(range, selectedLabel, fallback);
+  }
+
+  normalizeSinglePickerLabel(value: string | string[]): string {
+    if (typeof value === 'string') {
+      return value;
+    }
+
+    if (value.length === 0) {
+      return '';
+    }
+
+    return value[0];
+  }
+
+  indexOfPickerLabel(values: string[], label: string, fallbackIndex: number): number {
+    for (let index = 0; index < values.length; index++) {
+      if (values[index] === label) {
+        return index;
+      }
+    }
+
+    return fallbackIndex;
   }
 
   indexOfPickerValue(values: string[], value: string): number {
@@ -822,9 +1081,9 @@ struct VerificationReportPage {
 
   resetAfterFaultReportSubmitted(): void {
     this.deviceCode = '';
-    this.verificationType = `${VerificationType.Routine}`;
-    this.deviceStatus = `${VerificationDeviceStatus.Running}`;
-    this.verificationMethod = `${VerificationMethod.OnsiteObservation}`;
+    this.verificationType = '';
+    this.deviceStatus = '';
+    this.verificationMethod = '';
     this.verificationItems = VerificationReportService.createDefaultVerificationItems();
     this.description = '';
     this.verifiedAt = '';
@@ -838,9 +1097,9 @@ struct VerificationReportPage {
 
   resetAfterFaultReportDiscarded(): void {
     this.deviceCode = '';
-    this.verificationType = `${VerificationType.Routine}`;
-    this.deviceStatus = `${VerificationDeviceStatus.Running}`;
-    this.verificationMethod = `${VerificationMethod.OnsiteObservation}`;
+    this.verificationType = '';
+    this.deviceStatus = '';
+    this.verificationMethod = '';
     this.verificationItems = VerificationReportService.createDefaultVerificationItems();
     this.description = '';
     this.verifiedAt = '';

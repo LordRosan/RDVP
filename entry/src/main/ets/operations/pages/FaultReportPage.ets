@@ -10,7 +10,7 @@ import {
 } from '../models/VerificationReportModels';
 import { PermissionCode } from '../../user/models/PermissionModels';
 import { DeviceService } from '../../archive/services/DeviceService';
-import { FaultReportService, FaultSubtypeOption } from '../services/FaultReportService';
+import { FaultReportService, FaultSubtypeOption, FaultTypeSelection } from '../services/FaultReportService';
 import { VerificationReportService } from '../services/VerificationReportService';
 import { LocationService, LocationResolutionResult } from '../services/LocationService';
 import { UiFeedbackService } from '../../shared/services/UiFeedbackService';
@@ -43,9 +43,9 @@ const SEVERITY_LABELS: string[] = ['紧急', '严重', '一般', '轻微'];
 struct FaultReportPage {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   @State deviceCode: string = '';
-  @State faultType: string = `${FaultType.OperationAbnormal}`;
-  @State faultSubtype: string = `${FaultSubtype.NoResponse}`;
-  @State severity: string = `${FaultSeverity.General}`;
+  @State faultType: string = '';
+  @State faultSubtype: string = '';
+  @State severity: string = '';
   @State occurredAt: string = '';
   @State faultDescription: string = '';
   @State password: string = '';
@@ -306,39 +306,7 @@ struct FaultReportPage {
   FaultTypePicker() {
     Column({ space: 10 }) {
       this.FieldTitle('故障类型')
-
-      TextPicker({
-        range: this.createFaultCascadeRange(),
-        selected: [this.getFaultTypeIndex(), this.getFaultSubtypeIndex()]
-      })
-      .height(124)
-      .width('100%')
-      .backgroundColor(AppColors.FieldBackground)
-      .borderRadius(18)
-      .border({
-        width: 1,
-        color: AppColors.Border
-      })
-      .canLoop(false)
-      .defaultPickerItemHeight(38)
-      .selectedTextStyle({
-        color: AppColors.Primary,
-        font: {
-          size: 17,
-          weight: FontWeight.Bold
-        }
-      })
-      .textStyle({
-        color: AppColors.TextSecondary,
-        font: {
-          size: 14,
-          weight: FontWeight.Medium
-        }
-      })
-      .enabled(!this.submitting && !this.submitted)
-      .onChange((_value: string | string[], index: number | number[]) => {
-        this.applyFaultCascadeIndex(index);
-      })
+      this.FaultTypeSelectionField()
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -348,42 +316,82 @@ struct FaultReportPage {
   SeverityPicker() {
     Column({ space: 10 }) {
       this.FieldTitle('故障等级')
-
-      TextPicker({
-        range: SEVERITY_LABELS,
-        selected: this.getSeverityIndex()
-      })
-      .height(112)
-      .width('100%')
-      .backgroundColor(AppColors.FieldBackground)
-      .borderRadius(18)
-      .border({
-        width: 1,
-        color: AppColors.Border
-      })
-      .canLoop(false)
-      .defaultPickerItemHeight(36)
-      .selectedTextStyle({
-        color: this.getSeverityTone(this.severity as FaultSeverity),
-        font: {
-          size: 17,
-          weight: FontWeight.Bold
-        }
-      })
-      .textStyle({
-        color: AppColors.TextSecondary,
-        font: {
-          size: 14,
-          weight: FontWeight.Medium
-        }
-      })
-      .enabled(!this.submitting && !this.submitted)
-      .onChange((_value: string | string[], index: number | number[]) => {
-        this.applySeverityIndex(this.normalizeSinglePickerIndex(index));
-      })
+      this.SeveritySelectionField()
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  FaultTypeSelectionField() {
+    Row({ space: 10 }) {
+      Text(FaultReportService.formatFaultTypeSelection(this.faultType as FaultType, this.faultSubtype as FaultSubtype))
+        .fontSize(16)
+        .fontColor(this.isFaultTypeSelectionReady() ? AppColors.TextPrimary : AppColors.TextTertiary)
+        .layoutWeight(1)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+      SymbolGlyph($r('sys.symbol.chevron_forward'))
+        .fontSize(18)
+        .fontColor([AppColors.TextSecondary])
+    }
+    .height(56)
+    .width('100%')
+    .backgroundColor(AppColors.FieldBackground)
+    .borderRadius(18)
+    .padding({
+      left: 16,
+      right: 16
+    })
+    .border({
+      width: 1,
+      color: AppColors.Border
+    })
+    .enabled(!this.submitting && !this.submitted)
+    .onClick(() => {
+      if (this.submitting || this.submitted) {
+        return;
+      }
+
+      this.showFaultTypePicker();
+    })
+  }
+
+  @Builder
+  SeveritySelectionField() {
+    Row({ space: 10 }) {
+      Text(FaultReportService.formatSeveritySelection(this.severity as FaultSeverity))
+        .fontSize(16)
+        .fontColor(this.severity.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
+        .layoutWeight(1)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+      SymbolGlyph($r('sys.symbol.chevron_forward'))
+        .fontSize(18)
+        .fontColor([AppColors.TextSecondary])
+    }
+    .height(56)
+    .width('100%')
+    .backgroundColor(AppColors.FieldBackground)
+    .borderRadius(18)
+    .padding({
+      left: 16,
+      right: 16
+    })
+    .border({
+      width: 1,
+      color: AppColors.Border
+    })
+    .enabled(!this.submitting && !this.submitted)
+    .onClick(() => {
+      if (this.submitting || this.submitted) {
+        return;
+      }
+
+      this.showSeverityPicker();
+    })
   }
 
   @Builder
@@ -751,6 +759,100 @@ struct FaultReportPage {
     return this.indexOfPickerValue(SEVERITY_VALUES, this.severity);
   }
 
+  isFaultTypeSelectionReady(): boolean {
+    return FaultReportService.formatFaultTypeSelection(this.faultType as FaultType, this.faultSubtype as FaultSubtype) !==
+      '请选择故障类型';
+  }
+
+  showFaultTypePicker(): void {
+    if (this.submitting || this.submitted) {
+      return;
+    }
+
+    const previousFaultType = this.faultType;
+    const previousFaultSubtype = this.faultSubtype;
+    this.getUIContext().showTextPickerDialog({
+      range: this.createFaultCascadeRange(),
+      selected: [this.getFaultTypeIndex(), this.getFaultSubtypeIndex()],
+      canLoop: false,
+      defaultPickerItemHeight: 38,
+      selectedTextStyle: {
+        color: AppColors.Primary,
+        font: {
+          size: 17,
+          weight: FontWeight.Bold
+        }
+      },
+      textStyle: {
+        color: AppColors.TextSecondary,
+        font: {
+          size: 14,
+          weight: FontWeight.Medium
+        }
+      },
+      onAccept: (value: TextPickerResult) => {
+        this.applyFaultCascadeResult(value);
+      },
+      onChange: (value: TextPickerResult) => {
+        this.applyFaultCascadeResult(value);
+      },
+      onCancel: () => {
+        this.faultType = previousFaultType;
+        this.faultSubtype = previousFaultSubtype;
+      }
+    });
+  }
+
+  showSeverityPicker(): void {
+    if (this.submitting || this.submitted) {
+      return;
+    }
+
+    const previousSeverity = this.severity;
+    this.getUIContext().showTextPickerDialog({
+      range: SEVERITY_LABELS,
+      selected: this.getSeverityIndex(),
+      canLoop: false,
+      defaultPickerItemHeight: 38,
+      selectedTextStyle: {
+        color: this.severity.length > 0 ? this.getSeverityTone(this.severity as FaultSeverity) : AppColors.Primary,
+        font: {
+          size: 17,
+          weight: FontWeight.Bold
+        }
+      },
+      textStyle: {
+        color: AppColors.TextSecondary,
+        font: {
+          size: 14,
+          weight: FontWeight.Medium
+        }
+      },
+      onAccept: (value: TextPickerResult) => {
+        this.applySeverityResult(value);
+      },
+      onChange: (value: TextPickerResult) => {
+        this.applySeverityResult(value);
+      },
+      onScrollStop: (value: TextPickerResult) => {
+        this.applySeverityResult(value);
+      },
+      onCancel: () => {
+        this.severity = previousSeverity;
+      }
+    });
+  }
+
+  applyFaultCascadeResult(result: TextPickerResult): void {
+    const selection = this.resolveFaultCascadeValue(result.value);
+    if (selection !== undefined) {
+      this.applyFaultTypeSelection(selection);
+      return;
+    }
+
+    this.applyFaultCascadeIndex(result.index);
+  }
+
   applyFaultCascadeIndex(index: number | number[]): void {
     if (this.submitting || this.submitted) {
       return;
@@ -768,6 +870,52 @@ struct FaultReportPage {
       this.faultSubtype = `${FaultReportService.getDefaultFaultSubtype(type)}`;
     }
     this.markFormChanged();
+  }
+
+  applyFaultTypeSelection(selection: FaultTypeSelection): void {
+    if (this.submitting || this.submitted) {
+      return;
+    }
+
+    this.faultType = `${selection.faultType}`;
+    this.faultSubtype = `${selection.faultSubtype}`;
+    this.markFormChanged();
+  }
+
+  resolveFaultCascadeValue(value: string | string[]): FaultTypeSelection | undefined {
+    if (typeof value === 'string') {
+      return this.resolveFaultCascadeText(value);
+    }
+
+    if (value.length >= 2) {
+      return FaultReportService.resolveFaultTypeSelection(value[0], value[1]);
+    }
+
+    if (value.length === 1) {
+      return this.resolveFaultCascadeText(value[0]);
+    }
+
+    return undefined;
+  }
+
+  resolveFaultCascadeText(value: string): FaultTypeSelection | undefined {
+    const parts = value.split('/');
+    if (parts.length < 2) {
+      return undefined;
+    }
+
+    return FaultReportService.resolveFaultTypeSelection(parts[0], parts[1]);
+  }
+
+  applySeverityResult(result: TextPickerResult): void {
+    const severity = FaultReportService.resolveSeveritySelection(this.normalizeSinglePickerLabel(result.value));
+    if (severity !== undefined) {
+      this.severity = `${severity}`;
+      this.markFormChanged();
+      return;
+    }
+
+    this.applySeverityIndex(this.normalizeSinglePickerIndex(result.index));
   }
 
   applySeverityIndex(index: number): void {
@@ -789,6 +937,18 @@ struct FaultReportPage {
     }
 
     return index[0];
+  }
+
+  normalizeSinglePickerLabel(value: string | string[]): string {
+    if (typeof value === 'string') {
+      return value;
+    }
+
+    if (value.length === 0) {
+      return '';
+    }
+
+    return value[0];
   }
 
   normalizeMultiPickerIndex(index: number | number[]): number[] {

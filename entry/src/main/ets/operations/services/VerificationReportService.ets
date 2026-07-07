@@ -497,6 +497,30 @@ export class VerificationReportService {
     }
   }
 
+  static formatVerificationTypeSelection(type: VerificationType): string {
+    const label = VerificationReportService.formatVerificationType(type);
+    return label === '-' ? '请选择核验类型' : label;
+  }
+
+  static resolveVerificationTypeSelection(label: string): VerificationType | undefined {
+    switch (VerificationReportService.normalizeText(label)) {
+      case '例行':
+        return VerificationType.Routine;
+      case '临时':
+        return VerificationType.Temporary;
+      case '专项':
+        return VerificationType.Special;
+      case '首次':
+        return VerificationType.Initial;
+      case '抽检':
+        return VerificationType.Sampling;
+      case '其他':
+        return VerificationType.Other;
+      default:
+        return undefined;
+    }
+  }
+
   static formatDeviceStatus(status: VerificationDeviceStatus): string {
     switch (status) {
       case VerificationDeviceStatus.Running:
@@ -513,6 +537,30 @@ export class VerificationReportService {
         return '其他';
       default:
         return '-';
+    }
+  }
+
+  static formatDeviceStatusSelection(status: VerificationDeviceStatus): string {
+    const label = VerificationReportService.formatDeviceStatus(status);
+    return label === '-' ? '请选择设备状态' : label;
+  }
+
+  static resolveDeviceStatusSelection(label: string): VerificationDeviceStatus | undefined {
+    switch (VerificationReportService.normalizeText(label)) {
+      case '运行':
+        return VerificationDeviceStatus.Running;
+      case '待机':
+        return VerificationDeviceStatus.Standby;
+      case '停机':
+        return VerificationDeviceStatus.Stopped;
+      case '离线':
+        return VerificationDeviceStatus.Offline;
+      case '未知':
+        return VerificationDeviceStatus.Unknown;
+      case '其他':
+        return VerificationDeviceStatus.Other;
+      default:
+        return undefined;
     }
   }
 
@@ -535,12 +583,36 @@ export class VerificationReportService {
     }
   }
 
+  static formatVerificationMethodSelection(method: VerificationMethod): string {
+    const label = VerificationReportService.formatVerificationMethod(method);
+    return label === '-' ? '请选择核验方式' : label;
+  }
+
+  static resolveVerificationMethodSelection(label: string): VerificationMethod | undefined {
+    switch (VerificationReportService.normalizeText(label)) {
+      case '现场观察':
+        return VerificationMethod.OnsiteObservation;
+      case '编号核对':
+        return VerificationMethod.IdentificationCheck;
+      case '功能测试':
+        return VerificationMethod.FunctionTest;
+      case '数据读取':
+        return VerificationMethod.DataReading;
+      case '远程确认':
+        return VerificationMethod.RemoteConfirmation;
+      case '其他方式':
+        return VerificationMethod.Other;
+      default:
+        return undefined;
+    }
+  }
+
   static formatVerificationItemResult(result: VerificationItemResult): string {
     switch (result) {
       case VerificationItemResult.Passed:
         return '通过';
       case VerificationItemResult.Failed:
-        return '未通过';
+        return '不通过';
       case VerificationItemResult.NotApplicable:
         return '不适用';
       default:

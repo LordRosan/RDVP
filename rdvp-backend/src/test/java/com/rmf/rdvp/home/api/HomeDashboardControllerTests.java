@@ -134,7 +134,7 @@ class HomeDashboardControllerTests {
     }
 
     @Test
-    void includesCompletedArchiveFlowAndCountsOperationsRecordsFromCompletedWorkflow() throws Exception {
+    void includesCompletedArchiveFlowAndCountsOperationsLogsFromCompletedWorkflow() throws Exception {
         String archiveAdminToken = login("archiveadmin", "password");
         String adminToken = login("admin", "password");
         String operatorToken = login("operator", "password");

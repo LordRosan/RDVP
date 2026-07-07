@@ -18,6 +18,11 @@ export interface FaultSubtypeOption {
   label: string;
 }
 
+export interface FaultTypeSelection {
+  faultType: FaultType;
+  faultSubtype: FaultSubtype;
+}
+
 const FAULT_SUBTYPE_OPTIONS: FaultSubtypeOption[] = [
   {
     type: FaultType.OperationAbnormal,
@@ -178,7 +183,7 @@ export class FaultReportService {
     if (!FaultReportService.isKnownFaultSubtype(form.faultType, form.faultSubtype)) {
       return {
         valid: false,
-        message: UiFeedbackService.requiredSelection('故障小类')
+        message: UiFeedbackService.requiredSelection('故障类型')
       };
     }
 
@@ -283,6 +288,34 @@ export class FaultReportService {
     return options[0].subtype;
   }
 
+  static formatFaultTypeSelection(type: FaultType, subtype: FaultSubtype): string {
+    if (!FaultReportService.isKnownFaultType(type) || !FaultReportService.isKnownFaultSubtype(type, subtype)) {
+      return '请选择故障类型';
+    }
+
+    return `${FaultReportService.formatFaultType(type)} / ${FaultReportService.formatFaultSubtype(subtype)}`;
+  }
+
+  static resolveFaultTypeSelection(typeLabel: string, subtypeLabel: string): FaultTypeSelection | undefined {
+    const faultType = FaultReportService.resolveFaultTypeLabel(typeLabel);
+    if (faultType === undefined) {
+      return undefined;
+    }
+
+    const normalizedSubtypeLabel = FaultReportService.normalizeText(subtypeLabel);
+    const options = FaultReportService.getFaultSubtypeOptions(faultType);
+    for (let index = 0; index < options.length; index++) {
+      if (options[index].label === normalizedSubtypeLabel) {
+        return {
+          faultType,
+          faultSubtype: options[index].subtype
+        };
+      }
+    }
+
+    return undefined;
+  }
+
   static formatFaultSubtype(subtype: FaultSubtype): string {
     for (let index = 0; index < FAULT_SUBTYPE_OPTIONS.length; index++) {
       if (FAULT_SUBTYPE_OPTIONS[index].subtype === subtype) {
@@ -313,6 +346,26 @@ export class FaultReportService {
         return '轻微';
       default:
         return '-';
+    }
+  }
+
+  static formatSeveritySelection(severity: FaultSeverity): string {
+    const label = FaultReportService.formatSeverity(severity);
+    return label === '-' ? '请选择故障等级' : label;
+  }
+
+  static resolveSeveritySelection(label: string): FaultSeverity | undefined {
+    switch (FaultReportService.normalizeText(label)) {
+      case '紧急':
+        return FaultSeverity.Emergency;
+      case '严重':
+        return FaultSeverity.Severe;
+      case '一般':
+        return FaultSeverity.General;
+      case '轻微':
+        return FaultSeverity.Minor;
+      default:
+        return undefined;
     }
   }
 
@@ -366,6 +419,27 @@ export class FaultReportService {
         return '现象明确但暂无法归入既有类别，提交时应补充充分现场描述和证据';
       default:
         return '-';
+    }
+  }
+
+  private static resolveFaultTypeLabel(label: string): FaultType | undefined {
+    switch (FaultReportService.normalizeText(label)) {
+      case '运行异常':
+        return FaultType.OperationAbnormal;
+      case '部件损坏':
+        return FaultType.HardwareDamage;
+      case '通信故障':
+        return FaultType.CommunicationFault;
+      case '逻辑异常':
+        return FaultType.LogicFault;
+      case '供能异常':
+        return FaultType.EnergyFault;
+      case '外部因素':
+        return FaultType.ExternalFactor;
+      case '其他':
+        return FaultType.Other;
+      default:
+        return undefined;
     }
   }
 
