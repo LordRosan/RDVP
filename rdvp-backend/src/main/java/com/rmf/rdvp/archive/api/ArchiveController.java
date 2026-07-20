@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.rmf.rdvp.shared.api.ApiResponse;
 import com.rmf.rdvp.shared.api.RequestIds;
 import com.rmf.rdvp.archive.ArchiveRequestService;
+import com.rmf.rdvp.archive.ArchiveImageService;
 import com.rmf.rdvp.archive.ArchiveService;
 import com.rmf.rdvp.log.LogAction;
 import com.rmf.rdvp.log.LogEntryService;
@@ -30,16 +31,19 @@ import jakarta.validation.Valid;
 public class ArchiveController {
 
     private final ArchiveService archiveService;
+    private final ArchiveImageService archiveImageService;
     private final ArchiveRequestService archiveRequestService;
     private final AuthenticationService authenticationService;
     private final LogEntryService logEntryService;
 
     public ArchiveController(
             ArchiveService archiveService,
+            ArchiveImageService archiveImageService,
             ArchiveRequestService archiveRequestService,
             AuthenticationService authenticationService,
             LogEntryService logEntryService) {
         this.archiveService = archiveService;
+        this.archiveImageService = archiveImageService;
         this.archiveRequestService = archiveRequestService;
         this.authenticationService = authenticationService;
         this.logEntryService = logEntryService;
@@ -50,7 +54,8 @@ public class ArchiveController {
             @PathVariable String deviceCode,
             Authentication authentication,
             HttpServletRequest request) {
-        ArchiveResponse response = ArchiveResponse.from(archiveService.findByCode(deviceCode));
+        var archive = archiveService.findByCode(deviceCode);
+        ArchiveResponse response = ArchiveResponse.from(archive, archiveImageService.findByDeviceId(archive.id()));
         recordArchiveQuery(response, requireUser(authentication));
         return ResponseEntity.ok(ApiResponse.success(response, RequestIds.resolve(request)));
     }
@@ -60,8 +65,18 @@ public class ArchiveController {
             @PathVariable String deviceId,
             Authentication authentication,
             HttpServletRequest request) {
-        ArchiveResponse response = ArchiveResponse.from(archiveService.findById(deviceId));
+        var archive = archiveService.findById(deviceId);
+        ArchiveResponse response = ArchiveResponse.from(archive, archiveImageService.findByDeviceId(archive.id()));
         return ResponseEntity.ok(ApiResponse.success(response, RequestIds.resolve(request)));
+    }
+
+    @GetMapping("/archive-images/{imageId}")
+    public ResponseEntity<ApiResponse<ArchiveImageContentResponse>> findArchiveImage(
+            @PathVariable String imageId,
+            HttpServletRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                ArchiveImageContentResponse.from(archiveImageService.findById(imageId)),
+                RequestIds.resolve(request)));
     }
 
     @GetMapping("/device-codes/{deviceCode}/availability")
@@ -91,7 +106,10 @@ public class ArchiveController {
             @Valid @RequestBody QrVerifyRequest requestBody,
             Authentication authentication,
             HttpServletRequest request) {
-        QrVerificationResponse response = QrVerificationResponse.from(archiveService.verifyQrCode(requestBody.qrContent()));
+        var result = archiveService.verifyQrCode(requestBody.qrContent());
+        QrVerificationResponse response = QrVerificationResponse.from(
+                result,
+                archiveImageService.findByDeviceId(result.device().id()));
         recordArchiveQuery(response.device(), requireUser(authentication));
         return ResponseEntity.ok(ApiResponse.success(response, RequestIds.resolve(request)));
     }
@@ -119,7 +137,8 @@ public class ArchiveController {
         authenticationService.consumeRecentPasswordVerification(operator);
 
         try {
-            archive = ArchiveResponse.from(archiveService.findById(deviceId));
+            var foundArchive = archiveService.findById(deviceId);
+            archive = ArchiveResponse.from(foundArchive, archiveImageService.findByDeviceId(foundArchive.id()));
             logEntryService.recordSuccess(
                     LogAction.ARCHIVE_EXPORT,
                     archive.id(),

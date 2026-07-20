@@ -8,8 +8,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.nio.charset.StandardCharsets;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Base64;
+import java.util.List;
+
+import javax.imageio.ImageIO;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +28,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rmf.rdvp.archive.ArchiveImage;
+import com.rmf.rdvp.archive.ArchiveImageRepository;
 import com.rmf.rdvp.archive.ArchiveUpdate;
 import com.rmf.rdvp.archive.InMemoryArchiveRepository;
 
@@ -39,6 +47,9 @@ class ArchiveRequestControllerTests {
 
     @Autowired
     private InMemoryArchiveRepository archiveRepository;
+
+    @Autowired
+    private ArchiveImageRepository archiveImageRepository;
 
     @Test
     void createsArchiveRequestAndLocksArchiveEntry() throws Exception {
@@ -140,6 +151,311 @@ class ArchiveRequestControllerTests {
     }
 
     @Test
+    void approvesArchiveProfileFieldUpdate() throws Exception {
+        String applicantToken = login("archivist", "password");
+        String reviewerToken = login("archiveadmin", "password");
+
+        verifyPassword(applicantToken, "password");
+        String response = mockMvc.perform(post("/api/v1/archive-requests")
+                        .header("Authorization", "Bearer " + applicantToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "deviceId": "device-local-0001",
+                                  "reason": "补充档案基础信息。",
+                                  "initiatedAt": "2026-06-15 20:42",
+                                  "changes": {
+                                    "deviceType": {
+                                      "oldValue": "动力设备",
+                                      "newValue": "通用设备"
+                                    },
+                                    "commissionedAt": {
+                                      "oldValue": "2024-03-15",
+                                      "newValue": "2024-04-01"
+                                    },
+                                    "managementDepartment": {
+                                      "oldValue": "设备管理部",
+                                      "newValue": "安全管理部"
+                                    }
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.status").value("PENDING_REVIEW"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        String requestId = objectMapper.readTree(response).path("data").path("id").asText();
+
+        verifyPassword(reviewerToken, "password");
+        mockMvc.perform(post("/api/v1/archive-requests/{requestId}/review", requestId)
+                        .header("Authorization", "Bearer " + reviewerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "decision": "APPROVED",
+                                  "reviewedAt": "2026-06-01T08:00:00Z",
+                                  "reviewComment": "补充信息通过。"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("APPROVED"));
+
+        mockMvc.perform(get("/api/v1/devices/device-local-0001")
+                        .header("Authorization", "Bearer " + reviewerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.deviceType").value("通用设备"))
+                .andExpect(jsonPath("$.data.commissionedAt").value("2024-04-01"))
+                .andExpect(jsonPath("$.data.managementDepartment").value("安全管理部"));
+    }
+
+    @Test
+    void appliesArchiveImageReplacementOnlyAfterApproval() throws Exception {
+        String applicantToken = login("archivist", "password");
+        String reviewerToken = login("archiveadmin", "password");
+        String originalImageId = firstArchiveImageId(reviewerToken, "device-local-0001");
+
+        verifyPassword(applicantToken, "password");
+        String response = mockMvc.perform(post("/api/v1/archive-requests")
+                        .header("Authorization", "Bearer " + applicantToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "deviceId": "device-local-0001",
+                                  "reason": "更新设备图片。",
+                                  "changes": {},
+                                  "images": [
+                                    {
+                                      "contentBase64": "%s"
+                                    }
+                                  ]
+                                }
+                                """.formatted(testJpegBase64())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PENDING_REVIEW"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        String requestId = objectMapper.readTree(response).path("data").path("id").asText();
+
+        assertThat(firstArchiveImageId(reviewerToken, "device-local-0001")).isEqualTo(originalImageId);
+        String listResponse = mockMvc.perform(get("/api/v1/archive-requests?status=PENDING_REVIEW")
+                        .header("Authorization", "Bearer " + reviewerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[?(@.id == '%s')].images[0].thumbnailDataUri"
+                                .formatted(requestId))
+                        .value(hasItem(org.hamcrest.Matchers.startsWith("data:image/jpeg;base64,"))))
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        JsonNode pendingItem = java.util.stream.StreamSupport.stream(
+                        objectMapper.readTree(listResponse).path("data").path("items").spliterator(), false)
+                .filter(item -> requestId.equals(item.path("id").asText()))
+                .findFirst()
+                .orElseThrow();
+        String pendingImageId = pendingItem.path("images").get(0).path("id").asText();
+        mockMvc.perform(get("/api/v1/archive-requests/{requestId}/images/{imageId}", requestId, pendingImageId)
+                        .header("Authorization", "Bearer " + reviewerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.dataUri").value(org.hamcrest.Matchers.startsWith(
+                        "data:image/jpeg;base64,")));
+
+        verifyPassword(reviewerToken, "password");
+        mockMvc.perform(post("/api/v1/archive-requests/{requestId}/review", requestId)
+                        .header("Authorization", "Bearer " + reviewerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "decision": "APPROVED",
+                                  "reviewedAt": "2026-06-01T08:00:00Z",
+                                  "reviewComment": "图片更新通过。"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        assertThat(firstArchiveImageId(reviewerToken, "device-local-0001")).isNotEqualTo(originalImageId);
+    }
+
+    @Test
+    void preservesExistingImageIdsWhenReorderingApprovedImages() throws Exception {
+        ArchiveImage firstImage = archiveImageRepository.findByDeviceId("device-local-0001").getFirst();
+        ArchiveImage secondImage = new ArchiveImage(
+                "archive-image-local-0001-b",
+                firstImage.deviceId(),
+                1,
+                firstImage.contentType(),
+                firstImage.width(),
+                firstImage.height(),
+                firstImage.content(),
+                firstImage.thumbnail());
+        archiveImageRepository.replaceForDevice(
+                "device-local-0001",
+                List.of(firstImage, secondImage),
+                "test-setup");
+
+        String applicantToken = login("archivist", "password");
+        String reviewerToken = login("archiveadmin", "password");
+        verifyPassword(applicantToken, "password");
+        String response = mockMvc.perform(post("/api/v1/archive-requests")
+                        .header("Authorization", "Bearer " + applicantToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "deviceId": "device-local-0001",
+                                  "reason": "调整设备图片顺序。",
+                                  "changes": {},
+                                  "images": [
+                                    { "id": "%s" },
+                                    { "id": "%s" }
+                                  ]
+                                }
+                                """.formatted(secondImage.id(), firstImage.id())))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        String requestId = objectMapper.readTree(response).path("data").path("id").asText();
+
+        verifyPassword(reviewerToken, "password");
+        mockMvc.perform(post("/api/v1/archive-requests/{requestId}/review", requestId)
+                        .header("Authorization", "Bearer " + reviewerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "decision": "APPROVED",
+                                  "reviewedAt": "2026-06-01T08:00:00Z",
+                                  "reviewComment": "图片顺序调整通过。"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        assertThat(archiveImageRepository.findByDeviceId("device-local-0001"))
+                .extracting(ArchiveImage::id)
+                .containsExactly(secondImage.id(), firstImage.id());
+    }
+
+    @Test
+    void rejectsArchiveRequestWithMoreThanFiveImages() throws Exception {
+        String token = login("archivist", "password");
+        String image = testJpegBase64();
+        verifyPassword(token, "password");
+
+        mockMvc.perform(post("/api/v1/archive-requests")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "deviceId": "device-local-0001",
+                                  "reason": "图片数量测试。",
+                                  "changes": {},
+                                  "images": [
+                                    { "contentBase64": "%1$s" },
+                                    { "contentBase64": "%1$s" },
+                                    { "contentBase64": "%1$s" },
+                                    { "contentBase64": "%1$s" },
+                                    { "contentBase64": "%1$s" },
+                                    { "contentBase64": "%1$s" }
+                                  ]
+                                }
+                                """.formatted(image)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"));
+    }
+
+    @Test
+    void rejectsArchiveRequestImageThatIsNotJpeg() throws Exception {
+        String token = login("archivist", "password");
+        verifyPassword(token, "password");
+
+        mockMvc.perform(post("/api/v1/archive-requests")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "deviceId": "device-local-0001",
+                                  "reason": "图片格式测试。",
+                                  "changes": {},
+                                  "images": [
+                                    { "contentBase64": "%s" }
+                                  ]
+                                }
+                                """.formatted(testPngBase64())))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error.code").value("ARCHIVE_REQUEST_INVALID"));
+    }
+
+    @Test
+    void rejectsNullArchiveImagePayload() throws Exception {
+        String token = login("archivist", "password");
+        verifyPassword(token, "password");
+
+        mockMvc.perform(post("/api/v1/archive-requests")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "deviceId": "device-local-0001",
+                                  "reason": "空图片测试。",
+                                  "changes": {},
+                                  "images": [null]
+                                }
+                                """))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"));
+    }
+
+    @Test
+    void distinguishesRemovingAllImagesFromLeavingImagesUnchanged() throws Exception {
+        String applicantToken = login("archivist", "password");
+        String reviewerToken = login("archiveadmin", "password");
+        verifyPassword(applicantToken, "password");
+
+        String response = mockMvc.perform(post("/api/v1/archive-requests")
+                        .header("Authorization", "Bearer " + applicantToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "deviceId": "device-local-0001",
+                                  "reason": "删除全部设备图片。",
+                                  "changes": {},
+                                  "images": []
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        String requestId = objectMapper.readTree(response).path("data").path("id").asText();
+
+        mockMvc.perform(get("/api/v1/archive-requests?status=PENDING_REVIEW")
+                        .header("Authorization", "Bearer " + reviewerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[?(@.id == '%s')].imagesChanged".formatted(requestId))
+                        .value(hasItem(true)))
+                .andExpect(jsonPath("$.data.items[?(@.id == '%s')].images.length()".formatted(requestId))
+                        .value(hasItem(0)));
+
+        verifyPassword(reviewerToken, "password");
+        mockMvc.perform(post("/api/v1/archive-requests/{requestId}/review", requestId)
+                        .header("Authorization", "Bearer " + reviewerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "decision": "APPROVED",
+                                  "reviewedAt": "2026-06-01T08:00:00Z",
+                                  "reviewComment": "确认清空图片。"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/devices/device-local-0001")
+                        .header("Authorization", "Bearer " + reviewerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.images.length()").value(0));
+    }
+
+    @Test
     void rejectsApprovalWhenArchiveBaselineChangedAfterRequestCreation() throws Exception {
         String applicantToken = login("archivist", "password");
         String reviewerToken = login("archiveadmin", "password");
@@ -149,8 +465,11 @@ class ArchiveRequestControllerTests {
                 new ArchiveUpdate(
                         "device-local-0001",
                         "冷却泵A-后台修正",
+                        "动力设备",
                         "CP-1000",
                         "北方设备",
+                        OffsetDateTime.parse("2024-03-15T00:00:00Z").toLocalDate(),
+                        "设备管理部",
                         "一号厂房动力区",
                         "usr-archive-admin",
                         OffsetDateTime.parse("2026-06-01T07:30:00Z")),
@@ -186,8 +505,11 @@ class ArchiveRequestControllerTests {
                 new ArchiveUpdate(
                         "device-local-0001",
                         "冷却泵A-待删修正",
+                        "动力设备",
                         "CP-1000",
                         "北方设备",
+                        OffsetDateTime.parse("2024-03-15T00:00:00Z").toLocalDate(),
+                        "设备管理部",
                         "一号厂房动力区",
                         "usr-archive-admin",
                         OffsetDateTime.parse("2026-06-01T07:45:00Z")),
@@ -411,6 +733,9 @@ class ArchiveRequestControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.deviceCode").value("RDVP-DEVICE-0099"))
                 .andExpect(jsonPath("$.data.name").value("巡检网关G-99"))
+                .andExpect(jsonPath("$.data.deviceType").value("通用设备"))
+                .andExpect(jsonPath("$.data.commissionedAt").value("2026-06-01"))
+                .andExpect(jsonPath("$.data.managementDepartment").value("设备管理部"))
                 .andExpect(jsonPath("$.data.status").value("PENDING_VERIFICATION"))
                 .andExpect(jsonPath("$.data.archiveRequestState.locked").value(true))
                 .andExpect(jsonPath("$.data.archiveRequestState.freezeUntil").value(freezeUntil.toString()))
@@ -445,6 +770,7 @@ class ArchiveRequestControllerTests {
     @Test
     void deletesArchiveOnlyAfterDeleteRequestApproval() throws Exception {
         String token = login("archiveadmin", "password");
+        String imageId = firstArchiveImageId(token, "device-local-0001");
         verifyPassword(token, "password");
         String requestId = createArchiveDeleteRequest(token, "device-local-0001");
 
@@ -472,6 +798,10 @@ class ArchiveRequestControllerTests {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("DEVICE_NOT_FOUND"));
+
+        mockMvc.perform(get("/api/v1/archive-images/{imageId}", imageId)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -516,6 +846,24 @@ class ArchiveRequestControllerTests {
                                   "changes": {
                                     "name": {
                                       "newValue": "巡检网关G-99"
+                                    },
+                                    "model": {
+                                      "newValue": "IG-900"
+                                    },
+                                    "manufacturer": {
+                                      "newValue": "北方设备"
+                                    },
+                                    "deviceType": {
+                                      "newValue": "通用设备"
+                                    },
+                                    "commissionedAt": {
+                                      "newValue": "2026-06-01"
+                                    },
+                                    "managementDepartment": {
+                                      "newValue": "设备管理部"
+                                    },
+                                    "location.address": {
+                                      "newValue": "九号厂房巡检区"
                                     }
                                   }
                                 }
@@ -669,6 +1017,30 @@ class ArchiveRequestControllerTests {
         return requestId;
     }
 
+    private String firstArchiveImageId(String token, String deviceId) throws Exception {
+        String response = mockMvc.perform(get("/api/v1/devices/{deviceId}", deviceId)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        return objectMapper.readTree(response).path("data").path("images").get(0).path("id").asText();
+    }
+
+    private String testJpegBase64() throws Exception {
+        BufferedImage image = new BufferedImage(8, 8, BufferedImage.TYPE_INT_RGB);
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        ImageIO.write(image, "jpeg", output);
+        return Base64.getEncoder().encodeToString(output.toByteArray());
+    }
+
+    private String testPngBase64() throws Exception {
+        BufferedImage image = new BufferedImage(8, 8, BufferedImage.TYPE_INT_RGB);
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        ImageIO.write(image, "png", output);
+        return Base64.getEncoder().encodeToString(output.toByteArray());
+    }
+
     private static OffsetDateTime activeReviewTimestamp() {
         return OffsetDateTime.now(ZoneOffset.UTC).withNano(0);
     }
@@ -692,6 +1064,15 @@ class ArchiveRequestControllerTests {
                                     },
                                     "manufacturer": {
                                       "newValue": "北方设备"
+                                    },
+                                    "deviceType": {
+                                      "newValue": "通用设备"
+                                    },
+                                    "commissionedAt": {
+                                      "newValue": "2026-06-01"
+                                    },
+                                    "managementDepartment": {
+                                      "newValue": "设备管理部"
                                     },
                                     "location.address": {
                                       "newValue": "九号厂房巡检区"

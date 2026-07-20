@@ -151,6 +151,24 @@ class HomeDashboardControllerTests {
                                   "changes": {
                                     "name": {
                                       "newValue": "现场控制柜Z-99"
+                                    },
+                                    "deviceType": {
+                                      "newValue": "控制设备"
+                                    },
+                                    "model": {
+                                      "newValue": "CTRL-Z99"
+                                    },
+                                    "manufacturer": {
+                                      "newValue": "通用设备厂商"
+                                    },
+                                    "commissionedAt": {
+                                      "newValue": "2025-06-01"
+                                    },
+                                    "managementDepartment": {
+                                      "newValue": "运维管理部"
+                                    },
+                                    "location.address": {
+                                      "newValue": "测试区域控制点Z-99"
                                     }
                                   }
                                 }
@@ -345,6 +363,24 @@ class HomeDashboardControllerTests {
                                   "changes": {
                                     "name": {
                                       "newValue": "测试设备0101"
+                                    },
+                                    "deviceType": {
+                                      "newValue": "测试设备"
+                                    },
+                                    "model": {
+                                      "newValue": "TEST-0101"
+                                    },
+                                    "manufacturer": {
+                                      "newValue": "通用设备厂商"
+                                    },
+                                    "commissionedAt": {
+                                      "newValue": "2025-07-01"
+                                    },
+                                    "managementDepartment": {
+                                      "newValue": "测试管理部"
+                                    },
+                                    "location.address": {
+                                      "newValue": "测试区域0101"
                                     }
                                   }
                                 }

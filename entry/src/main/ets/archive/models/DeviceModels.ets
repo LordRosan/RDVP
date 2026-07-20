@@ -20,20 +20,62 @@ export interface DeviceLocation {
   latitude?: number;
 }
 
+export interface DeviceLocationPayload {
+  address?: string;
+  longitude?: number;
+  latitude?: number;
+}
+
 export interface ArchiveRequestState {
   locked: boolean;
   pendingRequestId?: string;
   freezeUntil?: string;
 }
 
+export interface ArchiveImageSummary {
+  id: string;
+  sortOrder: number;
+  width: number;
+  height: number;
+  thumbnailDataUri: string;
+}
+
+export interface ArchiveImageSummaryPayload {
+  id?: string;
+  sortOrder?: number;
+  width?: number;
+  height?: number;
+  thumbnailDataUri?: string;
+}
+
 export interface DeviceSummary {
   id: string;
   deviceCode: string;
   name: string;
+  images: ArchiveImageSummary[];
+  deviceType: string;
   model: string;
   manufacturer: string;
+  commissionedAt: string;
+  managementDepartment: string;
   location: DeviceLocation;
   status: DeviceStatus;
+  lastVerificationTime?: string;
+  archiveRequestState?: ArchiveRequestState;
+}
+
+export interface DeviceSummaryPayload {
+  id?: string;
+  deviceCode?: string;
+  name?: string;
+  images?: ArchiveImageSummaryPayload[];
+  deviceType?: string;
+  model?: string;
+  manufacturer?: string;
+  commissionedAt?: string;
+  managementDepartment?: string;
+  location?: DeviceLocationPayload;
+  status?: DeviceStatus;
   lastVerificationTime?: string;
   archiveRequestState?: ArchiveRequestState;
 }

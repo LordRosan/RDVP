@@ -17,6 +17,7 @@ import { SessionStore } from '../../user/stores/SessionStore';
 import { AuthGuard } from '../../shared/security/AuthGuard';
 import { AppNavigator } from '../../shared/navigation/AppNavigator';
 import { UiFeedbackTone } from '../../shared/models/UiFeedbackModels';
+import { ArchiveImageSummary } from '../../archive/models/DeviceModels';
 
 const REVIEW_TYPE_FILTER_OPTIONS: string[] = ['全部', '添加档案', '删除档案', '修改档案'];
 const REVIEW_TYPE_FILTER_VALUES: string[] = ['', 'CREATE', 'DELETE', 'UPDATE'];
@@ -33,6 +34,12 @@ struct ArchiveReviewPage {
   @State reviewDecision: string = '';
   @State reviewedAt: string = '';
   @State reviewComment: string = '';
+  @State expandedReviewImageKey: string = '';
+  @State expandedReviewImageDataUri: string = '';
+  @State loadingReviewImageKey: string = '';
+  @State reviewImageMessageKey: string = '';
+  @State reviewImageMessage: string = '';
+  private reviewImageRequestVersion: number = 0;
   @State password: string = '';
   @State message: string = '';
   @State messageTone: string = UiFeedbackTone.Danger;
@@ -304,6 +311,69 @@ struct ArchiveReviewPage {
       this.RequestTimeRow('操作人', this.getOperatorName(item))
       this.RequestTimeRow('提交时间', this.formatReviewTime(item.submittedAt))
       this.ReasonBlock(item.reason)
+
+      if (item.imagesChanged) {
+        Column({ space: 8 }) {
+          Text(item.images.length > 0 ? `设备图片（${item.images.length}张）` : '设备图片（清空全部）')
+            .fontSize(13)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(AppColors.TextPrimary)
+
+          if (item.images.length > 0) {
+            if (this.expandedReviewImageKey.startsWith(`${item.id}:`) && this.expandedReviewImageDataUri.length > 0) {
+              Image(this.expandedReviewImageDataUri)
+                .width('100%')
+                .aspectRatio(1.6)
+                .objectFit(ImageFit.Contain)
+                .backgroundColor(AppColors.FieldBackground)
+                .borderRadius(AppRadii.Medium)
+                .onClick(() => this.collapseReviewImage())
+            }
+
+            Scroll() {
+              Row({ space: 8 }) {
+                ForEach(item.images, (image: ArchiveImageSummary) => {
+                  Stack({ alignContent: Alignment.Center }) {
+                    Image(image.thumbnailDataUri)
+                      .width(72)
+                      .height(54)
+                      .objectFit(ImageFit.Cover)
+                      .borderRadius(AppRadii.Small)
+
+                    if (this.loadingReviewImageKey === `${item.id}:${image.id}`) {
+                      LoadingProgress()
+                        .width(22)
+                        .height(22)
+                        .color(AppColors.Primary)
+                    }
+                  }
+                  .width(72)
+                  .height(54)
+                  .border({
+                    width: this.expandedReviewImageKey === `${item.id}:${image.id}` ? 2 : 1,
+                    color: this.expandedReviewImageKey === `${item.id}:${image.id}` ?
+                      AppColors.Primary : AppColors.Border
+                  })
+                  .borderRadius(AppRadii.Small)
+                  .onClick(() => this.toggleReviewImage(item.id, image.id))
+                }, (image: ArchiveImageSummary) => image.id)
+              }
+            }
+            .scrollable(ScrollDirection.Horizontal)
+            .scrollBar(BarState.Off)
+            .width('100%')
+
+            if (this.reviewImageMessageKey.startsWith(`${item.id}:`) && this.reviewImageMessage.length > 0) {
+              InlineMessageSurface({
+                message: this.reviewImageMessage,
+                tone: UiFeedbackTone.Danger
+              })
+            }
+          }
+        }
+        .width('100%')
+        .alignItems(HorizontalAlign.Start)
+      }
 
       Column({ space: 8 }) {
         ForEach(item.changes, (change: ArchiveRequestFieldDiff) => {
@@ -940,6 +1010,48 @@ struct ArchiveReviewPage {
 
   hasSelectedRequest(): boolean {
     return this.selectedRequestId.length > 0;
+  }
+
+  async toggleReviewImage(requestId: string, imageId: string): Promise<void> {
+    const key = `${requestId}:${imageId}`;
+    if (this.expandedReviewImageKey === key) {
+      this.collapseReviewImage();
+      return;
+    }
+    const requestVersion = this.reviewImageRequestVersion + 1;
+    this.reviewImageRequestVersion = requestVersion;
+    this.loadingReviewImageKey = key;
+    this.reviewImageMessageKey = '';
+    this.reviewImageMessage = '';
+    try {
+      const response = await ArchiveReviewService.loadPendingImage(requestId, imageId);
+      if (this.reviewImageRequestVersion !== requestVersion || this.loadingReviewImageKey !== key) {
+        return;
+      }
+      if (response.success && response.data !== undefined) {
+        this.expandedReviewImageKey = key;
+        this.expandedReviewImageDataUri = response.data.dataUri;
+      } else {
+        this.reviewImageMessageKey = key;
+        this.reviewImageMessage = UiFeedbackService.operationUnavailable('图片加载');
+      }
+    } catch (err) {
+      if (this.reviewImageRequestVersion !== requestVersion || this.loadingReviewImageKey !== key) {
+        return;
+      }
+      this.reviewImageMessageKey = key;
+      this.reviewImageMessage = UiFeedbackService.operationUnavailable('图片加载');
+    }
+    this.loadingReviewImageKey = '';
+  }
+
+  collapseReviewImage(): void {
+    this.reviewImageRequestVersion += 1;
+    this.expandedReviewImageKey = '';
+    this.expandedReviewImageDataUri = '';
+    this.loadingReviewImageKey = '';
+    this.reviewImageMessageKey = '';
+    this.reviewImageMessage = '';
   }
 
   getSelectedRequestFieldText(): string {

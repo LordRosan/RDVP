@@ -1,3 +1,4 @@
+import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { AppColors, AppRadii, AppSpacing } from '../../shared/theme/AppTheme';
 import { AppSectionTitle } from '../../shared/components/AppSectionTitle';
 import { CenterTitleBar } from '../../shared/components/CenterTitleBar';
@@ -15,6 +16,8 @@ import { AuthService } from '../../user/services/AuthService';
 import { AuthGuard } from '../../shared/security/AuthGuard';
 import { AppNavigator } from '../../shared/navigation/AppNavigator';
 import { UiFeedbackTone } from '../../shared/models/UiFeedbackModels';
+import { ArchiveImageDraft } from '../models/ArchiveImageModels';
+import { ArchiveImageService } from '../services/ArchiveImageService';
 
 interface CodeAvailabilityResult {
   available: boolean;
@@ -27,8 +30,13 @@ struct ArchiveCreatePage {
   @StorageLink('rdvp_theme_revision') themeRevision: number = 0;
   @State deviceCode: string = '';
   @State deviceName: string = '';
+  @State images: ArchiveImageDraft[] = [];
+  @State processingImages: boolean = false;
+  @State deviceType: string = '';
   @State model: string = '';
   @State manufacturer: string = '';
+  @State commissionedAt: string = '';
+  @State managementDepartment: string = '';
   @State locationAddress: string = '';
   @State createTime: string = '';
   @State reason: string = '';
@@ -166,12 +174,22 @@ struct ArchiveCreatePage {
           this.deviceName = value;
           this.onFormChanged();
         })
+        this.ArchiveImagesField()
+        this.TextInputField('设备类型', '请输入设备类型', this.deviceType, (value: string) => {
+          this.deviceType = value;
+          this.onFormChanged();
+        })
         this.TextInputField('设备型号', '请输入设备型号', this.model, (value: string) => {
           this.model = value;
           this.onFormChanged();
         })
         this.TextInputField('生产厂商', '请输入生产厂商', this.manufacturer, (value: string) => {
           this.manufacturer = value;
+          this.onFormChanged();
+        })
+        this.CommissionedAtField()
+        this.TextInputField('管理部门', '请输入管理部门', this.managementDepartment, (value: string) => {
+          this.managementDepartment = value;
           this.onFormChanged();
         })
         this.TextInputField('设备位置', '请输入设备位置', this.locationAddress, (value: string) => {
@@ -263,6 +281,127 @@ struct ArchiveCreatePage {
 
           change(input);
         })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  ArchiveImagesField() {
+    Column({ space: 10 }) {
+      Row() {
+        this.FieldTitle('设备图片')
+        Blank()
+        Text(`${this.images.length}/5`)
+          .fontSize(13)
+          .fontColor(AppColors.TextSecondary)
+      }
+      .width('100%')
+
+      Scroll() {
+        Row({ space: 10 }) {
+          ForEach(this.images, (item: ArchiveImageDraft, index: number) => {
+            this.ArchiveImageItem(item, index)
+          }, (item: ArchiveImageDraft, index: number) => `${item.id === undefined ? item.previewUri : item.id}-${index}`)
+
+          if (this.images.length < ArchiveImageService.getMaximumImageCount()) {
+            Button({ type: ButtonType.Normal, stateEffect: true }) {
+              Column({ space: 5 }) {
+                SymbolGlyph($r('sys.symbol.plus_circle'))
+                  .fontSize(24)
+                  .fontColor([AppColors.TextPrimary])
+                Text(this.processingImages ? '处理中' : '添加图片')
+                  .fontSize(12)
+                  .fontColor(AppColors.TextSecondary)
+              }
+            }
+            .width(82)
+            .height(104)
+            .backgroundColor(AppColors.FieldBackground)
+            .borderRadius(AppRadii.Medium)
+            .border({ width: 1, color: AppColors.Border })
+            .enabled(!this.processingImages && !this.submitting && !this.isSubmitted())
+            .onClick(() => this.selectDeviceImages())
+          }
+        }
+      }
+      .scrollable(ScrollDirection.Horizontal)
+      .scrollBar(BarState.Off)
+      .width('100%')
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  ArchiveImageItem(item: ArchiveImageDraft, index: number) {
+    Column({ space: 4 }) {
+      Image(item.previewUri)
+        .width(82)
+        .height(72)
+        .objectFit(ImageFit.Cover)
+        .borderRadius(AppRadii.Medium)
+
+      Row({ space: 2 }) {
+        this.ImageIconButton($r('sys.symbol.chevron_backward'), index > 0, () => this.moveImage(index, -1))
+        this.ImageIconButton($r('sys.symbol.trash'), true, () => this.removeImage(index))
+        this.ImageIconButton($r('sys.symbol.chevron_forward'), index < this.images.length - 1,
+          () => this.moveImage(index, 1))
+      }
+      .width(82)
+      .justifyContent(FlexAlign.SpaceBetween)
+    }
+    .width(82)
+  }
+
+  @Builder
+  ImageIconButton(icon: Resource, enabled: boolean, action: () => void) {
+    Button({ type: ButtonType.Circle, stateEffect: true }) {
+      SymbolGlyph(icon)
+        .fontSize(14)
+        .fontColor([enabled ? AppColors.TextPrimary : AppColors.TextTertiary])
+    }
+    .width(24)
+    .height(24)
+    .backgroundColor(AppColors.FieldBackground)
+    .enabled(enabled && !this.submitting && !this.isSubmitted())
+    .onClick(action)
+  }
+
+  @Builder
+  CommissionedAtField() {
+    Column({ space: 10 }) {
+      this.FieldTitle('启用日期')
+
+      Row({ space: 10 }) {
+        SymbolGlyph($r('sys.symbol.calendar'))
+          .fontSize(20)
+          .fontColor([AppColors.TextPrimary])
+
+        Text(this.commissionedAt.length > 0 ? this.commissionedAt : '请选择启用日期')
+          .fontSize(16)
+          .fontColor(this.commissionedAt.length > 0 ? AppColors.TextPrimary : AppColors.TextTertiary)
+          .layoutWeight(1)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+        SymbolGlyph($r('sys.symbol.chevron_forward'))
+          .fontSize(18)
+          .fontColor([AppColors.TextSecondary])
+      }
+      .height(56)
+      .width('100%')
+      .backgroundColor(AppColors.FieldBackground)
+      .borderRadius(18)
+      .padding({ left: 16, right: 16 })
+      .border({ width: 1, color: AppColors.Border })
+      .onClick(() => {
+        if (this.submitting || this.isSubmitted()) {
+          return;
+        }
+
+        this.showCommissionedAtPicker();
+      })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -576,8 +715,12 @@ struct ArchiveCreatePage {
     return {
       deviceCode: this.deviceCode,
       deviceName: this.deviceName,
+      images: this.images,
+      deviceType: this.deviceType,
       model: this.model,
       manufacturer: this.manufacturer,
+      commissionedAt: this.commissionedAt,
+      managementDepartment: this.managementDepartment,
       locationAddress: this.locationAddress,
       reason: this.reason,
       initiatedAt: this.createTime
@@ -594,8 +737,12 @@ struct ArchiveCreatePage {
 
   clearCreateState(): void {
     this.deviceName = '';
+    this.images = [];
+    this.deviceType = '';
     this.model = '';
     this.manufacturer = '';
+    this.commissionedAt = '';
+    this.managementDepartment = '';
     this.locationAddress = '';
     this.createTime = '';
     this.reason = '';
@@ -671,6 +818,67 @@ struct ArchiveCreatePage {
     });
   }
 
+  showCommissionedAtPicker(): void {
+    if (this.submitting || this.isSubmitted()) {
+      return;
+    }
+
+    this.getUIContext().showDatePickerDialog({
+      start: new Date(1970, 0, 1),
+      end: new Date(2100, 11, 31),
+      selected: this.resolveSelectedDateOnly(this.commissionedAt),
+      showTime: false,
+      onDateAccept: (value: Date) => {
+        this.commissionedAt = this.formatDate(value);
+        this.onFormChanged();
+      }
+    });
+  }
+
+  async selectDeviceImages(): Promise<void> {
+    if (this.processingImages || this.submitting || this.isSubmitted()) {
+      return;
+    }
+
+    try {
+      this.processingImages = true;
+      const picker = new photoAccessHelper.PhotoViewPicker();
+      const selection = await picker.select({
+        MIMEType: photoAccessHelper.PhotoViewMIMETypes.IMAGE_TYPE,
+        maxSelectNumber: ArchiveImageService.getMaximumImageCount() - this.images.length
+      });
+      const selectedImages: ArchiveImageDraft[] = [];
+      for (let index = 0; index < selection.photoUris.length; index++) {
+        selectedImages.push(await ArchiveImageService.compressSelectedImage(selection.photoUris[index]));
+      }
+      this.images = this.images.concat(selectedImages);
+      this.onFormChanged();
+    } catch (err) {
+      this.message = '图片处理失败，请选择尺寸较小的有效图片';
+      this.messageTone = UiFeedbackTone.Danger;
+    } finally {
+      this.processingImages = false;
+    }
+  }
+
+  removeImage(index: number): void {
+    this.images = this.images.filter((item: ArchiveImageDraft, itemIndex: number) => itemIndex !== index);
+    this.onFormChanged();
+  }
+
+  moveImage(index: number, offset: number): void {
+    const target = index + offset;
+    if (target < 0 || target >= this.images.length) {
+      return;
+    }
+    const reordered = this.images.slice();
+    const selected = reordered[index];
+    reordered[index] = reordered[target];
+    reordered[target] = selected;
+    this.images = reordered;
+    this.onFormChanged();
+  }
+
   resolveSelectedDate(value: string): Date {
     const trimmed = value.trim();
     if (trimmed.length === 0) {
@@ -700,9 +908,34 @@ struct ArchiveCreatePage {
     return new Date(year, month - 1, day, hour, minute);
   }
 
+  resolveSelectedDateOnly(value: string): Date {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      return new Date();
+    }
+
+    const segments = trimmed.split('-');
+    if (segments.length !== 3) {
+      return new Date();
+    }
+
+    const year = Number(segments[0]);
+    const month = Number(segments[1]);
+    const day = Number(segments[2]);
+    if (year !== year || month !== month || day !== day) {
+      return new Date();
+    }
+
+    return new Date(year, month - 1, day);
+  }
+
   formatDateTime(value: Date): string {
     return `${value.getFullYear()}-${this.pad2(value.getMonth() + 1)}-${this.pad2(value.getDate())} ${this.pad2(
       value.getHours())}:${this.pad2(value.getMinutes())}`;
+  }
+
+  formatDate(value: Date): string {
+    return `${value.getFullYear()}-${this.pad2(value.getMonth() + 1)}-${this.pad2(value.getDate())}`;
   }
 
   pad2(value: number): string {

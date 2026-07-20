@@ -1,4 +1,5 @@
 import { ArchiveRequestStatus } from './ArchiveRequestModels';
+import { ArchiveImageSummary } from './DeviceModels';
 
 export enum ArchiveReviewDecision {
   Approved = 'APPROVED',
@@ -29,6 +30,8 @@ export interface ArchiveReviewItem {
   status: ArchiveRequestStatus;
   initiatedAt: string;
   submittedAt: string;
+  imagesChanged: boolean;
+  images: ArchiveImageSummary[];
   changes: ArchiveRequestFieldDiff[];
 }
 

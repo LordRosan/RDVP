@@ -10,6 +10,8 @@ import { ApiClient } from '../../shared/services/ApiClient';
 import { DeviceService } from './DeviceService';
 import { DateTimeFormatUtil } from '../../shared/utils/DateTimeFormatUtil';
 import { UiFeedbackService } from '../../shared/services/UiFeedbackService';
+import { ArchiveImageSubmissionPayload } from '../models/ArchiveImageModels';
+import { ArchiveImageService } from './ArchiveImageService';
 
 interface ArchiveUpdateApiResult {
   id: string;
@@ -27,6 +29,7 @@ interface ArchiveUpdateRequestPayload {
   deviceId: string;
   reason: string;
   changes: Record<string, ArchiveUpdateChangePayload>;
+  images?: ArchiveImageSubmissionPayload[];
   initiatedAt?: string;
 }
 
@@ -46,8 +49,11 @@ export class ArchiveUpdateService {
     }
 
     const deviceName = ArchiveUpdateService.normalizeText(form.deviceName);
+    const deviceType = ArchiveUpdateService.normalizeText(form.deviceType);
     const model = ArchiveUpdateService.normalizeText(form.model);
     const manufacturer = ArchiveUpdateService.normalizeText(form.manufacturer);
+    const commissionedAt = ArchiveUpdateService.normalizeText(form.commissionedAt);
+    const managementDepartment = ArchiveUpdateService.normalizeText(form.managementDepartment);
     const locationAddress = ArchiveUpdateService.normalizeText(form.locationAddress);
     const reason = ArchiveUpdateService.normalizeText(form.reason);
     const updatedFieldCount = ArchiveUpdateService.countUpdatedFields(form);
@@ -88,6 +94,33 @@ export class ArchiveUpdateService {
       };
     }
 
+    if (form.images.length > ArchiveImageService.getMaximumImageCount()) {
+      return {
+        valid: false,
+        message: '设备图片最多选择5张',
+        normalizedDeviceCode,
+        fieldCount: updatedFieldCount
+      };
+    }
+
+    if (ArchiveUpdateService.hasUpdatedFromBaseline(form.baseline, 'deviceType', deviceType) && deviceType.length === 0) {
+      return {
+        valid: false,
+        message: UiFeedbackService.requiredInput('设备类型'),
+        normalizedDeviceCode,
+        fieldCount: updatedFieldCount
+      };
+    }
+
+    if (deviceType.length > 80) {
+      return {
+        valid: false,
+        message: UiFeedbackService.fieldTooLong('设备类型', 80),
+        normalizedDeviceCode,
+        fieldCount: updatedFieldCount
+      };
+    }
+
     if (ArchiveUpdateService.hasUpdatedFromBaseline(form.baseline, 'model', model) && model.length === 0) {
       return {
         valid: false,
@@ -119,6 +152,44 @@ export class ArchiveUpdateService {
       return {
         valid: false,
         message: UiFeedbackService.fieldTooLong('生产厂商', 100),
+        normalizedDeviceCode,
+        fieldCount: updatedFieldCount
+      };
+    }
+
+    if (ArchiveUpdateService.hasUpdatedFromBaseline(form.baseline, 'commissionedAt', commissionedAt) &&
+      commissionedAt.length === 0) {
+      return {
+        valid: false,
+        message: UiFeedbackService.requiredSelection('启用日期'),
+        normalizedDeviceCode,
+        fieldCount: updatedFieldCount
+      };
+    }
+
+    if (commissionedAt.length > 0 && !ArchiveUpdateService.isLocalDateText(commissionedAt)) {
+      return {
+        valid: false,
+        message: UiFeedbackService.incorrect('启用日期'),
+        normalizedDeviceCode,
+        fieldCount: updatedFieldCount
+      };
+    }
+
+    if (ArchiveUpdateService.hasUpdatedFromBaseline(form.baseline, 'managementDepartment', managementDepartment) &&
+      managementDepartment.length === 0) {
+      return {
+        valid: false,
+        message: UiFeedbackService.requiredInput('管理部门'),
+        normalizedDeviceCode,
+        fieldCount: updatedFieldCount
+      };
+    }
+
+    if (managementDepartment.length > 120) {
+      return {
+        valid: false,
+        message: UiFeedbackService.fieldTooLong('管理部门', 120),
         normalizedDeviceCode,
         fieldCount: updatedFieldCount
       };
@@ -238,11 +309,27 @@ export class ArchiveUpdateService {
       count += 1;
     }
 
+    if (form.imagesChanged) {
+      count += 1;
+    }
+
+    if (ArchiveUpdateService.hasFieldUpdated(form.baseline, 'deviceType', form.deviceType)) {
+      count += 1;
+    }
+
     if (ArchiveUpdateService.hasFieldUpdated(form.baseline, 'model', form.model)) {
       count += 1;
     }
 
     if (ArchiveUpdateService.hasFieldUpdated(form.baseline, 'manufacturer', form.manufacturer)) {
+      count += 1;
+    }
+
+    if (ArchiveUpdateService.hasFieldUpdated(form.baseline, 'commissionedAt', form.commissionedAt)) {
+      count += 1;
+    }
+
+    if (ArchiveUpdateService.hasFieldUpdated(form.baseline, 'managementDepartment', form.managementDepartment)) {
       count += 1;
     }
 
@@ -280,12 +367,24 @@ export class ArchiveUpdateService {
       return normalizedValue !== ArchiveUpdateService.normalizeText(baseline.deviceName);
     }
 
+    if (field === 'deviceType') {
+      return normalizedValue !== ArchiveUpdateService.normalizeText(baseline.deviceType);
+    }
+
     if (field === 'model') {
       return normalizedValue !== ArchiveUpdateService.normalizeText(baseline.model);
     }
 
     if (field === 'manufacturer') {
       return normalizedValue !== ArchiveUpdateService.normalizeText(baseline.manufacturer);
+    }
+
+    if (field === 'commissionedAt') {
+      return normalizedValue !== ArchiveUpdateService.normalizeText(baseline.commissionedAt);
+    }
+
+    if (field === 'managementDepartment') {
+      return normalizedValue !== ArchiveUpdateService.normalizeText(baseline.managementDepartment);
     }
 
     if (field === 'locationAddress') {
@@ -315,6 +414,11 @@ export class ArchiveUpdateService {
       changes['name'] = ArchiveUpdateService.createApiChange(baseline.deviceName, deviceName);
     }
 
+    const deviceType = ArchiveUpdateService.normalizeText(form.deviceType);
+    if (ArchiveUpdateService.hasFieldUpdated(baseline, 'deviceType', deviceType)) {
+      changes['deviceType'] = ArchiveUpdateService.createApiChange(baseline.deviceType, deviceType);
+    }
+
     const model = ArchiveUpdateService.normalizeText(form.model);
     if (ArchiveUpdateService.hasFieldUpdated(baseline, 'model', model)) {
       changes['model'] = ArchiveUpdateService.createApiChange(baseline.model, model);
@@ -323,6 +427,17 @@ export class ArchiveUpdateService {
     const manufacturer = ArchiveUpdateService.normalizeText(form.manufacturer);
     if (ArchiveUpdateService.hasFieldUpdated(baseline, 'manufacturer', manufacturer)) {
       changes['manufacturer'] = ArchiveUpdateService.createApiChange(baseline.manufacturer, manufacturer);
+    }
+
+    const commissionedAt = ArchiveUpdateService.normalizeText(form.commissionedAt);
+    if (ArchiveUpdateService.hasFieldUpdated(baseline, 'commissionedAt', commissionedAt)) {
+      changes['commissionedAt'] = ArchiveUpdateService.createApiChange(baseline.commissionedAt, commissionedAt);
+    }
+
+    const managementDepartment = ArchiveUpdateService.normalizeText(form.managementDepartment);
+    if (ArchiveUpdateService.hasFieldUpdated(baseline, 'managementDepartment', managementDepartment)) {
+      changes['managementDepartment'] =
+        ArchiveUpdateService.createApiChange(baseline.managementDepartment, managementDepartment);
     }
 
     const locationAddress = ArchiveUpdateService.normalizeText(form.locationAddress);
@@ -340,6 +455,10 @@ export class ArchiveUpdateService {
       reason: ArchiveUpdateService.normalizeText(form.reason),
       changes: ArchiveUpdateService.buildApiChangesPayload(form)
     };
+
+    if (form.imagesChanged) {
+      payload.images = ArchiveImageService.buildSubmissionPayloads(form.images);
+    }
 
     if (form.initiatedAt !== undefined && form.initiatedAt.trim().length > 0) {
       payload.initiatedAt = DateTimeFormatUtil.toApiIsoString(form.initiatedAt);
@@ -364,8 +483,12 @@ export class ArchiveUpdateService {
       id: result.id,
       deviceCode: normalizedDeviceCode,
       deviceName: form.deviceName.trim(),
+      imageCount: form.images.length,
+      deviceType: form.deviceType.trim(),
       model: form.model.trim(),
       manufacturer: form.manufacturer.trim(),
+      commissionedAt: form.commissionedAt.trim(),
+      managementDepartment: form.managementDepartment.trim(),
       locationAddress: form.locationAddress.trim(),
       reason: form.reason.trim(),
       status: result.status,
@@ -375,5 +498,22 @@ export class ArchiveUpdateService {
 
   private static normalizeText(value: string): string {
     return value.trim();
+  }
+
+  private static isLocalDateText(value: string): boolean {
+    const parts = value.split('-');
+    if (parts.length !== 3 || parts[0].length !== 4 || parts[1].length !== 2 || parts[2].length !== 2) {
+      return false;
+    }
+
+    const year = Number(parts[0]);
+    const month = Number(parts[1]);
+    const day = Number(parts[2]);
+    if (year !== year || month !== month || day !== day) {
+      return false;
+    }
+
+    const date = new Date(year, month - 1, day);
+    return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
   }
 }

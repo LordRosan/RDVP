@@ -1,10 +1,13 @@
 package com.rmf.rdvp.archive;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -29,11 +32,27 @@ public class ArchiveRequestService {
     private static final int MAX_PAGE_SIZE = 100;
     private static final Pattern REQUEST_ID_PATTERN = Pattern.compile("^[A-Za-z0-9_-]{1,64}$");
     private static final Pattern DEVICE_CODE_PATTERN = Pattern.compile("^RDVP-DEVICE-\\d{4}$");
-    private static final Set<String> SUPPORTED_FIELDS = Set.of("name", "model", "manufacturer", "location.address");
+    private static final Set<String> SUPPORTED_FIELDS = Set.of(
+            "name",
+            "deviceType",
+            "model",
+            "manufacturer",
+            "commissionedAt",
+            "managementDepartment",
+            "location.address");
+    private static final Set<String> REQUIRED_CREATE_FIELDS = Set.of(
+            "name",
+            "deviceType",
+            "model",
+            "manufacturer",
+            "commissionedAt",
+            "managementDepartment",
+            "location.address");
     private static final Set<String> DELETE_BLOCKING_STATUSES = Set.of("FAULTED", "UNDER_REPAIR", "PENDING_REINSPECTION");
 
     private final ArchiveRepository archiveRepository;
     private final ArchiveRequestRepository archiveRequestRepository;
+    private final ArchiveImageService archiveImageService;
     private final DeviceQrCodeIssuer qrCodeIssuer;
     private final UserAccountRepository userStore;
     private final LogEntryService logEntryService;
@@ -41,11 +60,13 @@ public class ArchiveRequestService {
     public ArchiveRequestService(
             ArchiveRepository archiveRepository,
             ArchiveRequestRepository archiveRequestRepository,
+            ArchiveImageService archiveImageService,
             DeviceQrCodeIssuer qrCodeIssuer,
             UserAccountRepository userStore,
             LogEntryService logEntryService) {
         this.archiveRepository = archiveRepository;
         this.archiveRequestRepository = archiveRequestRepository;
+        this.archiveImageService = archiveImageService;
         this.qrCodeIssuer = qrCodeIssuer;
         this.userStore = userStore;
         this.logEntryService = logEntryService;
@@ -59,7 +80,7 @@ public class ArchiveRequestService {
             String reason,
             Map<String, ArchiveFieldChange> changes,
             AuthenticatedUser applicant) {
-        return create(type, deviceId, deviceCode, reason, changes, null, applicant);
+        return create(type, deviceId, deviceCode, reason, changes, null, null, applicant);
     }
 
     @Transactional
@@ -71,12 +92,25 @@ public class ArchiveRequestService {
             Map<String, ArchiveFieldChange> changes,
             OffsetDateTime initiatedAt,
             AuthenticatedUser applicant) {
+        return create(type, deviceId, deviceCode, reason, changes, null, initiatedAt, applicant);
+    }
+
+    @Transactional
+    public ArchiveRequest create(
+            ArchiveRequestType type,
+            String deviceId,
+            String deviceCode,
+            String reason,
+            Map<String, ArchiveFieldChange> changes,
+            List<ArchiveImageSubmission> images,
+            OffsetDateTime initiatedAt,
+            AuthenticatedUser applicant) {
         ArchiveRequestType requestType = type == null ? ArchiveRequestType.UPDATE : type;
         try {
             return switch (requestType) {
-                case UPDATE -> createUpdateRequest(deviceId, reason, changes, initiatedAt, applicant);
-                case CREATE -> createArchiveCreateRequest(deviceCode, reason, changes, initiatedAt, applicant);
-                case DELETE -> createArchiveDeleteRequest(deviceId, reason, initiatedAt, applicant);
+                case UPDATE -> createUpdateRequest(deviceId, reason, changes, images, initiatedAt, applicant);
+                case CREATE -> createArchiveCreateRequest(deviceCode, reason, changes, images, initiatedAt, applicant);
+                case DELETE -> createArchiveDeleteRequest(deviceId, reason, images, initiatedAt, applicant);
             };
         } catch (BusinessException exception) {
             recordArchiveRequestFailure(requestType, deviceId, deviceCode, applicant, exception);
@@ -201,6 +235,7 @@ public class ArchiveRequestService {
             String deviceId,
             String reason,
             Map<String, ArchiveFieldChange> changes,
+            List<ArchiveImageSubmission> images,
             OffsetDateTime initiatedAt,
             AuthenticatedUser applicant) {
         requirePermission(applicant, PermissionCode.ARCHIVE_CENTER_ARCHIVE_UPDATE_REQUEST_SUBMIT);
@@ -216,9 +251,12 @@ public class ArchiveRequestService {
             throw new BusinessException(ErrorCode.ARCHIVE_REQUEST_FROZEN);
         }
 
-        Map<String, ArchiveFieldChange> normalizedChanges = normalizeAndValidateUpdateChanges(device, changes);
+        Optional<List<ArchiveImage>> imageChange = archiveImageService.prepareChange(device.id(), images);
+        Map<String, ArchiveFieldChange> normalizedChanges = normalizeAndValidateUpdateChanges(
+                device, changes, imageChange.isPresent());
+        String requestId = newRequestId();
         ArchiveRequest created = createRequest(new ArchiveRequestCreate(
-                newRequestId(),
+                requestId,
                 ArchiveRequestType.UPDATE,
                 device.id(),
                 device.deviceCode(),
@@ -228,6 +266,7 @@ public class ArchiveRequestService {
                 normalizedChanges,
                 normalizeInitiatedAt(initiatedAt, now),
                 now));
+        imageChange.ifPresent(value -> archiveImageService.savePendingChange(requestId, value));
         logEntryService.recordSuccess(
                 LogAction.ARCHIVE_REQUEST,
                 created.id(),
@@ -241,6 +280,7 @@ public class ArchiveRequestService {
             String deviceCode,
             String reason,
             Map<String, ArchiveFieldChange> changes,
+            List<ArchiveImageSubmission> images,
             OffsetDateTime initiatedAt,
             AuthenticatedUser applicant) {
         requirePermission(applicant, PermissionCode.ARCHIVE_CENTER_ARCHIVE_CREATE_REQUEST_SUBMIT);
@@ -255,9 +295,11 @@ public class ArchiveRequestService {
         }
 
         OffsetDateTime submittedAt = now();
+        Optional<List<ArchiveImage>> imageChange = archiveImageService.prepareChange(null, images);
         Map<String, ArchiveFieldChange> normalizedChanges = normalizeAndValidateCreateChanges(changes);
+        String requestId = newRequestId();
         ArchiveRequest created = createRequest(new ArchiveRequestCreate(
-                newRequestId(),
+                requestId,
                 ArchiveRequestType.CREATE,
                 null,
                 normalizedDeviceCode,
@@ -267,6 +309,7 @@ public class ArchiveRequestService {
                 normalizedChanges,
                 normalizeInitiatedAt(initiatedAt, submittedAt),
                 submittedAt));
+        imageChange.ifPresent(value -> archiveImageService.savePendingChange(requestId, value));
         logEntryService.recordSuccess(
                 LogAction.ARCHIVE_REQUEST,
                 created.id(),
@@ -279,8 +322,12 @@ public class ArchiveRequestService {
     private ArchiveRequest createArchiveDeleteRequest(
             String deviceId,
             String reason,
+            List<ArchiveImageSubmission> images,
             OffsetDateTime initiatedAt,
             AuthenticatedUser applicant) {
+        if (images != null) {
+            throw new BusinessException(ErrorCode.ARCHIVE_REQUEST_INVALID, "Delete requests cannot change images.");
+        }
         requirePermission(applicant, PermissionCode.ARCHIVE_CENTER_ARCHIVE_DELETE_REQUEST_SUBMIT);
         Archive device = archiveRepository.findById(normalizeRequiredId(deviceId, "deviceId"))
                 .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
@@ -348,6 +395,7 @@ public class ArchiveRequestService {
                 if (!reviewed) {
                     throw new BusinessException(ErrorCode.ARCHIVE_REQUEST_ALREADY_REVIEWED);
                 }
+                archiveImageService.applyPendingChange(request.id(), currentDevice.id(), reviewer.id());
             }
             case CREATE -> {
                 if (archiveRepository.existsByCode(request.deviceCode())) {
@@ -375,6 +423,7 @@ public class ArchiveRequestService {
                 if (!reviewed) {
                     throw new BusinessException(ErrorCode.ARCHIVE_REQUEST_ALREADY_REVIEWED);
                 }
+                archiveImageService.applyPendingChange(request.id(), archiveCreate.id(), reviewer.id());
             }
             case DELETE -> {
                 Archive currentDevice = archiveRepository.findById(request.deviceId())
@@ -425,8 +474,12 @@ public class ArchiveRequestService {
 
     private Map<String, ArchiveFieldChange> normalizeAndValidateUpdateChanges(
             Archive device,
-            Map<String, ArchiveFieldChange> changes) {
+            Map<String, ArchiveFieldChange> changes,
+            boolean imageChangeRequested) {
         if (changes == null || changes.isEmpty()) {
+            if (imageChangeRequested) {
+                return Map.of();
+            }
             throw new BusinessException(ErrorCode.ARCHIVE_REQUEST_INVALID);
         }
 
@@ -442,7 +495,7 @@ public class ArchiveRequestService {
 
             String currentValue = currentFieldValue(device, field);
             String oldValue = normalizeText(value.oldValue());
-            String newValue = normalizeChangeValue(field, value.newValue(), true);
+            String newValue = normalizeChangeValue(field, value.newValue(), isRequiredUpdateField(field));
             if (!oldValue.equals(currentValue)) {
                 throw new BusinessException(ErrorCode.CONFLICT, "Archive baseline is stale.");
             }
@@ -452,7 +505,7 @@ public class ArchiveRequestService {
             }
         }
 
-        if (normalizedChanges.isEmpty()) {
+        if (normalizedChanges.isEmpty() && !imageChangeRequested) {
             throw new BusinessException(
                     ErrorCode.ARCHIVE_REQUEST_INVALID,
                     "At least one archive field must change.");
@@ -470,26 +523,35 @@ public class ArchiveRequestService {
         for (Map.Entry<String, ArchiveFieldChange> entry : changes.entrySet()) {
             String field = normalizeSupportedField(entry.getKey());
             ArchiveFieldChange value = requireChangeValue(entry.getValue());
-            String newValue = normalizeChangeValue(field, value.newValue(), "name".equals(field));
+            String newValue = normalizeChangeValue(field, value.newValue(), REQUIRED_CREATE_FIELDS.contains(field));
             if (!newValue.isBlank()) {
                 normalizedChanges.put(field, new ArchiveFieldChange("", newValue));
             }
         }
 
-        if (!normalizedChanges.containsKey("name")) {
-            throw new BusinessException(
-                    ErrorCode.ARCHIVE_REQUEST_INVALID,
-                    "name is required when creating an archive.");
+        for (String field : REQUIRED_CREATE_FIELDS) {
+            if (!normalizedChanges.containsKey(field)) {
+                throw new BusinessException(
+                        ErrorCode.ARCHIVE_REQUEST_INVALID,
+                        field + " is required when creating an archive.");
+            }
         }
 
         return Map.copyOf(normalizedChanges);
     }
 
+    private boolean isRequiredUpdateField(String field) {
+        return true;
+    }
+
     private Map<String, ArchiveFieldChange> buildDeleteSnapshot(Archive device) {
         Map<String, ArchiveFieldChange> snapshot = new HashMap<>();
         snapshot.put("name", new ArchiveFieldChange(normalizeText(device.name()), ""));
+        snapshot.put("deviceType", new ArchiveFieldChange(normalizeText(device.deviceType()), ""));
         snapshot.put("model", new ArchiveFieldChange(normalizeText(device.model()), ""));
         snapshot.put("manufacturer", new ArchiveFieldChange(normalizeText(device.manufacturer()), ""));
+        snapshot.put("commissionedAt", new ArchiveFieldChange(formatDate(device.commissionedAt()), ""));
+        snapshot.put("managementDepartment", new ArchiveFieldChange(normalizeText(device.managementDepartment()), ""));
         snapshot.put("location.address", new ArchiveFieldChange(normalizeText(device.address()), ""));
         return Map.copyOf(snapshot);
     }
@@ -499,10 +561,13 @@ public class ArchiveRequestService {
                 "device-" + UUID.randomUUID(),
                 request.deviceCode(),
                 requireCreatedValue(request, "name"),
-                createdValue(request, "model"),
-                createdValue(request, "manufacturer"),
+                requireCreatedValue(request, "deviceType"),
+                requireCreatedValue(request, "model"),
+                requireCreatedValue(request, "manufacturer"),
+                parseCommissionedAt(requireCreatedValue(request, "commissionedAt")),
+                requireCreatedValue(request, "managementDepartment"),
                 "PENDING_VERIFICATION",
-                createdValue(request, "location.address"),
+                requireCreatedValue(request, "location.address"),
                 null,
                 null,
                 reviewerId,
@@ -515,41 +580,86 @@ public class ArchiveRequestService {
             String reviewerId,
             OffsetDateTime reviewedAt) {
         String name = currentDevice.name();
+        String deviceType = currentDevice.deviceType();
         String model = currentDevice.model();
         String manufacturer = currentDevice.manufacturer();
+        LocalDate commissionedAt = currentDevice.commissionedAt();
+        String managementDepartment = currentDevice.managementDepartment();
         String address = currentDevice.address();
 
         for (Map.Entry<String, ArchiveFieldChange> entry : changes.entrySet()) {
             switch (entry.getKey()) {
                 case "name" -> name = entry.getValue().newValue();
+                case "deviceType" -> deviceType = entry.getValue().newValue();
                 case "model" -> model = entry.getValue().newValue();
                 case "manufacturer" -> manufacturer = entry.getValue().newValue();
+                case "commissionedAt" -> commissionedAt = parseCommissionedAt(entry.getValue().newValue());
+                case "managementDepartment" -> managementDepartment = entry.getValue().newValue();
                 case "location.address" -> address = entry.getValue().newValue();
                 default -> throw new BusinessException(ErrorCode.ARCHIVE_REQUEST_INVALID);
             }
         }
 
-        return new ArchiveUpdate(currentDevice.id(), name, model, manufacturer, address, reviewerId, reviewedAt);
+        return new ArchiveUpdate(
+                currentDevice.id(),
+                name,
+                deviceType,
+                model,
+                manufacturer,
+                commissionedAt,
+                managementDepartment,
+                address,
+                reviewerId,
+                reviewedAt);
     }
 
     private String currentFieldValue(Archive device, String field) {
         return switch (field) {
             case "name" -> normalizeText(device.name());
+            case "deviceType" -> normalizeText(device.deviceType());
             case "model" -> normalizeText(device.model());
             case "manufacturer" -> normalizeText(device.manufacturer());
+            case "commissionedAt" -> formatDate(device.commissionedAt());
+            case "managementDepartment" -> normalizeText(device.managementDepartment());
             case "location.address" -> normalizeText(device.address());
             default -> throw new BusinessException(ErrorCode.ARCHIVE_REQUEST_INVALID);
         };
     }
 
     private String normalizeChangeValue(String field, String value, boolean required) {
+        if ("commissionedAt".equals(field)) {
+            String normalized = required
+                    ? normalizeRequiredText(value, field, 10)
+                    : normalizeOptionalText(value, 10);
+            if (normalized.isBlank()) {
+                return normalized;
+            }
+
+            return parseCommissionedAt(normalized).toString();
+        }
+
         int maxLength = switch (field) {
-            case "name", "model" -> 80;
+            case "name", "model", "deviceType" -> 80;
             case "manufacturer" -> 100;
+            case "managementDepartment" -> 120;
             case "location.address" -> 200;
             default -> throw new BusinessException(ErrorCode.ARCHIVE_REQUEST_INVALID);
         };
         return required ? normalizeRequiredText(value, field, maxLength) : normalizeOptionalText(value, maxLength);
+    }
+
+    private LocalDate parseCommissionedAt(String value) {
+        try {
+            return LocalDate.parse(value);
+        } catch (RuntimeException exception) {
+            throw new BusinessException(
+                    ErrorCode.ARCHIVE_REQUEST_INVALID,
+                    "commissionedAt must be a valid date.");
+        }
+    }
+
+    private String formatDate(LocalDate value) {
+        return value == null ? "" : value.toString();
     }
 
     private String normalizeSupportedField(String field) {

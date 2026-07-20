@@ -2,6 +2,7 @@ package com.rmf.rdvp.archive;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -30,8 +31,11 @@ public class JdbcArchiveRepository implements ArchiveRepository {
                             d.id,
                             d.device_code,
                             d.name,
+                            d.device_type,
                             d.model,
                             d.manufacturer,
+                            d.commissioned_at,
+                            d.management_department,
                             d.status,
                             d.address,
                             d.longitude,
@@ -67,8 +71,11 @@ public class JdbcArchiveRepository implements ArchiveRepository {
                             d.id,
                             d.device_code,
                             d.name,
+                            d.device_type,
                             d.model,
                             d.manufacturer,
+                            d.commissioned_at,
+                            d.management_department,
                             d.status,
                             d.address,
                             d.longitude,
@@ -131,8 +138,11 @@ public class JdbcArchiveRepository implements ArchiveRepository {
                             id,
                             device_code,
                             name,
+                            device_type,
                             model,
                             manufacturer,
+                            commissioned_at,
+                            management_department,
                             status,
                             address,
                             longitude,
@@ -145,8 +155,11 @@ public class JdbcArchiveRepository implements ArchiveRepository {
                             :id,
                             :deviceCode,
                             :name,
+                            :deviceType,
                             :model,
                             :manufacturer,
+                            :commissionedAt,
+                            :managementDepartment,
                             :status,
                             :address,
                             :longitude,
@@ -161,8 +174,11 @@ public class JdbcArchiveRepository implements ArchiveRepository {
                         .addValue("id", create.id())
                         .addValue("deviceCode", create.deviceCode())
                         .addValue("name", create.name())
+                        .addValue("deviceType", create.deviceType())
                         .addValue("model", create.model())
                         .addValue("manufacturer", create.manufacturer())
+                        .addValue("commissionedAt", create.commissionedAt())
+                        .addValue("managementDepartment", create.managementDepartment())
                         .addValue("status", create.status())
                         .addValue("address", create.address())
                         .addValue("longitude", create.longitude())
@@ -232,8 +248,11 @@ public class JdbcArchiveRepository implements ArchiveRepository {
                 resultSet.getString("id"),
                 resultSet.getString("device_code"),
                 resultSet.getString("name"),
+                resultSet.getString("device_type"),
                 resultSet.getString("model"),
                 resultSet.getString("manufacturer"),
+                resultSet.getObject("commissioned_at", LocalDate.class),
+                resultSet.getString("management_department"),
                 resultSet.getString("status"),
                 resultSet.getString("address"),
                 resultSet.getBigDecimal("longitude"),

@@ -18,6 +18,7 @@ import { AppColors, AppRadii, AppSpacing } from '../../shared/theme/AppTheme';
 import { AuthGuard } from '../../shared/security/AuthGuard';
 import { AppNavigator } from '../../shared/navigation/AppNavigator';
 import { UiFeedbackTone } from '../../shared/models/UiFeedbackModels';
+import { ArchiveImageService } from '../services/ArchiveImageService';
 
 const ARCHIVE_EXPORT_PREVIEW_BODY_ID = 'rdvp_archive_export_preview_body';
 const EXPORT_TAB_DETAIL = 'DETAIL';
@@ -31,8 +32,12 @@ struct ArchiveExportPage {
     id: '',
     deviceCode: '-',
     name: '-',
+    images: [],
+    deviceType: '-',
     model: '-',
     manufacturer: '-',
+    commissionedAt: '-',
+    managementDepartment: '-',
     location: {
       address: '-'
     },
@@ -48,6 +53,7 @@ struct ArchiveExportPage {
   @State exporting: boolean = false;
   @State detailPreviewDataUri: string = '';
   @State qrExportResult: DeviceQrCodeExportResult | undefined = undefined;
+  @State firstArchiveImageDataUri: string = '';
   private clearingDetailPasswordAfterSuccess: boolean = false;
   private clearingQrPasswordAfterSuccess: boolean = false;
 
@@ -232,9 +238,25 @@ struct ArchiveExportPage {
       this.CardDivider()
       StatusInfoRow({ label: '设备名称', value: this.device.name, tone: AppColors.TextSecondary })
       this.CardDivider()
+      StatusInfoRow({ label: '设备图片', value: this.getImageExportText(), tone: AppColors.TextSecondary })
+      if (this.firstArchiveImageDataUri.length > 0) {
+        Image(this.firstArchiveImageDataUri)
+          .width('100%')
+          .aspectRatio(1.6)
+          .objectFit(ImageFit.Contain)
+          .backgroundColor(AppColors.FieldBackground)
+          .borderRadius(AppRadii.Medium)
+      }
+      this.CardDivider()
+      StatusInfoRow({ label: '设备类型', value: this.device.deviceType, tone: AppColors.TextSecondary })
+      this.CardDivider()
       StatusInfoRow({ label: '设备型号', value: this.device.model, tone: AppColors.TextSecondary })
       this.CardDivider()
       StatusInfoRow({ label: '生产厂商', value: this.device.manufacturer, tone: AppColors.TextSecondary })
+      this.CardDivider()
+      StatusInfoRow({ label: '启用日期', value: this.device.commissionedAt, tone: AppColors.TextSecondary })
+      this.CardDivider()
+      StatusInfoRow({ label: '管理部门', value: this.device.managementDepartment, tone: AppColors.TextSecondary })
       this.CardDivider()
       StatusInfoRow({ label: '设备位置', value: this.device.location.address, tone: AppColors.TextSecondary })
       this.CardDivider()
@@ -448,6 +470,8 @@ struct ArchiveExportPage {
 
     this.device = device;
     this.hasDevice = true;
+    this.firstArchiveImageDataUri = device.images.length > 0 ? device.images[0].thumbnailDataUri : '';
+    void this.loadFirstArchiveImage();
   }
 
   syncTabFromActiveTab(): void {
@@ -503,6 +527,10 @@ struct ArchiveExportPage {
   }
 
   async exportDetail(context: common.Context): Promise<void> {
+    if (!await this.loadFirstArchiveImage()) {
+      this.setExportUnavailableMessage();
+      return;
+    }
     const verifyResponse = await ArchiveExportService.verifyArchiveDetailExportRemoteFirst({
       deviceId: this.device.id
     });
@@ -627,6 +655,23 @@ struct ArchiveExportPage {
     }
 
     return DeviceQrCodeExportService.getImageDataUri(this.qrExportResult);
+  }
+
+  getImageExportText(): string {
+    return this.device.images.length > 0 ? `${this.device.images.length}张（导出首张）` : '未设置';
+  }
+
+  async loadFirstArchiveImage(): Promise<boolean> {
+    if (this.device.images.length === 0) {
+      this.firstArchiveImageDataUri = '';
+      return true;
+    }
+    const response = await ArchiveImageService.loadFullImage(this.device.images[0].id);
+    if (!response.success || response.data === undefined) {
+      return false;
+    }
+    this.firstArchiveImageDataUri = response.data.dataUri;
+    return true;
   }
 
   backToDetail(): void {

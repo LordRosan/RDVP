@@ -44,8 +44,37 @@ class ArchiveControllerTests {
                 .andExpect(jsonPath("$.data.id").value("device-local-0001"))
                 .andExpect(jsonPath("$.data.deviceCode").value("RDVP-DEVICE-0001"))
                 .andExpect(jsonPath("$.data.name").value("冷却泵A-01"))
+                .andExpect(jsonPath("$.data.deviceType").value("动力设备"))
+                .andExpect(jsonPath("$.data.commissionedAt").value("2024-03-15"))
+                .andExpect(jsonPath("$.data.managementDepartment").value("设备管理部"))
+                .andExpect(jsonPath("$.data.location.longitude").value(114.1694))
+                .andExpect(jsonPath("$.data.location.latitude").value(22.3193))
                 .andExpect(jsonPath("$.data.status").value("NORMAL"))
                 .andExpect(jsonPath("$.data.archiveRequestState.locked").value(false));
+    }
+
+    @Test
+    void returnsArchiveImageThumbnailsAndFullContent() throws Exception {
+        String token = login("operator", "password");
+
+        String response = mockMvc.perform(get("/api/v1/devices/by-code/RDVP-DEVICE-0001")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.images.length()").value(1))
+                .andExpect(jsonPath("$.data.images[0].sortOrder").value(0))
+                .andExpect(jsonPath("$.data.images[0].thumbnailDataUri").value(org.hamcrest.Matchers.startsWith(
+                        "data:image/jpeg;base64,")))
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        String imageId = objectMapper.readTree(response).path("data").path("images").get(0).path("id").asText();
+
+        mockMvc.perform(get("/api/v1/archive-images/{imageId}", imageId)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(imageId))
+                .andExpect(jsonPath("$.data.dataUri").value(org.hamcrest.Matchers.startsWith(
+                        "data:image/jpeg;base64,")));
     }
 
     @Test
@@ -111,6 +140,24 @@ class ArchiveControllerTests {
                                   "changes": {
                                     "name": {
                                       "newValue": "巡检网关G-98"
+                                    },
+                                    "model": {
+                                      "newValue": "IG-900"
+                                    },
+                                    "manufacturer": {
+                                      "newValue": "北方设备"
+                                    },
+                                    "deviceType": {
+                                      "newValue": "通用设备"
+                                    },
+                                    "commissionedAt": {
+                                      "newValue": "2026-06-01"
+                                    },
+                                    "managementDepartment": {
+                                      "newValue": "设备管理部"
+                                    },
+                                    "location.address": {
+                                      "newValue": "九号厂房巡检区"
                                     }
                                   }
                                 }

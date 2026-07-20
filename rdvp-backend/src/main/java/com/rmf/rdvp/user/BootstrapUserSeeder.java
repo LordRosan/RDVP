@@ -2,6 +2,7 @@ package com.rmf.rdvp.user;
 
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -10,6 +11,7 @@ import com.rmf.rdvp.shared.config.RdvpRuntimeProperties;
 
 @Component
 @Profile("!test")
+@ConditionalOnProperty(prefix = "rdvp.bootstrap-users", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class BootstrapUserSeeder implements ApplicationRunner {
 
     private final JdbcUserAccountRepository userAccountRepository;

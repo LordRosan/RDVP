@@ -1,4 +1,5 @@
 import { DeviceSummary } from './DeviceModels';
+import { ArchiveImageDraft } from './ArchiveImageModels';
 
 export enum ArchiveRequestStatus {
   Draft = 'DRAFT',
@@ -10,16 +11,24 @@ export enum ArchiveRequestStatus {
 
 export interface ArchiveUpdateBaseline {
   deviceName: string;
+  imageIds: string[];
+  deviceType: string;
   model: string;
   manufacturer: string;
+  commissionedAt: string;
+  managementDepartment: string;
   locationAddress: string;
 }
 
 export interface ArchiveCreateRequestForm {
   deviceCode: string;
   deviceName: string;
+  images: ArchiveImageDraft[];
+  deviceType: string;
   model: string;
   manufacturer: string;
+  commissionedAt: string;
+  managementDepartment: string;
   locationAddress: string;
   reason: string;
   initiatedAt?: string;
@@ -29,8 +38,13 @@ export interface ArchiveUpdateRequestForm {
   deviceId?: string;
   deviceCode: string;
   deviceName: string;
+  images: ArchiveImageDraft[];
+  imagesChanged: boolean;
+  deviceType: string;
   model: string;
   manufacturer: string;
+  commissionedAt: string;
+  managementDepartment: string;
   locationAddress: string;
   reason: string;
   initiatedAt?: string;
@@ -53,8 +67,13 @@ export interface ArchiveRequestValidationResult {
 export interface ArchiveUpdateDraft {
   deviceCode: string;
   deviceName: string;
+  images: ArchiveImageDraft[];
+  imagesChanged: boolean;
+  deviceType: string;
   model: string;
   manufacturer: string;
+  commissionedAt: string;
+  managementDepartment: string;
   locationAddress: string;
   reason: string;
   initiatedAt?: string;
@@ -64,8 +83,12 @@ export interface ArchiveRequestRecord {
   id: string;
   deviceCode: string;
   deviceName?: string;
+  imageCount?: number;
+  deviceType?: string;
   model?: string;
   manufacturer?: string;
+  commissionedAt?: string;
+  managementDepartment?: string;
   locationAddress?: string;
   reason: string;
   status: ArchiveRequestStatus;

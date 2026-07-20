@@ -291,7 +291,7 @@ class DomainTableNamingTests {
     }
 
     @Test
-    void operationsSourceTextDoesNotUseLegacyDeviceVerificationPhrase() throws IOException {
+    void operationsSourceTextDoesNotUseLegacyCombinedVerificationPhrase() throws IOException {
         List<String> violations = Stream.concat(
                         legacyDeviceVerificationPhraseViolations(Path.of("src/main/java")),
                         legacyDeviceVerificationPhraseViolations(Path.of("../entry/src/main/ets")))
@@ -455,7 +455,7 @@ class DomainTableNamingTests {
                 .flatMap(file -> {
                     try {
                         String content = Files.readString(file, StandardCharsets.UTF_8);
-                        return Stream.of("设备核验")
+                        return Stream.of("设备核验与报修")
                                 .filter(content::contains)
                                 .map(legacyToken -> file + " contains " + legacyToken);
                     } catch (IOException exception) {

@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Map;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
@@ -21,11 +22,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.rmf.rdvp.shared.api.ApiResponse;
 import com.rmf.rdvp.shared.api.RequestIds;
+import com.rmf.rdvp.archive.ArchiveImage;
 import com.rmf.rdvp.archive.ArchiveRequestPage;
+import com.rmf.rdvp.archive.ArchiveImageService;
 import com.rmf.rdvp.archive.ArchiveRequestService;
 import com.rmf.rdvp.archive.ArchiveReviewDecision;
 import com.rmf.rdvp.archive.ArchiveRequestType;
 import com.rmf.rdvp.archive.ArchiveFieldChange;
+import com.rmf.rdvp.archive.ArchiveImageSubmission;
 import com.rmf.rdvp.log.LogAction;
 import com.rmf.rdvp.log.LogEntryService;
 import com.rmf.rdvp.shared.error.BusinessException;
@@ -43,14 +47,17 @@ public class ArchiveRequestController {
     private static final DateTimeFormatter LOCAL_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private final ArchiveRequestService archiveRequestService;
+    private final ArchiveImageService archiveImageService;
     private final AuthenticationService authenticationService;
     private final LogEntryService logEntryService;
 
     public ArchiveRequestController(
             ArchiveRequestService archiveRequestService,
+            ArchiveImageService archiveImageService,
             AuthenticationService authenticationService,
             LogEntryService logEntryService) {
         this.archiveRequestService = archiveRequestService;
+        this.archiveImageService = archiveImageService;
         this.authenticationService = authenticationService;
         this.logEntryService = logEntryService;
     }
@@ -75,6 +82,7 @@ public class ArchiveRequestController {
                 requestBody.deviceCode(),
                 requestBody.reason(),
                 toDomainChanges(requestBody.changes()),
+                toDomainImages(requestBody.images()),
                 parseInitiatedAt(requestBody.initiatedAt()),
                 user);
         return ResponseEntity.ok(ApiResponse.success(ArchiveRequestCreateResponse.from(created), RequestIds.resolve(request)));
@@ -90,7 +98,22 @@ public class ArchiveRequestController {
             @RequestParam(defaultValue = "20") int pageSize,
             HttpServletRequest request) {
         ArchiveRequestPage result = archiveRequestService.list(status, deviceCode, applicantId, page, pageSize);
-        return ResponseEntity.ok(ApiResponse.success(ArchiveReviewListResponse.from(result), RequestIds.resolve(request)));
+        Map<String, List<ArchiveImage>> imageChangesByRequestId = archiveImageService.findPendingSummaryChanges(
+                result.items().stream().map(item -> item.id()).toList());
+        return ResponseEntity.ok(ApiResponse.success(
+                ArchiveReviewListResponse.from(result, imageChangesByRequestId),
+                RequestIds.resolve(request)));
+    }
+
+    @GetMapping("/{requestId}/images/{imageId}")
+    @PreAuthorize("hasAuthority('REVIEW_CENTER_ARCHIVE_REQUEST_REVIEW')")
+    public ResponseEntity<ApiResponse<ArchiveImageContentResponse>> findPendingImage(
+            @PathVariable String requestId,
+            @PathVariable String imageId,
+            HttpServletRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                ArchiveImageContentResponse.from(archiveImageService.findPendingImage(requestId, imageId)),
+                RequestIds.resolve(request)));
     }
 
     @PostMapping("/{requestId}/review")
@@ -166,6 +189,20 @@ public class ArchiveRequestController {
                 targetNo,
                 user,
                 "档案%s申请提交失败：%s。".formatted(formatRequestType(requestType), exception.getErrorCode().code()));
+    }
+
+    private List<ArchiveImageSubmission> toDomainImages(List<ArchiveImagePayload> images) {
+        if (images == null) {
+            return null;
+        }
+        return images.stream()
+                .map(image -> {
+                    if (image == null) {
+                        throw new BusinessException(ErrorCode.ARCHIVE_REQUEST_INVALID, "Image payload is required.");
+                    }
+                    return new ArchiveImageSubmission(image.id(), image.contentBase64());
+                })
+                .toList();
     }
 
     private String formatRequestType(ArchiveRequestType requestType) {

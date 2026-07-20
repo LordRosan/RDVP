@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@ohos/hypium';
-import { DeviceStatus } from '../main/ets/archive/models/DeviceModels';
+import { DeviceStatus, DeviceSummaryPayload } from '../main/ets/archive/models/DeviceModels';
 import { UiFeedbackTone } from '../main/ets/shared/models/UiFeedbackModels';
 import { AppColors, AppTone } from '../main/ets/shared/theme/AppTheme';
 import { AppThemeMode } from '../main/ets/shared/theme/ThemeModels';
@@ -7,8 +7,12 @@ import { AppThemeService } from '../main/ets/shared/theme/AppThemeService';
 import { HomeService } from '../main/ets/home/services/HomeService';
 import { UiFeedbackService } from '../main/ets/shared/services/UiFeedbackService';
 import { AuthService } from '../main/ets/user/services/AuthService';
+import { DeviceService } from '../main/ets/archive/services/DeviceService';
 import { ArchiveRequestService } from '../main/ets/archive/services/ArchiveRequestService';
 import { ArchiveUpdateService } from '../main/ets/archive/services/ArchiveUpdateService';
+import { ArchiveImageService } from '../main/ets/archive/services/ArchiveImageService';
+import { ArchiveImageDraft } from '../main/ets/archive/models/ArchiveImageModels';
+import { ArchiveReviewService } from '../main/ets/review/services/ArchiveReviewService';
 import { ApiClient } from '../main/ets/shared/services/ApiClient';
 import { RepairTaskService } from '../main/ets/operations/services/RepairTaskService';
 import { AppNavigator } from '../main/ets/shared/navigation/AppNavigator';
@@ -465,20 +469,88 @@ export default function localUnitTest() {
   });
 
   describe('archiveMutationValidation', () => {
+    it('normalizesArchiveImageSummaries', 0, () => {
+      const device = DeviceService.normalizeDeviceSummary({
+        id: 'device-local-0001',
+        deviceCode: 'RDVP-DEVICE-0001',
+        name: '测试设备',
+        images: [{
+          id: 'image-1',
+          sortOrder: 0,
+          width: 320,
+          height: 200,
+          thumbnailDataUri: 'data:image/jpeg;base64,thumbnail'
+        }],
+        model: 'M',
+        manufacturer: 'Factory',
+        location: { address: 'Lab' },
+        status: DeviceStatus.Normal
+      });
+
+      expect(device.images.length).assertEqual(1);
+      expect(device.images[0].id).assertEqual('image-1');
+      expect(device.images[0].thumbnailDataUri).assertEqual('data:image/jpeg;base64,thumbnail');
+    });
+
+    it('buildsArchiveImageSubmissionPayloads', 0, () => {
+      const drafts: ArchiveImageDraft[] = [{
+        id: 'image-existing',
+        previewUri: 'data:image/jpeg;base64,old'
+      }, {
+        previewUri: 'data:image/jpeg;base64,new',
+        contentBase64: 'new'
+      }];
+      const payloads = ArchiveImageService.buildSubmissionPayloads(drafts);
+
+      expect(payloads.length).assertEqual(2);
+      expect(payloads[0].id).assertEqual('image-existing');
+      expect(payloads[1].contentBase64).assertEqual('new');
+    });
+
+    it('normalizesLegacyArchiveDeviceResponseFields', 0, () => {
+      const legacyDevice: DeviceSummaryPayload = {
+        id: 'device-local-0001',
+        deviceCode: 'RDVP-DEVICE-0001',
+        name: '测试设备',
+        model: 'M',
+        manufacturer: 'Factory',
+        location: {
+          address: 'Lab'
+        },
+        status: DeviceStatus.Normal
+      };
+      const device = DeviceService.normalizeDeviceSummary(legacyDevice);
+
+      expect(device.images.length).assertEqual(0);
+      expect(device.deviceType).assertEqual('');
+      expect(device.commissionedAt).assertEqual('');
+      expect(device.managementDepartment).assertEqual('');
+      expect(device.location.address).assertEqual('Lab');
+    });
+
     it('validatesArchiveUpdateRequiresChangedField', 0, () => {
       const result = ArchiveUpdateService.validateUpdateRequestForm({
         deviceId: 'device-local-0001',
         deviceCode: 'RDVP-DEVICE-0001',
         deviceName: 'A',
+        images: [],
+        imagesChanged: false,
+        deviceType: '通用设备',
         model: 'M',
         manufacturer: 'Factory',
+        commissionedAt: '2026-01-01',
+        managementDepartment: '设备管理部',
         locationAddress: 'Lab',
         reason: '修正档案',
         initiatedAt: '2026-06-22 10:00',
         baseline: {
           deviceName: 'A',
+          imageIds: [],
+          deviceType: '通用设备',
           model: 'M',
           manufacturer: 'Factory',
+          commissionedAt: '2026-01-01',
+          managementDepartment: '设备管理部',
           locationAddress: 'Lab'
         }
       });
@@ -492,15 +564,24 @@ export default function localUnitTest() {
         deviceId: 'device-local-0001',
         deviceCode: 'RDVP-DEVICE-0001',
         deviceName: 'A2',
+        images: [],
+        imagesChanged: false,
+        deviceType: '通用设备',
         model: 'M',
         manufacturer: 'Factory',
+        commissionedAt: '2026-01-01',
+        managementDepartment: '设备管理部',
         locationAddress: 'Lab',
         reason: '修正档案',
         initiatedAt: '',
         baseline: {
           deviceName: 'A',
+          imageIds: [],
+          deviceType: '通用设备',
           model: 'M',
           manufacturer: 'Factory',
+          commissionedAt: '2026-01-01',
+          managementDepartment: '设备管理部',
           locationAddress: 'Lab'
         }
       });
@@ -515,8 +596,12 @@ export default function localUnitTest() {
           id: 'device-local-0001',
           deviceCode: 'RDVP-DEVICE-0001',
           name: 'A',
+          images: [],
+          deviceType: '通用设备',
           model: 'M',
           manufacturer: 'Factory',
+          commissionedAt: '2026-01-01',
+          managementDepartment: '设备管理部',
           location: {
             address: 'Lab'
           },
@@ -534,8 +619,12 @@ export default function localUnitTest() {
       const result = ArchiveRequestService.validateCreateRequestForm({
         deviceCode: 'RDVP-DEVICE-0002',
         deviceName: 'B',
+        images: [],
+        deviceType: '通用设备',
         model: 'M',
         manufacturer: 'Factory',
+        commissionedAt: '2026-01-01',
+        managementDepartment: '设备管理部',
         locationAddress: 'Lab',
         reason: '新增设备',
         initiatedAt: ''
@@ -549,8 +638,12 @@ export default function localUnitTest() {
       const result = ArchiveRequestService.validateCreateRequestForm({
         deviceCode: 'RDVP-DEVICE-0002',
         deviceName: 'B',
+        images: [],
+        deviceType: '通用设备',
         model: '',
         manufacturer: 'Factory',
+        commissionedAt: '2026-01-01',
+        managementDepartment: '设备管理部',
         locationAddress: 'Lab',
         reason: '新增设备',
         initiatedAt: '2026-06-22 10:00'
@@ -564,8 +657,12 @@ export default function localUnitTest() {
       const result = ArchiveRequestService.validateCreateRequestForm({
         deviceCode: 'RDVP-DEVICE-0002',
         deviceName: 'B',
+        images: [],
+        deviceType: '通用设备',
         model: 'M',
         manufacturer: '',
+        commissionedAt: '2026-01-01',
+        managementDepartment: '设备管理部',
         locationAddress: 'Lab',
         reason: '新增设备',
         initiatedAt: '2026-06-22 10:00'
@@ -579,8 +676,12 @@ export default function localUnitTest() {
       const result = ArchiveRequestService.validateCreateRequestForm({
         deviceCode: 'RDVP-DEVICE-0002',
         deviceName: 'B',
+        images: [],
+        deviceType: '通用设备',
         model: 'M',
         manufacturer: 'Factory',
+        commissionedAt: '2026-01-01',
+        managementDepartment: '设备管理部',
         locationAddress: '',
         reason: '新增设备',
         initiatedAt: '2026-06-22 10:00'
@@ -588,6 +689,77 @@ export default function localUnitTest() {
 
       expect(result.valid).assertEqual(false);
       expect(result.message).assertEqual('请输入设备位置');
+    });
+
+    it('validatesArchiveCreateRequiresDeviceType', 0, () => {
+      const result = ArchiveRequestService.validateCreateRequestForm({
+        deviceCode: 'RDVP-DEVICE-0002',
+        deviceName: 'B',
+        images: [],
+        deviceType: '',
+        model: 'M',
+        manufacturer: 'Factory',
+        commissionedAt: '2026-01-01',
+        managementDepartment: '设备管理部',
+        locationAddress: 'Lab',
+        reason: '新增设备',
+        initiatedAt: '2026-06-22 10:00'
+      });
+
+      expect(result.valid).assertEqual(false);
+      expect(result.message).assertEqual('请输入设备类型');
+    });
+
+    it('countsArchiveProfileFieldsForCreateAndUpdate', 0, () => {
+      const createResult = ArchiveRequestService.validateCreateRequestForm({
+        deviceCode: 'RDVP-DEVICE-0002',
+        deviceName: 'B',
+        images: [{ previewUri: 'data:image/jpeg;base64,image', contentBase64: 'image' }],
+        deviceType: '通用设备',
+        model: 'M',
+        manufacturer: 'Factory',
+        commissionedAt: '2026-01-01',
+        managementDepartment: '设备管理部',
+        locationAddress: 'Lab',
+        reason: '新增设备',
+        initiatedAt: '2026-06-22 10:00'
+      });
+      expect(createResult.valid).assertEqual(true);
+      expect(createResult.fieldCount).assertEqual(8);
+
+      const updateCount = ArchiveUpdateService.countUpdatedFields({
+        deviceId: 'device-local-0001',
+        deviceCode: 'RDVP-DEVICE-0001',
+        deviceName: 'A',
+        images: [{ previewUri: 'data:image/jpeg;base64,image', contentBase64: 'image' }],
+        imagesChanged: true,
+        deviceType: '通用设备',
+        model: 'M',
+        manufacturer: 'Factory',
+        commissionedAt: '2026-02-01',
+        managementDepartment: '安全管理部',
+        locationAddress: 'Lab',
+        reason: '修正档案',
+        initiatedAt: '2026-06-22 10:00',
+        baseline: {
+          deviceName: 'A',
+          imageIds: [],
+          deviceType: '通用设备',
+          model: 'M',
+          manufacturer: 'Factory',
+          commissionedAt: '2026-01-01',
+          managementDepartment: '设备管理部',
+          locationAddress: 'Lab'
+        }
+      });
+
+      expect(updateCount).assertEqual(3);
+    });
+
+    it('formatsArchiveReviewProfileFieldLabels', 0, () => {
+      expect(ArchiveReviewService.formatFieldLabel('deviceType')).assertEqual('设备类型');
+      expect(ArchiveReviewService.formatFieldLabel('commissionedAt')).assertEqual('启用日期');
+      expect(ArchiveReviewService.formatFieldLabel('managementDepartment')).assertEqual('管理部门');
     });
   });
 }

@@ -24,8 +24,12 @@ struct ArchiveDeletePage {
     id: '',
     deviceCode: '-',
     name: '-',
+    images: [],
+    deviceType: '-',
     model: '-',
     manufacturer: '-',
+    commissionedAt: '-',
+    managementDepartment: '-',
     location: {
       address: '-'
     },

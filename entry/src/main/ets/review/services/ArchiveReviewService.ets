@@ -13,6 +13,8 @@ import {
 import { ApiClient } from '../../shared/services/ApiClient';
 import { DateTimeFormatUtil } from '../../shared/utils/DateTimeFormatUtil';
 import { UiFeedbackService } from '../../shared/services/UiFeedbackService';
+import { ArchiveImageSummary, ArchiveImageSummaryPayload } from '../../archive/models/DeviceModels';
+import { ArchiveImageContentPayload } from '../../archive/models/ArchiveImageModels';
 
 interface ApiListResult<T> {
   items: T[];
@@ -37,10 +39,23 @@ interface ArchiveReviewApiItem {
   initiatedAt?: string;
   createdAt: string;
   submittedAt?: string;
+  imagesChanged?: boolean;
+  images?: ArchiveImageSummaryPayload[];
   changes: Record<string, ArchiveUpdateApiValue>;
 }
 
 export class ArchiveReviewService {
+  static async loadPendingImage(
+    requestId: string,
+    imageId: string
+  ): Promise<ApiResponse<ArchiveImageContentPayload>> {
+    return ApiClient.request<ArchiveImageContentPayload>(
+      `/api/v1/archive-requests/${encodeURIComponent(requestId)}/images/${encodeURIComponent(imageId)}`,
+      'GET',
+      true
+    );
+  }
+
   static async listPendingReviewsRemoteFirst(): Promise<ApiResponse<ArchiveReviewListResult>> {
     if (!ApiClient.isConfigured()) {
       return ApiClient.createServiceUnavailableResponse<ArchiveReviewListResult>();
@@ -195,10 +210,16 @@ export class ArchiveReviewService {
     switch (field) {
       case 'name':
         return '设备名称';
+      case 'deviceType':
+        return '设备类型';
       case 'model':
         return '设备型号';
       case 'manufacturer':
         return '生产厂商';
+      case 'commissionedAt':
+        return '启用日期';
+      case 'managementDepartment':
+        return '管理部门';
       case 'location.address':
         return '设备位置';
       default:
@@ -218,8 +239,23 @@ export class ArchiveReviewService {
       status: item.status,
       initiatedAt: ArchiveReviewService.resolveTimeText(item.initiatedAt, item.createdAt),
       submittedAt: ArchiveReviewService.resolveTimeText(item.submittedAt, item.createdAt),
+      imagesChanged: item.imagesChanged === true,
+      images: ArchiveReviewService.mapApiImages(item.images),
       changes: ArchiveReviewService.mapApiChanges(item.changes)
     };
+  }
+
+  private static mapApiImages(images?: ArchiveImageSummaryPayload[]): ArchiveImageSummary[] {
+    if (images === undefined) {
+      return [];
+    }
+    return images.map((item: ArchiveImageSummaryPayload): ArchiveImageSummary => ({
+      id: item.id === undefined ? '' : item.id,
+      sortOrder: item.sortOrder === undefined ? 0 : item.sortOrder,
+      width: item.width === undefined ? 0 : item.width,
+      height: item.height === undefined ? 0 : item.height,
+      thumbnailDataUri: item.thumbnailDataUri === undefined ? '' : item.thumbnailDataUri
+    }));
   }
 
   private static resolveTimeText(value: string | undefined, fallback: string): string {

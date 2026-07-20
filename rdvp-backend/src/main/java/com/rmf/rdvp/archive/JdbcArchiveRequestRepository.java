@@ -244,8 +244,11 @@ public class JdbcArchiveRequestRepository implements ArchiveRequestRepository {
                 """
                         UPDATE archive_devices
                         SET name = :name,
+                            device_type = :deviceType,
                             model = :model,
                             manufacturer = :manufacturer,
+                            commissioned_at = :commissionedAt,
+                            management_department = :managementDepartment,
                             address = :address,
                             updated_at = :updatedAt,
                             updated_by = :updatedBy
@@ -255,8 +258,11 @@ public class JdbcArchiveRequestRepository implements ArchiveRequestRepository {
                 new MapSqlParameterSource()
                         .addValue("deviceId", archiveUpdate.deviceId())
                         .addValue("name", archiveUpdate.name())
+                        .addValue("deviceType", archiveUpdate.deviceType())
                         .addValue("model", archiveUpdate.model())
                         .addValue("manufacturer", archiveUpdate.manufacturer())
+                        .addValue("commissionedAt", archiveUpdate.commissionedAt())
+                        .addValue("managementDepartment", archiveUpdate.managementDepartment())
                         .addValue("address", archiveUpdate.address())
                         .addValue("updatedAt", archiveUpdate.updatedAt())
                         .addValue("updatedBy", archiveUpdate.updatedBy()));

@@ -4,6 +4,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record ArchiveFieldChangePayload(
-        @Size(max = 500) String oldValue,
-        @NotNull @Size(max = 500) String newValue) {
+        @Size(max = 512) String oldValue,
+        @NotNull @Size(max = 512) String newValue) {
 }

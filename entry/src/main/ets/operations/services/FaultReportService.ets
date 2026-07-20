@@ -260,7 +260,7 @@ export class FaultReportService {
       case FaultType.ExternalFactor:
         return '外部故障';
       case FaultType.Other:
-        return '其他';
+        return '其他故障';
       default:
         return '-';
     }

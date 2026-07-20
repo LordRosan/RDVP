@@ -8,13 +8,16 @@ import {
   DeviceStatus,
   DeviceQrQueryForm,
   DeviceQrValidationResult,
-  DeviceSummary
+  DeviceSummary,
+  DeviceSummaryPayload,
+  ArchiveImageSummary,
+  ArchiveImageSummaryPayload
 } from '../models/DeviceModels';
 import { UiFeedbackService } from '../../shared/services/UiFeedbackService';
 
 interface QrVerifyApiResult {
   valid: boolean;
-  device: DeviceSummary;
+  device: DeviceSummaryPayload;
 }
 
 const DEVICE_CODE_PATTERN = /^RDVP-DEVICE-\d{4}$/;
@@ -104,7 +107,9 @@ export class DeviceService {
     }
 
     const deviceCode = encodeURIComponent(DeviceService.normalizeDeviceCode(form.deviceCode));
-    return ApiClient.request<DeviceSummary>(`/api/v1/devices/by-code/${deviceCode}`, 'GET', true);
+    const response = await ApiClient.request<DeviceSummaryPayload>(`/api/v1/devices/by-code/${deviceCode}`, 'GET',
+      true);
+    return DeviceService.normalizeDeviceSummaryResponse(response);
   }
 
   static async queryByQrContentRemoteFirst(form: DeviceQrQueryForm): Promise<ApiResponse<DeviceSummary>> {
@@ -153,7 +158,73 @@ export class DeviceService {
 
     return {
       success: true,
-      data: response.data.device,
+      data: DeviceService.normalizeDeviceSummary(response.data.device),
+      requestId: response.requestId,
+      timestamp: response.timestamp
+    };
+  }
+
+  static normalizeDeviceSummary(payload: DeviceSummaryPayload): DeviceSummary {
+    const location = payload.location;
+    return {
+      id: DeviceService.normalizeText(payload.id),
+      deviceCode: DeviceService.normalizeText(payload.deviceCode),
+      name: DeviceService.normalizeText(payload.name),
+      images: DeviceService.normalizeArchiveImages(payload.images),
+      deviceType: DeviceService.normalizeText(payload.deviceType),
+      model: DeviceService.normalizeText(payload.model),
+      manufacturer: DeviceService.normalizeText(payload.manufacturer),
+      commissionedAt: DeviceService.normalizeText(payload.commissionedAt),
+      managementDepartment: DeviceService.normalizeText(payload.managementDepartment),
+      location: {
+        address: location === undefined ? '' : DeviceService.normalizeText(location.address),
+        longitude: location === undefined ? undefined : location.longitude,
+        latitude: location === undefined ? undefined : location.latitude
+      },
+      status: payload.status === undefined ? DeviceStatus.PendingVerification : payload.status,
+      lastVerificationTime: payload.lastVerificationTime,
+      archiveRequestState: payload.archiveRequestState
+    };
+  }
+
+  private static normalizeArchiveImages(images?: ArchiveImageSummaryPayload[]): ArchiveImageSummary[] {
+    if (images === undefined) {
+      return [];
+    }
+    return images.map((item: ArchiveImageSummaryPayload): ArchiveImageSummary => ({
+      id: DeviceService.normalizeText(item.id),
+      sortOrder: item.sortOrder === undefined ? 0 : item.sortOrder,
+      width: item.width === undefined ? 0 : item.width,
+      height: item.height === undefined ? 0 : item.height,
+      thumbnailDataUri: DeviceService.normalizeText(item.thumbnailDataUri)
+    }));
+  }
+
+  private static normalizeDeviceSummaryResponse(response: ApiResponse<DeviceSummaryPayload>): ApiResponse<DeviceSummary> {
+    if (!response.success) {
+      return {
+        success: false,
+        error: response.error,
+        requestId: response.requestId,
+        timestamp: response.timestamp
+      };
+    }
+
+    if (response.data === undefined) {
+      return {
+        success: false,
+        error: {
+          code: 'DEVICE_QUERY_EMPTY',
+          message: UiFeedbackService.operationUnavailable('查询')
+        },
+        requestId: response.requestId,
+        timestamp: response.timestamp
+      };
+    }
+
+    return {
+      success: true,
+      data: DeviceService.normalizeDeviceSummary(response.data),
       requestId: response.requestId,
       timestamp: response.timestamp
     };
@@ -281,6 +352,14 @@ export class DeviceService {
     const date = new Date(timestamp);
     return `${date.getFullYear()}-${DeviceService.pad2(date.getMonth() + 1)}-${DeviceService.pad2(
       date.getDate())} ${DeviceService.pad2(date.getHours())}:${DeviceService.pad2(date.getMinutes())}`;
+  }
+
+  private static normalizeText(value?: string): string {
+    if (value === undefined) {
+      return '';
+    }
+
+    return value.trim();
   }
 
   private static pad2(value: number): string {
