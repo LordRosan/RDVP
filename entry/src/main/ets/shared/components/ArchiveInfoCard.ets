@@ -65,19 +65,26 @@ export struct ArchiveInfoCard {
 
   @Builder
   ImagePreview() {
-    Column({ space: 8 }) {
+    Column() {
       Row() {
         Text('设备图片')
-          .fontSize(13)
+          .fontSize(15)
+          .fontColor(AppColors.TextPrimary)
+          .fontWeight(FontWeight.Medium)
+          .layoutWeight(1)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Blank()
+        Text(`${this.device.images.length}张`)
+          .fontSize(15)
           .fontColor(AppColors.TextSecondary)
           .fontWeight(FontWeight.Medium)
           .maxLines(1)
-        Blank()
-        Text(`${this.device.images.length}张`)
-          .fontSize(13)
-          .fontColor(AppColors.TextTertiary)
       }
       .width('100%')
+      .height(54)
+      .padding({ left: 18, right: 18 })
+      .alignItems(VerticalAlign.Center)
 
       if (this.expandedImageDataUri.length > 0) {
         Image(this.expandedImageDataUri)
@@ -86,6 +93,7 @@ export struct ArchiveInfoCard {
           .objectFit(ImageFit.Contain)
           .borderRadius(AppRadii.Medium)
           .backgroundColor(AppColors.FieldBackground)
+          .margin({ left: 18, right: 18, bottom: 10 })
           .onClick(() => this.collapseImage())
       }
 
@@ -107,8 +115,8 @@ export struct ArchiveInfoCard {
                     .color(AppColors.Primary)
                 }
               }
-              .width(72)
-              .height(54)
+              .width(80)
+              .height(60)
               .border({
                 width: this.expandedImageId === item.id ? 2 : 1,
                 color: this.expandedImageId === item.id ? AppColors.Primary : AppColors.Border
@@ -117,10 +125,12 @@ export struct ArchiveInfoCard {
               .onClick(() => this.toggleImage(item))
             }, (item: ArchiveImageSummary) => item.id)
           }
+          .justifyContent(FlexAlign.Start)
         }
         .scrollable(ScrollDirection.Horizontal)
         .scrollBar(BarState.Off)
         .width('100%')
+        .padding({ left: 18, right: 18, bottom: 12 })
       } else {
         Row({ space: 8 }) {
           SymbolGlyph($r('sys.symbol.picture'))
@@ -137,7 +147,9 @@ export struct ArchiveInfoCard {
         .padding({ left: 16, right: 16 })
         .backgroundColor(AppColors.FieldBackground)
         .borderRadius(AppRadii.Medium)
-          .alignItems(VerticalAlign.Center)
+        .border({ width: 1, color: AppColors.Border })
+        .margin({ left: 18, right: 18, bottom: 12 })
+        .alignItems(VerticalAlign.Center)
       }
 
       if (this.imageMessage.length > 0) {
@@ -145,15 +157,10 @@ export struct ArchiveInfoCard {
           message: this.imageMessage,
           tone: UiFeedbackTone.Danger
         })
+        .margin({ left: 18, right: 18, bottom: 12 })
       }
     }
     .width('100%')
-    .padding({
-      left: 18,
-      right: 18,
-      top: 12,
-      bottom: 12
-    })
     .alignItems(HorizontalAlign.Start)
   }
 

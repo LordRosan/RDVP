@@ -507,6 +507,27 @@ export default function localUnitTest() {
       expect(payloads[1].contentBase64).assertEqual('new');
     });
 
+    it('appendsSelectedArchiveImagesWithinLimit', 0, () => {
+      const existing: ArchiveImageDraft[] = [{
+        id: 'image-existing',
+        previewUri: 'data:image/jpeg;base64,old'
+      }];
+      const selected: ArchiveImageDraft[] = [{
+        previewUri: 'data:image/jpeg;base64,new-1',
+        contentBase64: 'new-1'
+      }, {
+        previewUri: 'data:image/jpeg;base64,new-2',
+        contentBase64: 'new-2'
+      }];
+
+      const images = ArchiveImageService.appendSelectedDrafts(existing, selected);
+
+      expect(images.length).assertEqual(3);
+      expect(images[0].id).assertEqual('image-existing');
+      expect(images[1].contentBase64).assertEqual('new-1');
+      expect(images[2].contentBase64).assertEqual('new-2');
+    });
+
     it('normalizesLegacyArchiveDeviceResponseFields', 0, () => {
       const legacyDevice: DeviceSummaryPayload = {
         id: 'device-local-0001',

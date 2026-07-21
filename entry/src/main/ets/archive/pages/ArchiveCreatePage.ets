@@ -32,6 +32,7 @@ struct ArchiveCreatePage {
   @State deviceName: string = '';
   @State images: ArchiveImageDraft[] = [];
   @State processingImages: boolean = false;
+  @State imageMessage: string = '';
   @State deviceType: string = '';
   @State model: string = '';
   @State manufacturer: string = '';
@@ -292,9 +293,10 @@ struct ArchiveCreatePage {
       Row() {
         this.FieldTitle('设备图片')
         Blank()
-        Text(`${this.images.length}/5`)
+        Text(`${this.images.length} / ${ArchiveImageService.getMaximumImageCount()}`)
           .fontSize(13)
           .fontColor(AppColors.TextSecondary)
+          .fontWeight(FontWeight.Medium)
       }
       .width('100%')
 
@@ -302,32 +304,47 @@ struct ArchiveCreatePage {
         Row({ space: 10 }) {
           ForEach(this.images, (item: ArchiveImageDraft, index: number) => {
             this.ArchiveImageItem(item, index)
-          }, (item: ArchiveImageDraft, index: number) => `${item.id === undefined ? item.previewUri : item.id}-${index}`)
+          }, (item: ArchiveImageDraft, index: number) => `${item.id === undefined ? 'selected' : item.id}-${index}`)
 
           if (this.images.length < ArchiveImageService.getMaximumImageCount()) {
             Button({ type: ButtonType.Normal, stateEffect: true }) {
-              Column({ space: 5 }) {
+              Column({ space: 7 }) {
                 SymbolGlyph($r('sys.symbol.plus_circle'))
                   .fontSize(24)
-                  .fontColor([AppColors.TextPrimary])
+                  .fontColor([AppColors.Primary])
                 Text(this.processingImages ? '处理中' : '添加图片')
                   .fontSize(12)
                   .fontColor(AppColors.TextSecondary)
+                  .fontWeight(FontWeight.Medium)
+                  .maxLines(1)
               }
             }
             .width(82)
-            .height(104)
-            .backgroundColor(AppColors.FieldBackground)
-            .borderRadius(AppRadii.Medium)
+            .height(100)
+            .backgroundColor(AppColors.SurfaceRaised)
+            .borderRadius(AppRadii.Small)
             .border({ width: 1, color: AppColors.Border })
             .enabled(!this.processingImages && !this.submitting && !this.isSubmitted())
             .onClick(() => this.selectDeviceImages())
           }
         }
+        .justifyContent(FlexAlign.Start)
+        .alignItems(VerticalAlign.Top)
       }
       .scrollable(ScrollDirection.Horizontal)
       .scrollBar(BarState.Off)
       .width('100%')
+      .padding(12)
+      .backgroundColor(AppColors.FieldBackground)
+      .borderRadius(AppRadii.Medium)
+      .border({ width: 1, color: AppColors.Border })
+
+      if (this.imageMessage.length > 0) {
+        InlineMessageSurface({
+          message: this.imageMessage,
+          tone: UiFeedbackTone.Danger
+        })
+      }
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -340,7 +357,8 @@ struct ArchiveCreatePage {
         .width(82)
         .height(72)
         .objectFit(ImageFit.Cover)
-        .borderRadius(AppRadii.Medium)
+        .borderRadius(AppRadii.Small)
+        .border({ width: 1, color: AppColors.Border })
 
       Row({ space: 2 }) {
         this.ImageIconButton($r('sys.symbol.chevron_backward'), index > 0, () => this.moveImage(index, -1))
@@ -842,20 +860,23 @@ struct ArchiveCreatePage {
 
     try {
       this.processingImages = true;
+      this.imageMessage = '';
       const picker = new photoAccessHelper.PhotoViewPicker();
       const selection = await picker.select({
         MIMEType: photoAccessHelper.PhotoViewMIMETypes.IMAGE_TYPE,
         maxSelectNumber: ArchiveImageService.getMaximumImageCount() - this.images.length
       });
+      if (selection.photoUris.length === 0) {
+        return;
+      }
       const selectedImages: ArchiveImageDraft[] = [];
       for (let index = 0; index < selection.photoUris.length; index++) {
         selectedImages.push(await ArchiveImageService.compressSelectedImage(selection.photoUris[index]));
       }
-      this.images = this.images.concat(selectedImages);
+      this.images = ArchiveImageService.appendSelectedDrafts(this.images, selectedImages);
       this.onFormChanged();
     } catch (err) {
-      this.message = '图片处理失败，请选择尺寸较小的有效图片';
-      this.messageTone = UiFeedbackTone.Danger;
+      this.imageMessage = '图片处理失败，请重新选择有效图片';
     } finally {
       this.processingImages = false;
     }
@@ -863,6 +884,7 @@ struct ArchiveCreatePage {
 
   removeImage(index: number): void {
     this.images = this.images.filter((item: ArchiveImageDraft, itemIndex: number) => itemIndex !== index);
+    this.imageMessage = '';
     this.onFormChanged();
   }
 
@@ -876,6 +898,7 @@ struct ArchiveCreatePage {
     reordered[index] = reordered[target];
     reordered[target] = selected;
     this.images = reordered;
+    this.imageMessage = '';
     this.onFormChanged();
   }
 

@@ -1,5 +1,6 @@
 import { image } from '@kit.ImageKit';
 import { util } from '@kit.ArkTS';
+import { fileIo } from '@kit.CoreFileKit';
 import { ApiResponse } from '../../shared/models/ApiModels';
 import { ApiClient } from '../../shared/services/ApiClient';
 import {
@@ -35,12 +36,21 @@ export class ArchiveImageService {
     });
   }
 
+  static appendSelectedDrafts(
+    existingImages: ArchiveImageDraft[],
+    selectedImages: ArchiveImageDraft[]
+  ): ArchiveImageDraft[] {
+    return existingImages.concat(selectedImages).slice(0, MAX_ARCHIVE_IMAGES);
+  }
+
   static async compressSelectedImage(uri: string): Promise<ArchiveImageDraft> {
+    let selectedFile: fileIo.File | undefined = undefined;
     let source: image.ImageSource | undefined = undefined;
     let pixelMap: image.PixelMap | undefined = undefined;
     let packer: image.ImagePacker | undefined = undefined;
     try {
-      source = image.createImageSource(uri);
+      selectedFile = fileIo.openSync(uri, fileIo.OpenMode.READ_ONLY);
+      source = image.createImageSource(selectedFile.fd);
       const info = await source.getImageInfo();
       const longestEdge = Math.max(info.size.width, info.size.height);
       const scale = longestEdge > MAX_IMAGE_EDGE ? MAX_IMAGE_EDGE / longestEdge : 1;
@@ -81,6 +91,12 @@ export class ArchiveImageService {
       if (source !== undefined) {
         try {
           await source.release();
+        } catch (err) {
+        }
+      }
+      if (selectedFile !== undefined) {
+        try {
+          fileIo.closeSync(selectedFile);
         } catch (err) {
         }
       }
